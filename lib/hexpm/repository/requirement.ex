@@ -2,6 +2,8 @@ defmodule Hexpm.Repository.Requirement do
   use Hexpm.Schema
   @derive {HexpmWeb.Stale, last_modified: nil}
 
+  @app_format ~r/\A[^[:space:][:cntrl:]]+\z/
+
   schema "requirements" do
     field :app, :string
     field :requirement, :string
@@ -22,6 +24,7 @@ defmodule Hexpm.Repository.Requirement do
     |> validate_length(:repository, count: :bytes, max: 255)
     |> validate_length(:name, count: :bytes, max: 255)
     |> validate_length(:app, count: :codepoints, max: 255)
+    |> validate_format(:app, @app_format)
     |> validate_length(:requirement, count: :bytes, max: 255)
     |> put_assoc(:dependency, dependencies[{repository, params["name"]}])
     |> validate_required(~w(name app requirement optional)a)
@@ -60,11 +63,16 @@ defmodule Hexpm.Repository.Requirement do
   end
 
   defp validate_requirements_list(requirements) when is_list(requirements) do
-    names = for %{"name" => name} when is_binary(name) <- requirements, do: name
+    if Enum.all?(requirements, &is_map/1) do
+      names = for %{"name" => name} when is_binary(name) <- requirements, do: name
 
-    case names -- Enum.uniq(names) do
-      [] -> :ok
-      [name | _] -> {:error, ~s(has duplicate requirement "#{name}"), []}
+      case names -- Enum.uniq(names) do
+        [] -> :ok
+        [name | _] -> {:error, ~s(has duplicate requirement "#{name}"), []}
+      end
+    else
+      # cast_assoc/3 reads each entry as a map before it checks its type
+      {:error, "is invalid", type: {:array, :map}}
     end
   end
 

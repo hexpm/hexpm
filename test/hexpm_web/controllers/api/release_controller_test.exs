@@ -200,6 +200,19 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
 
       assert json_response(conn, 400)
     end
+
+    test "refuses an unauthorized caller before reading the body", %{package: package} do
+      meta = %{name: package.name, version: "0.1.0", description: "description"}
+
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", key_for(insert(:user)))
+        |> post("/api/packages/#{package.name}/releases", create_tar(meta))
+
+      assert json_response(conn, 403)
+      refute Map.has_key?(conn.params, "body")
+    end
   end
 
   describe "POST /api/publish" do
@@ -276,6 +289,22 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       assert result["html_url"] =~ "packages/#{package.name}/1.0.0"
 
       assert Hexpm.Repo.get_by(Package, name: package.name).meta.description == "awesomeness"
+    end
+
+    for name <- ["decimal\n", "decimal ", "decimal\t"] do
+      test "rejects package name #{inspect(name)}", %{user: user} do
+        meta = %{name: unquote(name), version: "1.0.0", description: "description"}
+
+        conn =
+          build_conn()
+          |> put_req_header("content-type", "application/octet-stream")
+          |> put_req_header("authorization", key_for(user))
+          |> post("/api/publish", create_tar(meta))
+
+        result = json_response(conn, 422)
+        assert result["errors"]["name"] == "has invalid format"
+        refute Hexpm.Repo.get_by(Package, name: unquote(name))
+      end
     end
 
     test "rejects release with escaping symlink", %{user: user} do
@@ -361,6 +390,99 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       result = json_response(conn, 401)
       assert result["message"] == "missing authentication information"
       refute Hexpm.Repo.get_by(Package, name: meta.name)
+    end
+
+    test "refuses a caller with no credential before reading the body" do
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> post("/api/publish", "not a tarball")
+
+      assert json_response(conn, 401)["message"] == "missing authentication information"
+      refute Map.has_key?(conn.params, "body")
+    end
+
+    test "refuses a caller with no credential before sending 100 Continue" do
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("expect", "100-continue")
+        |> put_req_header("content-length", "13")
+        |> post("/api/publish", "not a tarball")
+
+      assert json_response(conn, 401)["message"] == "missing authentication information"
+      assert Plug.Test.sent_informs(conn) == []
+      refute Map.has_key?(conn.params, "body")
+    end
+
+    test "refuses a metadata name or version that isn't a string of at most 255 bytes", %{
+      user: user
+    } do
+      metadata = %{
+        "name" => Fake.sequence(:package),
+        "version" => "1.0.0",
+        "app" => "app",
+        "description" => "description",
+        "licenses" => ["Apache-2.0"],
+        "build_tools" => ["mix"],
+        "files" => ["mix.exs"],
+        "requirements" => %{}
+      }
+
+      invalid = [
+        {"name", 123},
+        {"version", 123},
+        {"version", "1.0.0-" <> String.duplicate("a", 250)}
+      ]
+
+      for {field, value} <- invalid do
+        conn =
+          build_conn()
+          |> put_req_header("content-type", "application/octet-stream")
+          |> put_req_header("authorization", key_for(user))
+          |> post("/api/publish", create_tar_with_raw_metadata(Map.put(metadata, field, value)))
+
+        assert json_response(conn, 422)["errors"] == %{
+                 "tar" => "metadata #{field} must be a string of at most 255 bytes"
+               }
+      end
+
+      refute Hexpm.Repo.get_by(Package, name: metadata["name"])
+    end
+
+    test "refuses metadata text Postgres can't store", %{user: user} do
+      metadata = %{
+        "name" => Fake.sequence(:package),
+        "version" => "1.0.0",
+        "app" => "app",
+        "description" => "description",
+        "licenses" => ["Apache-2.0"],
+        "build_tools" => ["mix"],
+        "files" => ["mix.exs"],
+        "requirements" => %{}
+      }
+
+      invalid = [
+        {"description", "a\0b"},
+        {"description", <<"a", 255, "b">>},
+        {"links", %{"GitHub" => "https://github.com/a\0b"}},
+        {"licenses", ["MIT\0"]},
+        {"app", "a\0pp"},
+        {"requirements",
+         %{"decimal" => %{"app" => "a\0pp", "requirement" => "~> 2.0", "optional" => false}}}
+      ]
+
+      for {field, value} <- invalid do
+        conn =
+          build_conn()
+          |> put_req_header("content-type", "application/octet-stream")
+          |> put_req_header("authorization", key_for(user))
+          |> post("/api/publish", create_tar_with_raw_metadata(Map.put(metadata, field, value)))
+
+        assert json_response(conn, 422)["errors"] == %{
+                 "tar" => "metadata must be valid UTF-8 without NUL bytes"
+               }
+      end
     end
 
     test "accepts release with internal symlink", %{user: user} do
@@ -963,6 +1085,70 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
 
       assert result["errors"]["requirements"]["nonexistant_package"] ==
                "package does not exist in repository \"hexpm\""
+    end
+
+    for app <- ["app\n", "app ", "app\t"] do
+      test "rejects app name #{inspect(app)}", %{user: user} do
+        meta = %{
+          name: Fake.sequence(:package),
+          app: unquote(app),
+          version: "0.0.1",
+          description: "description"
+        }
+
+        conn =
+          build_conn()
+          |> put_req_header("content-type", "application/octet-stream")
+          |> put_req_header("authorization", key_for(user))
+          |> post("/api/publish", create_tar(meta))
+
+        result = json_response(conn, 422)
+        assert result["errors"]["meta"]["app"] == "has invalid format"
+      end
+
+      test "rejects requirement app name #{inspect(app)}", %{user: user, package: package} do
+        reqs = [
+          %{name: package.name, requirement: "~> 0.0.1", app: unquote(app), optional: false}
+        ]
+
+        meta = %{
+          name: Fake.sequence(:package),
+          version: "0.0.1",
+          requirements: reqs,
+          description: "description"
+        }
+
+        conn =
+          build_conn()
+          |> put_req_header("content-type", "application/octet-stream")
+          |> put_req_header("authorization", key_for(user))
+          |> post("/api/publish", create_tar(meta))
+
+        result = json_response(conn, 422)
+        assert result["errors"]["requirements"][package.name] == "has invalid format"
+      end
+    end
+
+    test "accepts app names with uppercase letters and hyphens", %{user: user, package: package} do
+      reqs = [%{name: package.name, requirement: "~> 0.0.1", app: "lfe-Dep", optional: false}]
+
+      meta = %{
+        name: Fake.sequence(:package),
+        app: "EventSourcing-DB",
+        version: "0.0.1",
+        requirements: reqs,
+        description: "description"
+      }
+
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", key_for(user))
+        |> post("/api/publish", create_tar(meta))
+
+      result = json_response(conn, 201)
+      assert result["meta"]["app"] == "EventSourcing-DB"
+      assert result["requirements"][package.name]["app"] == "lfe-Dep"
     end
 
     test "create release updates new registry", %{user: user, package: package} do
@@ -1891,6 +2077,8 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         |> put_req_header("x-hex-otp", code)
         |> post("/api/packages/#{meta.name}/releases", create_tar(meta))
       end
+
+      align_to_throttle_bucket(10 * 60_000)
 
       for _ <- 1..5, do: json_response(publish.("000000"), 401)
       json_response(publish.("000000"), 429)

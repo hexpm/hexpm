@@ -400,6 +400,62 @@ defmodule HexpmWeb.PackageControllerTest do
       assert response(conn, 200) =~ release.publisher.username
     end
 
+    test "show provenance for releases published by a trusted publisher", %{package1: package1} do
+      insert(
+        :release,
+        package: package1,
+        version: "0.1.0",
+        meta: build(:release_metadata, app: package1.name),
+        oidc_claims: %Hexpm.TrustedPublishers.ClaimsSnapshot{
+          repository: "acme/widget",
+          workflow_ref: "acme/widget/.github/workflows/release.yml@refs/tags/v0.1.0",
+          sha: "0123456789abcdef0123456789abcdef01234567",
+          ref: "refs/tags/v0.1.0",
+          ref_type: "tag",
+          environment: "hex",
+          actor: "octocat",
+          event_name: "push",
+          run_id: "42",
+          run_attempt: "1"
+        }
+      )
+
+      body = get(build_conn(), "/packages/#{package1.name}/0.1.0") |> response(200)
+
+      assert body =~ "Provenance"
+
+      assert body =~
+               "https://github.com/acme/widget/commit/0123456789abcdef0123456789abcdef01234567"
+
+      assert body =~ "acme/widget@0123456"
+
+      assert body =~
+               "https://github.com/acme/widget/blob/0123456789abcdef0123456789abcdef01234567/.github/workflows/release.yml"
+
+      assert body =~ "https://github.com/acme/widget/actions/runs/42/attempts/1"
+      assert body =~ "https://github.com/acme/widget/tree/v0.1.0"
+      assert body =~ "https://github.com/octocat"
+
+      assert body =~
+               "https://github.com/acme/widget/deployments/activity_log?environments_filter=hex"
+
+      assert body =~ "hex"
+    end
+
+    test "hide provenance for releases published by a user", %{package1: package1} do
+      insert(
+        :release,
+        package: package1,
+        publisher: build(:user),
+        version: "0.1.0",
+        meta: build(:release_metadata, app: package1.name)
+      )
+
+      body = get(build_conn(), "/packages/#{package1.name}/0.1.0") |> response(200)
+
+      refute body =~ "Provenance"
+    end
+
     test "show package from other repository", %{
       user1: user1,
       repository1: repository1,

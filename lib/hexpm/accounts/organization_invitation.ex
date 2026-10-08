@@ -39,7 +39,7 @@ defmodule Hexpm.Accounts.OrganizationInvitation do
     |> validate_required([:organization_id, :email, :role, :token_hash, :expires_at])
     |> update_change(:email, &normalize_email/1)
     |> validate_length(:email, count: :bytes, max: 255)
-    |> validate_format(:email, ~r/^[^\s]+@[^\s]+\.[^\s]+$/, message: "is not a valid email")
+    |> validate_format(:email, Email.format(), message: "is not a valid email")
     |> validate_inclusion(:role, @roles)
     |> unique_constraint(:token_hash)
     |> unique_constraint(:email,
@@ -48,9 +48,10 @@ defmodule Hexpm.Accounts.OrganizationInvitation do
     )
   end
 
-  def reissue_changeset(invitation, role, token_hash, expires_at) do
+  def reissue_changeset(invitation, invited_by, role, token_hash, expires_at) do
     invitation
     |> cast(%{"role" => role}, [:role])
+    |> put_change(:invited_by_user_id, invited_by && invited_by.id)
     |> put_change(:token_hash, token_hash)
     |> put_change(:expires_at, expires_at)
     |> validate_inclusion(:role, @roles)

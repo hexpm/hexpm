@@ -1353,13 +1353,21 @@ defmodule Hexpm.Accounts.SSO do
   The copy names the session it came from, so revoking that one takes the copy
   with it. Someone who signs out because their browser session was stolen means
   the access it handed out as well.
+
+  `:organization_ids` limits the copy to those organizations. Consenting to an
+  OAuth client and redeeming its code are separate requests, so the code names
+  what the browser carried at consent, and what it authenticated for in between
+  stays behind.
   """
-  def grant_org_sessions!(from_user_session_id, to_user_session_id, user_id)
+  def grant_org_sessions!(from_user_session_id, to_user_session_id, user_id, opts \\ [])
+
+  def grant_org_sessions!(from_user_session_id, to_user_session_id, user_id, opts)
       when is_integer(from_user_session_id) and is_integer(to_user_session_id) do
     now = DateTime.utc_now()
 
     OrgSession.live(from_user_session_id, now)
     |> OrgSession.for_user(user_id)
+    |> only_organizations(Keyword.get(opts, :organization_ids))
     |> Repo.all()
     |> Enum.map(fn source ->
       %OrgSession{}
@@ -1376,7 +1384,13 @@ defmodule Hexpm.Accounts.SSO do
     end)
   end
 
-  def grant_org_sessions!(_from_user_session_id, _to_user_session_id, _user_id), do: []
+  def grant_org_sessions!(_from_user_session_id, _to_user_session_id, _user_id, _opts), do: []
+
+  defp only_organizations(query, nil), do: query
+
+  defp only_organizations(query, organization_ids) do
+    from(session in query, where: session.organization_id in ^organization_ids)
+  end
 
   @doc """
   Takes a share lock on the connections whose access a copy would carry, so a

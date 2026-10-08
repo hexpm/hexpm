@@ -84,7 +84,6 @@ defmodule HexpmWeb.LoginControllerTest do
         {"carriage return", "/\r/evil.com"},
         {"CRLF", "/\r\n/evil.com"},
         {"header injection", "/dashboard\r\nSet-Cookie: x=1"},
-        {"null byte", "/dashboard\0"},
         {"vertical tab", "/dashboard\v"},
         {"form feed", "/dashboard\f"},
         {"delete", "/dashboard\d"}
@@ -193,6 +192,7 @@ defmodule HexpmWeb.LoginControllerTest do
 
   test "rate limits failed login attempts from same IP", c do
     PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage)
+    align_to_throttle_bucket(15 * 60_000)
 
     # Exhaust IP limit (10 attempts)
     Enum.each(1..10, fn _ ->

@@ -21,9 +21,9 @@
   </div>
 
   <div class="mt-8 flex gap-3">
-    <.form for={%{}} action={~p"/sso/link"} class="flex-1">
+    <.sudo_form current_user={@current_user} action={~p"/sso/link"} class="flex-1">
       <.button type="submit" variant="primary" full_width>Connect SSO</.button>
-    </.form>
+    </.sudo_form>
     <.form for={%{}} action={~p"/sso/link/cancel"} class="flex-1">
       <.button type="submit" variant="secondary" full_width>Cancel</.button>
     </.form>

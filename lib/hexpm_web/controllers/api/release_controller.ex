@@ -2,6 +2,7 @@ defmodule HexpmWeb.API.ReleaseController do
   use HexpmWeb, :controller
 
   @tarball_max_size 16 * 1024 * 1024
+  @metadata_string_max_size 255
 
   plug :maybe_fetch_release when action in [:show]
   plug :fetch_release when action in [:delete]
@@ -15,11 +16,24 @@ defmodule HexpmWeb.API.ReleaseController do
        [
          authentication: :required,
          domains: [{"api", "write"}, "package"],
+         allow_trusted_publisher: true,
          fun: [{AuthHelpers, :package_owner}, {AuthHelpers, :organization_billing_active}]
        ]
-       when action in [:create, :delete]
+       when action in [:create]
 
-  plug :handle_100_continue, [max_size: @tarball_max_size] when action in [:create, :publish]
+  plug :authorize,
+       [
+         authentication: :required,
+         domains: [{"api", "write"}, "package"],
+         fun: [{AuthHelpers, :package_owner}, {AuthHelpers, :organization_billing_active}]
+       ]
+       when action in [:delete]
+
+  # The package a publish names is in the tarball, so a caller with no
+  # credential is refused before the body is read and the package is
+  # authorized once the tarball is parsed.
+  plug :require_authentication when action in [:publish]
+  plug :fetch_body, [max_size: @tarball_max_size] when action in [:create, :publish]
   plug :parse_tarball when action in [:publish]
   plug :maybe_fetch_package when action in [:publish]
 
@@ -27,6 +41,7 @@ defmodule HexpmWeb.API.ReleaseController do
        [
          authentication: :required,
          domains: [{"api", "write"}, "package"],
+         allow_trusted_publisher: true,
          fun: [{AuthHelpers, :package_owner}, {AuthHelpers, :organization_billing_active}]
        ]
        when action in [:publish]
@@ -50,13 +65,14 @@ defmodule HexpmWeb.API.ReleaseController do
         Releases.publish(
           conn.assigns.repository,
           conn.assigns.package,
-          conn.assigns.current_user || conn.assigns.current_organization.user,
+          publisher_for(conn),
           body_path,
           meta,
           inner_checksum,
           outer_checksum,
           audit: audit_data(conn),
-          replace: replace?
+          replace: replace?,
+          trusted_publisher: trusted_publisher_context(conn)
         )
 
       {:error, errors} ->
@@ -70,7 +86,7 @@ defmodule HexpmWeb.API.ReleaseController do
       conn,
       conn.assigns.repository,
       conn.assigns.package,
-      conn.assigns.current_user || conn.assigns.current_organization.user,
+      publisher_for(conn),
       body_path
     )
   end
@@ -117,6 +133,15 @@ defmodule HexpmWeb.API.ReleaseController do
     end
   end
 
+  defp require_authentication(conn, _opts) do
+    if conn.assigns.current_user || conn.assigns.current_organization ||
+         conn.assigns.trusted_publisher do
+      conn
+    else
+      AuthHelpers.error(conn, {:error, :missing})
+    end
+  end
+
   defp parse_tarball(conn, _opts) do
     case release_metadata(conn.params["body"], :metadata) do
       {:ok, meta, _inner_checksum, _outer_checksum} ->
@@ -152,7 +177,8 @@ defmodule HexpmWeb.API.ReleaseController do
               inner_checksum,
               outer_checksum,
               audit: audit_data(conn),
-              replace: replace?
+              replace: replace?,
+              trusted_publisher: trusted_publisher_context(conn)
             )
         end
 
@@ -234,10 +260,54 @@ defmodule HexpmWeb.API.ReleaseController do
   defp unpack_release_metadata(body_path, output) do
     case :hex_tarball.unpack({:file, String.to_charlist(body_path)}, output) do
       {:ok, %{inner_checksum: inner_checksum, outer_checksum: outer_checksum, metadata: metadata}} ->
-        {:ok, metadata, inner_checksum, outer_checksum}
+        with :ok <- check_metadata_string(metadata, "name"),
+             :ok <- check_metadata_string(metadata, "version"),
+             :ok <- check_metadata_text(metadata) do
+          {:ok, metadata, inner_checksum, outer_checksum}
+        end
 
       {:error, reason} ->
         {:error, List.to_string(:hex_tarball.format_error(reason))}
+    end
+  end
+
+  # The name and version are used in queries and storage keys before the
+  # changesets validate them, so they are checked for type and size first.
+  # Valid ones are far shorter than the limit.
+  defp check_metadata_string(metadata, field) do
+    case metadata[field] do
+      value when is_binary(value) and byte_size(value) <= @metadata_string_max_size ->
+        :ok
+
+      _ ->
+        {:error,
+         "metadata #{field} must be a string of at most #{@metadata_string_max_size} bytes"}
+    end
+  end
+
+  # Metadata is stored as text and jsonb, which hold neither a NUL byte nor
+  # invalid UTF-8, and nothing upstream of the insert checks for them.
+  defp check_metadata_text(metadata) do
+    if Hexpm.Utils.storable_text?(metadata),
+      do: :ok,
+      else: {:error, "metadata must be valid UTF-8 without NUL bytes"}
+  end
+
+  defp publisher_for(conn) do
+    cond do
+      Map.get(conn.assigns, :trusted_publisher) -> nil
+      conn.assigns.current_user -> conn.assigns.current_user
+      conn.assigns.current_organization -> conn.assigns.current_organization.user
+    end
+  end
+
+  defp trusted_publisher_context(conn) do
+    case Map.get(conn.assigns, :trusted_publisher) do
+      %Hexpm.TrustedPublishers.TrustedPublisher{} = tp ->
+        %{trusted_publisher_id: tp.id, oidc_claims: conn.assigns.auth_credential.oidc_claims}
+
+      _ ->
+        nil
     end
   end
 end

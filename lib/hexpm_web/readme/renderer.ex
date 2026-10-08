@@ -10,13 +10,21 @@ defmodule HexpmWeb.Readme.Renderer do
   alias HexpmWeb.MDExPlugins.HeadingAnchors
   alias HexpmWeb.MDExPlugins.InlineAttributeLists
   alias HexpmWeb.Readme.{Sanitizer, URLRewriter}
+  alias HexpmWeb.SyntaxHighlight
 
   @header_tags [1, 2, 3, 4, 5, 6]
 
   @doc """
   Converts README content to sanitized, URL-rewritten HTML.
   """
-  def render(repository, filename, content, package_name, version) do
+  def render(
+        repository,
+        filename,
+        content,
+        package_name,
+        version,
+        budget \\ SyntaxHighlight.budget()
+      ) do
     ext = Path.extname(filename) |> String.downcase()
     content = scrub_invalid_utf8(content)
 
@@ -26,7 +34,10 @@ defmodule HexpmWeb.Readme.Renderer do
           MDEx.new(
             markdown: content,
             extension: [description_lists: true, superscript: true, subscript: true],
-            syntax_highlight: [formatter: :html_linked]
+            syntax_highlight: [
+              engine: :lumis,
+              opts: [formatter: :html_linked, budget: budget]
+            ]
           )
           |> MDExGFM.attach()
           |> MDEx.Document.run()

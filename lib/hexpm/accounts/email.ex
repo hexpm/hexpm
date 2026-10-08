@@ -2,7 +2,10 @@ defmodule Hexpm.Accounts.Email do
   use Hexpm.Schema
 
   @derive HexpmWeb.Stale
-  @email_regex ~r"^.+@.+\..+$"
+
+  # Deliberately loose: one @ with something on each side, and no whitespace
+  # or control characters anywhere.
+  @format ~r/\A[^[:space:][:cntrl:]@]+@[^[:space:][:cntrl:]@]+\z/
 
   schema "emails" do
     field :email, :string
@@ -18,6 +21,8 @@ defmodule Hexpm.Accounts.Email do
 
     timestamps()
   end
+
+  def format(), do: @format
 
   def changeset(email, type, params, verified? \\ not Application.get_env(:hexpm, :user_confirm))
 
@@ -98,7 +103,7 @@ defmodule Hexpm.Accounts.Email do
     |> validate_required(~w(email)a)
     |> update_change(:email, &String.downcase/1)
     |> validate_length(:email, count: :bytes, max: 255)
-    |> validate_format(:email, @email_regex)
+    |> validate_format(:email, @format)
     |> validate_domain_not_blocked()
     |> unique_constraint(:email, name: "emails_email_key")
     |> unique_constraint(:email, name: "emails_email_user_key")

@@ -1,8 +1,6 @@
 defmodule Hexpm.Accounts.AuditLogs do
   use Hexpm.Context
 
-  alias Hexpm.Accounts.AuditLog
-
   def all_by(schema) do
     AuditLog.all_by(schema)
     |> AuditLog.newest_first()
@@ -32,6 +30,63 @@ defmodule Hexpm.Accounts.AuditLogs do
     AuditLog.count_by_policies(organization)
     |> Repo.all()
     |> Map.new()
+  end
+
+  @doc """
+  Removes a deleted account's email addresses from the audit log entries it
+  made, keeping its id and username as the record of who acted. Runs in the
+  transaction that deletes the user, before the delete nulls the entries'
+  `user_id`.
+
+  Entries about an organization's email addresses keep them: those addresses
+  belong to the organization's own record.
+  """
+  def scrub_user(multi, %User{id: user_id}) do
+    entries = from(a in AuditLog, where: a.user_id == ^user_id)
+
+    multi
+    |> Multi.update_all(
+      :scrub_audit_user_data,
+      from(a in entries,
+        where: not is_nil(a.user_data),
+        update: [
+          set: [
+            user_data:
+              fragment(
+                "jsonb_build_object('id', ?->'id', 'username', ?->'username')",
+                a.user_data,
+                a.user_data
+              )
+          ]
+        ]
+      ),
+      []
+    )
+    |> Multi.update_all(
+      :scrub_audit_emails,
+      from(a in entries,
+        where: like(a.action, "email.%"),
+        where: not fragment("jsonb_exists(?, 'organization')", a.params),
+        update: [
+          set: [
+            params:
+              fragment(
+                "? - 'email' #- '{old_email,email}' #- '{new_email,email}'",
+                a.params
+              )
+          ]
+        ]
+      ),
+      []
+    )
+    |> Multi.update_all(
+      :scrub_audit_provider_emails,
+      from(a in entries,
+        where: like(a.action, "user_provider.%"),
+        update: [set: [params: fragment("? - 'provider_email'", a.params)]]
+      ),
+      []
+    )
   end
 
   def admin() do

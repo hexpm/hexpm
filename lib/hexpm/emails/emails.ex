@@ -22,6 +22,30 @@ defmodule Hexpm.Emails do
     |> render_body(:owner_remove)
   end
 
+  def trusted_publisher_added(trusted_publisher, owners, actor) do
+    trusted_publisher_email(:trusted_publisher_added, trusted_publisher, owners, actor)
+    |> subject("Hex.pm - Trusted publisher added to package #{trusted_publisher.package.name}")
+    |> render_body(:trusted_publisher_add)
+  end
+
+  def trusted_publisher_removed(trusted_publisher, owners, actor) do
+    trusted_publisher_email(:trusted_publisher_removed, trusted_publisher, owners, actor)
+    |> subject(
+      "Hex.pm - Trusted publisher removed from package #{trusted_publisher.package.name}"
+    )
+    |> render_body(:trusted_publisher_remove)
+  end
+
+  defp trusted_publisher_email(type, trusted_publisher, owners, actor) do
+    base_email(type)
+    |> email_to(owners)
+    |> assign(:username, actor.username)
+    |> assign(:package, trusted_publisher.package.name)
+    |> assign(:repository, trusted_publisher.repository)
+    |> assign(:workflow, trusted_publisher.workflow)
+    |> assign(:environment, trusted_publisher.environment)
+  end
+
   def verification(user, email) do
     base_email(:verification)
     |> email_to(%{email | user: user})

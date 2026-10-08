@@ -15,29 +15,6 @@ defmodule HexpmWeb.Plugs do
     read_timeout: 10_000
   ]
 
-  def validate_url(conn, _opts) do
-    if String.contains?(conn.request_path <> conn.query_string, "%00") do
-      conn
-      |> ControllerHelpers.render_error(400)
-      |> halt()
-    else
-      conn
-    end
-  end
-
-  def fetch_body(conn, _opts) do
-    # Skip body reading if client sent Expect: 100-continue
-    # Body will be read after validation in handle_100_continue
-    case get_req_header(conn, "expect") do
-      ["100-continue"] ->
-        conn
-
-      _ ->
-        {conn, path} = read_body_to_file(conn)
-        put_in(conn.params["body"], path)
-    end
-  end
-
   def read_body_to_file(conn) do
     {:ok, path} = Plug.Upload.random_file("upload")
 
@@ -164,13 +141,15 @@ defmodule HexpmWeb.Plugs do
          auth_credential: auth_credential,
          user: user,
          organization: organization,
-         email: email
+         email: email,
+         trusted_publisher: trusted_publisher
        }} ->
         conn
         |> assign(:auth_credential, auth_credential)
         |> assign(:current_user, user)
         |> assign(:current_organization, organization)
         |> assign(:email, email)
+        |> assign(:trusted_publisher, trusted_publisher)
 
       {:error, :missing} ->
         conn
@@ -178,6 +157,7 @@ defmodule HexpmWeb.Plugs do
         |> assign(:current_user, nil)
         |> assign(:current_organization, nil)
         |> assign(:email, nil)
+        |> assign(:trusted_publisher, nil)
 
       {:error, _} = error ->
         HexpmWeb.AuthHelpers.error(conn, error)

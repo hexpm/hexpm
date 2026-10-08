@@ -7,7 +7,7 @@ defmodule HexpmWeb.ErrorView do
       conn: assigns.conn,
       error: true,
       status: status,
-      message: message(status),
+      message: assigns[:message] || message(status),
       container: "container error-view",
       current_user: assigns[:current_user],
       script_src_nonce: assigns[:script_src_nonce],
@@ -15,7 +15,7 @@ defmodule HexpmWeb.ErrorView do
     )
   end
 
-  # Refusals raised before the controller (a null byte in the query, the rate
+  # Refusals raised before the controller (text Postgres can't store, the rate
   # limit, read-only mode) reach the provisioning agent, which parses the SCIM
   # error schema and nothing else.
   def render(<<status::binary-3>> <> ".scim", assigns) when status != "all" do

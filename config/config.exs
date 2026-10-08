@@ -16,6 +16,7 @@ config :hexpm,
   preview_bucket: {Hexpm.Store.Local, "preview_bucket"},
   diff_bucket: {Hexpm.Store.Local, "diff_bucket"},
   deletions_bucket: {Hexpm.Store.Local, "deletions_bucket"},
+  access_logs_private_bucket: {Hexpm.Store.Local, "access_logs_private_bucket"},
   slack_webhook_url: nil,
   organization_deletions: :off,
   diff_cache_version: 1,
@@ -52,6 +53,10 @@ config :hexpm,
 config :hexpm, secret_scan_notify: false
 
 config :hexpm, HexpmWeb.BasicAuth, schedule_enabled: true
+
+config :hexpm, :features, trusted_publishers: true
+
+config :hexpm, :trusted_publishers, audience: "hexpm"
 
 config :hexpm, :organization_sso,
   mode: :off,
@@ -130,7 +135,7 @@ config :hexpm, HexpmWeb.Endpoint,
   root: Path.dirname(__DIR__),
   render_errors: [
     view: HexpmWeb.ErrorView,
-    accepts: ~w(html json elixir erlang),
+    accepts: ~w(html json elixir erlang scim),
     root_layout: {HexpmWeb.LayoutView, :root},
     layout: {HexpmWeb.LayoutView, :app}
   ],
@@ -203,8 +208,5 @@ config :ueberauth, Ueberauth,
   ]
 
 config :mdex_native, syntax_highlighter: :lumis
-
-# The lumis git checkout has no precompiled NIF checksums, build from source
-System.put_env("LUMIS_BUILD", "1")
 
 import_config "#{Mix.env()}.exs"

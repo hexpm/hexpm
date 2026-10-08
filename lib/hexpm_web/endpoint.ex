@@ -67,6 +67,8 @@ defmodule HexpmWeb.Endpoint do
     pass: ["*/*"],
     json_decoder: JSON
 
+  plug HexpmWeb.Plugs.ValidateParams
+
   plug Sentry.PlugContext,
     body_scrubber: {HexpmWeb.SentryScrubber, :scrub_body},
     header_scrubber: {HexpmWeb.SentryScrubber, :scrub_headers},

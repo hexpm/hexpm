@@ -595,23 +595,6 @@ defmodule HexpmWeb.SSOEnforcementTest do
       assert json_response(conn, 403)["message"] =~ "organization key"
     end
 
-    test "refuses basic auth, which holds no session either", context do
-      require_sso(context)
-      user = insert(:user, password: Hexpm.Accounts.Auth.gen_password("hunter42"))
-      insert(:organization_user, organization: context.organization, user: user, role: "read")
-
-      conn =
-        build_conn()
-        |> put_req_header("authorization", basic_auth(user.username, "hunter42"))
-        |> get("/api/orgs/#{context.organization.name}")
-
-      message = json_response(conn, 403)["message"]
-
-      assert message =~ "requires authenticating through its identity"
-      assert message =~ "username and password"
-      refute message =~ "/sso/org/"
-    end
-
     test "lets a personal key through where the organization allows them", context do
       require_sso(context, "allow")
 
@@ -1248,6 +1231,62 @@ defmodule HexpmWeb.SSOEnforcementTest do
 
       assert body["organization_reauth_required"] == [
                %{"organization" => name, "requirements" => ["sso"]}
+             ]
+    end
+
+    # The same window with some access at approval: the code is bound to the
+    # browser, and what the browser authenticates for before the exchange was
+    # not part of the approval.
+    test "a consent copies only the organization access held when it was given", context do
+      require_sso(context)
+      other = second_organization(context)
+      {conn, browser} = login(context.member)
+      authenticate(context, context.member, browser)
+
+      client = insert(:oauth_client, allowed_scopes: ["api:read", "repositories"])
+      verifier = "code-verifier-#{System.unique_integer([:positive])}"
+      challenge = :sha256 |> :crypto.hash(verifier) |> Base.url_encode64(padding: false)
+
+      conn =
+        post(conn, "/oauth/authorize", %{
+          "client_id" => client.client_id,
+          "redirect_uri" => hd(client.redirect_uris),
+          "action" => "approve",
+          "scope" => "api:read repositories",
+          "selected_scopes" => ["api:read", "repositories"],
+          "state" => "opaque-state",
+          "code_challenge" => challenge,
+          "code_challenge_method" => "S256"
+        })
+
+      %URI{query: query} = conn |> redirected_to() |> URI.parse()
+      code = URI.decode_query(query)["code"]
+
+      authenticate(other, context.member, browser)
+
+      body =
+        build_conn()
+        |> post("/api/oauth/token", %{
+          "grant_type" => "authorization_code",
+          "code" => code,
+          "client_id" => client.client_id,
+          "redirect_uri" => hd(client.redirect_uris),
+          "code_verifier" => verifier
+        })
+        |> json_response(200)
+
+      assert body["scope"] =~ "repository:#{context.organization.name}"
+      refute body["scope"] =~ "repository:#{other.organization.name}"
+
+      assert body["organization_reauth_required"] == [
+               %{"organization" => other.organization.name, "requirements" => ["sso"]}
+             ]
+
+      token =
+        Repo.get_by!(Hexpm.OAuth.Token, user_id: context.member.id, client_id: client.client_id)
+
+      assert SSO.granted_organization_ids(token.user_session_id, context.member.id) == [
+               context.organization.id
              ]
     end
 
@@ -2018,10 +2057,6 @@ defmodule HexpmWeb.SSOEnforcementTest do
 
   defp repository_permission(context) do
     [%{domain: "repository", resource: context.organization.name}]
-  end
-
-  defp basic_auth(username, password) do
-    "Basic " <> Base.encode64("#{username}:#{password}")
   end
 
   defp break_glass_logs(context) do

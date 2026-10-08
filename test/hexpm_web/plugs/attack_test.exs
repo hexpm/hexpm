@@ -1,7 +1,7 @@
 defmodule HexpmWeb.Plugs.AttackTest do
   use ExUnit.Case
   import Plug.{Conn, Test}
-  import Hexpm.Factory
+  import Hexpm.{Factory, TestHelpers}
   alias HexpmWeb.{Plugs.Attack, RateLimitPubSub}
 
   defmodule Hello do
@@ -159,6 +159,32 @@ defmodule HexpmWeb.Plugs.AttackTest do
       assert callback_data[:remaining] == 48
     end
 
+    test "broadcasts and bounds trusted publisher mint rate limits" do
+      align_to_throttle_bucket()
+      time = System.system_time(:millisecond)
+      key = {:github_repository, "8888"}
+
+      Phoenix.PubSub.broadcast!(
+        Hexpm.PubSub,
+        "ratelimit",
+        {:throttle, {:trusted_publisher_mint, key}, time}
+      )
+
+      :sys.get_state(RateLimitPubSub)
+
+      assert {:allow, {:throttle, data}} =
+               Attack.trusted_publisher_mint_throttle(key, time: time)
+
+      assert data[:limit] == 30
+      assert data[:remaining] == 28
+
+      for _ <- 1..28 do
+        assert {:allow, _data} = Attack.trusted_publisher_mint_throttle(key, time: time)
+      end
+
+      assert {:block, _data} = Attack.trusted_publisher_mint_throttle(key, time: time)
+    end
+
     test "halts requests when ip limit is exceeded" do
       align_to_throttle_bucket()
 
@@ -192,6 +218,70 @@ defmodule HexpmWeb.Plugs.AttackTest do
                  status: 429,
                  message: "API rate limit exceeded for user #{user.id}"
                })
+    end
+
+    test "doesn't apply the ip limit to trusted publisher mints" do
+      conn =
+        conn(:post, "/api/oauth/token", %{
+          "grant_type" => "urn:ietf:params:oauth:grant-type:jwt-bearer"
+        })
+        |> Map.put(:remote_ip, {3, 3, 3, 3})
+        |> assign(:current_user, nil)
+        |> assign(:current_organization, nil)
+        |> Hello.call(:index)
+
+      assert conn.status == 200
+      assert get_resp_header(conn, "x-ratelimit-remaining") == []
+    end
+
+    test "halts requests when trusted publisher limit is exceeded" do
+      align_to_throttle_bucket()
+      trusted_publisher = %{id: 7}
+
+      Enum.each(499..0//-1, fn i ->
+        conn = request_trusted_publisher(trusted_publisher)
+        assert conn.status == 200
+        assert get_resp_header(conn, "x-ratelimit-remaining") == ["#{i}"]
+      end)
+
+      conn = request_trusted_publisher(trusted_publisher)
+      assert conn.status == 429
+
+      assert conn.resp_body ==
+               JSON.encode!(%{
+                 status: 429,
+                 message: "API rate limit exceeded for trusted publisher 7"
+               })
+
+      assert request_ip({5, 5, 5, 5}).status == 200
+    end
+
+    test "broadcasts trusted publisher rate limits" do
+      align_to_throttle_bucket()
+      time = System.system_time(:millisecond)
+
+      Phoenix.PubSub.broadcast!(
+        Hexpm.PubSub,
+        "ratelimit",
+        {:throttle, {:trusted_publisher, 8}, time}
+      )
+
+      :sys.get_state(RateLimitPubSub)
+
+      assert {:allow, {:throttle, data}} = Attack.trusted_publisher_throttle(8, time: time)
+      assert data[:remaining] == 498
+    end
+
+    test "doesn't apply the ip limit to the OIDC audience" do
+      conn =
+        conn(:get, "/api/oidc/audience")
+        |> Map.put(:remote_ip, {4, 4, 4, 4})
+        |> assign(:current_user, nil)
+        |> assign(:current_organization, nil)
+        |> Hello.call(:index)
+
+      assert conn.status == 200
+      assert get_resp_header(conn, "x-ratelimit-remaining") == []
     end
 
     test "allows requests again when limit expired" do
@@ -307,12 +397,14 @@ defmodule HexpmWeb.Plugs.AttackTest do
     end
 
     test "blocks login requests when IP limit is exceeded" do
+      time = System.system_time(:millisecond)
+
       # Exhaust IP limit (10 attempts per 15 minutes)
       Enum.each(1..10, fn _ ->
-        HexpmWeb.Plugs.Attack.login_ip_throttle({2, 2, 2, 2})
+        HexpmWeb.Plugs.Attack.login_ip_throttle({2, 2, 2, 2}, time: time)
       end)
 
-      result = HexpmWeb.Plugs.Attack.login_ip_throttle({2, 2, 2, 2})
+      result = HexpmWeb.Plugs.Attack.login_ip_throttle({2, 2, 2, 2}, time: time)
       assert {:block, _data} = result
     end
   end
@@ -327,47 +419,45 @@ defmodule HexpmWeb.Plugs.AttackTest do
     end
 
     test "blocks 2FA requests when the user limit is exceeded" do
+      time = System.system_time(:millisecond)
+
       # Exhaust user limit (5 attempts per 10 minutes)
       Enum.each(1..5, fn _ ->
-        HexpmWeb.Plugs.Attack.tfa_user_throttle(456)
+        HexpmWeb.Plugs.Attack.tfa_user_throttle(456, time: time)
       end)
 
-      result = HexpmWeb.Plugs.Attack.tfa_user_throttle(456)
+      result = HexpmWeb.Plugs.Attack.tfa_user_throttle(456, time: time)
       assert {:block, _data} = result
     end
 
     test "blocks 2FA requests when IP limit is exceeded" do
+      time = System.system_time(:millisecond)
+
       # Exhaust IP limit (20 attempts per 15 minutes)
       Enum.each(1..20, fn _ ->
-        HexpmWeb.Plugs.Attack.tfa_ip_throttle({7, 7, 7, 7})
+        HexpmWeb.Plugs.Attack.tfa_ip_throttle({7, 7, 7, 7}, time: time)
       end)
 
-      result = HexpmWeb.Plugs.Attack.tfa_ip_throttle({7, 7, 7, 7})
+      result = HexpmWeb.Plugs.Attack.tfa_ip_throttle({7, 7, 7, 7}, time: time)
       assert {:block, _data} = result
     end
 
     test "different users have independent limits" do
+      time = System.system_time(:millisecond)
+
       # Exhaust limit for the first user
       Enum.each(1..5, fn _ ->
-        HexpmWeb.Plugs.Attack.tfa_user_throttle(111)
+        HexpmWeb.Plugs.Attack.tfa_user_throttle(111, time: time)
       end)
 
       # First user should be blocked
-      result1 = HexpmWeb.Plugs.Attack.tfa_user_throttle(111)
+      result1 = HexpmWeb.Plugs.Attack.tfa_user_throttle(111, time: time)
       assert {:block, _data} = result1
 
       # Second user should still work
-      result2 = HexpmWeb.Plugs.Attack.tfa_user_throttle(222)
+      result2 = HexpmWeb.Plugs.Attack.tfa_user_throttle(222, time: time)
       assert {:allow, _data} = result2
     end
-  end
-
-  # The throttle counter is keyed by `div(time_ms, period_ms)`. If a test's
-  # setup and assertion fall in different buckets, the counter resets between
-  # them. Wait past the next boundary if we're too close to it.
-  defp align_to_throttle_bucket(period_ms \\ 60_000, headroom_ms \\ 5_000) do
-    remaining = period_ms - rem(System.system_time(:millisecond), period_ms)
-    if remaining < headroom_ms, do: Process.sleep(remaining + 50)
   end
 
   defp request_ip(remote_ip) do
@@ -379,6 +469,15 @@ defmodule HexpmWeb.Plugs.AttackTest do
     |> Map.put(:remote_ip, remote_ip)
     |> assign(:current_user, nil)
     |> assign(:current_organization, nil)
+    |> Hello.call(:index)
+  end
+
+  defp request_trusted_publisher(trusted_publisher) do
+    conn(:get, "/api/")
+    |> Map.put(:remote_ip, {5, 5, 5, 5})
+    |> assign(:current_user, nil)
+    |> assign(:current_organization, nil)
+    |> assign(:trusted_publisher, trusted_publisher)
     |> Hello.call(:index)
   end
 

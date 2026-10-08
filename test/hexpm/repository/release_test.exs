@@ -134,6 +134,21 @@ defmodule Hexpm.Repository.ReleaseTest do
     refute Map.has_key?(changeset.changes, :requirements)
   end
 
+  test "refuses requirements that aren't maps", %{
+    publisher: publisher,
+    packages: [package, dep, _]
+  } do
+    params =
+      %{version: "0.0.1", app: package.name}
+      |> rel_meta()
+      |> Map.put("requirements", [[{"name", dep.name}, {"requirement", "~> 1.0"}]])
+
+    changeset = Release.build(package, publisher, params, "", "")
+
+    assert errors_on(changeset).requirements == "expected type list(map)"
+    refute Map.has_key?(changeset.changes, :requirements)
+  end
+
   defp requirement_error(changeset) do
     changeset |> errors_on() |> Map.fetch!(:requirements) |> List.wrap() |> hd()
   end

@@ -58,6 +58,31 @@ defmodule Hexpm.TestHelpers do
   end
 
   @doc """
+  Waits past the next throttle bucket boundary when fewer than `headroom_ms`
+  remain in the current one.
+
+  `HexpmWeb.Plugs.Attack` keys its counters by `div(now_ms, period_ms)`, so a
+  test that fills a bucket and expects the next request to be refused fails if
+  a boundary passes in between.
+  """
+  def align_to_throttle_bucket(period_ms \\ 60_000, headroom_ms \\ 5_000) do
+    remaining = period_ms - rem(System.system_time(:millisecond), period_ms)
+    if remaining < headroom_ms, do: Process.sleep(remaining + 50)
+  end
+
+  @doc """
+  The date `days` before the database's `CURRENT_DATE`.
+
+  The download views count days back from `CURRENT_DATE`, which the sandbox
+  fixes when the test's transaction starts and which follows the database time
+  zone, so rows placed at a view's edge have to be dated from it.
+  """
+  def database_days_ago(days) do
+    %{rows: [[today]]} = Hexpm.RepoBase.query!("SELECT CURRENT_DATE")
+    Date.add(today, -days)
+  end
+
+  @doc """
   Captures logs down to debug, including Ecto's query log.
 
   `capture_log/2`'s `:level` option filters what it keeps; it does not lower
@@ -174,7 +199,7 @@ defmodule Hexpm.TestHelpers do
   `metadata` needs binary keys and all required fields.
   """
   def create_tar_with_raw_metadata(metadata, files \\ [{"mix.exs", "mix.exs"}]) do
-    name = "#{metadata["name"]}-#{metadata["version"]}"
+    name = "raw-#{Base.encode16(:crypto.strong_rand_bytes(4))}"
     contents_path = Path.join(@tmp, "#{name}-contents.tar.gz")
     files = Enum.map(files, fn {name, bin} -> {String.to_charlist(name), bin} end)
     :ok = :erl_tar.create(contents_path, files, [:compressed])

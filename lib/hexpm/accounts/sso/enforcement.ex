@@ -17,6 +17,7 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   alias Hexpm.Emails
   alias Hexpm.Emails.Outbox
   alias Hexpm.OAuth.Token
+  alias Hexpm.TrustedPublishers.TrustedPublisher
   alias HexpmWeb.EmailView
 
   @type refusal :: :sso_required | :personal_key
@@ -126,6 +127,7 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   # bug on the caller's side, and a catch-all answers it with `:ok`, which is
   # the one answer that cannot be noticed.
   def check(%Organization{}, %Organization{}, _credential, _user_session_id), do: :ok
+  def check(%Organization{}, %TrustedPublisher{}, _credential, _user_session_id), do: :ok
   def check(%Organization{}, nil, _credential, _user_session_id), do: :ok
   def check(nil, _principal, _credential, _user_session_id), do: :ok
 

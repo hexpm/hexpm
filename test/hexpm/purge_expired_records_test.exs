@@ -545,20 +545,21 @@ defmodule Hexpm.PurgeExpiredRecordsTest do
   defp hours_from_now(hours), do: DateTime.add(DateTime.utc_now(), hours * 3600, :second)
 
   describe "archive" do
-    # The credential itself, the mail body, or the identity a provider gave us.
+    # The credential itself, an email address, the mail body, or the identity a
+    # provider gave us.
     @redacted %{
       "authorization_codes" => ~w(code code_challenge),
       "device_codes" => ~w(device_code user_code verification_uri_complete),
       "oauth_tokens" => ~w(refresh_token_hash),
       "user_sessions" => ~w(session_token),
-      "password_resets" => ~w(key_hash),
-      "account_deletion_requests" => ~w(key_hash),
+      "password_resets" => ~w(key_hash primary_email),
+      "account_deletion_requests" => ~w(key_hash primary_email),
       "organization_sso_transactions" =>
         ~w(state_hash nonce code_verifier link_token_hash subject provider_email),
       "organization_sso_sessions" => [],
       "organization_invitations" => ~w(token_hash),
       "keys" => ~w(secret_first secret_second),
-      "email_outbox_entries" => ~w(email)
+      "email_outbox_entries" => ~w(email recipients)
     }
 
     test "writes every column but the redacted ones of each row it deletes" do
@@ -665,7 +666,7 @@ defmodule Hexpm.PurgeExpiredRecordsTest do
       refute Map.has_key?(row, "secret_second")
     end
 
-    test "keeps who was sent what but not the mail itself" do
+    test "keeps what was sent but not the recipients or the mail itself" do
       entry =
         insert(:email_outbox_entry,
           category: "admin.announcement",
@@ -683,10 +684,10 @@ defmodule Hexpm.PurgeExpiredRecordsTest do
       assert row["category"] == "admin.announcement"
       assert row["type"] == "announcement"
       assert row["subject"] == "Hex.pm - Service update"
-      assert row["recipients"] == ["bob@example.com"]
       assert row["provider_message_id"] == "sg-message-id"
       assert row["delivered_at"] =~ ~r/^\d{4}-\d{2}-\d{2}T/
       refute Map.has_key?(row, "email")
+      refute Map.has_key?(row, "recipients")
     end
 
     test "leaves the rows in place when the upload fails" do
