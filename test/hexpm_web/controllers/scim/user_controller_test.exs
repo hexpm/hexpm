@@ -362,29 +362,20 @@ defmodule HexpmWeb.SCIM.UserControllerTest do
   end
 
   test "an externalId carrying a NUL byte is refused", context do
-    body =
-      scim_conn(context.token)
-      |> post(
-        "/scim/v2/Users",
-        scim_body(%{"userName" => "nul@example.com", "externalId" => "okta\u00001"})
-      )
-      |> scim_json_response(400)
+    {400, headers, body} =
+      assert_error_sent(400, fn ->
+        scim_conn(context.token)
+        |> post(
+          "/scim/v2/Users",
+          scim_body(%{"userName" => "nul@example.com", "externalId" => "okta\u00001"})
+        )
+      end)
 
-    assert body["scimType"] == "invalidValue"
+    assert {"content-type", "application/scim+json" <> _} =
+             List.keyfind(headers, "content-type", 0)
 
-    created =
-      scim_conn(context.token)
-      |> post("/scim/v2/Users", scim_body(%{"userName" => "nul@example.com"}))
-      |> scim_json_response(201)
-
-    operations = [%{"op" => "replace", "path" => "externalId", "value" => "okta\u00001"}]
-
-    body =
-      scim_conn(context.token)
-      |> patch("/scim/v2/Users/#{created["id"]}", scim_body(%{"Operations" => operations}))
-      |> scim_json_response(400)
-
-    assert body["scimType"] == "invalidValue"
+    assert JSON.decode!(body)["schemas"] == ["urn:ietf:params:scim:api:messages:2.0:Error"]
+    refute Repo.exists?(Hexpm.Accounts.SCIM.Resource)
   end
 
   defp scim_conn(token) do

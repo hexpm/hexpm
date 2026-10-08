@@ -138,9 +138,15 @@ defmodule HexpmWeb.SCIM.DiscoveryControllerTest do
   end
 
   test "a refusal before the controller answers with the SCIM error schema", context do
-    body =
-      scim_json_response(scim_get(context.token, "/scim/v2/ServiceProviderConfig?x=%00"), 400)
+    {400, headers, body} =
+      assert_error_sent(400, fn ->
+        scim_get(context.token, "/scim/v2/ServiceProviderConfig?x=%00")
+      end)
 
+    assert {"content-type", "application/scim+json" <> _} =
+             List.keyfind(headers, "content-type", 0)
+
+    body = JSON.decode!(body)
     assert body["schemas"] == ["urn:ietf:params:scim:api:messages:2.0:Error"]
     assert body["status"] == "400"
     assert body["detail"] == "Bad request"
