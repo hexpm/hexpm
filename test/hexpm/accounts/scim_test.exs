@@ -450,6 +450,22 @@ defmodule Hexpm.Accounts.SCIMTest do
       refute "old@example.com" in emails
     end
 
+    test "an invitation revoked in the request that sent it is not mailed", context do
+      {:ok, %{resource: resource}} =
+        create_user(context.connection, %{"userName" => "first@example.com"})
+
+      Repo.update_all(OutboxEntry, set: [delivered_at: DateTime.utc_now()])
+
+      assert {:ok, %{state: :inactive}} =
+               replace_user(context.connection, resource.scim_id, %{
+                 "userName" => "second@example.com",
+                 "active" => false
+               })
+
+      assert OrganizationInvitations.all_pending(context.organization) == []
+      assert Repo.all(OutboxEntry.undelivered()) == []
+    end
+
     test "delete deactivates and frees the userName slot", context do
       user = insert(:user)
       email = hd(user.emails).email

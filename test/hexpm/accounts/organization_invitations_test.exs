@@ -336,6 +336,31 @@ defmodule Hexpm.Accounts.OrganizationInvitationsTest do
     end
   end
 
+  describe "revoke/3" do
+    test "takes the invitation mail that hasn't gone out with it", %{
+      organization: organization,
+      admin: admin
+    } do
+      {:ok, invitation} = invite(organization, admin, "newcomer@example.com")
+      assert [_mail] = Repo.all(OutboxEntry.undelivered())
+
+      {:ok, _} =
+        OrganizationInvitations.revoke(organization, invitation, audit: audit_data(admin))
+
+      assert Repo.all(OutboxEntry) == []
+    end
+
+    test "leaves a mail that was already delivered", %{organization: organization, admin: admin} do
+      {:ok, invitation} = invite(organization, admin, "newcomer@example.com")
+      Repo.update_all(OutboxEntry, set: [delivered_at: DateTime.utc_now()])
+
+      {:ok, _} =
+        OrganizationInvitations.revoke(organization, invitation, audit: audit_data(admin))
+
+      assert [%{delivered_at: %DateTime{}}] = Repo.all(OutboxEntry)
+    end
+  end
+
   describe "get_pending_by_token/1" do
     test "does not answer for an expired invitation", %{
       organization: organization,
