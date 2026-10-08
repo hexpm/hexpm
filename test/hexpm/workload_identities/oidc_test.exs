@@ -122,6 +122,15 @@ defmodule Hexpm.WorkloadIdentities.OIDCTest do
     assert {:error, :jti_missing} = OIDC.verify(token, @issuer)
   end
 
+  test "rejects claims Postgres can't store" do
+    token =
+      WorkloadIdentityHelpers.sign_oidc_claims(
+        Map.put(WorkloadIdentityHelpers.github_claims(), "environment", "release\0")
+      )
+
+    assert {:error, :invalid_token} = OIDC.verify(token, @issuer)
+  end
+
   test "refetches the JWKS when the token is signed by a rotated key" do
     assert {:ok, _} =
              OIDC.verify(

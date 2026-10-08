@@ -40,8 +40,9 @@ defmodule Hexpm.WorkloadIdentities.OIDC do
 
   Signature, `iss`, `aud`, `exp`, and `nbf` validation is delegated to
   `Oidcc.Token.validate_jwt/3`. This module rejects `none` and symmetric
-  algorithms before handing the token over, and checks `jti` and an upper bound
-  on `iat` afterwards, neither of which the generic JWT validation covers.
+  algorithms before handing the token over, and afterwards checks `jti`, an
+  upper bound on `iat`, and that the claims hold no text Postgres can't store,
+  none of which the generic JWT validation covers.
   """
   def verify(token, issuer) when is_binary(token) and is_binary(issuer) do
     with {:ok, header} <- peek_header(token),
@@ -241,6 +242,9 @@ defmodule Hexpm.WorkloadIdentities.OIDC do
 
       not is_binary(claims["jti"]) or claims["jti"] == "" ->
         {:error, :jti_missing}
+
+      not Hexpm.Utils.storable_text?(claims) ->
+        {:error, :invalid_token}
 
       true ->
         :ok

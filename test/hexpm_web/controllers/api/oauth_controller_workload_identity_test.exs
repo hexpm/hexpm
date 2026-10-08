@@ -239,6 +239,23 @@ defmodule HexpmWeb.API.OAuthControllerWorkloadIdentityTest do
     assert body["error_description"] =~ "pull_request_target"
   end
 
+  test "rejects a token whose claims Postgres can't store", %{package: package} do
+    for claims <- [
+          Map.put(WorkloadIdentityHelpers.github_claims(), "environment", "release\0"),
+          Map.put(WorkloadIdentityHelpers.github_claims(), "jti", "jti\0")
+        ] do
+      oidc = WorkloadIdentityHelpers.sign_oidc_claims(claims)
+
+      conn =
+        build_conn()
+        |> post("/api/oauth/token", mint_params(oidc, "package:hexpm/#{package.name}"))
+
+      assert json_response(conn, 400)["error"] == "invalid_grant"
+    end
+
+    refute Repo.exists?(Hexpm.OAuth.Token)
+  end
+
   test "rejects non-matching workload identity", %{package: package} do
     oidc =
       WorkloadIdentityHelpers.sign_oidc_claims(
