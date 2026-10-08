@@ -311,6 +311,61 @@ defmodule HexpmWeb.SSOControllerTest do
     end
   end
 
+  # Linking binds whoever authenticated at the provider to the signed-in account
+  # and can make it a member, so a stolen cookie outside the sudo window must not
+  # be enough to confirm one.
+  describe "link consent takes step-up re-authentication" do
+    setup context do
+      %{conn: conn, state: state} = begin_login(context)
+      conn = complete_callback(conn, state)
+      lapsed = NaiveDateTime.add(NaiveDateTime.utc_now(), -2 * 60 * 60, :second)
+
+      %{conn: conn, lapsed: lapsed}
+    end
+
+    test "the consent page sends a lapsed session to sudo and keeps the request", context do
+      conn =
+        context.conn
+        |> recycle()
+        |> test_login(context.member, sudo_at: context.lapsed)
+        |> get("/sso/link")
+
+      assert redirected_to(conn) == "/sudo"
+      assert get_session(conn, "sudo_return_to") == "/sso/link"
+      assert %{"transaction_id" => _id, "token" => _token} = get_session(conn, "pending_sso_link")
+    end
+
+    test "consenting from a lapsed session links nothing", context do
+      conn =
+        context.conn
+        |> recycle()
+        |> test_login(context.member, sudo_at: context.lapsed)
+        |> post("/sso/link")
+
+      assert redirected_to(conn) == "/sudo"
+      refute Repo.exists?(Identity)
+      refute Repo.exists?(OrgSession)
+    end
+
+    test "the consent form still submits after the sudo window lapses", context do
+      conn = context.conn |> recycle() |> test_login(context.member) |> get("/sso/link")
+
+      [token] =
+        Regex.run(~r/name="_sudo_token" value="([^"]+)"/, html_response(conn, 200),
+          capture: :all_but_first
+        )
+
+      conn =
+        conn
+        |> recycle()
+        |> test_login(context.member, sudo_at: context.lapsed)
+        |> post("/sso/link", %{"_sudo_token" => token})
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{context.organization.name}"
+      assert Repo.one!(Identity).user_id == context.member.id
+    end
+  end
+
   describe "callback outcome: linked subject owned by the signed-in account" do
     setup context do
       identity =

@@ -135,7 +135,7 @@ config :hexpm, HexpmWeb.Endpoint,
   root: Path.dirname(__DIR__),
   render_errors: [
     view: HexpmWeb.ErrorView,
-    accepts: ~w(html json elixir erlang),
+    accepts: ~w(html json elixir erlang scim),
     root_layout: {HexpmWeb.LayoutView, :root},
     layout: {HexpmWeb.LayoutView, :app}
   ],

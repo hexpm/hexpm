@@ -29,7 +29,8 @@ defmodule Hexpm.OAuth.AuthorizationCodes do
       client_id: client_id,
       code_challenge: Keyword.fetch!(opts, :code_challenge),
       code_challenge_method: Keyword.get(opts, :code_challenge_method, "S256"),
-      user_session_id: Keyword.get(opts, :user_session_id)
+      user_session_id: Keyword.get(opts, :user_session_id),
+      organization_ids: Keyword.get(opts, :organization_ids, [])
     }
 
     AuthorizationCode.build(attrs)

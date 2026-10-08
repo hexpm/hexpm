@@ -15,16 +15,6 @@ defmodule HexpmWeb.Plugs do
     read_timeout: 10_000
   ]
 
-  def validate_url(conn, _opts) do
-    if String.contains?(conn.request_path <> conn.query_string, "%00") do
-      conn
-      |> ControllerHelpers.render_error(400)
-      |> halt()
-    else
-      conn
-    end
-  end
-
   def read_body_to_file(conn) do
     {:ok, path} = Plug.Upload.random_file("upload")
 

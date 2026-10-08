@@ -13,27 +13,32 @@ defmodule HexpmWeb.OAuthController do
   plug :require_sudo_to_grant_organization_access
 
   defp require_sudo_to_grant_organization_access(conn, _opts) do
-    if grants_organization_access?(conn) do
+    organization_ids = granted_organization_ids(conn)
+    conn = assign(conn, :granted_organization_ids, organization_ids)
+
+    if organization_ids != [] do
       HexpmWeb.Plugs.Sudo.call(conn, [])
     else
       conn
     end
   end
 
-  defp grants_organization_access?(%{assigns: %{current_user: %User{} = user}} = conn) do
-    HexpmWeb.SSOEnforcement.granted_organizations(conn, user) != []
+  defp granted_organization_ids(%{assigns: %{current_user: %User{} = user}} = conn) do
+    HexpmWeb.SSOEnforcement.granted_organizations(conn, user)
   end
 
-  defp grants_organization_access?(_conn), do: false
+  defp granted_organization_ids(_conn), do: []
 
-  # The code carries the browser session only so the exchange can copy the
+  # The code carries the browser session so the exchange can copy the
   # organization access that session is holding, and that copy is what the sudo
-  # gate above is for. A request the gate did not apply to had no access to
-  # copy, so binding it would hand over whatever the browser gained afterwards,
-  # under an approval nobody re-authenticated for.
-  defp organization_access_session_id(conn) do
-    if grants_organization_access?(conn) do
-      conn.assigns.current_session && conn.assigns.current_session.id
+  # gate above is for. It also names the organizations, because the exchange is
+  # a later request and the browser may have authenticated for more by then;
+  # those were never part of this approval. A request the gate did not apply to
+  # had no access to copy and binds nothing.
+  defp organization_access(conn) do
+    case conn.assigns.granted_organization_ids do
+      [] -> [user_session_id: nil, organization_ids: []]
+      ids -> [user_session_id: conn.assigns.current_session.id, organization_ids: ids]
     end
   end
 
@@ -133,9 +138,10 @@ defmodule HexpmWeb.OAuthController do
              client.client_id,
              redirect_uri,
              selected_scopes,
-             code_challenge: params["code_challenge"],
-             code_challenge_method: params["code_challenge_method"],
-             user_session_id: organization_access_session_id(conn)
+             [
+               code_challenge: params["code_challenge"],
+               code_challenge_method: params["code_challenge_method"]
+             ] ++ organization_access(conn)
            ) do
         {:ok, auth_code} ->
           success_params = %{

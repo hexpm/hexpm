@@ -29,6 +29,7 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
   @inviter_period_seconds 60 * 60
   @provisioning_limit 500
   @provisioning_period_seconds 24 * 60 * 60
+  @mail_category "organization.invitation"
 
   def all_pending(organization) do
     Repo.all(
@@ -191,11 +192,19 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
     |> result()
   end
 
+  # The mail is cancelled with the invitation, because a revoke can land before
+  # the outbox delivers it, as when provisioning renames or deactivates someone
+  # in the request that invited them. Mail already handed to the provider stays
+  # sent.
   def revoke(organization, invitation, audit: audit_data) do
     Multi.new()
     |> Multi.update(
       :invitation,
       OrganizationInvitation.revoke_changeset(invitation, DateTime.utc_now())
+    )
+    |> Outbox.cancel(:email,
+      group_key: mail_group_key(invitation),
+      categories: [@mail_category]
     )
     |> audit(audit_data, "organization.invitation.revoke", &{organization, &1.invitation})
     |> Repo.transaction()
@@ -288,14 +297,16 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
       invitation
       |> Emails.organization_invitation()
       |> Outbox.enqueue!(
-        category: "organization.invitation",
-        group_key: "organization-invitation:#{invitation.id}",
+        category: @mail_category,
+        group_key: mail_group_key(invitation),
         scope_key: "organization:#{organization.id}"
       )
 
       {:ok, invitation}
     end)
   end
+
+  defp mail_group_key(invitation), do: "organization-invitation:#{invitation.id}"
 
   defp result({:ok, %{email: invitation}}), do: {:ok, invitation}
   defp result({:error, :invitation, changeset, _changes}), do: {:error, changeset}
