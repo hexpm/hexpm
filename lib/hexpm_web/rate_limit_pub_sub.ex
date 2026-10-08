@@ -76,6 +76,11 @@ defmodule HexpmWeb.RateLimitPubSub do
     {:noreply, []}
   end
 
+  def handle_info({:throttle, {:workload_identity_mint_ip, ip}, time}, []) do
+    Attack.workload_identity_mint_ip_throttle(ip, time: time)
+    {:noreply, []}
+  end
+
   def handle_info({:throttle, {:workload_identity_lookup, user_id}, time}, []) do
     Attack.workload_identity_lookup_throttle(user_id, time: time)
     {:noreply, []}

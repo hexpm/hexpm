@@ -233,18 +233,46 @@ defmodule HexpmWeb.Plugs.AttackTest do
                })
     end
 
-    test "doesn't apply the ip limit to workload identity mints" do
-      conn =
-        conn(:post, "/api/oauth/token", %{
-          "grant_type" => "urn:ietf:params:oauth:grant-type:jwt-bearer"
-        })
-        |> Map.put(:remote_ip, {3, 3, 3, 3})
-        |> assign(:current_user, nil)
-        |> assign(:current_organization, nil)
-        |> Hello.call(:index)
+    test "gives workload identity mints their own address limit" do
+      align_to_throttle_bucket()
 
+      conn = request_workload_identity_mint({3, 3, 3, 3})
       assert conn.status == 200
-      assert get_resp_header(conn, "x-ratelimit-remaining") == []
+      assert get_resp_header(conn, "x-ratelimit-limit") == ["1000"]
+      assert get_resp_header(conn, "x-ratelimit-remaining") == ["999"]
+
+      assert get_resp_header(request_ip({3, 3, 3, 3}), "x-ratelimit-remaining") == ["99"]
+    end
+
+    test "halts workload identity mints when their address limit is exceeded" do
+      align_to_throttle_bucket()
+      time = System.system_time(:millisecond)
+
+      for _ <- 1..1_000 do
+        Attack.workload_identity_mint_ip_throttle({6, 6, 6, 6}, time: time)
+      end
+
+      conn = request_workload_identity_mint({6, 6, 6, 6})
+      assert conn.status == 429
+
+      assert conn.resp_body ==
+               JSON.encode!(%{status: 429, message: "API rate limit exceeded for IP 6.6.6.6"})
+
+      assert request_workload_identity_mint({7, 7, 7, 7}).status == 200
+    end
+
+    test "broadcasts workload identity mint address limits" do
+      align_to_throttle_bucket()
+      time = System.system_time(:millisecond)
+      key = {:workload_identity_mint_ip, {9, 9, 9, 9}}
+      Phoenix.PubSub.broadcast!(Hexpm.PubSub, "ratelimit", {:throttle, key, time})
+      :sys.get_state(RateLimitPubSub)
+
+      assert {:allow, {:throttle, data}} =
+               Attack.workload_identity_mint_ip_throttle({9, 9, 9, 9}, time: time)
+
+      assert data[:limit] == 1_000
+      assert data[:remaining] == 998
     end
 
     test "halts requests when workload identity limit is exceeded" do
@@ -467,6 +495,16 @@ defmodule HexpmWeb.Plugs.AttackTest do
 
   defp request_ip(remote_ip) do
     conn(:get, "/api/")
+    |> Map.put(:remote_ip, remote_ip)
+    |> assign(:current_user, nil)
+    |> assign(:current_organization, nil)
+    |> Hello.call(:index)
+  end
+
+  defp request_workload_identity_mint(remote_ip) do
+    conn(:post, "/api/oauth/token", %{
+      "grant_type" => "urn:ietf:params:oauth:grant-type:jwt-bearer"
+    })
     |> Map.put(:remote_ip, remote_ip)
     |> assign(:current_user, nil)
     |> assign(:current_organization, nil)

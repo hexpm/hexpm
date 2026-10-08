@@ -319,9 +319,10 @@ defmodule HexpmWeb.API.OAuthController do
     end
   end
 
-  # Only failures on a verified token are limited. Anyone can send an
-  # unverified token from the addresses CI runners share, and rejecting one
-  # costs a signature check.
+  # Only failures on a verified token count toward a repository's limit. Anyone
+  # can send an unverified token from the addresses CI runners share, and
+  # rejecting one costs a signature check, so those only count toward the
+  # per-address limit in HexpmWeb.Plugs.Attack.
   defp check_mint_rate_limit(verified) do
     if Attack.workload_identity_mint_blocked?(WorkloadIdentities.rate_limit_key(verified)) do
       {:error, :slow_down, "Too many failed mint requests. Please try again later."}

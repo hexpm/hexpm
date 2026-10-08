@@ -63,6 +63,12 @@ defmodule HexpmWeb.Plugs.Attack do
     end
   end
 
+  rule "workload identity mint ip throttle", conn do
+    if workload_identity_mint?(conn) do
+      workload_identity_mint_ip_throttle(conn.remote_ip)
+    end
+  end
+
   rule "ip throttle", conn do
     if api?(conn) and not workload_identity_mint?(conn) and not oidc_audience?(conn) do
       ip_throttle(conn.remote_ip)
@@ -326,6 +332,23 @@ defmodule HexpmWeb.Plugs.Attack do
       storage: @storage,
       limit: 30,
       period: 15 * 60_000
+    )
+  end
+
+  # CI runners can share an address, so this sits far above what a pool of
+  # runners exchanges. It bounds what one address can send, including replays of
+  # a used OIDC token, which the per-repository limit doesn't count.
+  def workload_identity_mint_ip_throttle(ip, opts \\ []) do
+    key = {:workload_identity_mint_ip, ip}
+    time = opts[:time] || System.system_time(:millisecond)
+    unless opts[:time], do: RateLimitPubSub.broadcast(key, time)
+
+    timed_throttle(
+      key,
+      time: time,
+      storage: @storage,
+      limit: 1_000,
+      period: 60_000
     )
   end
 

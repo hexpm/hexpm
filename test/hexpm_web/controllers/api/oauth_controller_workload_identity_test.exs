@@ -177,6 +177,39 @@ defmodule HexpmWeb.API.OAuthControllerWorkloadIdentityTest do
       assert json_response(conn, 200)["access_token"]
     end
 
+    test "limits exchanges per address, replays included", %{package: package} do
+      scope = "package:hexpm/#{package.name}"
+      oidc = WorkloadIdentityHelpers.sign_oidc_claims(WorkloadIdentityHelpers.github_claims())
+
+      exchange = fn remote_ip, assertion ->
+        build_conn()
+        |> Map.put(:remote_ip, remote_ip)
+        |> post("/api/oauth/token", mint_params(assertion, scope))
+      end
+
+      align_to_throttle_bucket()
+
+      conn = exchange.({10, 0, 0, 1}, oidc)
+      assert json_response(conn, 200)["access_token"]
+      assert get_resp_header(conn, "x-ratelimit-remaining") == ["999"]
+
+      conn = exchange.({10, 0, 0, 1}, oidc)
+      assert json_response(conn, 400)["error_description"] =~ "already been used"
+      assert get_resp_header(conn, "x-ratelimit-remaining") == ["998"]
+
+      time = System.system_time(:millisecond)
+
+      for _ <- 1..998 do
+        HexpmWeb.Plugs.Attack.workload_identity_mint_ip_throttle({10, 0, 0, 1}, time: time)
+      end
+
+      assert json_response(exchange.({10, 0, 0, 1}, oidc), 429)["message"] ==
+               "API rate limit exceeded for IP 10.0.0.1"
+
+      fresh = WorkloadIdentityHelpers.sign_oidc_claims(WorkloadIdentityHelpers.github_claims())
+      assert json_response(exchange.({10, 0, 0, 2}, fresh), 200)["access_token"]
+    end
+
     test "successful mints do not count", %{package: package} do
       scope = "package:hexpm/#{package.name}"
 
