@@ -450,6 +450,41 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       refute Hexpm.Repo.get_by(Package, name: metadata["name"])
     end
 
+    test "refuses metadata text Postgres can't store", %{user: user} do
+      metadata = %{
+        "name" => Fake.sequence(:package),
+        "version" => "1.0.0",
+        "app" => "app",
+        "description" => "description",
+        "licenses" => ["Apache-2.0"],
+        "build_tools" => ["mix"],
+        "files" => ["mix.exs"],
+        "requirements" => %{}
+      }
+
+      invalid = [
+        {"description", "a\0b"},
+        {"description", <<"a", 255, "b">>},
+        {"links", %{"GitHub" => "https://github.com/a\0b"}},
+        {"licenses", ["MIT\0"]},
+        {"app", "a\0pp"},
+        {"requirements",
+         %{"decimal" => %{"app" => "a\0pp", "requirement" => "~> 2.0", "optional" => false}}}
+      ]
+
+      for {field, value} <- invalid do
+        conn =
+          build_conn()
+          |> put_req_header("content-type", "application/octet-stream")
+          |> put_req_header("authorization", key_for(user))
+          |> post("/api/publish", create_tar_with_raw_metadata(Map.put(metadata, field, value)))
+
+        assert json_response(conn, 422)["errors"] == %{
+                 "tar" => "metadata must be valid UTF-8 without NUL bytes"
+               }
+      end
+    end
+
     test "accepts release with internal symlink", %{user: user} do
       meta = %{name: Fake.sequence(:package), version: "1.0.0", description: "description"}
 
@@ -1052,7 +1087,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
                "package does not exist in repository \"hexpm\""
     end
 
-    for app <- ["app\n", "app ", "app\t", "a\u0000pp"] do
+    for app <- ["app\n", "app ", "app\t"] do
       test "rejects app name #{inspect(app)}", %{user: user} do
         meta = %{
           name: Fake.sequence(:package),
