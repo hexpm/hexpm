@@ -42,6 +42,8 @@ defmodule Hexpm.Accounts.SCIM.Resource do
     |> validate_required([:connection_id, :organization_id, :scim_id, :user_name])
     |> validate_length(:user_name, count: :bytes, max: 255)
     |> validate_length(:external_id, count: :bytes, max: 1_024)
+    # Postgres text cannot hold a NUL byte, and JSON can carry one.
+    |> validate_format(:external_id, ~r/\A[^\x00]*\z/)
     |> unique_constraint([:connection_id, :scim_id])
     |> unique_constraint([:connection_id, :user_name])
     |> unique_constraint([:connection_id, :user_id])
