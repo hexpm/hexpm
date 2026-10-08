@@ -524,6 +524,31 @@ defmodule Hexpm.Accounts.SCIMTest do
       assert Repo.aggregate(Resource, :count) == 1
     end
 
+    test "a handle materialized for a current member is audited as the provider's", context do
+      listed = insert(:user)
+      filtered = insert(:user)
+      insert(:organization_user, organization: context.organization, user: listed)
+      insert(:organization_user, organization: context.organization, user: filtered)
+
+      filtered_email = hd(filtered.emails).email
+      assert %{state: :member} = find_by_user_name(context.connection, filtered_email)
+      list_users(context.connection, 1, 100)
+
+      logs =
+        Repo.all(
+          from(log in Hexpm.Accounts.AuditLog, where: log.action == "sso.scim.resource.create")
+        )
+
+      assert Enum.all?(logs, &(&1.user_agent == "SCIM" and &1.remote_ip == "198.51.100.4"))
+
+      assert Enum.sort(Enum.map(logs, & &1.params["user_name"])) ==
+               Enum.sort([
+                 hd(context.admin.emails).email,
+                 hd(listed.emails).email,
+                 filtered_email
+               ])
+    end
+
     test "filtering by userName finds nothing for outsiders", context do
       outsider = insert(:user)
 
