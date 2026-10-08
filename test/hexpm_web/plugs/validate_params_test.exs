@@ -51,6 +51,15 @@ defmodule HexpmWeb.Plugs.ValidateParamsTest do
       assert_refused(fn -> get(build_conn(), "/packages?search=a%00b") end)
     end
 
+    test "invalid UTF-8 in the Host header" do
+      assert_refused(fn ->
+        post(%{build_conn() | host: <<"hex", 0xE9, ".pm">>}, "/api/oauth/device_authorization", %{
+          "client_id" => "client",
+          "scope" => "api"
+        })
+      end)
+    end
+
     test "routes that run no pipeline" do
       assert_refused(fn -> get(build_conn(), "/preview/a%00b/sitemap.xml") end)
 
