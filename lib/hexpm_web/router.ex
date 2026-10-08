@@ -64,7 +64,6 @@ defmodule HexpmWeb.Router do
     plug :disable_deactivated
     plug :validate_url
     plug HexpmWeb.Plugs.Attack
-    plug :fetch_body
     plug :default_repository
   end
 

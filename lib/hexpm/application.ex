@@ -17,6 +17,8 @@ defmodule Hexpm.Application do
 
     shutdown_on_eof()
 
+    Lumis.Languages.async_load(~w(erlang elixir))
+
     opts = [strategy: :one_for_one, name: Hexpm.Supervisor]
     Supervisor.start_link(children, opts)
   end
@@ -219,8 +221,7 @@ defmodule Hexpm.Application do
       goth_spec(),
       if(write_mode?, do: setup()),
       HexpmWeb.Telemetry,
-      metrics_server_spec(),
-      {Task, &HexpmWeb.SyntaxHighlight.warm/0}
+      metrics_server_spec()
     ]
     |> Enum.reject(&is_nil/1)
   end

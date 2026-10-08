@@ -69,7 +69,7 @@ defmodule Hexpm.Repository.Package do
     |> validate_required(:name)
     |> validate_length(:name, min: 2)
     |> validate_length(:name, count: :bytes, max: 255)
-    |> validate_format(:name, ~r"^[a-z][a-z0-9_]*$")
+    |> validate_format(:name, ~r"\A[a-z][a-z0-9_]*\z")
     |> validate_exclusion(:name, @reserved_names)
     |> cast_embed(:meta, with: &PackageMetadata.changeset(&1, &2, package), required: true)
     |> put_first_owner(user, repository)

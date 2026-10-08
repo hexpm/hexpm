@@ -25,19 +25,6 @@ defmodule HexpmWeb.Plugs do
     end
   end
 
-  def fetch_body(conn, _opts) do
-    # Skip body reading if client sent Expect: 100-continue
-    # Body will be read after validation in handle_100_continue
-    case get_req_header(conn, "expect") do
-      ["100-continue"] ->
-        conn
-
-      _ ->
-        {conn, path} = read_body_to_file(conn)
-        put_in(conn.params["body"], path)
-    end
-  end
-
   def read_body_to_file(conn) do
     {:ok, path} = Plug.Upload.random_file("upload")
 

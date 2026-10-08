@@ -30,7 +30,7 @@ defmodule Hexpm.Accounts.Organization do
     has_many :sso_identities, Hexpm.Accounts.SSO.Identity
   end
 
-  @name_regex ~r"^[a-z0-9_]+$"
+  @name_regex ~r"\A[a-z0-9_]+\z"
   @roles ~w(admin write read)
 
   @reserved_names Enum.uniq(Hexpm.Repository.Package.reserved_names() ++ ~w(phoenix acme))

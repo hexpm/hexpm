@@ -537,42 +537,44 @@ defmodule HexpmWeb.ControllerHelpers do
   defp scrub?(""), do: true
   defp scrub?(_), do: false
 
-  # HTTP 100 Continue handling for large uploads
-  def handle_100_continue(conn, opts) do
-    # If authorization failed (conn halted), don't process 100 Continue
-    if conn.halted do
-      conn
-    else
-      case get_req_header(conn, "expect") do
-        ["100-continue"] ->
-          # Validate Content-Length header is present
-          case get_req_header(conn, "content-length") do
-            [] ->
-              conn
-              |> put_status(411)
-              |> put_view(HexpmWeb.ErrorView)
-              |> render(:"411")
-              |> halt()
+  @doc """
+  Reads an upload body to a file and puts its path in `conn.params["body"]`.
 
-            [content_length] ->
-              # Check size limit if max_size option provided
-              case check_max_size(content_length, Keyword.get(opts, :max_size)) do
-                :ok ->
-                  # Authorization already passed, send 100 Continue and read body
-                  conn = inform(conn, :continue, [])
-                  {conn, path} = HexpmWeb.Plugs.read_body_to_file(conn)
-                  put_in(conn.params["body"], path)
+  Plug it after the action's authorization so a refused request is answered
+  before its body is read. A client that sends `Expect: 100-continue` gets the
+  100 response only once the request has got this far.
+  """
+  def fetch_body(conn, opts) do
+    case get_req_header(conn, "expect") do
+      ["100-continue"] ->
+        case get_req_header(conn, "content-length") do
+          [] ->
+            conn
+            |> put_status(411)
+            |> put_view(HexpmWeb.ErrorView)
+            |> render(:"411")
+            |> halt()
 
-                {:error, :too_large} ->
-                  validation_failed(conn, %{tar: "too big"})
-              end
-          end
+          [content_length] ->
+            case check_max_size(content_length, Keyword.get(opts, :max_size)) do
+              :ok ->
+                conn
+                |> inform(:continue, [])
+                |> read_body_param()
 
-        _ ->
-          # No Expect header, continue normally
-          conn
-      end
+              {:error, :too_large} ->
+                validation_failed(conn, %{tar: "too big"})
+            end
+        end
+
+      _ ->
+        read_body_param(conn)
     end
+  end
+
+  defp read_body_param(conn) do
+    {conn, path} = HexpmWeb.Plugs.read_body_to_file(conn)
+    put_in(conn.params["body"], path)
   end
 
   defp check_max_size(_content_length, nil), do: :ok

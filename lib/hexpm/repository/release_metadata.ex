@@ -3,6 +3,8 @@ defmodule Hexpm.Repository.ReleaseMetadata do
 
   @derive {HexpmWeb.Stale, last_modified: nil}
 
+  @app_format ~r/\A[^[:space:][:cntrl:]]+\z/
+
   embedded_schema do
     field :app, :string
     field :build_tools, {:array, :string}
@@ -14,6 +16,7 @@ defmodule Hexpm.Repository.ReleaseMetadata do
     cast(meta, params, ~w(app build_tools elixir files)a)
     |> validate_required(~w(app build_tools files)a)
     |> validate_length(:app, count: :codepoints, max: 255)
+    |> validate_format(:app, @app_format)
     |> validate_length(:build_tools, max: 16)
     |> validate_each_length(:build_tools, count: :codepoints, max: 255)
     |> validate_length(:elixir, count: :bytes, max: 255)

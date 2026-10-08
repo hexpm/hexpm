@@ -28,6 +28,50 @@ defmodule Hexpm.Accounts.UserTest do
 
       changeset = User.build(%{username: "{€%}"})
       assert errors_on(changeset)[:username] == "has invalid format"
+
+      for username <- ["username\n", "username ", "username\t"] do
+        changeset = User.build(%{username: username})
+        assert errors_on(changeset)[:username] == "has invalid format"
+      end
+    end
+
+    test "validates email format" do
+      valid = [
+        "mail@example.com",
+        "first.last+tag@sub.example.co.uk",
+        ~s("quoted"@example.com),
+        "mail@localhost",
+        "mail@[192.0.2.1]",
+        "üser@bücher.example"
+      ]
+
+      for email <- valid do
+        changeset =
+          Hexpm.Accounts.Email.changeset(%Hexpm.Accounts.Email{}, :create, %{email: email}, true)
+
+        refute errors_on(changeset)[:email], "expected #{inspect(email)} to be valid"
+      end
+
+      invalid = [
+        "mailexample.com",
+        "@example.com",
+        "mail@",
+        "mail@@example.com",
+        "mail@other@example.com",
+        "mail@example.com\n",
+        " mail@example.com",
+        "mail @example.com",
+        "mail@exa\tmple.com",
+        "mail@exa\0mple.com"
+      ]
+
+      for email <- invalid do
+        changeset =
+          Hexpm.Accounts.Email.changeset(%Hexpm.Accounts.Email{}, :create, %{email: email}, true)
+
+        assert errors_on(changeset)[:email] == "has invalid format",
+               "expected #{inspect(email)} to be invalid"
+      end
     end
 
     test "validates password" do
