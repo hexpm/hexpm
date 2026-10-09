@@ -118,15 +118,11 @@ defmodule Hexpm.OAuth.Tokens do
   # literal `repositories` scope has been expanded into names, minus the ones
   # enforcement wants a live organization access session for. An organization
   # subject reaches only itself.
-  #
-  # `sso_session_id` is for the authorization code grant, where the session this
-  # token belongs to does not exist yet and the browser that consented holds the
-  # organization access it is about to inherit.
   defp authorized_scopes(%User{} = user, scopes, opts) do
     Permissions.expand_and_filter_organization_scopes(
       user,
       scopes,
-      Keyword.get(opts, :sso_session_id) || Keyword.get(opts, :user_session_id),
+      Keyword.get(opts, :user_session_id),
       Keyword.get(opts, :credential)
     )
   end
@@ -295,15 +291,8 @@ defmodule Hexpm.OAuth.Tokens do
       DateTime.add(DateTime.utc_now(), UserSessions.default_session_expires_in(), :second)
 
     browser_session_id = Keyword.get(opts, :browser_session_id)
-
-    # Pre-compute JWT outside the transaction (CPU-intensive ES256 signing)
-    token_opts =
-      opts
-      |> Keyword.put(:refresh_token_expires_at, session_expires_at)
-      |> Keyword.put(:sso_session_id, browser_session_id)
-
-    token_changeset =
-      create_for_user(user, client_id, scopes, grant_type, grant_reference, token_opts)
+    organization_ids = Keyword.get(opts, :organization_ids, [])
+    token_opts = Keyword.put(opts, :refresh_token_expires_at, session_expires_at)
 
     # Build flat Multi (no nested transactions, last_use folded into INSERT)
     Ecto.Multi.new()
@@ -320,11 +309,18 @@ defmodule Hexpm.OAuth.Tokens do
       )
     )
     |> Ecto.Multi.run(:organization_sso_sessions, fn _repo, %{session: session} ->
-      {:ok, Hexpm.Accounts.SSO.grant_org_sessions!(browser_session_id, session.id, user.id)}
+      {:ok,
+       Hexpm.Accounts.SSO.grant_org_sessions!(browser_session_id, session.id, user.id,
+         organization_ids: organization_ids
+       )}
     end)
+    # After the copy, because minting the scopes reads the organization access
+    # the new session now holds.
     |> Ecto.Multi.run(:token, fn _repo, %{session: session} ->
-      token_changeset
-      |> Ecto.Changeset.put_change(:user_session_id, session.id)
+      token_opts = Keyword.put(token_opts, :user_session_id, session.id)
+
+      user
+      |> create_for_user(client_id, scopes, grant_type, grant_reference, token_opts)
       |> Repo.insert()
     end)
     |> Repo.transaction()

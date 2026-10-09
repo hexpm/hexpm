@@ -10,7 +10,10 @@ defmodule HexpmWeb.Endpoint do
     store: :cookie,
     serializer: HexpmWeb.Session.JSON,
     key: "_hexpm_key",
-    max_age: 60 * 60 * 24 * 30
+    max_age: 60 * 60 * 24 * 30,
+    # Where force_ssl redirects plain HTTP, browsers only send the cookie over
+    # HTTPS.
+    secure: Application.compile_env(:hexpm, [__MODULE__, :force_ssl]) != nil
   ]
 
   # Serve at "/" the static files from "priv/static" directory.
@@ -65,6 +68,8 @@ defmodule HexpmWeb.Endpoint do
     pass: ["*/*"],
     json_decoder: JSON
 
+  plug HexpmWeb.Plugs.ValidateParams
+
   plug Sentry.PlugContext,
     body_scrubber: {HexpmWeb.SentryScrubber, :scrub_body},
     header_scrubber: {HexpmWeb.SentryScrubber, :scrub_headers},
@@ -75,10 +80,6 @@ defmodule HexpmWeb.Endpoint do
   plug HexpmWeb.Plugs.Vary, ["accept-encoding"]
 
   plug Plug.Session, @session_options
-
-  if Mix.env() == :prod do
-    plug Plug.SSL, rewrite_on: [:x_forwarded_proto]
-  end
 
   plug HexpmWeb.Plugs.CanonicalHost
 

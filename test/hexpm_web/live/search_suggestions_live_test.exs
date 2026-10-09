@@ -35,6 +35,19 @@ defmodule HexpmWeb.SearchSuggestionsLiveTest do
       assert html =~ ~s(role="listbox")
     end
 
+    test "drops a term holding a NUL byte instead of querying with it", %{conn: conn} do
+      insert(:package, name: "phoenix_live_view")
+
+      {:ok, view, _html} =
+        live_isolated(conn, HexpmWeb.SearchSuggestionsLive, session: %{"variant" => "home"})
+
+      html =
+        view |> form("#search-suggestions-form", %{"search" => "phoe\0nix"}) |> render_change()
+
+      refute html =~ "phoenix_live_view"
+      assert render(view) =~ ~s(id="home-search-input")
+    end
+
     test "cuts the term to 100 bytes", %{conn: conn} do
       insert(:package, name: "phoenix_live_view")
 

@@ -42,8 +42,11 @@ ENV MIX_ENV=prod
 
 # install mix dependencies
 COPY mix.exs mix.lock ./
-COPY config config
 RUN mix deps.get
+# The config the dependencies compile with. runtime.exs is only read by the
+# release, so it's copied in right before it, and a change to it doesn't
+# recompile the dependencies.
+COPY config/config.exs config/prod.exs config/
 # Compiling dependencies across multiple OS processes
 # https://mix.hexdocs.pm/Mix.Tasks.Deps.Compile.html#module-compiling-dependencies-across-multiple-os-processes
 RUN <<EOF
@@ -71,6 +74,7 @@ ARG GEOIP_MONTH
 RUN mix download_geoip${GEOIP_MONTH:+ --month ${GEOIP_MONTH}}
 
 # build release
+COPY config/runtime.exs config/
 COPY rel rel
 RUN mix do sentry.package_source_code + release
 
@@ -82,11 +86,15 @@ RUN apt update && \
     apt install --no-install-recommends -y bash openssl ca-certificates git && \
     apt clean -y && rm -rf /var/lib/apt/lists/*
 
-RUN mkdir /app
+# The release creates /app/tmp when it starts and writes its runtime config
+# there, so /app is nobody's.
+RUN mkdir /app && chown nobody:nogroup /app
 WORKDIR /app
 
-COPY --from=build /app/_build/prod/rel/hexpm ./
-RUN chown -R nobody: /app
+# A --link copy doesn't depend on the layers before it, so a build that has
+# them in its cache doesn't have to download them. --link can't look up user
+# names, so the owner is nobody:nogroup by ID.
+COPY --link --from=build --chown=65534:65534 /app/_build/prod/rel/hexpm ./
 USER nobody
 
 ENV HOME=/app

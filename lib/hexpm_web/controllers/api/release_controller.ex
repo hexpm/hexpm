@@ -2,6 +2,7 @@ defmodule HexpmWeb.API.ReleaseController do
   use HexpmWeb, :controller
 
   @tarball_max_size 16 * 1024 * 1024
+  @metadata_string_max_size 255
 
   plug :maybe_fetch_release when action in [:show]
   plug :fetch_release when action in [:delete]
@@ -28,7 +29,11 @@ defmodule HexpmWeb.API.ReleaseController do
        ]
        when action in [:delete]
 
-  plug :handle_100_continue, [max_size: @tarball_max_size] when action in [:create, :publish]
+  # The package a publish names is in the tarball, so a caller with no
+  # credential is refused before the body is read and the package is
+  # authorized once the tarball is parsed.
+  plug :require_authentication when action in [:publish]
+  plug :fetch_body, [max_size: @tarball_max_size] when action in [:create, :publish]
   plug :parse_tarball when action in [:publish]
   plug :maybe_fetch_package when action in [:publish]
 
@@ -125,6 +130,15 @@ defmodule HexpmWeb.API.ReleaseController do
 
       {:error, _, changeset, _} ->
         validation_failed(conn, changeset)
+    end
+  end
+
+  defp require_authentication(conn, _opts) do
+    if conn.assigns.current_user || conn.assigns.current_organization ||
+         conn.assigns.trusted_publisher do
+      conn
+    else
+      AuthHelpers.error(conn, {:error, :missing})
     end
   end
 
@@ -246,11 +260,37 @@ defmodule HexpmWeb.API.ReleaseController do
   defp unpack_release_metadata(body_path, output) do
     case :hex_tarball.unpack({:file, String.to_charlist(body_path)}, output) do
       {:ok, %{inner_checksum: inner_checksum, outer_checksum: outer_checksum, metadata: metadata}} ->
-        {:ok, metadata, inner_checksum, outer_checksum}
+        with :ok <- check_metadata_string(metadata, "name"),
+             :ok <- check_metadata_string(metadata, "version"),
+             :ok <- check_metadata_text(metadata) do
+          {:ok, metadata, inner_checksum, outer_checksum}
+        end
 
       {:error, reason} ->
         {:error, List.to_string(:hex_tarball.format_error(reason))}
     end
+  end
+
+  # The name and version are used in queries and storage keys before the
+  # changesets validate them, so they are checked for type and size first.
+  # Valid ones are far shorter than the limit.
+  defp check_metadata_string(metadata, field) do
+    case metadata[field] do
+      value when is_binary(value) and byte_size(value) <= @metadata_string_max_size ->
+        :ok
+
+      _ ->
+        {:error,
+         "metadata #{field} must be a string of at most #{@metadata_string_max_size} bytes"}
+    end
+  end
+
+  # Metadata is stored as text and jsonb, which hold neither a NUL byte nor
+  # invalid UTF-8, and nothing upstream of the insert checks for them.
+  defp check_metadata_text(metadata) do
+    if Hexpm.Utils.storable_text?(metadata),
+      do: :ok,
+      else: {:error, "metadata must be valid UTF-8 without NUL bytes"}
   end
 
   defp publisher_for(conn) do

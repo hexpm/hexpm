@@ -143,6 +143,17 @@ defmodule HexpmWeb.API.DocsControllerTest do
 
       refute Hexpm.Repo.get_by!(assoc(package, :releases), version: "0.0.1").has_docs
     end
+
+    test "refuses an unauthorized caller before reading the body" do
+      package = insert(:package, package_owners: [build(:package_owner, user: insert(:user))])
+      insert(:release, package: package, version: "0.0.1")
+
+      conn = publish_docs(insert(:user), package, "0.0.1", [{~c"index.html", "package v0.0.1"}])
+
+      assert json_response(conn, 403)
+      refute Map.has_key?(conn.params, "body")
+      refute Hexpm.Repo.get_by!(assoc(package, :releases), version: "0.0.1").has_docs
+    end
   end
 
   describe "POST /api/repos/:repository/packages/:name/releases/:version/docs" do

@@ -27,7 +27,7 @@ defmodule Hexpm.Accounts.SSO.OIDC do
   """
   def valid_subject?(subject) when is_binary(subject) do
     subject != "" and byte_size(subject) <= 255 and
-      subject |> :binary.bin_to_list() |> Enum.all?(&(&1 <= 127))
+      subject |> :binary.bin_to_list() |> Enum.all?(&(&1 in 1..127))
   end
 
   def valid_subject?(_subject), do: false
@@ -39,7 +39,7 @@ defmodule Hexpm.Accounts.SSO.OIDC do
   def valid_provider_email?(nil), do: true
 
   def valid_provider_email?(email) when is_binary(email) do
-    byte_size(email) <= 255 and String.valid?(email)
+    byte_size(email) <= 255 and Hexpm.Utils.storable_text?(email)
   end
 
   def valid_provider_email?(_email), do: false

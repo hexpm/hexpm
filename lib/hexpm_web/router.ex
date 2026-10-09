@@ -14,7 +14,6 @@ defmodule HexpmWeb.Router do
 
     plug :put_secure_browser_headers
     plug :user_agent, required: false
-    plug :validate_url
     plug HexpmWeb.Plugs.Attack
 
     plug HexpmWeb.Plugs.ContentSecurityPolicy,
@@ -62,9 +61,7 @@ defmodule HexpmWeb.Router do
     plug :user_agent
     plug :authenticate
     plug :disable_deactivated
-    plug :validate_url
     plug HexpmWeb.Plugs.Attack
-    plug :fetch_body
     plug :default_repository
   end
 
@@ -76,7 +73,6 @@ defmodule HexpmWeb.Router do
     plug :user_agent
     plug :authenticate
     plug :disable_deactivated
-    plug :validate_url
     plug HexpmWeb.Plugs.Attack
     plug Corsica, origins: "*", allow_methods: ["HEAD", "GET"]
     plug :default_repository
@@ -85,7 +81,6 @@ defmodule HexpmWeb.Router do
   pipeline :varsel do
     plug :accepts, ["json"]
     plug :user_agent
-    plug :validate_url
     plug HexpmWeb.Plugs.Attack
     plug HexpmWeb.Plugs.VarselAuth
   end
@@ -95,7 +90,6 @@ defmodule HexpmWeb.Router do
     plug :fetch_session
     plug :put_secure_browser_headers
     plug :user_agent, required: false
-    plug :validate_url
     plug HexpmWeb.Plugs.Attack
     plug HexpmWeb.Plugs.ReadOnly
     plug :protect_from_forgery
@@ -116,7 +110,6 @@ defmodule HexpmWeb.Router do
   pipeline :scim do
     plug :accepts, ["scim", "json"]
     plug :user_agent, required: false
-    plug :validate_url
 
     # Authentication before the throttle, so the throttle keys on the
     # connection. The address is the provider's shared egress, one bucket for

@@ -33,8 +33,7 @@ defmodule HexpmWeb.Readme.Renderer do
         ext when ext in [".md", ".markdown"] ->
           MDEx.new(
             markdown: content,
-            extension: [description_lists: true, superscript: true, subscript: true],
-            syntax_highlight: nil
+            extension: [description_lists: true, superscript: true, subscript: true]
           )
           |> MDExGFM.attach()
           |> MDEx.Document.run()
@@ -60,15 +59,10 @@ defmodule HexpmWeb.Readme.Renderer do
     |> LazyHTML.Tree.to_html()
   end
 
-  # Code blocks are highlighted in lumis serve processes, like file previews,
-  # rather than in the VM.
   defp highlight_code_block(%MDEx.CodeBlock{info: info, literal: literal}, label, budget) do
     language = info |> String.split() |> List.first("plaintext")
-
-    %MDEx.HtmlBlock{
-      literal:
-        SyntaxHighlight.highlight(literal, language, "#{label} #{language}", budget: budget)
-    }
+    html = SyntaxHighlight.highlight(literal, language, "#{label} #{language}", budget: budget)
+    %MDEx.HtmlBlock{literal: html}
   end
 
   defp highlight_code_block(node, _label, _budget), do: node

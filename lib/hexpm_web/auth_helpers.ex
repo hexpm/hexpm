@@ -297,6 +297,7 @@ defmodule HexpmWeb.AuthHelpers do
 
   defp basic_auth(credentials, conn) do
     with {:ok, decoded} <- Base.decode64(credentials),
+         true <- Hexpm.Utils.storable_text?(decoded),
          [username_or_email, password] <- String.split(decoded, ":", parts: 2) do
       case Auth.password_auth(username_or_email, password) do
         {:ok, result} ->

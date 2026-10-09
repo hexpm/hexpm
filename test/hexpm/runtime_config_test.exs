@@ -19,7 +19,7 @@ defmodule Hexpm.RuntimeConfigTest do
     "HEXPM_FASTLY_KEY" => "fastly-key",
     "HEXPM_FASTLY_HEXREPO" => "fastly-hexrepo",
     "HEXPM_JWT_SIGNING_KEY" => "jwt-signing-key",
-    "HEXPM_BILLING_KEY" => "billing-key",
+    "HEXPM_BILLING_TOKEN_PATH" => "/var/run/secrets/billing/token",
     "HEXPM_BILLING_URL" => "https://billing.example.com",
     "HEXPM_HOST" => "hex.example.com",
     "HEXPM_DASHBOARD_USER" => "dashboard-user",

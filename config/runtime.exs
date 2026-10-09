@@ -117,7 +117,7 @@ if config_env() == :prod do
     fastly_key: System.fetch_env!("HEXPM_FASTLY_KEY"),
     fastly_hexrepo: System.fetch_env!("HEXPM_FASTLY_HEXREPO"),
     jwt_signing_key: System.fetch_env!("HEXPM_JWT_SIGNING_KEY"),
-    billing_key: System.fetch_env!("HEXPM_BILLING_KEY"),
+    billing_token_path: System.fetch_env!("HEXPM_BILLING_TOKEN_PATH"),
     billing_url: System.fetch_env!("HEXPM_BILLING_URL"),
     host: System.fetch_env!("HEXPM_HOST"),
     dashboard_user: System.fetch_env!("HEXPM_DASHBOARD_USER"),

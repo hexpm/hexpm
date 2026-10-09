@@ -128,7 +128,9 @@ File previews, diffs and README code blocks are highlighted by
 
 Parsers come from the `lumis_wasm_*` dependencies in `mix.exs`, and nothing is
 downloaded at runtime. A language without one is shown as plain text. Each
-process loads all of them before it takes a request.
+process loads all of them before it takes a request. A source that timed out or
+ended its process is shown as plain text for an hour without being highlighted
+again.
 
 | Variable                                  | Default                         |                                                                                         |
 | ----------------------------------------- | ------------------------------- | --------------------------------------------------------------------------------------- |
