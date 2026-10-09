@@ -56,6 +56,17 @@ config :hexpm,
 config :hexpm, HexpmWeb.Endpoint,
   http: [port: 5000],
   server: false,
+  # The prod options, except that a request without X-Forwarded-Proto skips
+  # the redirect, so only tests that send the header get redirected.
+  force_ssl: [
+    rewrite_on: [:x_forwarded_proto],
+    host: nil,
+    exclude: [
+      hosts: ["localhost", "127.0.0.1"],
+      paths: ["/status"],
+      conn: {Hexpm.TestHelpers, :without_forwarded_proto?, []}
+    ]
+  ],
   secret_key_base: "38K8orQfRHMC6ZWXIdgItQEiumeY+L2Ls0fvYfTMt4AoG5+DSFsLG6vMajNcd5Td",
   live_view: [signing_salt: "2UTSB72sZsF9KTlxefkIrFFPXTO7d+Ep"],
   cache_static_manifest_latest: %{
