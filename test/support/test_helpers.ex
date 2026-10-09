@@ -334,6 +334,11 @@ defmodule Hexpm.TestHelpers do
     end)
   end
 
+  # The test endpoint's force_ssl exclusion, see config/test.exs
+  def without_forwarded_proto?(conn) do
+    Plug.Conn.get_req_header(conn, "x-forwarded-proto") == []
+  end
+
   def key_for(user_or_organization, permissions \\ [%{domain: "api"}]) do
     {:ok, %{key: key}} =
       Hexpm.Accounts.Keys.create(
