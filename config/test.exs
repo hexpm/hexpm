@@ -81,6 +81,9 @@ config :hexpm, Oban, testing: :manual, queues: false, plugins: false
 
 config :hexpm, Hexpm.PromEx, disabled: true
 
+# async tests highlight at the same time; the cap is tested on its own table
+config :hexpm, syntax_highlight_max_concurrency: :infinity
+
 config :hexpm, Hexpm.RepoBase,
   username: "postgres",
   password: "postgres",
