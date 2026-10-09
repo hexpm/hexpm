@@ -4,7 +4,7 @@ defmodule HexpmWeb.API.OAuthController do
   import HexpmWeb.RequestHelpers, only: [build_usage_info: 1]
 
   alias Hexpm.Accounts.{Organization, User}
-  alias Hexpm.{SecurityLog, TrustedPublishers, UserSessions}
+  alias Hexpm.{SecurityLog, WorkloadIdentities, UserSessions}
   alias Hexpm.OAuth.{Clients, Token, Tokens, AuthorizationCodes, DeviceCodes}
   alias HexpmWeb.Plugs.Attack
 
@@ -289,12 +289,12 @@ defmodule HexpmWeb.API.OAuthController do
   end
 
   defp handle_jwt_bearer_grant(conn, params) do
-    if TrustedPublishers.enabled?() do
-      with {:ok, repository, package} <- parse_package_scope(params["scope"]),
+    if WorkloadIdentities.enabled?() do
+      with {:ok, scope} <- parse_workload_identity_scope(params["scope"]),
            {:ok, assertion} <- fetch_assertion(params),
            {:ok, verified} <- verify_assertion(assertion),
            :ok <- check_mint_rate_limit(verified),
-           {:ok, token} <- mint_trusted_publisher_token(verified, repository, package) do
+           {:ok, token} <- mint_workload_identity_token(verified, scope) do
         render(conn, :token, token: token)
       else
         {:error, error, description} ->
@@ -310,7 +310,7 @@ defmodule HexpmWeb.API.OAuthController do
   end
 
   defp verify_assertion(assertion) do
-    case TrustedPublishers.verify(assertion) do
+    case WorkloadIdentities.verify(assertion) do
       {:ok, verified} ->
         {:ok, verified}
 
@@ -320,54 +320,69 @@ defmodule HexpmWeb.API.OAuthController do
     end
   end
 
-  # Only failures on a verified token are limited. Anyone can send an
-  # unverified token from the addresses CI runners share, and rejecting one
-  # costs a signature check.
+  # Only failures on a verified token count toward a repository's limit. Anyone
+  # can send an unverified token from the addresses CI runners share, and
+  # rejecting one costs a signature check, so those only count toward the
+  # per-address limit in HexpmWeb.Plugs.Attack.
   defp check_mint_rate_limit(verified) do
-    if Attack.trusted_publisher_mint_blocked?(TrustedPublishers.rate_limit_key(verified)) do
+    if Attack.workload_identity_mint_blocked?(WorkloadIdentities.rate_limit_key(verified)) do
       {:error, :slow_down, "Too many failed mint requests. Please try again later."}
     else
       :ok
     end
   end
 
-  defp mint_trusted_publisher_token(verified, repository, package) do
-    case TrustedPublishers.mint(verified, repository: repository, package: package) do
+  defp mint_workload_identity_token(verified, scope) do
+    case WorkloadIdentities.mint(verified, scope) do
       {:ok, token} ->
         {:ok, token}
 
       {:error, reason} ->
         {error, description} = jwt_bearer_error(reason)
 
-        if error != :server_error do
-          Attack.trusted_publisher_mint_throttle(TrustedPublishers.rate_limit_key(verified))
+        if counts_toward_mint_limit?(reason, error) do
+          Attack.workload_identity_mint_throttle(WorkloadIdentities.rate_limit_key(verified))
         end
 
         {:error, error, description}
     end
   end
 
-  defp parse_package_scope(scope_string) when is_binary(scope_string) do
+  # A rejected event or a replayed token says nothing about the workload identities Hex
+  # has, and a pull request from a fork can produce either, so counting them
+  # would let outsiders block the repository's releases.
+  defp counts_toward_mint_limit?(reason, _error)
+       when reason in [:event_not_allowed, :token_replayed],
+       do: false
+
+  defp counts_toward_mint_limit?(_reason, error), do: error != :server_error
+
+  defp parse_workload_identity_scope(scope_string) when is_binary(scope_string) do
     case String.split(scope_string, " ", trim: true) do
-      [scope] -> parse_package_scope_value(scope)
-      _ -> {:error, :invalid_scope, "Expected exactly one package scope"}
+      [scope] -> parse_workload_identity_scope_value(scope)
+      _ -> {:error, :invalid_scope, "Expected exactly one package or repository scope"}
     end
   end
 
-  defp parse_package_scope(_), do: {:error, :invalid_scope, "Missing scope parameter"}
+  defp parse_workload_identity_scope(_), do: {:error, :invalid_scope, "Missing scope parameter"}
 
-  defp parse_package_scope_value("package:" <> resource) do
+  defp parse_workload_identity_scope_value("package:" <> resource) do
     case String.split(resource, "/", parts: 2) do
       [repository, package] when repository != "" and package != "" ->
-        {:ok, repository, package}
+        {:ok, repository: repository, package: package}
 
       _ ->
         {:error, :invalid_scope, "Expected a package scope in the form package:repository/name"}
     end
   end
 
-  defp parse_package_scope_value(_) do
-    {:error, :invalid_scope, "Expected a single package scope"}
+  defp parse_workload_identity_scope_value("repository:" <> repository)
+       when repository != "" do
+    {:ok, repository: repository}
+  end
+
+  defp parse_workload_identity_scope_value(_) do
+    {:error, :invalid_scope, "Expected a single package or repository scope"}
   end
 
   defp fetch_assertion(params) do
@@ -378,18 +393,25 @@ defmodule HexpmWeb.API.OAuthController do
   end
 
   defp jwt_bearer_error(:disabled),
-    do: {:unsupported_grant_type, "Trusted publishers are disabled"}
+    do: {:unsupported_grant_type, "Workload Identity is disabled"}
 
-  defp jwt_bearer_error(:package_not_found), do: {:access_denied, "No matching trusted publisher"}
+  defp jwt_bearer_error(reason)
+       when reason in [:repository_not_found, :package_not_found, :no_matching_identity],
+       do: {:access_denied, "No matching workload identity"}
 
-  defp jwt_bearer_error(:no_matching_publisher),
-    do: {:access_denied, "No matching trusted publisher"}
+  defp jwt_bearer_error(:billing_inactive),
+    do: {:access_denied, "The organization has no active billing subscription"}
+
+  defp jwt_bearer_error(:invalid_package_name),
+    do: {:invalid_scope, "The scope doesn't name a valid package"}
 
   defp jwt_bearer_error(:token_replayed), do: {:invalid_grant, "OIDC token has already been used"}
   defp jwt_bearer_error(:issuer_not_allowed), do: {:invalid_grant, "OIDC issuer is not allowed"}
 
   defp jwt_bearer_error(:event_not_allowed),
-    do: {:invalid_grant, "OIDC tokens from pull_request_target workflows are not accepted"}
+    do:
+      {:invalid_grant,
+       "OIDC tokens from pull_request_target and workflow_run workflows are not accepted"}
 
   defp jwt_bearer_error(reason)
        when reason in [
@@ -400,6 +422,7 @@ defmodule HexpmWeb.API.OAuthController do
               :token_expired,
               :token_not_yet_valid,
               :issued_at_in_future,
+              :lifetime_too_long,
               :issuer_mismatch,
               :jti_missing,
               :issuer_missing

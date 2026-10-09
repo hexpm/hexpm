@@ -17,7 +17,7 @@ defmodule Hexpm.Repository.Release do
 
     belongs_to :package, Package
     belongs_to(:publisher, User, on_replace: :nilify)
-    belongs_to :trusted_publisher, Hexpm.TrustedPublishers.TrustedPublisher
+    belongs_to :workload_identity, Hexpm.WorkloadIdentities.WorkloadIdentity
     has_many :requirements, Requirement, on_replace: :delete
     has_many :daily_downloads, Download
     has_one :downloads, ReleaseDownload
@@ -28,7 +28,7 @@ defmodule Hexpm.Repository.Release do
 
     embeds_one :meta, ReleaseMetadata, on_replace: :delete
     embeds_one :retirement, ReleaseRetirement, on_replace: :delete
-    embeds_one :oidc_claims, Hexpm.TrustedPublishers.ClaimsSnapshot, on_replace: :delete
+    embeds_one :oidc_claims, Hexpm.WorkloadIdentities.ClaimsSnapshot, on_replace: :delete
   end
 
   defp changeset(
@@ -40,7 +40,7 @@ defmodule Hexpm.Repository.Release do
          inner_checksum,
          outer_checksum,
          replace?,
-         trusted_publisher_context
+         workload_identity_context
        ) do
     changeset(
       release,
@@ -51,7 +51,7 @@ defmodule Hexpm.Repository.Release do
       inner_checksum,
       outer_checksum,
       replace?,
-      trusted_publisher_context
+      workload_identity_context
     )
     |> unique_constraint(
       :version,
@@ -69,7 +69,7 @@ defmodule Hexpm.Repository.Release do
          inner_checksum,
          outer_checksum,
          replace?,
-         trusted_publisher_context
+         workload_identity_context
        ) do
     cast(release, params, ~w(version)a)
     |> cast_embed(:meta, required: true)
@@ -78,7 +78,7 @@ defmodule Hexpm.Repository.Release do
     |> put_change(:inner_checksum, inner_checksum)
     |> put_change(:outer_checksum, outer_checksum)
     |> put_assoc(:publisher, publisher)
-    |> put_trusted_publisher(trusted_publisher_context)
+    |> put_workload_identity(workload_identity_context)
     |> Requirement.build_all(package)
   end
 
@@ -89,7 +89,7 @@ defmodule Hexpm.Repository.Release do
         inner_checksum,
         outer_checksum,
         replace? \\ true,
-        trusted_publisher_context \\ nil
+        workload_identity_context \\ nil
       ) do
     build_assoc(package, :releases)
     |> changeset(
@@ -100,7 +100,7 @@ defmodule Hexpm.Repository.Release do
       inner_checksum,
       outer_checksum,
       replace?,
-      trusted_publisher_context
+      workload_identity_context
     )
   end
 
@@ -111,7 +111,7 @@ defmodule Hexpm.Repository.Release do
         inner_checksum,
         outer_checksum,
         replace? \\ true,
-        trusted_publisher_context \\ nil
+        workload_identity_context \\ nil
       ) do
     changeset(
       release,
@@ -122,22 +122,22 @@ defmodule Hexpm.Repository.Release do
       inner_checksum,
       outer_checksum,
       replace?,
-      trusted_publisher_context
+      workload_identity_context
     )
   end
 
-  defp put_trusted_publisher(changeset, %{
-         trusted_publisher_id: trusted_publisher_id,
+  defp put_workload_identity(changeset, %{
+         workload_identity_id: workload_identity_id,
          oidc_claims: oidc_claims
        }) do
     changeset
-    |> put_change(:trusted_publisher_id, trusted_publisher_id)
+    |> put_change(:workload_identity_id, workload_identity_id)
     |> put_embed(:oidc_claims, oidc_claims)
   end
 
-  defp put_trusted_publisher(changeset, nil) do
+  defp put_workload_identity(changeset, nil) do
     changeset
-    |> put_change(:trusted_publisher_id, nil)
+    |> put_change(:workload_identity_id, nil)
     |> put_embed(:oidc_claims, nil)
   end
 

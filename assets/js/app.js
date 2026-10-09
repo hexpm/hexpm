@@ -18,7 +18,6 @@ import { SearchShortcut } from "./hooks/search_shortcut";
 import { SearchInputSync } from "./hooks/search_input_sync";
 import { ToggleGroup } from "./hooks/toggle_group";
 import { RuleToggle } from "./hooks/rule_toggle";
-import { ScrollActiveIntoView } from "./hooks/scroll_active_into_view";
 import { OverrideList } from "./hooks/override_list";
 import { PrivateRepoTabs } from "./hooks/private_repo_tabs";
 import { PolicyDirtyState } from "./hooks/policy_dirty_state";
@@ -48,7 +47,6 @@ let Hooks = {
   SearchInputSync,
   ToggleGroup,
   RuleToggle,
-  ScrollActiveIntoView,
   OverrideList,
   PrivateRepoTabs,
   PolicyDirtyState,

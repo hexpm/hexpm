@@ -8,7 +8,7 @@ defmodule HexpmWeb.API.OIDCControllerTest do
 
   test "GET /api/oidc/audience returns 404 when feature disabled" do
     previous = Application.get_env(:hexpm, :features)
-    Application.put_env(:hexpm, :features, trusted_publishers: false)
+    Application.put_env(:hexpm, :features, workload_identity: false)
     on_exit(fn -> Application.put_env(:hexpm, :features, previous) end)
 
     body =

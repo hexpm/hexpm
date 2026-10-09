@@ -1,0 +1,5 @@
+<%= OrganizationWorkloadIdentityAdd.message(@username, @organization) %>
+
+<%= Enum.join(OrganizationWorkloadIdentityDetails.lines(@role, @repository_owner, @repository, @workflow, @environment, @packages), "\n") %>
+
+<%= OrganizationWorkloadIdentityAdd.warning(@role, @organization, @packages) %>

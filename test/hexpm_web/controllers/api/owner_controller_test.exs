@@ -673,7 +673,7 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       assert user.id == user1.id
 
       recipients = Enum.sort([user1, user2])
-      assert_email_sent(Hexpm.Emails.owner_removed(package, recipients, user2))
+      assert_email_sent(Hexpm.Emails.owner_removed(package, recipients, user2, []))
 
       log = Hexpm.Repo.one!(AuditLog)
       assert log.user_id == user1.id

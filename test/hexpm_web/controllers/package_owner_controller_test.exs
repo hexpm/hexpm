@@ -27,7 +27,32 @@ defmodule HexpmWeb.PackageOwnerControllerTest do
         |> test_login(full_owner)
         |> get("/packages/#{package.name}/owners")
 
-      assert html_response(conn, 200) =~ "Current owners"
+      body = html_response(conn, 200)
+      assert body =~ "Current owners"
+      refute body =~ "workload identities, so anyone who can run"
+    end
+
+    test "the remove dialog says the package's workload identities stay", %{
+      full_owner: full_owner,
+      package: package
+    } do
+      insert(:workload_identity,
+        package: package,
+        repository: "acme/widget",
+        workflow: "release.yml"
+      )
+
+      body =
+        build_conn()
+        |> test_login(full_owner)
+        |> get("/packages/#{package.name}/owners")
+        |> html_response(200)
+
+      assert body =~
+               "Removing an owner doesn't change #{package.name}'s workload identities"
+
+      assert body =~ "acme/widget (release.yml)"
+      assert body =~ ~s(href="/packages/#{package.name}/workload-identities")
     end
 
     test "an organization admin who owns nothing directly sees the page" do

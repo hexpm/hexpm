@@ -249,7 +249,7 @@ defmodule HexpmWeb.Router do
     get "/docs/private", DocsController, :private
     get "/docs/dependency-policies", DocsController, :dependency_policies
     get "/docs/organization-sso", DocsController, :organization_sso
-    get "/docs/trusted-publishers", DocsController, :trusted_publishers
+    get "/docs/workload-identity", DocsController, :workload_identity
     get "/docs/organization-tfa", DocsController, :organization_tfa
     get "/docs/faq", DocsController, :faq
     get "/docs/mirrors", DocsController, :mirrors
@@ -294,9 +294,9 @@ defmodule HexpmWeb.Router do
     post "/packages/:name/owners", PackageOwnerController, :create
     put "/packages/:name/owners/:username", PackageOwnerController, :update
     delete "/packages/:name/owners/:username", PackageOwnerController, :delete
-    get "/packages/:name/trusted-publishers", PackageTrustedPublisherController, :index
-    post "/packages/:name/trusted-publishers", PackageTrustedPublisherController, :create
-    delete "/packages/:name/trusted-publishers/:id", PackageTrustedPublisherController, :delete
+    get "/packages/:name/workload-identities", PackageWorkloadIdentityController, :index
+    post "/packages/:name/workload-identities", PackageWorkloadIdentityController, :create
+    delete "/packages/:name/workload-identities/:id", PackageWorkloadIdentityController, :delete
     get "/packages/:name", PackageController, :show
     get "/packages/:name/audit-logs", PackageController, :audit_logs
     get "/packages/:name/dependents", PackageController, :dependents
@@ -320,16 +320,16 @@ defmodule HexpmWeb.Router do
     put "/packages/:repository/:name/owners/:username", PackageOwnerController, :update
     delete "/packages/:repository/:name/owners/:username", PackageOwnerController, :delete
 
-    get "/packages/:repository/:name/trusted-publishers",
-        PackageTrustedPublisherController,
+    get "/packages/:repository/:name/workload-identities",
+        PackageWorkloadIdentityController,
         :index
 
-    post "/packages/:repository/:name/trusted-publishers",
-         PackageTrustedPublisherController,
+    post "/packages/:repository/:name/workload-identities",
+         PackageWorkloadIdentityController,
          :create
 
-    delete "/packages/:repository/:name/trusted-publishers/:id",
-           PackageTrustedPublisherController,
+    delete "/packages/:repository/:name/workload-identities/:id",
+           PackageWorkloadIdentityController,
            :delete
 
     get "/packages/:repository/:name/audit-logs", PackageController, :audit_logs
@@ -449,6 +449,17 @@ defmodule HexpmWeb.Router do
     post "/orgs/:dashboard_org/change-plan", OrganizationController, :change_plan
     post "/orgs/:dashboard_org/keys", OrganizationController, :create_key
     delete "/orgs/:dashboard_org/keys", OrganizationController, :delete_key
+
+    get "/orgs/:dashboard_org/workload-identities", OrganizationController, :workload_identities
+
+    post "/orgs/:dashboard_org/workload-identities",
+         OrganizationController,
+         :create_workload_identity
+
+    delete "/orgs/:dashboard_org/workload-identities/:id",
+           OrganizationController,
+           :delete_workload_identity
+
     get "/orgs/:dashboard_org/invoices/:id", OrganizationController, :show_invoice
     post "/orgs/:dashboard_org/invoices/:id/pay", OrganizationController, :pay_invoice
     post "/orgs/:dashboard_org/profile", OrganizationController, :update_profile

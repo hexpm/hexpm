@@ -58,7 +58,7 @@ defmodule HexpmWeb.API.ReleaseView do
 
   defp oidc_claims(nil), do: nil
 
-  defp oidc_claims(%Hexpm.TrustedPublishers.ClaimsSnapshot{} = claims) do
+  defp oidc_claims(%Hexpm.WorkloadIdentities.ClaimsSnapshot{} = claims) do
     claims
     |> Map.from_struct()
     |> Map.delete(:id)

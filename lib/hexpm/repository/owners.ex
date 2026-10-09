@@ -2,6 +2,7 @@ defmodule Hexpm.Repository.Owners do
   use Hexpm.Context
 
   alias Hexpm.Accounts.OptionalEmails
+  alias Hexpm.WorkloadIdentities.WorkloadIdentity
 
   def all(package, preload \\ []) do
     from(owner in assoc(package, :package_owners),
@@ -16,6 +17,16 @@ defmodule Hexpm.Repository.Owners do
     if owner = Repo.get_by(PackageOwner, package_id: package.id, user_id: user.id) do
       %{owner | package: package, user: user}
     end
+  end
+
+  @doc """
+  The workload identities that keep publishing the package whoever its owners
+  are, shown to whoever removes an owner.
+  """
+  def workload_identities(package) do
+    if Hexpm.WorkloadIdentities.enabled?(),
+      do: Hexpm.WorkloadIdentities.list(package),
+      else: []
   end
 
   @doc """
@@ -75,6 +86,7 @@ defmodule Hexpm.Repository.Owners do
         PackageOwner.changeset(owner, params)
       end)
       |> remove_existing_owners(params)
+      |> remove_workload_identities(package, params, audit_data)
       |> audit(audit_data, add_owner_audit_log_action(params), fn %{owner: owner} ->
         {package, owner.level, user}
       end)
@@ -122,6 +134,31 @@ defmodule Hexpm.Repository.Owners do
   end
 
   defp remove_existing_owners(multi, _params) do
+    multi
+  end
+
+  # A transfer hands the package to new owners, so a workload identity the previous
+  # owners pointed at their own repositories stops publishing it.
+  defp remove_workload_identities(multi, package, %{"transfer" => true}, audit_data) do
+    multi
+    |> Multi.run(:workload_identities, fn repo, _changes ->
+      query = from(tp in WorkloadIdentity, where: tp.package_id == ^package.id)
+      workload_identities = query |> repo.all() |> Enum.map(&%{&1 | package: package})
+
+      workload_identities
+      |> Enum.map(& &1.id)
+      |> Hexpm.WorkloadIdentities.revoke_tokens_query()
+      |> repo.update_all([])
+
+      repo.delete_all(query)
+      {:ok, workload_identities}
+    end)
+    |> Multi.merge(fn %{workload_identities: workload_identities} ->
+      audit_many(Multi.new(), audit_data, "workload_identity.remove", workload_identities)
+    end)
+  end
+
+  defp remove_workload_identities(multi, _package, _params, _audit_data) do
     multi
   end
 
@@ -194,7 +231,7 @@ defmodule Hexpm.Repository.Owners do
           |> Enum.filter(&OptionalEmails.allowed?(&1, :owner_removed_from_package))
 
         if owners != [] do
-          Emails.owner_removed(package, owners, owner.user)
+          Emails.owner_removed(package, owners, owner.user, workload_identities(package))
           |> Mailer.deliver!()
         end
 

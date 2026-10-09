@@ -221,6 +221,31 @@ defmodule Hexpm.PurgeExpiredRecordsTest do
       refute Repo.get(Hexpm.OAuth.Token, revoked.id)
     end
 
+    test "keeps a revoked workload identity token until it expires" do
+      workload_identity = insert(:workload_identity)
+
+      token = fn jti, expires_at ->
+        Repo.insert!(%Hexpm.OAuth.Token{
+          jti: jti,
+          token_type: "bearer",
+          scopes: ["package:hexpm/#{workload_identity.package.name}"],
+          expires_at: expires_at,
+          revoked_at: truncated_seconds_ago(60),
+          grant_type: "workload_identity",
+          grant_reference: "oidc-#{jti}",
+          workload_identity_id: workload_identity.id
+        })
+      end
+
+      live = token.("live-jti", truncated_seconds_from_now(600))
+      expired = token.("expired-jti", truncated_seconds_ago(60))
+
+      PurgeExpiredRecords.run()
+
+      assert Repo.get(Hexpm.OAuth.Token, live.id)
+      refute Repo.get(Hexpm.OAuth.Token, expired.id)
+    end
+
     test "deletes revoked tokens whose refresh token has not expired" do
       user = insert(:user)
       client = insert(:oauth_client)
