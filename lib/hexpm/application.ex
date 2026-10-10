@@ -17,8 +17,6 @@ defmodule Hexpm.Application do
 
     shutdown_on_eof()
 
-    Lumis.Languages.async_load(~w(erlang elixir))
-
     opts = [strategy: :one_for_one, name: Hexpm.Supervisor]
     Supervisor.start_link(children, opts)
   end
@@ -260,6 +258,7 @@ defmodule Hexpm.Application do
        interval: 3_600_000,
        enabled: Application.fetch_env!(:hexpm, :cache_enabled)},
       load_caches(),
+      HexpmWeb.SyntaxHighlight.Pool,
       HexpmWeb.Endpoint
     ]
   end

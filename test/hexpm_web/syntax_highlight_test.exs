@@ -1,11 +1,11 @@
 defmodule HexpmWeb.SyntaxHighlightTest do
   use ExUnit.Case, async: true
 
-  alias HexpmWeb.SyntaxHighlight
+  import ExUnit.CaptureLog
+  import HexpmWeb.SyntaxHighlightHelpers
 
-  setup_all do
-    Lumis.Languages.load(["elixir"])
-  end
+  alias HexpmWeb.SyntaxHighlight
+  alias HexpmWeb.SyntaxHighlight.Pool
 
   test "highlights documents and line fragments with Lumis" do
     document = SyntaxHighlight.highlight("value = <script>", "lib/app.ex", "test document")
@@ -36,28 +36,7 @@ defmodule HexpmWeb.SyntaxHighlightTest do
              ~s(class="l-keyword")
   end
 
-  @tag :capture_log
-  test "answers the fallback after the task times out or fails" do
-    assert ["&lt;script&gt;"] =
-             SyntaxHighlight.run(
-               make_ref(),
-               fn -> Process.sleep(100) end,
-               fn -> ["&lt;script&gt;"] end,
-               "slow source",
-               timeout: 0
-             )
-
-    assert :fallback =
-             SyntaxHighlight.run(
-               make_ref(),
-               fn -> raise "invalid source" end,
-               fn -> :fallback end,
-               "invalid source"
-             )
-  end
-
-  @tag :capture_log
-  test "uses escaped fallback output after timeout or failure" do
+  test "returns plain text marked with the budget after the time limit" do
     lines = List.duplicate("value = <script>", 2_000)
     opts = [budget: [time_limit: 1, match_limit: 4096]]
 
@@ -69,9 +48,6 @@ defmodule HexpmWeb.SyntaxHighlightTest do
 
     assert SyntaxHighlight.highlight_lines(lines, "lib/app.ex", "slow", opts) |> Enum.uniq() ==
              ["value = &lt;script&gt;"]
-
-    error = %Lumis.RenderError{reason: :runtime, detail: "unavailable"}
-    assert :fallback = SyntaxHighlight.or_plain({:error, error}, "invalid", fn -> :fallback end)
   end
 
   test "preserves diff lines when the highlighting match limit is exhausted" do
@@ -108,120 +84,87 @@ defmodule HexpmWeb.SyntaxHighlightTest do
              ["", "x", "", ""]
   end
 
-  describe "limits" do
-    setup do
-      table = :"#{__MODULE__}.#{System.unique_integer([:positive])}"
-      start_supervised!({SyntaxHighlight, name: table})
-      %{table: table}
-    end
+  test "uses escaped plain source after a timeout, and skips that source afterwards" do
+    # A timeout closes a process, and the other tests would wait for the pool
+    # to load every language into its replacement.
+    pool = :"#{inspect(__MODULE__)} timeout"
+    table = :"#{inspect(__MODULE__)} skipped"
+    start_supervised!({Pool, name: pool, workers: 1})
+    start_supervised!({SyntaxHighlight, name: table})
+    assert await_idle(pool)
 
-    @tag :capture_log
-    test "skips a source that ran out of time", %{table: table} do
-      key = make_ref()
-      test = self()
+    opts = [name: pool, table: table]
+    source = slow_source(0.5) <> "<script>"
+    ref = :telemetry_test.attach_event_handlers(self(), [[:hexpm, :syntax_highlight, :stop]])
 
-      blocked = fn ->
-        send(test, {:blocked, self()})
+    log =
+      capture_log(fn ->
+        assert document =
+                 SyntaxHighlight.highlight(
+                   source,
+                   "lib/app.ex",
+                   "slow source",
+                   [timeout: 1] ++ opts
+                 )
 
-        receive do
-          :release -> :done
+        assert document =~ ~s(<span class="l-line" data-line="1">defmodule App do</span>)
+        assert document =~ "&lt;script&gt;"
+        refute document =~ "l-keyword"
+
+        assert await_idle(pool)
+        [os_pid] = idle_os_pids(pool)
+
+        assert SyntaxHighlight.highlight(source, "lib/app.ex", "slow source", opts) == document
+        assert_receive {[:hexpm, :syntax_highlight, :stop], ^ref, _, %{result: :skipped}}
+        assert idle_os_pids(pool) == [os_pid]
+
+        assert ["value = &lt;script&gt;"] =
+                 SyntaxHighlight.highlight_lines(
+                   ["value = <script>"],
+                   "lib/app.ex",
+                   "slow lines",
+                   [timeout: 0] ++ opts
+                 )
+      end)
+
+    assert log =~ "Failed to highlight slow source: :timeout"
+  end
+
+  test "uses the markup lumis writes for plain text when highlighting is unavailable" do
+    sources = [
+      "",
+      "\n",
+      "<b>",
+      "a & 'b' \"c\"",
+      "a\n<b>",
+      "a\n<b>\n",
+      "a\n\n",
+      "one\n\n<three>\n",
+      "a\r\n\r\nb",
+      "a\r\n"
+    ]
+
+    log =
+      capture_log(fn ->
+        for source <- sources do
+          assert SyntaxHighlight.highlight(source, "lib/app.ex", "source", name: :no_such_pool) ==
+                   Lumis.highlight!(source, formatter: {:html_linked, language: "plaintext"})
         end
-      end
+      end)
 
-      assert :fallback =
-               SyntaxHighlight.run(
-                 key,
-                 blocked,
-                 fn -> :fallback end,
-                 "slow source",
-                 table: table,
-                 timeout: 0
-               )
+    assert log =~ "Failed to highlight source: :unavailable"
+  end
 
-      assert_receive {:blocked, pid}
+  test "emits telemetry with the result" do
+    ref = :telemetry_test.attach_event_handlers(self(), [[:hexpm, :syntax_highlight, :stop]])
 
-      assert :fallback =
-               SyntaxHighlight.run(
-                 key,
-                 fn -> send(test, :ran) end,
-                 fn -> :fallback end,
-                 "slow source",
-                 table: table
-               )
+    SyntaxHighlight.highlight(":ok", "lib/app.ex", "source")
+    assert_receive {[:hexpm, :syntax_highlight, :stop], ^ref, %{duration: _}, %{result: :ok}}
 
-      refute_received :ran
+    capture_log(fn ->
+      SyntaxHighlight.highlight(":ok", "lib/app.ex", "source", name: :no_such_pool)
+    end)
 
-      assert :ran =
-               SyntaxHighlight.run(
-                 make_ref(),
-                 fn -> send(test, :ran) end,
-                 fn -> :fallback end,
-                 "other source",
-                 table: table
-               )
-
-      ref = Process.monitor(pid)
-      send(pid, :release)
-      assert_receive {:DOWN, ^ref, :process, ^pid, _reason}
-    end
-
-    @tag :capture_log
-    test "falls back to the markup Lumis renders for plain text", %{table: table} do
-      for source <- ["one\n\n<three>\n", "", "a\r\n\r\nb", ~s(q "x" & y's)] do
-        opts = [table: table, max_concurrency: 0]
-
-        assert SyntaxHighlight.highlight(source, "lib/app.ex", "test fallback", opts) ==
-                 Lumis.highlight!(source, formatter: {:html_linked, language: "plaintext"})
-      end
-    end
-
-    @tag :capture_log
-    test "falls back without starting work while every slot is taken", %{table: table} do
-      test = self()
-      opts = [table: table, max_concurrency: 1]
-
-      blocked = fn ->
-        send(test, {:blocked, self()})
-
-        receive do
-          :release -> :done
-        end
-      end
-
-      assert :fallback =
-               SyntaxHighlight.run(
-                 make_ref(),
-                 blocked,
-                 fn -> :fallback end,
-                 "blocked",
-                 Keyword.put(opts, :timeout, 0)
-               )
-
-      assert_receive {:blocked, pid}
-
-      assert :fallback =
-               SyntaxHighlight.run(
-                 make_ref(),
-                 fn -> send(test, :ran) end,
-                 fn -> :fallback end,
-                 "waiting",
-                 opts
-               )
-
-      refute_received :ran
-
-      ref = Process.monitor(pid)
-      send(pid, :release)
-      assert_receive {:DOWN, ^ref, :process, ^pid, _reason}
-
-      assert :ran =
-               SyntaxHighlight.run(
-                 make_ref(),
-                 fn -> send(test, :ran) end,
-                 fn -> :fallback end,
-                 "after release",
-                 opts
-               )
-    end
+    assert_receive {[:hexpm, :syntax_highlight, :stop], ^ref, _, %{result: :unavailable}}
   end
 end
