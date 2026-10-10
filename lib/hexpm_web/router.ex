@@ -83,6 +83,10 @@ defmodule HexpmWeb.Router do
     plug :user_agent
     plug HexpmWeb.Plugs.Attack
     plug HexpmWeb.Plugs.VarselAuth
+
+    # A contact lookup records the disclosure, so it writes even though it is
+    # a GET.
+    plug HexpmWeb.Plugs.ReadOnly, write_routes: [{"GET", "/api/users/:name/contact"}]
   end
 
   pipeline :browser_api do
