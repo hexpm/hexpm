@@ -50,6 +50,8 @@ $ HEX_COOLDOWN_EXCLUDE_REPOS=hexpm:myorg mix deps.get
 
 Cooldown filters candidates at resolution time. The lockfile is trusted on install — versions in the lockfile are not re-filtered. Versions held back by cooldown are reported in the resolution summary, so it is always clear which versions were filtered and why.
 
+If the version locked in `mix.lock` has a security advisory, the cooldown doesn't apply to that package or to the direct dependencies of the locked version. This lets `mix deps.update` move to the release that fixes the advisory, and to newer versions of the dependencies that release needs, while they're still inside the cooldown, so a project isn't held on a vulnerable version. A cooldown set by a dependency policy still applies.
+
 ### Dependency policies
 
 A *policy* is a signed payload an organization admin publishes from the org's `Policies` dashboard. The Hex client honors the active policy at resolution time. A policy is configured *per repository* — one tab for `hexpm` (public packages) and one for the organization's own repository — so public and private dependencies can be governed independently.
