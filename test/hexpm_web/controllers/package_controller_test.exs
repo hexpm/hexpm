@@ -247,6 +247,43 @@ defmodule HexpmWeb.PackageControllerTest do
       assert counts == 1
     end
 
+    test "groups the owner pages under a Settings tab that only full owners see" do
+      owner = insert(:user)
+      maintainer = insert(:user)
+
+      package =
+        insert(:package,
+          package_owners: [
+            build(:package_owner, user: owner, level: "full"),
+            build(:package_owner, user: maintainer, level: "maintainer")
+          ]
+        )
+
+      insert(:release, package: package, meta: build(:release_metadata, app: package.name))
+
+      tabs = fn conn ->
+        conn
+        |> get("/packages/#{package.name}")
+        |> response(200)
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#package-tabs a")
+        |> Enum.map(&(&1 |> LazyHTML.text(separator: " ") |> String.trim()))
+      end
+
+      assert build_conn() |> test_login(owner) |> tabs.() == [
+               "Documentation",
+               "1 Version",
+               "0 Dependencies",
+               "0 Dependants",
+               "Files",
+               "Activity",
+               "Settings"
+             ]
+
+      refute "Settings" in (build_conn() |> test_login(maintainer) |> tabs.())
+      refute "Settings" in tabs.(build_conn())
+    end
+
     test "banners the release on screen when an advisory affects it", %{package1: package1} do
       advise(package1, "GHSA-current-release", "0.0.2")
 
