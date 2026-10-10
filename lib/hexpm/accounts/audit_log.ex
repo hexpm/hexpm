@@ -125,7 +125,7 @@ defmodule Hexpm.Accounts.AuditLog do
   end
 
   def build(
-        %{user: %Hexpm.TrustedPublishers.TrustedPublisher{id: trusted_publisher_id}} = audit_data,
+        %{user: %Hexpm.WorkloadIdentities.WorkloadIdentity{id: workload_identity_id}} = audit_data,
         action,
         params
       ) do
@@ -138,7 +138,7 @@ defmodule Hexpm.Accounts.AuditLog do
       organization_id:
         params[:organization][:id] || params[:package][:organization_id] ||
           params[:organization_id],
-      user_data: %{trusted_publisher_id: trusted_publisher_id, grant_type: "trusted_publisher"},
+      user_data: %{workload_identity_id: workload_identity_id, grant_type: "workload_identity"},
       key_data: serialize_key(key),
       key: key,
       oauth_token: oauth_token,
@@ -300,11 +300,17 @@ defmodule Hexpm.Accounts.AuditLog do
   defp extract_params("user_provider.create", user_provider), do: serialize(user_provider)
   defp extract_params("user_provider.delete", user_provider), do: serialize(user_provider)
 
-  defp extract_params("trusted_publisher.create", trusted_publisher),
-    do: serialize(trusted_publisher)
+  defp extract_params("workload_identity.create", workload_identity),
+    do: serialize(workload_identity)
 
-  defp extract_params("trusted_publisher.remove", trusted_publisher),
-    do: serialize(trusted_publisher)
+  defp extract_params("workload_identity.remove", workload_identity),
+    do: serialize(workload_identity)
+
+  defp extract_params("organization.workload_identity.add", workload_identity),
+    do: serialize(workload_identity)
+
+  defp extract_params("organization.workload_identity.remove", workload_identity),
+    do: serialize(workload_identity)
 
   defp extract_params("password.add", _), do: %{}
   defp extract_params("password.remove", _), do: %{}
@@ -515,10 +521,11 @@ defmodule Hexpm.Accounts.AuditLog do
     |> Map.update!(:repositories, &Enum.map(&1, fn rp -> serialize_repository_policy(rp) end))
   end
 
-  defp serialize(%Hexpm.TrustedPublishers.TrustedPublisher{} = trusted_publisher) do
-    trusted_publisher
+  defp serialize(%Hexpm.WorkloadIdentities.WorkloadIdentity{} = workload_identity) do
+    workload_identity
     |> do_serialize()
-    |> Map.put(:package, serialize_if_loaded(trusted_publisher.package))
+    |> Map.put(:package, serialize_if_loaded(workload_identity.package))
+    |> Map.put(:organization, serialize_if_loaded(workload_identity.organization))
   end
 
   defp serialize(nil), do: nil
@@ -562,7 +569,7 @@ defmodule Hexpm.Accounts.AuditLog do
   defp fields(%Hexpm.UserSession{}), do: [:id, :type, :name, :client_id]
   defp fields(%Hexpm.OAuth.Client{}), do: [:id, :name]
 
-  defp fields(%Hexpm.TrustedPublishers.TrustedPublisher{}),
+  defp fields(%Hexpm.WorkloadIdentities.WorkloadIdentity{}),
     do: [
       :id,
       :provider,
@@ -571,7 +578,10 @@ defmodule Hexpm.Accounts.AuditLog do
       :repository,
       :workflow,
       :environment,
-      :package_id
+      :role,
+      :packages,
+      :package_id,
+      :organization_id
     ]
 
   defp fields(%Hexpm.Accounts.UserProvider{}),

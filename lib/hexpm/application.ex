@@ -13,6 +13,7 @@ defmodule Hexpm.Application do
     mode = mode()
     if web_mode?(mode), do: Hexpm.BlockAddress.start()
     if web_mode?(mode) and Application.fetch_env!(:hexpm, :cache_enabled), do: Hexpm.Cache.start()
+    Hexpm.WorkloadIdentities.OIDC.start()
     children = children(mode, Hexpm.Repo.write_mode?())
 
     shutdown_on_eof()
@@ -221,7 +222,8 @@ defmodule Hexpm.Application do
       goth_spec(),
       if(write_mode?, do: setup()),
       HexpmWeb.Telemetry,
-      metrics_server_spec()
+      metrics_server_spec(),
+      HexpmWeb.SyntaxHighlight
     ]
     |> Enum.reject(&is_nil/1)
   end

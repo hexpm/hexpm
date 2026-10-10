@@ -1,7 +1,7 @@
 defmodule HexpmWeb.Components.Provenance do
   use Phoenix.Component
 
-  alias Hexpm.TrustedPublishers.ClaimsSnapshot
+  alias Hexpm.WorkloadIdentities.ClaimsSnapshot
 
   attr :claims, ClaimsSnapshot, required: true
 

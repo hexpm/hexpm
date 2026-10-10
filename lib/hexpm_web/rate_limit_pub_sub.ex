@@ -26,8 +26,8 @@ defmodule HexpmWeb.RateLimitPubSub do
     {:noreply, []}
   end
 
-  def handle_info({:throttle, {:trusted_publisher, trusted_publisher_id}, time}, []) do
-    Attack.trusted_publisher_throttle(trusted_publisher_id, time: time)
+  def handle_info({:throttle, {:workload_identity, workload_identity_id}, time}, []) do
+    Attack.workload_identity_throttle(workload_identity_id, time: time)
     {:noreply, []}
   end
 
@@ -71,8 +71,18 @@ defmodule HexpmWeb.RateLimitPubSub do
     {:noreply, []}
   end
 
-  def handle_info({:throttle, {:trusted_publisher_mint, key}, time}, []) do
-    Attack.trusted_publisher_mint_throttle(key, time: time)
+  def handle_info({:throttle, {:workload_identity_mint, key}, time}, []) do
+    Attack.workload_identity_mint_throttle(key, time: time)
+    {:noreply, []}
+  end
+
+  def handle_info({:throttle, {:workload_identity_mint_ip, ip}, time}, []) do
+    Attack.workload_identity_mint_ip_throttle(ip, time: time)
+    {:noreply, []}
+  end
+
+  def handle_info({:throttle, {:workload_identity_lookup, user_id}, time}, []) do
+    Attack.workload_identity_lookup_throttle(user_id, time: time)
     {:noreply, []}
   end
 

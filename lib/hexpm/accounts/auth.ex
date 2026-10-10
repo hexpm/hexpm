@@ -4,8 +4,8 @@ defmodule Hexpm.Accounts.Auth do
 
   alias Hexpm.Accounts.{Key, Keys, Organization, Organizations, User, Users, UserProviders}
   alias Hexpm.OAuth.{Tokens, JWT}
-  alias Hexpm.TrustedPublishers
-  alias Hexpm.TrustedPublishers.TrustedPublisher
+  alias Hexpm.WorkloadIdentities
+  alias Hexpm.WorkloadIdentities.WorkloadIdentity
 
   @token_prefix Key.token_prefix()
 
@@ -51,7 +51,7 @@ defmodule Hexpm.Accounts.Auth do
                user: key.user,
                organization: key.organization,
                email: if(preload == :full, do: find_email(key.user, nil)),
-               trusted_publisher: nil
+               workload_identity: nil
              }}
           end
         else
@@ -107,7 +107,7 @@ defmodule Hexpm.Accounts.Auth do
            user: user,
            organization: nil,
            email: find_email(user, username_or_email),
-           trusted_publisher: nil
+           workload_identity: nil
          }}
 
       true ->
@@ -136,7 +136,7 @@ defmodule Hexpm.Accounts.Auth do
     case String.split(subject, ":", parts: 2) do
       ["user", username] -> {:ok, :user, username}
       ["org", org_name] -> {:ok, :organization, org_name}
-      ["trusted_publisher", id] -> {:ok, :trusted_publisher, id}
+      ["workload_identity", id] -> {:ok, :workload_identity, id}
       _ -> {:error, :invalid_subject}
     end
   end
@@ -144,19 +144,19 @@ defmodule Hexpm.Accounts.Auth do
   defp load_entity(:user, username), do: load_user_from_username(username)
   defp load_entity(:organization, org_name), do: load_organization_from_name(org_name)
 
-  defp load_entity(:trusted_publisher, id) do
-    case TrustedPublishers.get(id) do
+  defp load_entity(:workload_identity, id) do
+    case WorkloadIdentities.get(id) do
       nil ->
-        {:error, :trusted_publisher_not_found}
+        {:error, :workload_identity_not_found}
 
-      trusted_publisher ->
-        {:ok, Hexpm.Repo.preload(trusted_publisher, package: :repository)}
+      workload_identity ->
+        {:ok, Hexpm.Repo.preload(workload_identity, package: :repository)}
     end
   end
 
   defp validate_entity_auth(%User{} = user), do: not User.organization?(user)
   defp validate_entity_auth(%Organization{} = _organization), do: true
-  defp validate_entity_auth(%TrustedPublisher{} = _trusted_publisher), do: true
+  defp validate_entity_auth(%WorkloadIdentity{} = _workload_identity), do: true
 
   defp build_auth_result(%User{} = user, oauth_token) do
     {:ok,
@@ -165,7 +165,7 @@ defmodule Hexpm.Accounts.Auth do
        user: user,
        organization: nil,
        email: find_email(user, nil),
-       trusted_publisher: nil
+       workload_identity: nil
      }}
   end
 
@@ -176,18 +176,18 @@ defmodule Hexpm.Accounts.Auth do
        user: nil,
        organization: organization,
        email: nil,
-       trusted_publisher: nil
+       workload_identity: nil
      }}
   end
 
-  defp build_auth_result(%TrustedPublisher{} = trusted_publisher, oauth_token) do
+  defp build_auth_result(%WorkloadIdentity{} = workload_identity, oauth_token) do
     {:ok,
      %{
        auth_credential: oauth_token,
        user: nil,
        organization: nil,
        email: nil,
-       trusted_publisher: trusted_publisher
+       workload_identity: workload_identity
      }}
   end
 
@@ -259,7 +259,7 @@ defmodule Hexpm.Accounts.Auth do
          user: user_provider.user,
          organization: nil,
          email: find_email(user_provider.user, user_provider.provider_email),
-         trusted_publisher: nil
+         workload_identity: nil
        }}
     else
       :error

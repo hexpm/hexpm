@@ -158,7 +158,7 @@ When running the command to publish a package, Hex will create a tar file of all
 
 ### Publishing from CI
 
-Prefer [trusted publishers](/docs/trusted-publishers) when your CI runs on GitHub Actions: Hex exchanges a short-lived OIDC identity token for a package-scoped publish token, so you do not store a long-lived API key in CI secrets. The package must already exist; trusted publishers cannot create a package or its first release.
+Prefer [Workload Identity](/docs/workload-identity), sometimes also known as "Trusted Publishing", when your CI runs on GitHub Actions. Hex exchanges a short-lived OIDC identity token for a token that can only publish the package, so you don't store a long-lived API key in CI secrets. The package must already exist, because a package's workload identities can't create a package or publish its first release.
 
 You can also automate publishing with a key that has permissions to publish packages:
 

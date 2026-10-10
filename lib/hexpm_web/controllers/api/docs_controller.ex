@@ -16,7 +16,7 @@ defmodule HexpmWeb.API.DocsController do
   plug :authorize,
        [
          domains: [{"api", "write"}, "package"],
-         allow_trusted_publisher: true,
+         allow_workload_identity: true,
          fun: [{AuthHelpers, :package_owner}, {AuthHelpers, :organization_billing_active}]
        ]
        when action in [:create]

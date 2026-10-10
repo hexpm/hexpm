@@ -54,9 +54,9 @@ config :hexpm, secret_scan_notify: false
 
 config :hexpm, HexpmWeb.BasicAuth, schedule_enabled: true
 
-config :hexpm, :features, trusted_publishers: true
+config :hexpm, :features, workload_identity: true
 
-config :hexpm, :trusted_publishers, audience: "hexpm"
+config :hexpm, :workload_identity, audience: "hexpm"
 
 config :hexpm, :organization_sso,
   mode: :off,
