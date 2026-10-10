@@ -11,7 +11,7 @@ config :hexpm,
   pwned_impl: Hexpm.Pwned.HaveIBeenPwned,
   tmp_dir: "tmp"
 
-config :hexpm, :features, workload_identity: false
+config :hexpm, :features, workload_identity: true
 
 config :hexpm, HexpmWeb.Endpoint,
   url: [scheme: "https", port: 443],
