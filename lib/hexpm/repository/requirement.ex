@@ -63,11 +63,16 @@ defmodule Hexpm.Repository.Requirement do
   end
 
   defp validate_requirements_list(requirements) when is_list(requirements) do
-    names = for %{"name" => name} when is_binary(name) <- requirements, do: name
+    if Enum.all?(requirements, &is_map/1) do
+      names = for %{"name" => name} when is_binary(name) <- requirements, do: name
 
-    case names -- Enum.uniq(names) do
-      [] -> :ok
-      [name | _] -> {:error, ~s(has duplicate requirement "#{name}"), []}
+      case names -- Enum.uniq(names) do
+        [] -> :ok
+        [name | _] -> {:error, ~s(has duplicate requirement "#{name}"), []}
+      end
+    else
+      # cast_assoc/3 reads each entry as a map before it checks its type
+      {:error, "is invalid", type: {:array, :map}}
     end
   end
 

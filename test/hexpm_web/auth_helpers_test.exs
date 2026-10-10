@@ -132,6 +132,16 @@ defmodule HexpmWeb.AuthHelpersTest do
                      }}
   end
 
+  test "refuses Basic credentials Postgres can't store before looking up the user", %{
+    user: user
+  } do
+    for credentials <- ["#{user.username}\0:password", <<"#{user.username}", 0xFF, ":password">>] do
+      conn = auth_conn(user, "Basic " <> Base.encode64(credentials))
+
+      assert {:error, :invalid} = AuthHelpers.authenticate_at(conn, ~U[2026-09-30 23:59:59Z])
+    end
+  end
+
   test "records an invalid Bearer token", %{user: user} do
     conn = auth_conn(user, "Bearer not-a-jwt")
 

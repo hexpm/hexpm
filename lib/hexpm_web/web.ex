@@ -97,6 +97,8 @@ defmodule HexpmWeb do
     quote do
       use Phoenix.LiveView, layout: {HexpmWeb.LayoutView, :app}
 
+      on_mount HexpmWeb.Live.ValidateParams
+
       import Phoenix.HTML
       import Phoenix.HTML.Form
       import HexpmWeb.ViewIcons

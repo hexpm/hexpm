@@ -13,37 +13,77 @@ defmodule Hexpm.Emails do
     |> render_body(:owner_add)
   end
 
-  def owner_removed(package, owners, owner) do
+  def owner_removed(package, owners, owner, workload_identities) do
     base_email(:owner_removed)
     |> email_to(owners)
     |> subject("Hex.pm - Owner removed from package #{package.name}")
     |> assign(:username, owner.username)
     |> assign(:package, package.name)
+    |> assign(:workload_identities, workload_identities)
+    |> assign(
+      :workload_identities_url,
+      HexpmWeb.EmailView.email_url(HexpmWeb.ViewHelpers.path_for_workload_identities(package))
+    )
     |> render_body(:owner_remove)
   end
 
-  def trusted_publisher_added(trusted_publisher, owners, actor) do
-    trusted_publisher_email(:trusted_publisher_added, trusted_publisher, owners, actor)
-    |> subject("Hex.pm - Trusted publisher added to package #{trusted_publisher.package.name}")
-    |> render_body(:trusted_publisher_add)
+  def workload_identity_added(workload_identity, owners, actor) do
+    workload_identity_email(:workload_identity_added, workload_identity, owners, actor)
+    |> subject("Hex.pm - Workload identity added to package #{workload_identity.package.name}")
+    |> render_body(:workload_identity_add)
   end
 
-  def trusted_publisher_removed(trusted_publisher, owners, actor) do
-    trusted_publisher_email(:trusted_publisher_removed, trusted_publisher, owners, actor)
+  def workload_identity_removed(workload_identity, owners, actor) do
+    workload_identity_email(:workload_identity_removed, workload_identity, owners, actor)
     |> subject(
-      "Hex.pm - Trusted publisher removed from package #{trusted_publisher.package.name}"
+      "Hex.pm - Workload identity removed from package #{workload_identity.package.name}"
     )
-    |> render_body(:trusted_publisher_remove)
+    |> render_body(:workload_identity_remove)
   end
 
-  defp trusted_publisher_email(type, trusted_publisher, owners, actor) do
+  defp workload_identity_email(type, workload_identity, owners, actor) do
     base_email(type)
     |> email_to(owners)
     |> assign(:username, actor.username)
-    |> assign(:package, trusted_publisher.package.name)
-    |> assign(:repository, trusted_publisher.repository)
-    |> assign(:workflow, trusted_publisher.workflow)
-    |> assign(:environment, trusted_publisher.environment)
+    |> assign(:package, workload_identity.package.name)
+    |> assign(:repository, workload_identity.repository)
+    |> assign(:workflow, workload_identity.workflow)
+    |> assign(:environment, workload_identity.environment)
+  end
+
+  def organization_workload_identity_added(workload_identity, organization, actor) do
+    organization_workload_identity_email(
+      :organization_workload_identity_added,
+      workload_identity,
+      organization,
+      actor
+    )
+    |> subject("Hex.pm - Workload identity added to organization #{organization.name}")
+    |> render_body(:organization_workload_identity_add)
+  end
+
+  def organization_workload_identity_removed(workload_identity, organization, actor) do
+    organization_workload_identity_email(
+      :organization_workload_identity_removed,
+      workload_identity,
+      organization,
+      actor
+    )
+    |> subject("Hex.pm - Workload identity removed from organization #{organization.name}")
+    |> render_body(:organization_workload_identity_remove)
+  end
+
+  defp organization_workload_identity_email(type, workload_identity, organization, actor) do
+    base_email(type)
+    |> email_to(organization)
+    |> assign(:username, actor.username)
+    |> assign(:organization, organization.name)
+    |> assign(:role, workload_identity.role)
+    |> assign(:repository_owner, workload_identity.repository_owner)
+    |> assign(:repository, workload_identity.repository)
+    |> assign(:workflow, workload_identity.workflow)
+    |> assign(:environment, workload_identity.environment)
+    |> assign(:packages, workload_identity.packages)
   end
 
   def verification(user, email) do

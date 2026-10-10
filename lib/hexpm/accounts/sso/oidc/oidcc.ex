@@ -258,13 +258,20 @@ defmodule Hexpm.Accounts.SSO.OIDC.Oidcc do
     case HTTPAdapter.get(ref, :response) do
       %{headers: headers, body: body} ->
         case JSON.decode(body) do
-          {:ok, document} when is_map(document) -> {:ok, document, cache_expiry(headers)}
+          {:ok, document} when is_map(document) -> storable_document(document, headers, stage)
           _other -> error(stage, :invalid_json)
         end
 
       nil ->
         error(stage, :unavailable)
     end
+  end
+
+  # JSON can escape a NUL byte, which the document's jsonb column refuses.
+  defp storable_document(document, headers, stage) do
+    if Hexpm.Utils.storable_text?(document),
+      do: {:ok, document, cache_expiry(headers)},
+      else: error(stage, :invalid_document)
   end
 
   defp discovery_error(%Error{} = error), do: {:error, error}

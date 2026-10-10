@@ -102,20 +102,20 @@ defmodule HexpmWeb.ViewHelpers do
     ~p"/packages/#{package.repository}/#{package}/owners/#{username}"
   end
 
-  def path_for_trusted_publishers(%Package{repository_id: 1} = package) do
-    ~p"/packages/#{package}/trusted-publishers"
+  def path_for_workload_identities(%Package{repository_id: 1} = package) do
+    ~p"/packages/#{package}/workload-identities"
   end
 
-  def path_for_trusted_publishers(%Package{} = package) do
-    ~p"/packages/#{package.repository}/#{package}/trusted-publishers"
+  def path_for_workload_identities(%Package{} = package) do
+    ~p"/packages/#{package.repository}/#{package}/workload-identities"
   end
 
-  def path_for_trusted_publisher(%Package{repository_id: 1} = package, id) do
-    ~p"/packages/#{package}/trusted-publishers/#{id}"
+  def path_for_workload_identity(%Package{repository_id: 1} = package, id) do
+    ~p"/packages/#{package}/workload-identities/#{id}"
   end
 
-  def path_for_trusted_publisher(%Package{} = package, id) do
-    ~p"/packages/#{package.repository}/#{package}/trusted-publishers/#{id}"
+  def path_for_workload_identity(%Package{} = package, id) do
+    ~p"/packages/#{package.repository}/#{package}/workload-identities/#{id}"
   end
 
   def path_for_dependencies(%Package{repository_id: 1} = package) do

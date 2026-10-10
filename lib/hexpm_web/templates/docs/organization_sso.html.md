@@ -88,7 +88,7 @@ The first time a member uses the organization login URL:
 
 1. The member signs in to Hexpm with their own credential, completing their personal two-factor authentication if they have it enrolled.
 2. The member authenticates through the configured identity provider.
-3. Hexpm asks the member to confirm the link between the returned provider identity and the account they are signed in as.
+3. Hexpm asks the member to confirm the link between the returned provider identity and the account they are signed in as. If the member hasn't re-authenticated to Hexpm in the last hour, this takes [step-up re-authentication](#mfa-and-step-up) first.
 
 Hexpm relies on the member being signed in, so there's no confirmation code and the provider's email isn't compared with the account's addresses. The Hexpm account has to be a member of the organization already, unless [just-in-time membership](#just-in-time-membership) admits it at this step. Otherwise an organization administrator adds it and the member retries.
 

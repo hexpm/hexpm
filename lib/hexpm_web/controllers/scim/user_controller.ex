@@ -165,7 +165,12 @@ defmodule HexpmWeb.SCIM.UserController do
       )
 
   defp refuse(conn, :too_many_invitations),
-    do: scim_error(conn, 429, "Too many invitations have been sent to this address recently")
+    do:
+      scim_error(
+        conn,
+        429,
+        "Too many invitations have been sent to this address or by this organization's provisioning recently"
+      )
 
   defp refuse(conn, :invalid_value),
     do: scim_error(conn, 400, "userName must be an email address", :invalidValue)

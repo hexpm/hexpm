@@ -25,6 +25,28 @@ defmodule Hexpm.Utils do
   end
 
   @doc """
+  Whether every string in `term`, map keys included, is text a Postgres `text`
+  or `jsonb` column accepts: valid UTF-8 with no NUL byte.
+  """
+  def storable_text?(value) when is_binary(value) do
+    String.valid?(value) and not String.contains?(value, <<0>>)
+  end
+
+  def storable_text?(map) when is_map(map) do
+    map |> Map.to_list() |> storable_text?()
+  end
+
+  # Element by element rather than through Enum, so an improper list from a
+  # decoded Erlang term is checked instead of raising.
+  def storable_text?([head | tail]), do: storable_text?(head) and storable_text?(tail)
+
+  def storable_text?(tuple) when is_tuple(tuple) do
+    tuple |> Tuple.to_list() |> storable_text?()
+  end
+
+  def storable_text?(_other), do: true
+
+  @doc """
   Lists all regular files under `directory` as relative paths.
 
   Symlinks are skipped entirely, both as entries and as directories to

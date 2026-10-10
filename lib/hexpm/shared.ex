@@ -54,8 +54,8 @@ defmodule Hexpm.Shared do
         Repository.Sitemaps,
         SecretScan.Finding,
         SecretScan.Scan,
-        TrustedPublishers,
-        TrustedPublishers.TrustedPublisher
+        WorkloadIdentities,
+        WorkloadIdentities.WorkloadIdentity
       }
     end
   end

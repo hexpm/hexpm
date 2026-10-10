@@ -222,6 +222,18 @@ defmodule Hexpm.Accounts.SSO.OIDC.OidccTest do
     assert {:error, %Error{stage: :jwks, code: :invalid_document}} = Oidcc.discover(@issuer)
   end
 
+  test "rejects provider documents holding a NUL byte", context do
+    discovery_document = Map.put(context.discovery_document, "tenant_region_scope", "E\0U")
+    expect_json_get(@issuer <> "/.well-known/openid-configuration", discovery_document)
+
+    assert {:error, %Error{stage: :discovery, code: :invalid_document}} = Oidcc.discover(@issuer)
+
+    expect_json_get(@issuer <> "/.well-known/openid-configuration", context.discovery_document)
+    expect_json_get(@jwks_uri, Map.put(context.jwks_document, "tenant", "a\0b"))
+
+    assert {:error, %Error{stage: :jwks, code: :invalid_document}} = Oidcc.discover(@issuer)
+  end
+
   test "rejects a provider that publishes no signing keys", context do
     expect_json_get(
       @issuer <> "/.well-known/openid-configuration",

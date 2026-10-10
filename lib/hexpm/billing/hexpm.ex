@@ -112,18 +112,28 @@ defmodule Hexpm.Billing.Hexpm do
     {:error, %{}}
   end
 
-  defp auth() do
-    Application.get_env(:hexpm, :billing_key)
+  @doc """
+  The billing service authenticates hexpm with the Kubernetes service account
+  token the kubelet mounts into the pod for billing's audience. The kubelet
+  replaces the token before it expires, so it is read on every request.
+  Dev and test configure no token path and send no authorization.
+  """
+  def auth_headers() do
+    case Application.get_env(:hexpm, :billing_token_path) do
+      nil -> []
+      path -> [{"authorization", "Bearer " <> File.read!(path)}]
+    end
   end
 
   defp post(path, body, opts \\ []) do
     body = JSON.encode!(body)
 
-    headers = [
-      {"authorization", auth()},
-      {"accept", "application/json"},
-      {"content-type", "application/json"}
-    ]
+    headers =
+      auth_headers() ++
+        [
+          {"accept", "application/json"},
+          {"content-type", "application/json"}
+        ]
 
     request(:post, path, opts, fn url ->
       HTTP.impl().post(url, headers, body, receive_timeout: @timeout)
@@ -133,11 +143,12 @@ defmodule Hexpm.Billing.Hexpm do
   defp patch(path, body) do
     body = JSON.encode!(body)
 
-    headers = [
-      {"authorization", auth()},
-      {"accept", "application/json"},
-      {"content-type", "application/json"}
-    ]
+    headers =
+      auth_headers() ++
+        [
+          {"accept", "application/json"},
+          {"content-type", "application/json"}
+        ]
 
     request(:patch, path, [], fn url ->
       HTTP.impl().patch(url, headers, body, receive_timeout: @timeout)
@@ -145,10 +156,7 @@ defmodule Hexpm.Billing.Hexpm do
   end
 
   defp get_json(path, opts) do
-    headers = [
-      {"authorization", auth()},
-      {"accept", "application/json"}
-    ]
+    headers = auth_headers() ++ [{"accept", "application/json"}]
 
     request(:get, path, opts, fn url ->
       HTTP.impl().get(url, headers, receive_timeout: @timeout)
@@ -156,10 +164,7 @@ defmodule Hexpm.Billing.Hexpm do
   end
 
   defp get_html(path, opts) do
-    headers = [
-      {"authorization", auth()},
-      {"accept", "text/html"}
-    ]
+    headers = auth_headers() ++ [{"accept", "text/html"}]
 
     request(:get, path, opts, fn url ->
       HTTP.impl().get(url, headers, receive_timeout: @timeout)

@@ -97,7 +97,7 @@ if config_env() == :prod do
     fastly_key: System.fetch_env!("HEXPM_FASTLY_KEY"),
     fastly_hexrepo: System.fetch_env!("HEXPM_FASTLY_HEXREPO"),
     jwt_signing_key: System.fetch_env!("HEXPM_JWT_SIGNING_KEY"),
-    billing_key: System.fetch_env!("HEXPM_BILLING_KEY"),
+    billing_token_path: System.fetch_env!("HEXPM_BILLING_TOKEN_PATH"),
     billing_url: System.fetch_env!("HEXPM_BILLING_URL"),
     host: System.fetch_env!("HEXPM_HOST"),
     dashboard_user: System.fetch_env!("HEXPM_DASHBOARD_USER"),
@@ -117,8 +117,8 @@ if config_env() == :prod do
     key_id: System.fetch_env!("HEXPM_VARSEL_KEY_ID"),
     jwks: System.fetch_env!("HEXPM_VARSEL_JWKS")
 
-  config :hexpm, :trusted_publishers,
-    audience: System.fetch_env!("HEXPM_TRUSTED_PUBLISHERS_AUDIENCE")
+  config :hexpm, :workload_identity,
+    audience: System.fetch_env!("HEXPM_WORKLOAD_IDENTITY_AUDIENCE")
 
   config :hexpm, :hcaptcha,
     sitekey: System.fetch_env!("HEXPM_HCAPTCHA_SITEKEY"),

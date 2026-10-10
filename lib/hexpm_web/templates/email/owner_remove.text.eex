@@ -1,1 +1,8 @@
 <%= OwnerRemove.message(@username, @package) %>
+<%= if @workload_identities != [] do %>
+<%= OwnerRemove.workload_identities(@package) %>
+
+<%= for workload_identity <- @workload_identities do %><%= workload_identity.repository %> (<%= workload_identity.workflow %>)
+<% end %>
+<%= OwnerRemove.review(@workload_identities_url, :text) %>
+<% end %>

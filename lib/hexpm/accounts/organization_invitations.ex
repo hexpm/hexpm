@@ -20,11 +20,16 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
   alias Hexpm.Emails.Outbox
 
   # Every invitation mails an address the inviter chose, so both the address,
-  # across all organizations, and the inviter are capped.
+  # across all organizations, and the inviter are capped. Provisioning has no
+  # person behind it, so its invitations are capped per organization, with room
+  # for an initial import.
   @address_limit 5
   @address_period_seconds 24 * 60 * 60
   @inviter_limit 50
   @inviter_period_seconds 60 * 60
+  @provisioning_limit 500
+  @provisioning_period_seconds 24 * 60 * 60
+  @mail_category "organization.invitation"
 
   def all_pending(organization) do
     Repo.all(
@@ -70,7 +75,7 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
       member?(organization, email) ->
         {:error, :already_member}
 
-      too_many_invitations?(email, invited_by) ->
+      too_many_invitations?(organization, email, invited_by) ->
         {:error, :too_many_invitations}
 
       lapsed = lapsed_invitation(organization, email) ->
@@ -79,7 +84,7 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
         # be immutable and expiry is a comparison against now. So an expired
         # invitation still holds the slot, and no read path shows it. Reissuing
         # it is what the administrator meant by inviting the address again.
-        reissue(organization, lapsed, params["role"] || lapsed.role, audit_data)
+        reissue(organization, lapsed, invited_by, params["role"] || lapsed.role, audit_data)
 
       true ->
         insert(organization, invited_by, email, params["role"], audit_data)
@@ -112,7 +117,7 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
   # the two writes that send mail, so its updated_at counts every mail to the
   # address. Revoking or accepting writes it too, which only counts toward the
   # limit sooner.
-  defp too_many_invitations?(email, invited_by) do
+  defp too_many_invitations?(organization, email, invited_by) do
     address_count =
       Repo.aggregate(
         from(invitation in OrganizationInvitation,
@@ -122,19 +127,34 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
         :count
       )
 
-    address_count >= @address_limit or inviter_count(invited_by) >= @inviter_limit
+    address_count >= @address_limit or inviter_over_limit?(organization, invited_by)
   end
 
-  defp inviter_count(nil), do: 0
+  defp inviter_over_limit?(organization, nil) do
+    count =
+      Repo.aggregate(
+        from(invitation in OrganizationInvitation,
+          where: invitation.organization_id == ^organization.id,
+          where: is_nil(invitation.invited_by_user_id),
+          where: invitation.updated_at > ago(@provisioning_period_seconds, "second")
+        ),
+        :count
+      )
 
-  defp inviter_count(%User{id: id}) do
-    Repo.aggregate(
-      from(invitation in OrganizationInvitation,
-        where: invitation.invited_by_user_id == ^id,
-        where: invitation.inserted_at > ago(@inviter_period_seconds, "second")
-      ),
-      :count
-    )
+    count >= @provisioning_limit
+  end
+
+  defp inviter_over_limit?(_organization, %User{id: id}) do
+    count =
+      Repo.aggregate(
+        from(invitation in OrganizationInvitation,
+          where: invitation.invited_by_user_id == ^id,
+          where: invitation.inserted_at > ago(@inviter_period_seconds, "second")
+        ),
+        :count
+      )
+
+    count >= @inviter_limit
   end
 
   defp lapsed_invitation(organization, email) do
@@ -150,14 +170,21 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
   end
 
   # An expired invitation still holds the one-per-address slot, so inviting
-  # that address again reissues the row rather than being refused.
-  defp reissue(organization, invitation, role, audit_data) do
+  # that address again reissues the row rather than being refused. The row
+  # takes the new inviter, so the mail counts against whoever sent it.
+  defp reissue(organization, invitation, invited_by, role, audit_data) do
     raw_token = random_token()
 
     Multi.new()
     |> Multi.update(
       :invitation,
-      OrganizationInvitation.reissue_changeset(invitation, role, hash(raw_token), expires_at())
+      OrganizationInvitation.reissue_changeset(
+        invitation,
+        invited_by,
+        role,
+        hash(raw_token),
+        expires_at()
+      )
     )
     |> audit(audit_data, "organization.invitation.create", &{organization, &1.invitation})
     |> deliver(organization, raw_token)
@@ -165,11 +192,19 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
     |> result()
   end
 
+  # The mail is cancelled with the invitation, because a revoke can land before
+  # the outbox delivers it, as when provisioning renames or deactivates someone
+  # in the request that invited them. Mail already handed to the provider stays
+  # sent.
   def revoke(organization, invitation, audit: audit_data) do
     Multi.new()
     |> Multi.update(
       :invitation,
       OrganizationInvitation.revoke_changeset(invitation, DateTime.utc_now())
+    )
+    |> Outbox.cancel(:email,
+      group_key: mail_group_key(invitation),
+      categories: [@mail_category]
     )
     |> audit(audit_data, "organization.invitation.revoke", &{organization, &1.invitation})
     |> Repo.transaction()
@@ -262,14 +297,16 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
       invitation
       |> Emails.organization_invitation()
       |> Outbox.enqueue!(
-        category: "organization.invitation",
-        group_key: "organization-invitation:#{invitation.id}",
+        category: @mail_category,
+        group_key: mail_group_key(invitation),
         scope_key: "organization:#{organization.id}"
       )
 
       {:ok, invitation}
     end)
   end
+
+  defp mail_group_key(invitation), do: "organization-invitation:#{invitation.id}"
 
   defp result({:ok, %{email: invitation}}), do: {:ok, invitation}
   defp result({:error, :invitation, changeset, _changes}), do: {:error, changeset}

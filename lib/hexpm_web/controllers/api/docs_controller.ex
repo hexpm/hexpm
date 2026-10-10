@@ -16,7 +16,7 @@ defmodule HexpmWeb.API.DocsController do
   plug :authorize,
        [
          domains: [{"api", "write"}, "package"],
-         allow_trusted_publisher: true,
+         allow_workload_identity: true,
          fun: [{AuthHelpers, :package_owner}, {AuthHelpers, :organization_billing_active}]
        ]
        when action in [:create]
@@ -28,7 +28,7 @@ defmodule HexpmWeb.API.DocsController do
        ]
        when action in [:delete]
 
-  plug :handle_100_continue, [max_size: @tarball_max_size] when action in [:create]
+  plug :fetch_body, [max_size: @tarball_max_size] when action in [:create]
 
   def show(conn, _params) do
     repository = conn.assigns.repository

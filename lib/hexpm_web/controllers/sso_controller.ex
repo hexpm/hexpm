@@ -19,10 +19,14 @@ defmodule HexpmWeb.SSOController do
               :authorize_organization
             ]
 
-  # The same bar device approval sets, for the same reason: this hands a
-  # capability to a session that is not the browser doing the clicking, and a
-  # stolen access token is enough to ask for the page.
-  plug HexpmWeb.Plugs.Sudo when action in [:authorize, :authorize_organization]
+  # The same bar device approval sets. Authorizing hands a capability to a
+  # session that is not the browser doing the clicking, and a stolen access
+  # token is enough to ask for the page. Linking binds whoever authenticated at
+  # the provider to this account until an administrator unlinks it, and can make
+  # the account a member, so a stolen cookie and an account at the provider must
+  # not be enough for it.
+  plug HexpmWeb.Plugs.Sudo
+       when action in [:authorize, :authorize_organization, :link, :confirm_link]
 
   plug :rate_limit_callback when action in [:callback]
 

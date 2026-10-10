@@ -613,6 +613,18 @@ defmodule Hexpm.Accounts.SSOTest do
       assert "sso.login" in actions
     end
 
+    test "a subject or email Postgres can't store is refused before any lookup", context do
+      for {claims, reason} <- [
+            {%{valid_claims() | subject: "00u\0123"}, :subject_invalid},
+            {valid_claims("admin\0@example.com"), :provider_email_invalid}
+          ] do
+        transaction = start_transaction(context, context.member)
+        assert {:error, ^reason} = complete(transaction, claims, context.member)
+      end
+
+      refute Repo.exists?(Identity)
+    end
+
     test "an unlinked subject refuses a nonmember and creates nothing", context do
       outsider = insert(:user)
 

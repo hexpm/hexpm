@@ -1234,6 +1234,62 @@ defmodule HexpmWeb.SSOEnforcementTest do
              ]
     end
 
+    # The same window with some access at approval: the code is bound to the
+    # browser, and what the browser authenticates for before the exchange was
+    # not part of the approval.
+    test "a consent copies only the organization access held when it was given", context do
+      require_sso(context)
+      other = second_organization(context)
+      {conn, browser} = login(context.member)
+      authenticate(context, context.member, browser)
+
+      client = insert(:oauth_client, allowed_scopes: ["api:read", "repositories"])
+      verifier = "code-verifier-#{System.unique_integer([:positive])}"
+      challenge = :sha256 |> :crypto.hash(verifier) |> Base.url_encode64(padding: false)
+
+      conn =
+        post(conn, "/oauth/authorize", %{
+          "client_id" => client.client_id,
+          "redirect_uri" => hd(client.redirect_uris),
+          "action" => "approve",
+          "scope" => "api:read repositories",
+          "selected_scopes" => ["api:read", "repositories"],
+          "state" => "opaque-state",
+          "code_challenge" => challenge,
+          "code_challenge_method" => "S256"
+        })
+
+      %URI{query: query} = conn |> redirected_to() |> URI.parse()
+      code = URI.decode_query(query)["code"]
+
+      authenticate(other, context.member, browser)
+
+      body =
+        build_conn()
+        |> post("/api/oauth/token", %{
+          "grant_type" => "authorization_code",
+          "code" => code,
+          "client_id" => client.client_id,
+          "redirect_uri" => hd(client.redirect_uris),
+          "code_verifier" => verifier
+        })
+        |> json_response(200)
+
+      assert body["scope"] =~ "repository:#{context.organization.name}"
+      refute body["scope"] =~ "repository:#{other.organization.name}"
+
+      assert body["organization_reauth_required"] == [
+               %{"organization" => other.organization.name, "requirements" => ["sso"]}
+             ]
+
+      token =
+        Repo.get_by!(Hexpm.OAuth.Token, user_id: context.member.id, client_id: client.client_id)
+
+      assert SSO.granted_organization_ids(token.user_session_id, context.member.id) == [
+               context.organization.id
+             ]
+    end
+
     # Approving hands the client's own session a copy of the organization
     # access this browser is carrying, so a stolen cookie is otherwise enough.
     test "asks for the password before a consent hands organization access on", context do

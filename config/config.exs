@@ -54,9 +54,9 @@ config :hexpm, secret_scan_notify: false
 
 config :hexpm, HexpmWeb.BasicAuth, schedule_enabled: true
 
-config :hexpm, :features, trusted_publishers: true
+config :hexpm, :features, workload_identity: true
 
-config :hexpm, :trusted_publishers, audience: "hexpm"
+config :hexpm, :workload_identity, audience: "hexpm"
 
 config :hexpm, :organization_sso,
   mode: :off,
@@ -136,7 +136,7 @@ config :hexpm, HexpmWeb.Endpoint,
   root: Path.dirname(__DIR__),
   render_errors: [
     view: HexpmWeb.ErrorView,
-    accepts: ~w(html json elixir erlang),
+    accepts: ~w(html json elixir erlang scim),
     root_layout: {HexpmWeb.LayoutView, :root},
     layout: {HexpmWeb.LayoutView, :app}
   ],

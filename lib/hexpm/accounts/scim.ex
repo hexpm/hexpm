@@ -840,11 +840,14 @@ defmodule Hexpm.Accounts.SCIM do
                 resolve(taken)
 
               nil ->
-                connection
-                |> Resource.build()
-                |> Resource.changeset(%{user_name: user_name, user_id: user.id})
-                |> Repo.insert!()
-                |> resolve()
+                resource =
+                  connection
+                  |> Resource.build()
+                  |> Resource.changeset(%{user_name: user_name, user_id: user.id})
+                  |> Repo.insert!()
+
+                audit!(audit_data, "sso.scim.resource.create", connection, resource)
+                resolve(resource)
             end
         end
       end)

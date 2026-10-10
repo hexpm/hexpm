@@ -5,3 +5,19 @@
 <p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
   <%= OwnerRemove.message(@username, @package) %>
 </p>
+
+<%= if @workload_identities != [] do %>
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= OwnerRemove.workload_identities(@package) %>
+</p>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= for workload_identity <- @workload_identities do %>
+    <%= workload_identity.repository %> (<%= workload_identity.workflow %>)<br>
+  <% end %>
+</p>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= raw(OwnerRemove.review(@workload_identities_url, :html)) %>
+</p>
+<% end %>

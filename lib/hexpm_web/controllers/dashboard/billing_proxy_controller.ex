@@ -24,16 +24,16 @@ defmodule HexpmWeb.Dashboard.BillingProxyController do
       when action in @allowed_actions do
     access_organization(conn, organization, "admin", fn _organization ->
       billing_url = Application.get_env(:hexpm, :billing_url)
-      billing_key = Application.get_env(:hexpm, :billing_key)
       url = billing_url <> "/" <> Enum.join(path, "/")
 
       body = JSON.encode!(conn.body_params)
 
-      headers = [
-        {"authorization", billing_key},
-        {"content-type", "application/json"},
-        {"accept", "application/json"}
-      ]
+      headers =
+        Hexpm.Billing.Hexpm.auth_headers() ++
+          [
+            {"content-type", "application/json"},
+            {"accept", "application/json"}
+          ]
 
       case Hexpm.HTTP.track_request(:post, url, fn ->
              Hexpm.HTTP.impl().post(url, headers, body, receive_timeout: @timeout)

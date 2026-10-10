@@ -450,6 +450,22 @@ defmodule Hexpm.Accounts.SCIMTest do
       refute "old@example.com" in emails
     end
 
+    test "an invitation revoked in the request that sent it is not mailed", context do
+      {:ok, %{resource: resource}} =
+        create_user(context.connection, %{"userName" => "first@example.com"})
+
+      Repo.update_all(OutboxEntry, set: [delivered_at: DateTime.utc_now()])
+
+      assert {:ok, %{state: :inactive}} =
+               replace_user(context.connection, resource.scim_id, %{
+                 "userName" => "second@example.com",
+                 "active" => false
+               })
+
+      assert OrganizationInvitations.all_pending(context.organization) == []
+      assert Repo.all(OutboxEntry.undelivered()) == []
+    end
+
     test "delete deactivates and frees the userName slot", context do
       user = insert(:user)
       email = hd(user.emails).email
@@ -522,6 +538,31 @@ defmodule Hexpm.Accounts.SCIMTest do
       assert %{state: :member} = find_by_user_name(context.connection, email)
 
       assert Repo.aggregate(Resource, :count) == 1
+    end
+
+    test "a handle materialized for a current member is audited as the provider's", context do
+      listed = insert(:user)
+      filtered = insert(:user)
+      insert(:organization_user, organization: context.organization, user: listed)
+      insert(:organization_user, organization: context.organization, user: filtered)
+
+      filtered_email = hd(filtered.emails).email
+      assert %{state: :member} = find_by_user_name(context.connection, filtered_email)
+      list_users(context.connection, 1, 100)
+
+      logs =
+        Repo.all(
+          from(log in Hexpm.Accounts.AuditLog, where: log.action == "sso.scim.resource.create")
+        )
+
+      assert Enum.all?(logs, &(&1.user_agent == "SCIM" and &1.remote_ip == "198.51.100.4"))
+
+      assert Enum.sort(Enum.map(logs, & &1.params["user_name"])) ==
+               Enum.sort([
+                 hd(context.admin.emails).email,
+                 hd(listed.emails).email,
+                 filtered_email
+               ])
     end
 
     test "filtering by userName finds nothing for outsiders", context do

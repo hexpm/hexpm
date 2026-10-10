@@ -27,7 +27,7 @@ defmodule Hexpm.PurgeExpiredRecords do
   @redacted %{
     Hexpm.OAuth.AuthorizationCode => ~w(code code_challenge),
     Hexpm.OAuth.DeviceCode => ~w(device_code user_code verification_uri_complete),
-    Hexpm.OAuth.Token => ~w(refresh_token_hash),
+    Hexpm.OAuth.Token => ~w(refresh_token_hash trusted_publisher_id),
     Hexpm.UserSession => ~w(session_token),
     Hexpm.Accounts.PasswordReset => ~w(key_hash primary_email),
     Hexpm.Accounts.AccountDeletionRequest => ~w(key_hash primary_email),
@@ -35,7 +35,7 @@ defmodule Hexpm.PurgeExpiredRecords do
       ~w(state_hash nonce code_verifier link_token_hash subject provider_email),
     Hexpm.Accounts.SSO.Authorization => ~w(code_hash),
     Hexpm.Accounts.SSO.OrgSession => [],
-    Hexpm.Accounts.OrganizationInvitation => ~w(token_hash),
+    Hexpm.Accounts.OrganizationInvitation => ~w(token_hash email),
     Hexpm.Accounts.Key => ~w(secret_first secret_second),
     Hexpm.Emails.OutboxEntry => ~w(email recipients)
   }
@@ -109,6 +109,10 @@ defmodule Hexpm.PurgeExpiredRecords do
   # what refresh lookups resolve by, and every path that sets it also sets
   # refresh_token_expires_at. The row is unreachable once both timestamps have
   # passed, not once the access token alone has.
+  #
+  # A workload identity token's row is what makes its OIDC token single-use,
+  # so it stays until it expires even when revoked. The exchange refuses OIDC
+  # tokens that outlive it.
   defp purge_oauth_tokens(repo, batch_size, run) do
     count =
       archive_and_delete(
@@ -118,7 +122,7 @@ defmodule Hexpm.PurgeExpiredRecords do
           where:
             (t.expires_at < fragment("NOW()") and
                (is_nil(t.refresh_jti) or t.refresh_token_expires_at < fragment("NOW()"))) or
-              not is_nil(t.revoked_at),
+              (not is_nil(t.revoked_at) and t.grant_type != "workload_identity"),
           order_by: t.expires_at
         ),
         batch_size,
@@ -282,6 +286,46 @@ defmodule Hexpm.PurgeExpiredRecords do
       )
 
     Logger.info("[task] Purged #{count} delivered email outbox entries")
+  end
+
+  @doc """
+  Archives a user's API keys, OAuth tokens and sessions to the audit bucket,
+  redacted like the rows the purge deletes, so the record of who held them
+  outlives the account. Runs in the transaction that deletes the user, before
+  the keys and tokens are deleted and the sessions go with the user. A
+  transaction that rolls back after the upload leaves archived rows of
+  credentials that still exist: the purge archives them again when it deletes
+  them, and the BigQuery views collapse the duplicates by source id.
+  """
+  def archive_user_credentials(repo, %Hexpm.Accounts.User{id: user_id}) do
+    run = new_run()
+
+    [
+      {Hexpm.Accounts.Key, from(k in Hexpm.Accounts.Key, where: k.user_id == ^user_id)},
+      {Hexpm.OAuth.Token, from(t in Hexpm.OAuth.Token, where: t.user_id == ^user_id)},
+      {Hexpm.UserSession, from(s in Hexpm.UserSession, where: s.user_id == ^user_id)}
+    ]
+    |> Enum.map(fn {schema, query} -> archive_all(repo, schema, query, run) end)
+    |> Enum.sum()
+  end
+
+  defp archive_all(repo, schema, query, run) do
+    redacted = Map.fetch!(@redacted, schema)
+
+    rows =
+      repo.all(
+        from(r in query,
+          select: {r.id, fragment("(to_jsonb(?) - ?::text[])::text", r, ^redacted)},
+          order_by: r.id
+        )
+      )
+
+    rows
+    |> Enum.chunk_every(@batch_size)
+    |> Enum.with_index(1)
+    |> Enum.each(fn {batch, seq} -> archive(schema, run, seq, batch) end)
+
+    length(rows)
   end
 
   # Each batch is uploaded before it is deleted, so a failed upload raises with

@@ -11,10 +11,19 @@ config :hexpm,
   pwned_impl: Hexpm.Pwned.HaveIBeenPwned,
   tmp_dir: "tmp"
 
-config :hexpm, :features, trusted_publishers: false
+config :hexpm, :features, workload_identity: false
 
 config :hexpm, HexpmWeb.Endpoint,
   url: [scheme: "https", port: 443],
+  # Phoenix runs Plug.SSL before the endpoint's plugs and sockets. The load
+  # balancer forwards plain HTTP with X-Forwarded-Proto: http, and the readiness
+  # probe calls /status without it. host: nil redirects to the requested host,
+  # which can be the readme host.
+  force_ssl: [
+    rewrite_on: [:x_forwarded_proto],
+    host: nil,
+    exclude: [hosts: ["localhost", "127.0.0.1"], paths: ["/status"]]
+  ],
   cache_static_manifest: "priv/static/cache_manifest.json"
 
 config :bcrypt_elixir, log_rounds: 12

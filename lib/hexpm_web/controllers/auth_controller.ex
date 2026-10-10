@@ -55,8 +55,10 @@ defmodule HexpmWeb.AuthController do
     {delete_session(conn, "oauth_return"), path}
   end
 
+  # Ueberauth answers the request phase of every provider it is configured
+  # with, so this only runs for a provider name it doesn't know.
   def request(conn, _params) do
-    conn
+    not_found(conn)
   end
 
   def callback(%{assigns: %{ueberauth_failure: _fails}} = conn, _params) do

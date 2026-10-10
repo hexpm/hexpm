@@ -2,7 +2,7 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
   @moduledoc """
   PromEx plugin for hex.pm business metrics: the domain events emitted from
   the contexts (see `Hexpm.Repository.Releases`, `Hexpm.Accounts.Users` and
-  `Hexpm.TrustedPublishers`), API authentication (`HexpmWeb.AuthHelpers`),
+  `Hexpm.WorkloadIdentities`), API authentication (`HexpmWeb.AuthHelpers`),
   registry builds (`Hexpm.Repository.RegistryWorker`) and CDN purges
   (`Hexpm.CDN.PurgeWorker`, `Hexpm.CDN.Fastly`), organization billing and
   deletion (`Hexpm.Billing.Report`, `Hexpm.Accounts.OrganizationDeletions`), and
@@ -71,15 +71,15 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
           reporter_options: [buckets: [10, 50, 100, 500, 1000, 5000, 30_000]],
           description: "Time spent matching a release's files."
         ),
-        counter("hexpm.trusted_publishers.mint.success.total",
-          event_name: [:hexpm, :trusted_publishers, :mint, :success],
-          description: "Trusted publisher OIDC tokens successfully exchanged for Hex tokens.",
+        counter("hexpm.workload_identity.mint.success.total",
+          event_name: [:hexpm, :workload_identity, :mint, :success],
+          description: "Workload identity OIDC tokens successfully exchanged for Hex tokens.",
           tags: [:provider],
           tag_values: &__MODULE__.mint_success_tags/1
         ),
-        counter("hexpm.trusted_publishers.mint.failure.total",
-          event_name: [:hexpm, :trusted_publishers, :mint, :failure],
-          description: "Trusted publisher mint attempts that failed.",
+        counter("hexpm.workload_identity.mint.failure.total",
+          event_name: [:hexpm, :workload_identity, :mint, :failure],
+          description: "Workload identity token exchanges that failed.",
           tags: [:reason],
           tag_values: &__MODULE__.mint_failure_tags/1
         )

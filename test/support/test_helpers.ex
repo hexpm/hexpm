@@ -199,7 +199,7 @@ defmodule Hexpm.TestHelpers do
   `metadata` needs binary keys and all required fields.
   """
   def create_tar_with_raw_metadata(metadata, files \\ [{"mix.exs", "mix.exs"}]) do
-    name = "#{metadata["name"]}-#{metadata["version"]}"
+    name = "raw-#{Base.encode16(:crypto.strong_rand_bytes(4))}"
     contents_path = Path.join(@tmp, "#{name}-contents.tar.gz")
     files = Enum.map(files, fn {name, bin} -> {String.to_charlist(name), bin} end)
     :ok = :erl_tar.create(contents_path, files, [:compressed])
@@ -332,6 +332,11 @@ defmodule Hexpm.TestHelpers do
     ExUnit.Callbacks.on_exit(fn ->
       Application.put_env(app, key, original_env)
     end)
+  end
+
+  # The test endpoint's force_ssl exclusion, see config/test.exs
+  def without_forwarded_proto?(conn) do
+    Plug.Conn.get_req_header(conn, "x-forwarded-proto") == []
   end
 
   def key_for(user_or_organization, permissions \\ [%{domain: "api"}]) do
