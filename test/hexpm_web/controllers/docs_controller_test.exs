@@ -113,9 +113,10 @@ defmodule HexpmWeb.DocsControllerTest do
     assert html =~ "Configure a workload identity"
     assert html =~ "urn:ietf:params:oauth:grant-type:jwt-bearer"
     assert html =~ "id-token: write"
-    assert html =~ "create a package or land the first release from CI"
+    assert html =~ "create a package or publish its first release from CI"
     assert html =~ ~s(id="organization-workload-identities")
     assert html =~ "scope=repository:ORG"
+    assert html =~ "Mix does this exchange itself"
 
     document = LazyHTML.from_document(html)
 
