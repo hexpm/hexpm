@@ -116,6 +116,7 @@ defmodule HexpmWeb.DocsControllerTest do
     assert html =~ "create a package or publish its first release from CI"
     assert html =~ ~s(id="organization-workload-identities")
     assert html =~ "scope=repository:ORG"
+    assert html =~ "Mix does this exchange itself"
 
     document = LazyHTML.from_document(html)
 

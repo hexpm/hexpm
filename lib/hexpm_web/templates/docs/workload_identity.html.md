@@ -89,6 +89,8 @@ scope=repository:ORG
 
 Send the access token to repo.hex.pm as `Authorization: Bearer <token>`. It can't call the Hex API.
 
+Mix does this exchange itself when it fetches packages from an organization's repository in a GitHub Actions job with the `id-token: write` permission, and neither an organization key nor an authenticated user is configured.
+
 To publish or create a package, use a package scope in the organization's repository, the same as for a package workload identity:
 
 ```nohighlight
@@ -221,7 +223,6 @@ token=<hex-access-token>
 
 * Only GitHub Actions can act as a workload identity. GitLab, CircleCI, and custom OIDC issuers aren't supported.
 * A package's workload identities can't create a package or publish its first release from CI. Publish once manually, then attach a workload identity. For a private package, use an organization workload identity, which can create it.
-* Mix and rebar3 don't request repository tokens with an OIDC token, so an organization workload identity's `read` role only serves tools that call repo.hex.pm directly. Publishing works with the `package:ORG/PACKAGE` scope as shown above.
 
 ### Troubleshooting
 
