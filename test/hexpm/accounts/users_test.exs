@@ -483,6 +483,17 @@ defmodule Hexpm.Accounts.UsersTest do
           }
         )
 
+      invitation_log =
+        insert(:audit_log,
+          user: user,
+          action: "organization.invitation.accept",
+          user_data: user_data,
+          params: %{
+            "organization" => %{"id" => 1, "name" => "acme"},
+            "invitation" => %{"id" => 7, "email" => "invitee@example.com", "role" => "write"}
+          }
+        )
+
       other_log =
         insert(:audit_log,
           action: "owner.add",
@@ -515,11 +526,78 @@ defmodule Hexpm.Accounts.UsersTest do
                "provider_uid" => "1"
              }
 
+      assert Repo.get(AuditLog, invitation_log.id).params == %{
+               "organization" => %{"id" => 1, "name" => "acme"},
+               "invitation" => %{"id" => 7, "role" => "write"}
+             }
+
       assert Repo.get(AuditLog, other_log.id).user_data == other_log.user_data
 
       delete_log = Repo.get_by(AuditLog, action: "user.delete")
       assert delete_log.user_data == %{"id" => user.id, "username" => user.username}
       assert delete_log.params == %{"id" => user.id, "username" => user.username}
+    end
+
+    test "archives the user's keys, OAuth tokens and sessions before deleting them" do
+      user = insert(:user)
+      other = insert(:user)
+      key = insert(:key, user: user)
+      revoked_key = insert(:key, user: user, revoke_at: DateTime.utc_now())
+      other_key = insert(:key, user: other)
+      client = insert(:oauth_client)
+
+      token =
+        Repo.insert!(%Hexpm.OAuth.Token{
+          jti: "deleted-user-jti",
+          token_type: "bearer",
+          scopes: ["api"],
+          granted_scopes: ["api"],
+          expires_at:
+            DateTime.utc_now() |> DateTime.add(3600, :second) |> DateTime.truncate(:second),
+          grant_type: "authorization_code",
+          user_id: user.id,
+          client_id: client.client_id
+        })
+
+      session =
+        Repo.insert!(%Hexpm.UserSession{
+          type: "browser",
+          name: "laptop",
+          session_token: :crypto.strong_rand_bytes(32),
+          expires_at: DateTime.add(DateTime.utc_now(), 3600, :second),
+          user_id: user.id,
+          last_use: %Hexpm.UserSession.Use{
+            used_at: DateTime.utc_now(),
+            user_agent: "Mozilla/5.0",
+            ip: "203.0.113.9"
+          }
+        })
+
+      assert :ok = Users.delete(user, audit: audit_data(user), notify: false)
+
+      refute Repo.get(Hexpm.Accounts.Key, key.id)
+      refute Repo.get(Hexpm.OAuth.Token, token.id)
+      refute Repo.get(Hexpm.UserSession, session.id)
+      assert Repo.get(Hexpm.Accounts.Key, other_key.id)
+
+      keys = archived_rows("keys")
+      assert Enum.sort(Enum.map(keys, & &1["source_id"])) == Enum.sort([key.id, revoked_key.id])
+
+      for %{"row" => row} <- keys do
+        assert row["user_id"] == user.id
+        refute Map.has_key?(row, "secret_first")
+        refute Map.has_key?(row, "secret_second")
+      end
+
+      assert [%{"source_id" => token_id, "row" => token_row}] = archived_rows("oauth_tokens")
+      assert token_id == token.id
+      assert token_row["jti"] == "deleted-user-jti"
+      refute Map.has_key?(token_row, "refresh_token_hash")
+
+      assert [%{"source_id" => session_id, "row" => session_row}] = archived_rows("user_sessions")
+      assert session_id == session.id
+      assert session_row["last_use"]["ip"] == "203.0.113.9"
+      refute Map.has_key?(session_row, "session_token")
     end
 
     test "deletes a user without a primary email and sends no email" do
@@ -1123,5 +1201,18 @@ defmodule Hexpm.Accounts.UsersTest do
                  audit: audit_data(build(:user))
                )
     end
+  end
+
+  defp archived_rows(table) do
+    :audit_bucket
+    |> Hexpm.Store.list("#{table}-")
+    |> Enum.sort()
+    |> Enum.flat_map(fn key ->
+      :audit_bucket
+      |> Hexpm.Store.get(key)
+      |> :zlib.gunzip()
+      |> String.split("\n", trim: true)
+      |> Enum.map(&JSON.decode!/1)
+    end)
   end
 end

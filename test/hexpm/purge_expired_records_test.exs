@@ -582,7 +582,7 @@ defmodule Hexpm.PurgeExpiredRecordsTest do
       "organization_sso_transactions" =>
         ~w(state_hash nonce code_verifier link_token_hash subject provider_email),
       "organization_sso_sessions" => [],
-      "organization_invitations" => ~w(token_hash),
+      "organization_invitations" => ~w(token_hash email),
       "keys" => ~w(secret_first secret_second),
       "email_outbox_entries" => ~w(email recipients)
     }

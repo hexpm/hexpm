@@ -35,7 +35,7 @@ defmodule Hexpm.PurgeExpiredRecords do
       ~w(state_hash nonce code_verifier link_token_hash subject provider_email),
     Hexpm.Accounts.SSO.Authorization => ~w(code_hash),
     Hexpm.Accounts.SSO.OrgSession => [],
-    Hexpm.Accounts.OrganizationInvitation => ~w(token_hash),
+    Hexpm.Accounts.OrganizationInvitation => ~w(token_hash email),
     Hexpm.Accounts.Key => ~w(secret_first secret_second),
     Hexpm.Emails.OutboxEntry => ~w(email recipients)
   }
@@ -286,6 +286,46 @@ defmodule Hexpm.PurgeExpiredRecords do
       )
 
     Logger.info("[task] Purged #{count} delivered email outbox entries")
+  end
+
+  @doc """
+  Archives a user's API keys, OAuth tokens and sessions to the audit bucket,
+  redacted like the rows the purge deletes, so the record of who held them
+  outlives the account. Runs in the transaction that deletes the user, before
+  the keys and tokens are deleted and the sessions go with the user. A
+  transaction that rolls back after the upload leaves archived rows of
+  credentials that still exist: the purge archives them again when it deletes
+  them, and the BigQuery views collapse the duplicates by source id.
+  """
+  def archive_user_credentials(repo, %Hexpm.Accounts.User{id: user_id}) do
+    run = new_run()
+
+    [
+      {Hexpm.Accounts.Key, from(k in Hexpm.Accounts.Key, where: k.user_id == ^user_id)},
+      {Hexpm.OAuth.Token, from(t in Hexpm.OAuth.Token, where: t.user_id == ^user_id)},
+      {Hexpm.UserSession, from(s in Hexpm.UserSession, where: s.user_id == ^user_id)}
+    ]
+    |> Enum.map(fn {schema, query} -> archive_all(repo, schema, query, run) end)
+    |> Enum.sum()
+  end
+
+  defp archive_all(repo, schema, query, run) do
+    redacted = Map.fetch!(@redacted, schema)
+
+    rows =
+      repo.all(
+        from(r in query,
+          select: {r.id, fragment("(to_jsonb(?) - ?::text[])::text", r, ^redacted)},
+          order_by: r.id
+        )
+      )
+
+    rows
+    |> Enum.chunk_every(@batch_size)
+    |> Enum.with_index(1)
+    |> Enum.each(fn {batch, seq} -> archive(schema, run, seq, batch) end)
+
+    length(rows)
   end
 
   # Each batch is uploaded before it is deleted, so a failed upload raises with
