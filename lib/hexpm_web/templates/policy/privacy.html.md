@@ -10,9 +10,9 @@ One part of the service works differently: an organization's private packages an
 
 To register you have to provide a username and an email address, and a password unless you sign up with GitHub; without them we can't create an account. You can add profile information, such as a full name and social media handles, if you want to. If you choose to sign in with GitHub we receive your GitHub account identity.
 
-Your profile is public: your username always, and your email address, which is shown by default and which you can hide in your dashboard. Your full name is shown only if you choose to show it. The public packages you own are also public. Your organization memberships and the private packages those organizations own aren't. Nothing else about your account is made public. Non-public data is shared only with the providers on the [Subprocessors](/policies/subprocessors) page and in the cases described under "Vulnerability reports" and "Disclosure" below.
+Your profile is public: your username always, your email address, which is shown by default and which you can hide in your dashboard, and your full name and profile links (website, GitHub, Twitter, Bluesky, Elixir Forum, Slack, Freenode) if you add them. The public packages you own are also public. Your organization memberships and the private packages those organizations own aren't. Nothing else about your account is made public. Non-public data is shared only with the providers on the [Subprocessors](/policies/subprocessors) page and in the cases described under "Vulnerability reports" and "Disclosure" below.
 
-We send transactional email, such as address verification and password resets, through the email provider on the [Subprocessors](/policies/subprocessors) page. For each email we send we record the recipient addresses, the subject, the time it was sent and the provider's message id. We keep the email itself and its recipient addresses for 90 days after sending. After that we keep the subject, the time and the provider's message id, without the recipients.
+We send transactional email, such as address verification and password resets, through the email provider on the [Subprocessors](/policies/subprocessors) page. For each email we send we log what kind of email it is, the time it was sent and the provider's message id, without the recipients, and keep that log for ten years. Emails about an organization, such as invitations, single sign-on and two-factor notices and data deletion notices, are also stored with their recipient addresses for 90 days after sending, so that delivery can be retried. After that we keep their subject, the time and the provider's message id, without the recipients.
 
 We process account data to operate your account and deliver the service, so the legal basis is our contract with you. We keep it for as long as your account exists. You can delete your account in the dashboard. After deletion, public packages you published stay public, your username stays reserved so nobody else can take it over, and audit log entries and billing records aren't deleted with the account. Audit log entries keep your user id and username, and we remove your email addresses and profile handles from them when the account is deleted.
 
@@ -22,7 +22,7 @@ Packages published to the public repository are public. Anyone can download the 
 
 Package contents and metadata may contain personal data the publisher chose to include, for example author names and email addresses. If a package contains personal data about you, it came from the publisher, not from us collecting it from you; see "Your rights" below.
 
-We process public packages to run the registry, on the basis of our contract with the publisher. Published packages stay available indefinitely, including after the publisher deletes their account, unless removed under our policies.
+We process public packages to run the registry, on the basis of our contract with the publisher. Published packages stay available indefinitely, including after the publisher deletes their account, unless removed under our policies. We keep a copy of every package and documentation tarball sent to us for publishing, including ones that failed, were reverted or were removed, to investigate malicious publishes.
 
 ### Private packages
 
@@ -36,11 +36,11 @@ Entries for public packages and documentation keep the IP address and the key or
 
 Requests to the hex.pm website and API are logged with the client IP address, user agent and referrer. We keep these logs for ten years.
 
-When an attempt to sign in, or to authenticate to the API or the package repository, fails, we record the username or email address it was made with, the IP address, the user agent and why it was refused, so that we can detect attacks on accounts. We keep these records for ten years.
+When an attempt to sign in to hex.pm, or to authenticate to its API, fails, we record the username or email address it was made with, the IP address, the user agent and why it was refused, so that we can detect attacks on accounts. We keep these records for ten years. A request to the package repository refused for its key or token is in the repository's access log described above, without the reason.
 
 When you take an action that changes something, such as publishing a package, generating a key or changing account settings, we record it in an audit log together with the IP address and user agent of the request that performed it. You can see your own audit log in the dashboard, and organization administrators can see their organization's. We keep audit log entries indefinitely, because their purpose is to be a permanent record of what changed. Entries about public packages and other public content are kept even after the account or organization that made them is deleted, and they keep a copy of who acted. Entries about an organization's private packages and policies are part of that organization's data under the [Data Processing Agreement](/policies/dpa) and are deleted with them, and the organization's other entries are deleted with the organization. On request we can remove the identifying details from your entries.
 
-Once an API key, token or session has expired or been revoked, we delete it and keep a record of who held it, what it could access, when it was created, used and revoked, and the IP address and user agent of its last use. We keep these records indefinitely, to investigate account takeovers and malicious publishes.
+We delete a session or token within a day of its expiry or revocation, and an API key 90 days after it expires or is revoked, and keep a record of who held it, what it could access, when it was created, used and revoked, and the IP address and user agent of its last use. The same record is kept for the keys, tokens and sessions of a deleted account. We keep these records indefinitely, to investigate account takeovers and malicious publishes.
 
 Sign up, password reset, email verification and the package report form are protected by hCaptcha, which receives your IP address and browser data to tell people from bots. Application errors are reported to the error tracking provider on the [Subprocessors](/policies/subprocessors) page and can include the request data that was in scope when the error happened; they're deleted on that provider's retention schedule.
 
@@ -56,7 +56,7 @@ We use a session cookie to keep you logged in on hex.pm; it expires after 30 day
 
 ### Resources loaded by your browser
 
-Some pages load resources directly from third parties, so your browser contacts them and they see your IP address: Google Fonts on every page, Gravatar wherever a profile picture is shown, Stripe on billing pages, and hCaptcha on sign up, password reset and email verification. Gravatar also receives a hash of the email address the picture is derived from.
+Some pages load resources directly from third parties, so your browser contacts them and they see your IP address: Google Fonts on every page, Gravatar wherever a profile picture is shown, Stripe on billing pages, and hCaptcha on sign up, password reset, email verification and the package report form. Gravatar also receives a hash of the email address the picture is derived from.
 
 ### Billing
 
@@ -86,7 +86,7 @@ Six Colors is the exporter for those transfers and is responsible for the transf
 
 You can ask us for access to the personal data we hold about you, and for rectification, erasure, restriction of processing, or a copy of the data you provided in a portable format. You can object to any processing we base on legitimate interests. Where processing is based on consent, you can withdraw it at any time without affecting what was done before. Some of this you can do yourself in the dashboard: edit your profile and email addresses, review your audit log, and delete your account. For everything else, email <support@hex.pm>.
 
-Erasure has limits: published public packages stay public, a deleted account's username stays reserved, audit log entries about public content are kept as a permanent record, and we keep records the law requires us to keep, such as accounting records.
+Erasure has limits: published public packages stay public, a deleted account's username stays reserved, audit log entries about public content are kept as a permanent record, and we keep records the law requires us to keep, such as accounting records. Data we delete stays in our backups for up to 90 days after the deletion, and until it's gone it isn't restored or used for any other purpose.
 
 For personal data inside an organization's private packages, direct your request to that organization; it's the controller, and we forward requests we receive to it.
 
