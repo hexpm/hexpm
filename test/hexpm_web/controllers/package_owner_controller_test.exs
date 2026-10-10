@@ -20,6 +20,18 @@ defmodule HexpmWeb.PackageOwnerControllerTest do
     %{full_owner: full_owner, maintainer: maintainer, non_owner: non_owner, package: package}
   end
 
+  defp links(document, selector) do
+    document
+    |> LazyHTML.query(selector)
+    |> Enum.map(fn link ->
+      {
+        link |> LazyHTML.text(separator: " ") |> String.replace(~r/\s+/, " ") |> String.trim(),
+        link |> LazyHTML.attribute("href") |> List.first(),
+        link |> LazyHTML.attribute("aria-current") |> List.first()
+      }
+    end)
+  end
+
   describe "GET /packages/:name/owners" do
     test "full owner sees management page", %{full_owner: full_owner, package: package} do
       conn =
@@ -30,6 +42,40 @@ defmodule HexpmWeb.PackageOwnerControllerTest do
       body = html_response(conn, 200)
       assert body =~ "Current owners"
       refute body =~ "workload identities, so anyone who can run"
+    end
+
+    test "is a Settings section with a section nav in place of the sidebar", %{
+      full_owner: full_owner,
+      package: package
+    } do
+      insert(:release, package: package, meta: build(:release_metadata, app: package.name))
+
+      document =
+        build_conn()
+        |> test_login(full_owner)
+        |> get("/packages/#{package.name}/owners")
+        |> html_response(200)
+        |> LazyHTML.from_document()
+
+      assert links(document, "#package-tabs a") |> List.last() ==
+               {"Settings", "/packages/#{package.name}/owners", nil}
+
+      assert links(document, "#package-settings-nav a") == [
+               {"Owners", "/packages/#{package.name}/owners", "page"},
+               {"Workload identities", "/packages/#{package.name}/workload-identities", nil}
+             ]
+
+      assert document |> LazyHTML.query("#checksum-snippet") |> Enum.empty?()
+
+      assert links(document, ".package-tabs-mobile-menu a") |> Enum.take(-3) == [
+               {"Settings", "/packages/#{package.name}/owners", nil},
+               {"Owners", "/packages/#{package.name}/owners", nil},
+               {"Workload identities", "/packages/#{package.name}/workload-identities", nil}
+             ]
+
+      assert document
+             |> LazyHTML.query(".package-tabs-mobile-trigger")
+             |> LazyHTML.text(separator: " ") =~ "Owners"
     end
 
     test "the remove dialog says the package's workload identities stay", %{

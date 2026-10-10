@@ -24,6 +24,15 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
     %{full_owner: full_owner, maintainer: maintainer, non_owner: non_owner, package: package}
   end
 
+  defp settings_nav(document) do
+    document
+    |> LazyHTML.query("#package-settings-nav a")
+    |> Enum.map(fn link ->
+      {link |> LazyHTML.text(separator: " ") |> String.trim(),
+       link |> LazyHTML.attribute("aria-current") |> List.first()}
+    end)
+  end
+
   describe "GET /packages/:name/workload-identities" do
     test "full owner with 2FA and sudo sees the page", %{
       full_owner: full_owner,
@@ -35,6 +44,41 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
         |> get("/packages/#{package.name}/workload-identities")
 
       assert html_response(conn, 200) =~ "Workload identities"
+    end
+
+    test "selects Workload identities in the settings nav", %{
+      full_owner: full_owner,
+      package: package
+    } do
+      document =
+        build_conn()
+        |> test_login(full_owner)
+        |> get("/packages/#{package.name}/workload-identities")
+        |> html_response(200)
+        |> LazyHTML.from_document()
+
+      assert settings_nav(document) == [
+               {"Owners", nil},
+               {"Workload identities", "page"}
+             ]
+    end
+
+    test "leaves Workload identities out of the settings nav when the feature is off", %{
+      full_owner: full_owner,
+      package: package
+    } do
+      previous = Application.get_env(:hexpm, :features)
+      Application.put_env(:hexpm, :features, workload_identity: false)
+      on_exit(fn -> Application.put_env(:hexpm, :features, previous) end)
+
+      document =
+        build_conn()
+        |> test_login(full_owner)
+        |> get("/packages/#{package.name}/owners")
+        |> html_response(200)
+        |> LazyHTML.from_document()
+
+      assert settings_nav(document) == [{"Owners", "page"}]
     end
 
     test "lists existing workload identities", %{full_owner: full_owner, package: package} do
