@@ -39,7 +39,8 @@ defmodule Hexpm.Accounts.AuditLogs do
   `user_id`.
 
   Entries about an organization's email addresses keep them: those addresses
-  belong to the organization's own record.
+  belong to the organization's own record. The invitations it accepted lose
+  the address they were sent to.
   """
   def scrub_user(multi, %User{id: user_id}) do
     entries = from(a in AuditLog, where: a.user_id == ^user_id)
@@ -84,6 +85,14 @@ defmodule Hexpm.Accounts.AuditLogs do
       from(a in entries,
         where: like(a.action, "user_provider.%"),
         update: [set: [params: fragment("? - 'provider_email'", a.params)]]
+      ),
+      []
+    )
+    |> Multi.update_all(
+      :scrub_audit_invitation_emails,
+      from(a in entries,
+        where: a.action == "organization.invitation.accept",
+        update: [set: [params: fragment("? #- '{invitation,email}'", a.params)]]
       ),
       []
     )
