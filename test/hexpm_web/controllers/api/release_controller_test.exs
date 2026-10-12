@@ -1087,7 +1087,21 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
                "package does not exist in repository \"hexpm\""
     end
 
-    for app <- ["app\n", "app ", "app\t"] do
+    for app <- [
+          "app\n",
+          "app ",
+          "app\t",
+          "../app",
+          "/app",
+          "app/..",
+          "app\\..",
+          "..",
+          ".",
+          ".app",
+          "_app",
+          "1app",
+          "-app"
+        ] do
       test "rejects app name #{inspect(app)}", %{user: user} do
         meta = %{
           name: Fake.sequence(:package),
