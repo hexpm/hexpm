@@ -241,6 +241,29 @@ defmodule HexpmWeb.Dashboard.OrganizationWorkloadIdentitiesTest do
       assert WorkloadIdentities.list(organization) == []
     end
 
+    test "requires an environment for a write workload identity from a public repository", %{
+      admin: admin,
+      organization: organization
+    } do
+      expect(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/widget", _, _ ->
+        {:ok, 200, [], %{"id" => 22, "owner" => %{"id" => 11}, "visibility" => "public"}}
+      end)
+
+      conn =
+        build_conn()
+        |> test_login(admin)
+        |> post(
+          path(organization),
+          identity_params(%{"role" => "write", "workflow" => "publish.yml"})
+        )
+
+      body = html_response(conn, 400)
+      assert body =~ "is required for a public repository"
+      assert body =~ ~s(value="publish.yml")
+      refute body =~ ~s(value="22")
+      assert WorkloadIdentities.list(organization) == []
+    end
+
     test "refuses a write member", %{writer: writer, organization: organization} do
       conn =
         build_conn()

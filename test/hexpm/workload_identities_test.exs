@@ -73,6 +73,31 @@ defmodule Hexpm.WorkloadIdentitiesTest do
       assert reloaded.oidc_claims.workflow_ref =~ "acme/widget/.github/workflows/release.yml"
     end
 
+    test "matches no token from a public repository without an environment", %{
+      package: package,
+      workload_identity: workload_identity
+    } do
+      mint = fn claims ->
+        claims
+        |> WorkloadIdentityHelpers.github_claims()
+        |> WorkloadIdentityHelpers.sign_oidc_claims()
+        |> WorkloadIdentities.verify_and_mint(
+          repository: "hexpm",
+          package: package.name,
+          audit: audit_data(insert(:user))
+        )
+      end
+
+      assert {:error, :no_matching_identity} =
+               mint.(repository_visibility: "public", environment: "release")
+
+      workload_identity
+      |> Ecto.Changeset.change(environment: "release")
+      |> Repo.update!()
+
+      assert {:ok, _token} = mint.(repository_visibility: "public", environment: "release")
+    end
+
     test "does not write an audit log", %{package: package} do
       token =
         WorkloadIdentityHelpers.sign_oidc_claims(WorkloadIdentityHelpers.github_claims())
@@ -577,6 +602,45 @@ defmodule Hexpm.WorkloadIdentitiesTest do
     end
   end
 
+  describe "create/3 from a public repository" do
+    setup %{user: user} do
+      package =
+        insert(:package,
+          package_owners: [build(:package_owner, user: user, level: "full")]
+        )
+
+      stub(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/widget", _, _ ->
+        {:ok, 200, [], %{"id" => 99, "owner" => %{"id" => 42}, "visibility" => "public"}}
+      end)
+
+      params = %{
+        "provider" => "github",
+        "repository_owner" => "acme",
+        "repository" => "widget",
+        "workflow" => "release.yml"
+      }
+
+      %{package: package, params: params}
+    end
+
+    test "requires an environment", %{user: user, package: package, params: params} do
+      assert {:error, changeset} =
+               WorkloadIdentities.create(package, params, audit: audit_data(user))
+
+      assert errors_on(changeset)[:environment] == "is required for a public repository"
+      assert WorkloadIdentities.list(package) == []
+
+      assert {:ok, identity} =
+               WorkloadIdentities.create(
+                 package,
+                 Map.put(params, "environment", "release"),
+                 audit: audit_data(user)
+               )
+
+      assert identity.environment == "release"
+    end
+  end
+
   describe "delete/2" do
     test "emails every package owner", %{user: user, workload_identity: workload_identity} do
       assert {:ok, _} = WorkloadIdentities.delete(workload_identity, audit: audit_data(user))
@@ -818,6 +882,36 @@ defmodule Hexpm.WorkloadIdentitiesTest do
       assert {:ok, token} = mint(repository: repository.name, package: package.name)
       assert token.scopes == ["package:#{repository.name}/#{package.name}"]
       assert token.workload_identity_id == tp.id
+    end
+
+    test "a write workload identity matches no token from a public repository without an environment",
+         %{repository: repository, organization: organization} do
+      insert(:organization_workload_identity,
+        organization: organization,
+        role: "write",
+        repository: "acme/widget",
+        workflow: "release.yml"
+      )
+
+      assert {:error, :no_matching_identity} =
+               mint([repository: repository.name, package: "widget"],
+                 repository_visibility: "public"
+               )
+
+      assert {:error, :no_matching_identity} =
+               mint([repository: repository.name], repository_visibility: "public")
+
+      assert {:ok, _token} = mint(repository: repository.name, package: "widget")
+    end
+
+    test "a read workload identity matches a token from a public repository without an environment",
+         %{repository: repository, organization: organization} do
+      insert(:organization_workload_identity,
+        organization: organization,
+        repository: "acme/widget"
+      )
+
+      assert {:ok, _token} = mint([repository: repository.name], repository_visibility: "public")
     end
 
     test "mints a package token for a package that doesn't exist yet", %{
@@ -1122,6 +1216,38 @@ defmodule Hexpm.WorkloadIdentitiesTest do
       assert_email_sent(fn email ->
         assert email.text_body =~ "GitHub repository: any repository owned by acme"
       end)
+    end
+
+    test "requires an environment on a write workload identity from a public repository", %{
+      admin: admin,
+      organization: organization
+    } do
+      stub(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/widget", _, _ ->
+        {:ok, 200, [], %{"id" => 99, "owner" => %{"id" => 42}, "visibility" => "public"}}
+      end)
+
+      params = %{
+        "provider" => "github",
+        "repository_owner" => "acme",
+        "repository" => "widget",
+        "workflow" => "release.yml"
+      }
+
+      assert {:error, changeset} =
+               WorkloadIdentities.create(
+                 organization,
+                 Map.put(params, "role", "write"),
+                 audit: audit_data(admin)
+               )
+
+      assert errors_on(changeset)[:environment] == "is required for a public repository"
+
+      assert {:ok, _identity} =
+               WorkloadIdentities.create(
+                 organization,
+                 Map.put(params, "role", "read"),
+                 audit: audit_data(admin)
+               )
     end
 
     test "rejects the same configuration twice", %{admin: admin, organization: organization} do

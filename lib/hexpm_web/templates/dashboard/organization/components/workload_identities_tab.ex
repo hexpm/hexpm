@@ -185,7 +185,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.WorkloadIdentitiesTab do
 
           <div class="flex flex-col gap-2 text-xs text-grey-500 dark:text-grey-300">
             <p>
-              The write role needs a repository name and a workflow. With the read role, an empty workflow matches every workflow in the repository, and an empty repository name matches every repository the owner has, for example so all of them can fetch private dependencies.
+              The write role needs a repository name and a workflow, and an environment when the repository is public. With the read role, an empty workflow matches every workflow in the repository, and an empty repository name matches every repository the owner has, for example so all of them can fetch private dependencies.
             </p>
             <p>
               Anyone who can push a workflow file to a matching repository can then fetch, the same as with an organization key stored as a GitHub secret. Set an environment with protection rules to narrow a single repository.

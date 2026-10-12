@@ -281,6 +281,36 @@ defmodule Hexpm.WorkloadIdentities.Provider.GitHubTest do
       refute GitHub.match?(identity, claims)
     end
 
+    test "requires an environment on a write workload identity from a public repository" do
+      identity = %WorkloadIdentity{
+        repository_owner_id: "123",
+        repository_id: "456",
+        repository: "acme/widget",
+        workflow: "release.yml",
+        environment: ""
+      }
+
+      claims = %{
+        "repository" => "acme/widget",
+        "repository_owner_id" => "123",
+        "repository_id" => "456",
+        "workflow_ref" => "acme/widget/.github/workflows/release.yml@refs/heads/main",
+        "repository_visibility" => "public"
+      }
+
+      refute GitHub.match?(identity, claims)
+      refute GitHub.match?(identity, Map.put(claims, "environment", "release"))
+      assert GitHub.match?(identity, Map.put(claims, "repository_visibility", "private"))
+      assert GitHub.match?(identity, Map.put(claims, "repository_visibility", "internal"))
+
+      assert GitHub.match?(
+               %{identity | environment: "release"},
+               Map.put(claims, "environment", "release")
+             )
+
+      assert GitHub.match?(%{identity | role: "read", organization_id: 1}, claims)
+    end
+
     test "matches environment differing only by casing" do
       identity = %WorkloadIdentity{
         repository_owner_id: "123",
@@ -364,8 +394,19 @@ defmodule Hexpm.WorkloadIdentities.Provider.GitHubTest do
         {:ok, 200, [], %{"id" => 456, "owner" => %{"id" => 123}}}
       end)
 
-      assert {:ok, %{repository_owner_id: 123, repository_id: 456}} =
+      assert {:ok, %{repository_owner_id: 123, repository_id: 456, public: false}} =
                GitHub.resolve_immutable_ids(%{repository: "acme/widget"})
+    end
+
+    test "says whether the repository is public" do
+      for {visibility, public?} <- [{"public", true}, {"internal", false}, {"private", false}] do
+        expect(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/widget", _, _ ->
+          {:ok, 200, [], %{"id" => 456, "owner" => %{"id" => 123}, "visibility" => visibility}}
+        end)
+
+        assert {:ok, %{public: ^public?}} =
+                 GitHub.resolve_immutable_ids(%{repository: "acme/widget"})
+      end
     end
 
     test "pins only the owner id for a workload identity that matches every repository" do

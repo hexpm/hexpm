@@ -8,7 +8,8 @@ defmodule Hexpm.WorkloadIdentities.Provider do
   @type claims :: map()
   @type immutable_ids :: %{
           required(:repository_owner_id) => String.t() | integer(),
-          optional(:repository_id) => String.t() | integer() | nil
+          optional(:repository_id) => String.t() | integer() | nil,
+          optional(:public) => boolean()
         }
 
   @callback name() :: String.t()

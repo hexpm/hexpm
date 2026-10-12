@@ -303,6 +303,33 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
       assert WorkloadIdentities.list(package) == []
     end
 
+    test "shows a changeset error for a public repository without an environment", %{
+      full_owner: full_owner,
+      package: package
+    } do
+      expect(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/widget", _, _ ->
+        {:ok, 200, [], %{"id" => 22, "owner" => %{"id" => 11}, "visibility" => "public"}}
+      end)
+
+      conn =
+        build_conn()
+        |> test_login(full_owner, sudo: true)
+        |> post("/packages/#{package.name}/workload-identities", %{
+          "workload_identity" => %{
+            "provider" => "github",
+            "repository_owner" => "acme",
+            "repository" => "widget",
+            "workflow" => "publish.yml"
+          }
+        })
+
+      body = html_response(conn, 400)
+      assert body =~ "is required for a public repository"
+      assert body =~ ~s(value="publish.yml")
+      refute body =~ ~s(value="22")
+      assert WorkloadIdentities.list(package) == []
+    end
+
     test "creates a workload identity for a repository Hex cannot see when given its id", %{
       full_owner: full_owner,
       package: package

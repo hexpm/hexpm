@@ -84,6 +84,7 @@ defmodule Hexpm.WorkloadIdentityHelpers do
     owner_id = Keyword.get(opts, :repository_owner_id, "12345")
     repo_id = Keyword.get(opts, :repository_id, "67890")
     environment = Keyword.get(opts, :environment)
+    visibility = Keyword.get(opts, :repository_visibility, "private")
 
     workflow_ref = "#{repo}/.github/workflows/#{workflow}@refs/heads/main"
 
@@ -92,6 +93,7 @@ defmodule Hexpm.WorkloadIdentityHelpers do
       "repository_owner" => owner,
       "repository_owner_id" => owner_id,
       "repository_id" => repo_id,
+      "repository_visibility" => visibility,
       "workflow_ref" => workflow_ref,
       "job_workflow_ref" => workflow_ref
     }

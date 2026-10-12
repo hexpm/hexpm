@@ -100,13 +100,25 @@ defmodule Hexpm.WorkloadIdentities do
         }
 
         with :ok <- before_lookup.(),
-             {:ok, immutable_ids} <- provider.resolve_immutable_ids(resolve_attrs) do
+             {:ok, immutable_ids} <- provider.resolve_immutable_ids(resolve_attrs),
+             {:ok, changeset} <- check_public_environment(changeset, immutable_ids) do
           insert_identity(owner, changeset, immutable_ids, audit_data)
         end
       else
         {:error, %{changeset | action: :insert}}
       end
     end
+  end
+
+  # Checked before the resolved ids go into the changeset, so the form shows
+  # the repository ID as it was typed.
+  defp check_public_environment(changeset, immutable_ids) do
+    public? = Map.get(immutable_ids, :public, false)
+    changeset = WorkloadIdentity.validate_public_environment(changeset, public?)
+
+    if changeset.valid?,
+      do: {:ok, changeset},
+      else: {:error, %{changeset | action: :insert}}
   end
 
   defp insert_identity(owner, changeset, immutable_ids, audit_data) do
