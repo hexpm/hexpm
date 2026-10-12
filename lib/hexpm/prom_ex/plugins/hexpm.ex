@@ -201,8 +201,8 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
           unit: {:native, :millisecond}
         ),
         sum("hexpm.cdn.purge.absorbed.total",
-          event_name: [:hexpm, :cdn, :purge, :done],
-          measurement: :absorbed,
+          event_name: [:hexpm, :cdn, :purge, :absorb],
+          measurement: :count,
           description: "Queued purge jobs merged into a running one.",
           tags: [:service]
         ),
@@ -326,12 +326,14 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
 
     for service <- @cdn_services do
       for {result, rounds} <- purges do
-        :telemetry.execute([:hexpm, :cdn, :purge, :done], %{count: 0, absorbed: 0}, %{
+        :telemetry.execute([:hexpm, :cdn, :purge, :done], %{count: 0}, %{
           service: service,
           result: result,
           rounds: rounds
         })
       end
+
+      :telemetry.execute([:hexpm, :cdn, :purge, :absorb], %{count: 0}, %{service: service})
 
       :telemetry.execute([:hexpm, :cdn, :purge, :exception], %{count: 0}, %{service: service})
     end

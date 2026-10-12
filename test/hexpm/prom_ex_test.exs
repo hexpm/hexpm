@@ -65,6 +65,7 @@ defmodule Hexpm.PromExTest do
           [:hexpm, :sentry, :filtered],
           [:hexpm, :cdn, :verify, :stop],
           [:hexpm, :cdn, :purge, :done],
+          [:hexpm, :cdn, :purge, :absorb],
           [:db_connection, :connection_error],
           [:db_connection, :connected],
           [:hexpm, :email, :deliver, :done],
@@ -107,11 +108,14 @@ defmodule Hexpm.PromExTest do
       assert_received {[:hexpm, :cdn, :verify, :stop], ^ref, %{count: 0},
                        %{pop: "nrt-tokyo-jp", result: :error}}
 
-      assert_received {[:hexpm, :cdn, :purge, :done], ^ref, %{count: 0, absorbed: 0},
+      assert_received {[:hexpm, :cdn, :purge, :done], ^ref, %{count: 0},
                        %{service: :fastly_hexdocs, result: :ok, rounds: 3}}
 
-      assert_received {[:hexpm, :cdn, :purge, :done], ^ref, %{count: 0, absorbed: 0},
+      assert_received {[:hexpm, :cdn, :purge, :done], ^ref, %{count: 0},
                        %{service: :fastly_hexrepo, result: :error, rounds: 0}}
+
+      assert_received {[:hexpm, :cdn, :purge, :absorb], ^ref, %{count: 0},
+                       %{service: :fastly_hexdocs_private}}
 
       assert_received {[:db_connection, :connection_error], ^ref, %{count: 0},
                        %{error: %DBConnection.ConnectionError{reason: :queue_timeout}}}
@@ -143,6 +147,8 @@ defmodule Hexpm.PromExTest do
       assert ~s(hexpm_registry_builder_build_total{result="ok",type="repository"} 0) in samples
 
       assert ~s(hexpm_cdn_purge_total{result="error",rounds="0",service="fastly_hexrepo"} 0) in samples
+
+      assert ~s(hexpm_cdn_purge_absorbed_total{service="fastly_hexrepo"} 0) in samples
 
       for type <- Hexpm.Emails.types() do
         for outcome <- ["ok", "error"] do
