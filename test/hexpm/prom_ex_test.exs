@@ -33,6 +33,18 @@ defmodule Hexpm.PromExTest do
     assert {Hexpm.PromEx.Plugins.Oban, poll_rate: 60_000} = oban_plugin()
   end
 
+  defp plugin_modules() do
+    Enum.map(Hexpm.PromEx.plugins(), fn
+      {module, _opts} -> module
+      module -> module
+    end)
+  end
+
+  test "reports Phoenix metrics through the plugin that relabels them" do
+    assert Hexpm.PromEx.Plugins.Phoenix in plugin_modules()
+    refute PromEx.Plugins.Phoenix in plugin_modules()
+  end
+
   # initialize_counters/0 reaches every handler on the events it seeds, so
   # these tests run apart from the async tests that attach to them.
   describe "initialize_counters/0" do

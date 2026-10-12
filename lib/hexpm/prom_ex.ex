@@ -8,7 +8,7 @@ defmodule Hexpm.PromEx do
     [
       Plugins.Application,
       Plugins.Beam,
-      {Plugins.Phoenix, router: HexpmWeb.Router, endpoint: HexpmWeb.Endpoint},
+      {Hexpm.PromEx.Plugins.Phoenix, router: HexpmWeb.Router, endpoint: HexpmWeb.Endpoint},
       {Plugins.Ecto, repos: [Hexpm.RepoBase]},
       Hexpm.PromEx.Plugins.Hexpm,
       Hexpm.PromEx.Plugins.EctoLatency,
