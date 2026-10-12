@@ -12,6 +12,9 @@ defmodule Hexpm.PromEx.Plugins.OutboundHttpTest do
     def init(opts), do: opts
 
     @impl Plug
+    def call(%Plug.Conn{path_info: [status]} = conn, _opts),
+      do: Plug.Conn.send_resp(conn, String.to_integer(status), "")
+
     def call(conn, _opts), do: Plug.Conn.send_resp(conn, 200, "ok")
   end
 
@@ -99,7 +102,7 @@ defmodule Hexpm.PromEx.Plugins.OutboundHttpTest do
       ref = :telemetry_test.attach_event_handlers(self(), @finch_events)
       on_exit(fn -> :telemetry.detach(ref) end)
 
-      %{url: "http://localhost:#{port}/", ref: ref}
+      %{url: "http://localhost:#{port}/", port: port, ref: ref}
     end
 
     test "tags a response, its wait for the pool and its connection by host", %{
@@ -152,6 +155,61 @@ defmodule Hexpm.PromEx.Plugins.OutboundHttpTest do
                  %{host: label, method: "GET", kind: :error}
                ]
       end
+    end
+
+    test "tags a response ExAws streamed through Req by its status", %{port: port, ref: ref} do
+      url = "http://localhost:#{port}/403"
+
+      assert {:ok, %{status_code: 403}} = ExAws.Request.Req.request(:get, url)
+
+      assert_receive {[:finch, :request, :stop], ^ref, _,
+                      %{name: Hexpm.Finch, request: %{port: ^port}, result: {:ok, _acc}} =
+                        request}
+
+      assert labels([:finch, :request, :stop], request) == [
+               %{host: "localhost", method: "GET", status: 403}
+             ]
+    end
+
+    test "tags a response Req streamed into a function or a collectable by its status", %{
+      url: url,
+      ref: ref
+    } do
+      into = [fn {:data, _data}, acc -> {:cont, acc} end, []]
+
+      for into <- into do
+        assert {:ok, %Req.Response{status: 503}} =
+                 Req.request(
+                   url: url <> "503",
+                   finch: [name: __MODULE__.Finch],
+                   into: into,
+                   retry: false
+                 )
+
+        assert_receive {[:finch, :request, :stop], ^ref, _,
+                        %{name: __MODULE__.Finch, result: {:ok, _acc}} = request}
+
+        assert labels([:finch, :request, :stop], request) == [
+                 %{host: "localhost", method: "GET", status: 503}
+               ]
+      end
+    end
+
+    test "tags a streamed request that failed by the exception", %{ref: ref} do
+      {:ok, listener} = :gen_tcp.listen(0, ip: :loopback)
+      {:ok, port} = :inet.port(listener)
+      :ok = :gen_tcp.close(listener)
+
+      assert {:error, %{reason: %Req.TransportError{reason: :econnrefused}}} =
+               ExAws.Request.Req.request(:get, "http://localhost:#{port}/")
+
+      assert_receive {[:finch, :request, :stop], ^ref, _,
+                      %{name: Hexpm.Finch, request: %{port: ^port}, result: {:error, _, _}} =
+                        request}
+
+      assert labels([:finch, :request, :stop], request) == [
+               %{host: "localhost", method: "GET", status: "Finch.TransportError"}
+             ]
     end
   end
 end

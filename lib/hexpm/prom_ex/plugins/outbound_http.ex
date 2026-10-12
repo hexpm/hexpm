@@ -113,10 +113,22 @@ defmodule Hexpm.PromEx.Plugins.OutboundHttp do
   defp host(host), do: host
 
   # A request that never got a response is still worth counting, so failures are
-  # labelled rather than dropped.
-  defp status({:ok, %{status: status}}), do: status
+  # labelled rather than dropped. Finch.request/3 returns the response and
+  # Finch.stream_while/5 its accumulator, which Req's adapter, and so ExAws,
+  # keeps as the request next to the response it builds.
+  defp status({:ok, %{status: status}}) when is_integer(status), do: status
+  defp status({:ok, {%Req.Request{}, response}}), do: req_status(response)
   defp status({:ok, _other}), do: "ok"
   defp status({:error, %{__struct__: module}}), do: inspect(module)
+  defp status({:error, %{__struct__: module}, _acc}), do: inspect(module)
   defp status({:error, _other}), do: "error"
+  defp status({:error, _other, _acc}), do: "error"
   defp status(_), do: "unknown"
+
+  # Req collects a response into {status, headers, body, trailers}, or into a
+  # Req.Response when it streams the body into a function or a collectable.
+  defp req_status({status, _headers, _body, _trailers}) when is_integer(status), do: status
+  defp req_status(%Req.Response{status: status}), do: status
+  defp req_status({_collector, %Req.Response{status: status}}), do: status
+  defp req_status(_response), do: "ok"
 end
