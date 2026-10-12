@@ -3,7 +3,12 @@ defmodule Hexpm.PackageReports.Varsel do
               {:ok, %{id: String.t(), url: String.t(), sign_in_url: String.t()}}
               | {:error, :unavailable}
 
+  @callback erase(%{username: String.t(), email: String.t() | nil}) ::
+              :ok | {:error, :unavailable}
+
   def submit(report), do: impl().submit(report)
+
+  def erase(person), do: impl().erase(person)
 
   defp impl, do: Application.fetch_env!(:hexpm, :varsel_impl)
 end
@@ -21,7 +26,7 @@ defmodule Hexpm.PackageReports.Varsel.Client do
     config = Application.fetch_env!(:hexpm, :varsel)
     url = Keyword.fetch!(config, :report_url)
 
-    with {:ok, token} <- token(config),
+    with {:ok, token} <- token(config, Keyword.fetch!(config, :audience)),
          body <- JSON.encode!(report),
          {:ok, 201, headers, response} <-
            Hexpm.HTTP.impl().post(url, request_headers(token), body,
@@ -42,11 +47,35 @@ defmodule Hexpm.PackageReports.Varsel.Client do
       {:error, :unavailable}
   end
 
-  defp token(config) do
+  @impl true
+  def erase(person) do
+    config = Application.fetch_env!(:hexpm, :varsel)
+    url = Keyword.fetch!(config, :erasure_url)
+
+    with {:ok, token} <- token(config, url),
+         {:ok, 204, _headers, _body} <-
+           Hexpm.HTTP.impl().post(url, request_headers(token), JSON.encode!(person),
+             receive_timeout: @timeout,
+             request_timeout: @timeout,
+             max_body_bytes: @max_body_bytes
+           ) do
+      :ok
+    else
+      error ->
+        Logger.error("Varsel erasure notice failed: #{failure_reason(error)}")
+        {:error, :unavailable}
+    end
+  rescue
+    error ->
+      Logger.error("Varsel erasure notice failed: #{inspect(error.__struct__)}")
+      {:error, :unavailable}
+  end
+
+  defp token(config, audience) do
     now = System.system_time(:second)
 
     claims = %{
-      "aud" => Keyword.fetch!(config, :audience),
+      "aud" => audience,
       "exp" => now + 60,
       "iat" => now,
       "iss" => "hexpm",

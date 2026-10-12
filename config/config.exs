@@ -68,7 +68,8 @@ config :hexpm, :varsel_impl, Hexpm.PackageReports.Varsel.Client
 
 config :hexpm, :varsel,
   report_url: "https://cna.erlef.org/api/hex/reports",
-  audience: "https://cna.erlef.org/api/hex/reports"
+  audience: "https://cna.erlef.org/api/hex/reports",
+  erasure_url: "https://cna.erlef.org/api/hex/erasures"
 
 config :hexpm, ecto_repos: [Hexpm.RepoBase]
 

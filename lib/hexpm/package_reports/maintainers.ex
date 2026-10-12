@@ -5,12 +5,20 @@ defmodule Hexpm.PackageReports.Maintainers do
 
   def for_package(package) do
     package
+    |> users()
+    |> Enum.map(&identity/1)
+  end
+
+  @doc """
+  The users `for_package/1` names, one per primary email address.
+  """
+  def users(package) do
+    package
     |> package_users()
     |> Enum.flat_map(&expand_user/1)
-    |> Enum.map(&identity/1)
-    |> Enum.reject(&is_nil/1)
-    |> Enum.uniq_by(&String.downcase(&1.email))
-    |> Enum.sort_by(&String.downcase(&1.email))
+    |> Enum.filter(&identity/1)
+    |> Enum.uniq_by(&String.downcase(identity(&1).email))
+    |> Enum.sort_by(&String.downcase(identity(&1).email))
   end
 
   def identity(%User{} = user) do
