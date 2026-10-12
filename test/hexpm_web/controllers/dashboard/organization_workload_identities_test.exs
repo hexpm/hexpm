@@ -64,6 +64,39 @@ defmodule HexpmWeb.Dashboard.OrganizationWorkloadIdentitiesTest do
       assert body =~ "release.yml"
       assert body =~ "widget, gadget"
       assert body =~ "add-workload-identity-form"
+      refute body =~ "Two-factor authentication on your account is required"
+      refute body =~ ~r/<fieldset[^>]*\sdisabled[\s>]/
+    end
+
+    test "disables the form for an admin without 2FA and links to enabling it", %{
+      organization: organization
+    } do
+      admin = insert(:user)
+      insert(:organization_user, organization: organization, user: admin, role: "admin")
+
+      identity =
+        insert(:organization_workload_identity,
+          organization: organization,
+          repository: "acme/widget"
+        )
+
+      body =
+        build_conn()
+        |> test_login(admin)
+        |> get(path(organization))
+        |> html_response(200)
+
+      assert body =~ "acme/widget"
+
+      assert body =~
+               "Two-factor authentication on your account is required to add or remove workload identities."
+
+      assert body =~
+               ~s(href="/dashboard/security?return=#{URI.encode_www_form(path(organization))}")
+
+      assert body =~ "add-workload-identity-form"
+      assert body =~ ~r/<fieldset[^>]*\sdisabled[\s>]/
+      refute body =~ "remove-workload-identity-#{identity.id}"
     end
 
     test "shows the workload identities without the form to a write member", %{
@@ -212,6 +245,29 @@ defmodule HexpmWeb.Dashboard.OrganizationWorkloadIdentitiesTest do
       body = html_response(conn, 400)
       assert body =~ "must be empty when every repository matches"
       assert body =~ ~s(value="ci.yml")
+      assert WorkloadIdentities.list(organization) == []
+    end
+
+    test "requires an environment for a write workload identity from a public repository", %{
+      admin: admin,
+      organization: organization
+    } do
+      expect(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/widget", _, _ ->
+        {:ok, 200, [], %{"id" => 22, "owner" => %{"id" => 11}, "visibility" => "public"}}
+      end)
+
+      conn =
+        build_conn()
+        |> test_login(admin)
+        |> post(
+          path(organization),
+          identity_params(%{"role" => "write", "workflow" => "publish.yml"})
+        )
+
+      body = html_response(conn, 400)
+      assert body =~ "is required for a public repository"
+      assert body =~ ~s(value="publish.yml")
+      refute body =~ ~s(value="22")
       assert WorkloadIdentities.list(organization) == []
     end
 

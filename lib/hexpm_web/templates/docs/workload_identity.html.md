@@ -8,7 +8,7 @@ GitHub Actions is the only supported CI provider.
 
 ### How it works
 
-1. A package owner configures a workload identity that names the GitHub repository, workflow file, and optional environment.
+1. A package owner configures a workload identity that names the GitHub repository, workflow file, and environment. The environment is optional for a private repository.
 2. The CI job requests an OIDC token from GitHub with audience `hexpm`.
 3. The job exchanges that token at Hex's OAuth token endpoint for a token for one package.
 4. Hex verifies the token, matches a workload identity, and returns a Hex access token that expires in 15 minutes and can only publish that package.
@@ -40,7 +40,7 @@ Fill in the form:
   <dt><code>Workflow</code></dt>
   <dd>Workflow filename only, for example <code>release.yml</code> or <code>release.yaml</code>. Hex strips any path and matches the basename of the calling workflow in the configured repository. <strong>Case-sensitive</strong>, so <code>Release.yml</code> and <code>release.yml</code> are different workflows.</dd>
   <dt><code>Environment</code></dt>
-  <dd>GitHub Actions environment name. Optional, but strongly recommended. A GitHub environment is where you can require reviewers, add a wait timer, or restrict which branches can deploy, so it's the only place to add a check before a publish. When it's set, the OIDC token must name the same environment, compared case-insensitively as GitHub compares environment names. When it's blank, Hex accepts any environment or none.</dd>
+  <dd>GitHub Actions environment name. Required when the repository is public, and strongly recommended otherwise. A GitHub environment is where you can require reviewers, add a wait timer, or restrict which branches can deploy, so it's the only place to add a check before a publish. GitHub <a href="https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments">offers environments</a> in public repositories on every plan and in private repositories only on paid plans, which is why Hex doesn't require one for a private repository. When it's set, the OIDC token must name the same environment, compared case-insensitively as GitHub compares environment names. When it's blank, Hex accepts any environment or none until the repository is made public, and then accepts no token for the workload identity.</dd>
   <dt><code>Repository ID</code></dt>
   <dd>Numeric GitHub repository ID. Only required when Hex can't see the repository, as with a private repository. Leave it blank for a public repository and Hex looks up the ID itself. When Hex finds the ID, it uses that instead of anything entered here.</dd>
 </dl>
@@ -70,7 +70,7 @@ Each organization workload identity has a role:
   <dd>Fetches like <code>read</code>, publishes releases and docs of packages in the repository, and creates new packages in it. The "Packages" field limits which package names it covers. Leave it empty to cover every package. A name in the list doesn't have to exist yet, so the workflow can create that package.</dd>
 </dl>
 
-The other fields are the same as for a package workload identity. The `write` role needs a repository name and a workflow. The `read` role can leave either empty:
+The other fields are the same as for a package workload identity. The `write` role needs a repository name and a workflow, and an environment when the repository is public. The `read` role can leave the repository name and workflow empty, and never needs an environment:
 
 * An empty workflow matches every workflow in the repository, including test workflows. Anyone who can push a workflow file to the repository can then fetch, the same as with an organization API key stored as a repository secret, so set an environment with protection rules when that matters.
 * An empty repository name matches every repository owned by the repository owner, pinned by the owner's GitHub ID. Anyone who can create a repository under that owner, or push a workflow file to one of its repositories, can then fetch, the same as with an organization API key stored as a GitHub organization secret available to all repositories. The workflow and environment must be empty too, because whoever creates a repository also names its workflows and environments.
@@ -120,8 +120,9 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    # Optional: pin to a GitHub Environment that matches the workload identity.
-    # environment: release
+    # The GitHub Environment the workload identity names. Required for a public
+    # repository.
+    environment: release
     steps:
       - uses: actions/checkout@v4
 
@@ -162,7 +163,7 @@ Notes:
 * Discover the audience with `GET /api/oidc/audience` instead of hardcoding it. The current value is `hexpm`.
 * Each OIDC token can be exchanged at most once, and Hex rejects a replayed `jti`. Hex refuses OIDC tokens that are valid for more than 15 minutes, because it keeps the record of a used token for that long. GitHub's are valid for 5 minutes.
 * The Hex token can only publish the package named in the `scope` parameter. It isn't a general-purpose API key.
-* Prefer matching on a GitHub Environment for production release workflows, so only that environment can get a token.
+* A workload identity for a public repository names a GitHub Environment, so only jobs in that environment can get a token. For a private repository the environment is optional, and still the only way to put protection rules in front of a publish.
 
 ### Token exchange API
 
@@ -212,7 +213,7 @@ token=<hex-access-token>
 ### Security model
 
 * Hex verifies the GitHub OIDC signature with discovery and JWKS, rejects `none` and HMAC algorithms, and checks `iss`, `aud`, `exp`, `nbf`, and `iat`.
-* Matching requires the configured repository, the workflow basename from a workflow ref inside that repository, the immutable `repository_owner_id` and `repository_id`, and the optional environment. A token without a `repository_id` claim never matches. The workflow is compared exactly, including casing. The repository, owner, and environment are compared case-insensitively, and the repository and owner are pinned by their immutable GitHub IDs. A reusable workflow from another repository doesn't satisfy the workflow match by having the same basename.
+* Matching requires the configured repository, the workflow basename from a workflow ref inside that repository, the immutable `repository_owner_id` and `repository_id`, and the environment when one is configured. A token without a `repository_id` claim never matches. A workload identity that can publish and has no environment matches no token whose `repository_visibility` claim is `public`. The workflow is compared exactly, including casing. The repository, owner, and environment are compared case-insensitively, and the repository and owner are pinned by their immutable GitHub IDs. A reusable workflow from another repository doesn't satisfy the workflow match by having the same basename.
 * Pinning the repository ID as well as the owner ID matters inside an organization. If the configured repository is deleted, anyone who can create a repository in that organization could otherwise recreate the name, add the configured workflow, and get a token. The owner ID alone wouldn't stop that.
 * Hex tokens issued this way expire after 15 minutes, cover one package or one organization repository, and are attributed to the workload identity. The release has no publishing user, and the audit log records the publish.
 * Hex rejects tokens from `pull_request_target` and `workflow_run` workflows. A `workflow_run` run gets write permissions even when a pull request from a fork triggered the run that started it, and no OIDC claim says whether one did.
@@ -228,8 +229,9 @@ token=<hex-access-token>
 
 * **The form reports the GitHub repository could not be resolved:** the GitHub owner doesn't exist or is misspelled. Hex could read neither the repository nor the owner profile.
 * **The form reports that a repository ID is required:** Hex couldn't see the repository, so it can't pin the ID itself. For a private repository, fill in the repository ID field. For a public one, this usually means the repository name is misspelled, because GitHub answers 404 both for a repository that doesn't exist and for one Hex can't see, so a typo looks the same as a private repository. A wrong repository name combined with a repository ID you fill in is created but never matches, and the exchange returns no matching workload identity.
+* **The form reports that the environment is required for a public repository:** a workload identity that can publish from a public repository must name a GitHub environment. Create one under the repository's Settings, Environments, add protection rules such as required reviewers, set `environment:` on the publishing job, and enter the environment's name in the form.
 * **The form reports that GitHub could not be reached:** GitHub was unreachable, rate-limited, or answered with something unexpected. Nothing was stored, so you can submit the same form again.
-* **The exchange returns no matching workload identity:** check the package name, Hex repository, GitHub `owner/repo`, workflow **filename**, and optional environment against the configured workload identity, including the exact casing of the workflow filename. The workflow file that requests the OIDC token must be in the configured repository.
+* **The exchange returns no matching workload identity:** check the package name, Hex repository, GitHub `owner/repo`, workflow **filename**, and environment against the configured workload identity, including the exact casing of the workflow filename. The workflow file that requests the OIDC token must be in the configured repository. A workload identity without an environment stops matching when its repository is made public, so remove it and add one that names an environment.
 * **The exchange rejects the OIDC token:** confirm `id-token: write`, audience `hexpm`, and that you aren't reusing a JWT that was already exchanged.
 * **The exchange rejects a token from a `pull_request_target` or `workflow_run` workflow:** both events run with the base repository's permissions when a pull request from a fork triggered them, so code from a fork could request an OIDC token. Publish from `push`, `release`, or `workflow_dispatch` instead.
 * **Publish fails with package ownership or scope errors:** the Hex token only covers the package named in the exchange. Exchange again for that package name.

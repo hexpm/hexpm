@@ -2,7 +2,8 @@ defmodule HexpmWeb.Dashboard.Organization.Components.WorkloadIdentitiesTab do
   @moduledoc """
   Workload identities tab content for the organization dashboard. Lists the
   GitHub Actions workflows that can fetch from the organization's repository,
-  and publish to it with the write role. Admins add and remove them.
+  and publish to it with the write role. Admins with 2FA on their account add
+  and remove them.
   """
   use Phoenix.Component
 
@@ -12,11 +13,13 @@ defmodule HexpmWeb.Dashboard.Organization.Components.WorkloadIdentitiesTab do
     statics: HexpmWeb.static_paths()
 
   import HexpmWeb.Components.Badge, only: [badge: 1]
-  import HexpmWeb.Components.Buttons, only: [button: 1, icon_button: 1]
+  import HexpmWeb.Components.Buttons, only: [button: 1, button_link: 1, icon_button: 1]
   import HexpmWeb.Components.Form, only: [sudo_form: 1]
   import HexpmWeb.Components.Input, only: [text_input: 1, select_input: 1]
   import HexpmWeb.Components.Modal, only: [modal: 1, show_modal: 1, hide_modal: 1]
+  import HexpmWeb.Components.Tooltip, only: [tooltip: 1]
 
+  alias Hexpm.Accounts.User
   alias Hexpm.WorkloadIdentities.WorkloadIdentity
 
   attr :changeset, :any, required: true
@@ -28,6 +31,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.WorkloadIdentitiesTab do
     assigns =
       assigns
       |> assign(:admin?, admin?(assigns.current_user, assigns.organization))
+      |> assign(:tfa?, User.tfa_enabled?(assigns.current_user))
       |> assign(:form, to_form(assigns.changeset, as: :workload_identity))
 
     ~H"""
@@ -73,12 +77,20 @@ defmodule HexpmWeb.Dashboard.Organization.Components.WorkloadIdentitiesTab do
             </div>
 
             <.icon_button
-              :if={@admin?}
+              :if={@admin? and @tfa?}
               icon="x-mark"
               variant="danger"
               aria-label={"Remove workload identity #{repository_label(workload_identity)}"}
               phx-click={show_modal("remove-workload-identity-#{workload_identity.id}")}
             />
+            <.tooltip :if={@admin? and not @tfa?} text="Requires 2FA">
+              <.icon_button
+                icon="x-mark"
+                variant="danger"
+                aria-label={"Remove workload identity #{repository_label(workload_identity)}"}
+                disabled
+              />
+            </.tooltip>
           </li>
           <li
             :if={@workload_identities == []}
@@ -106,6 +118,24 @@ defmodule HexpmWeb.Dashboard.Organization.Components.WorkloadIdentitiesTab do
           </h2>
         </div>
 
+        <div
+          :if={not @tfa?}
+          class="mx-6 mt-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-4 py-3"
+        >
+          <p class="text-sm text-amber-900 dark:text-amber-100">
+            Two-factor authentication on your account is required to add or remove workload identities.
+          </p>
+          <.button_link
+            href={
+              ~p"/dashboard/security?return=#{~p"/dashboard/orgs/#{@organization}/workload-identities"}"
+            }
+            size="sm"
+            class="shrink-0"
+          >
+            Enable two-factor authentication
+          </.button_link>
+        </div>
+
         <.sudo_form
           current_user={@current_user}
           action={~p"/dashboard/orgs/#{@organization}/workload-identities"}
@@ -113,79 +143,84 @@ defmodule HexpmWeb.Dashboard.Organization.Components.WorkloadIdentitiesTab do
           id="add-workload-identity-form"
           class="group/workload-identity px-6 py-5 flex flex-col gap-4"
         >
-          <input type="hidden" name="workload_identity[provider]" value="github" />
+          <fieldset disabled={not @tfa?} class="flex flex-col gap-4 disabled:opacity-50">
+            <input type="hidden" name="workload_identity[provider]" value="github" />
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <.text_input
-              field={@form[:repository_owner]}
-              label="Repository owner"
-              placeholder="acme"
-              required
-            />
-            <.text_input
-              field={@form[:repository]}
-              value={WorkloadIdentity.repository_name(@form[:repository].value)}
-              label="Repository name"
-              placeholder="widget"
-            />
-            <.select_input
-              field={@form[:role]}
-              label="Role"
-              options={[
-                {"Read: fetch packages", "read"},
-                {"Write: fetch, publish and create packages", "write"}
-              ]}
-            />
-            <.text_input
-              field={@form[:workflow]}
-              label="Workflow"
-              placeholder="release.yml"
-            />
-            <.text_input
-              field={@form[:environment]}
-              label="Environment"
-              placeholder="Any"
-            />
-            <.text_input
-              field={@form[:repository_id]}
-              label="Repository ID"
-              placeholder="123456"
-            />
-          </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <.text_input
+                field={@form[:repository_owner]}
+                label="Repository owner"
+                placeholder="acme"
+                required
+              />
+              <.text_input
+                field={@form[:repository]}
+                value={WorkloadIdentity.repository_name(@form[:repository].value)}
+                label="Repository name"
+                placeholder="widget"
+              />
+              <.select_input
+                field={@form[:role]}
+                label="Role"
+                options={[
+                  {"Read: fetch packages", "read"},
+                  {"Write: fetch, publish and create packages", "write"}
+                ]}
+              />
+              <.text_input
+                field={@form[:workflow]}
+                label="Workflow"
+                placeholder="release.yml"
+              />
+              <.text_input
+                field={@form[:environment]}
+                label="Environment"
+                placeholder="Any"
+              />
+              <.text_input
+                field={@form[:repository_id]}
+                label="Repository ID"
+                placeholder="123456"
+              />
+            </div>
 
-          <div class="hidden group-has-[option[value=write]:checked]/workload-identity:block">
-            <.text_input
-              field={@form[:packages]}
-              value={packages_value(@form[:packages].value)}
-              label="Packages"
-              placeholder="All packages"
-            />
-            <p class="mt-1 text-xs text-grey-500 dark:text-grey-300">
-              Package names separated by commas. A name can be a package that doesn't exist yet, which the workflow can then create. Leave empty to cover every package in the repository.
-            </p>
-          </div>
+            <div class="hidden group-has-[option[value=write]:checked]/workload-identity:block">
+              <.text_input
+                field={@form[:packages]}
+                value={packages_value(@form[:packages].value)}
+                label="Packages"
+                placeholder="All packages"
+              />
+              <p class="mt-1 text-xs text-grey-500 dark:text-grey-300">
+                Package names separated by commas. A name can be a package that doesn't exist yet, which the workflow can then create. Leave empty to cover every package in the repository.
+              </p>
+            </div>
 
-          <div class="flex flex-col gap-2 text-xs text-grey-500 dark:text-grey-300">
-            <p>
-              The write role needs a repository name and a workflow. With the read role, an empty workflow matches every workflow in the repository, and an empty repository name matches every repository the owner has, for example so all of them can fetch private dependencies.
-            </p>
-            <p>
-              Anyone who can push a workflow file to a matching repository can then fetch, the same as with an organization key stored as a GitHub secret. Set an environment with protection rules to narrow a single repository.
-            </p>
-            <p>
-              The repository ID is required for private GitHub repositories Hex can't see. Find it with <code class="text-xs">gh api repos/OWNER/NAME --jq .id</code>.
-            </p>
-          </div>
+            <div class="flex flex-col gap-2 text-xs text-grey-500 dark:text-grey-300">
+              <p>
+                The write role needs a repository name and a workflow, and an environment when the repository is public. With the read role, an empty workflow matches every workflow in the repository, and an empty repository name matches every repository the owner has, for example so all of them can fetch private dependencies.
+              </p>
+              <p>
+                Anyone who can push a workflow file to a matching repository can then fetch, the same as with an organization key stored as a GitHub secret. Set an environment with protection rules to narrow a single repository.
+              </p>
+              <p>
+                The repository ID is required for private GitHub repositories Hex can't see. Find it with <code class="text-xs">gh api repos/OWNER/NAME --jq .id</code>.
+              </p>
+            </div>
+          </fieldset>
 
           <div class="flex justify-end">
-            <.button type="submit" variant="primary">Add workload identity</.button>
+            <.button :if={@tfa?} type="submit" variant="primary">Add workload identity</.button>
+            <.tooltip :if={not @tfa?} text="Requires 2FA">
+              <.button type="submit" variant="primary" disabled>Add workload identity</.button>
+            </.tooltip>
           </div>
         </.sudo_form>
       </div>
 
       <.modal
         :for={workload_identity <- @workload_identities}
-        :if={@admin?}
+        :if={@admin? and @tfa?}
         id={"remove-workload-identity-#{workload_identity.id}"}
         title="Remove workload identity?"
         max_width="md"
