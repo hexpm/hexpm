@@ -7,6 +7,7 @@ defmodule Hexpm.PackageReports.Varsel.ClientTest do
   alias Hexpm.PackageReports.Varsel.Client
 
   @report_url "https://cna.erlef.org/api/hex/reports"
+  @erasure_url "https://cna.erlef.org/api/hex/erasures"
 
   setup :verify_on_exit!
 
@@ -19,6 +20,7 @@ defmodule Hexpm.PackageReports.Varsel.ClientTest do
       original
       |> Keyword.put(:report_url, @report_url)
       |> Keyword.put(:audience, @report_url)
+      |> Keyword.put(:erasure_url, @erasure_url)
       |> Keyword.put(:key_id, "hexpm-test")
     )
 
@@ -99,6 +101,51 @@ defmodule Hexpm.PackageReports.Varsel.ClientTest do
     end)
 
     assert capture_log(fn -> Client.submit(report()) end) =~ "invalid_response"
+  end
+
+  describe "erase/1" do
+    test "posts the username and email with a JWT addressed to the erasure endpoint" do
+      expect(Hexpm.HTTP.Mock, :post, fn url, headers, body, _opts ->
+        assert url == @erasure_url
+
+        assert JSON.decode!(body) == %{
+                 "username" => "deleted",
+                 "email" => "deleted@example.com"
+               }
+
+        assert {"content-type", "application/json"} in headers
+        assert {"authorization", "Bearer " <> token} = List.keyfind(headers, "authorization", 0)
+
+        signer =
+          Joken.Signer.create(
+            "ES256",
+            %{"pem" => Application.fetch_env!(:hexpm, :jwt_signing_key)}
+          )
+
+        assert {:ok, claims} = Joken.Signer.verify(token, signer)
+        assert claims["iss"] == "hexpm"
+        assert claims["sub"] == "hexpm"
+        assert claims["aud"] == @erasure_url
+        assert claims["exp"] - claims["iat"] == 60
+
+        {:ok, 204, [], ""}
+      end)
+
+      assert Client.erase(%{username: "deleted", email: "deleted@example.com"}) == :ok
+    end
+
+    test "returns unavailable on any other response" do
+      expect(Hexpm.HTTP.Mock, :post, fn _url, _headers, _body, _opts ->
+        {:ok, 503, [], %{"error" => "unavailable"}}
+      end)
+
+      log =
+        capture_log(fn ->
+          assert Client.erase(%{username: "deleted", email: nil}) == {:error, :unavailable}
+        end)
+
+      assert log =~ "Varsel erasure notice failed: HTTP status 503"
+    end
   end
 
   defp report do
