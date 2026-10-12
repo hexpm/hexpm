@@ -9,9 +9,8 @@ defmodule Hexpm.PromEx do
       Plugins.Application,
       Plugins.Beam,
       {Hexpm.PromEx.Plugins.Phoenix, router: HexpmWeb.Router, endpoint: HexpmWeb.Endpoint},
-      {Plugins.Ecto, repos: [Hexpm.RepoBase]},
+      {Hexpm.PromEx.Plugins.Ecto, repos: [Hexpm.RepoBase]},
       Hexpm.PromEx.Plugins.Hexpm,
-      Hexpm.PromEx.Plugins.EctoLatency,
       Hexpm.PromEx.Plugins.DbConnection,
       Hexpm.PromEx.Plugins.OutboundHttp,
       Hexpm.PromEx.Plugins.Email

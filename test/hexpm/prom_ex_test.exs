@@ -45,6 +45,11 @@ defmodule Hexpm.PromExTest do
     refute PromEx.Plugins.Phoenix in plugin_modules()
   end
 
+  test "reports Ecto metrics through the plugin that rebuckets them" do
+    assert Hexpm.PromEx.Plugins.Ecto in plugin_modules()
+    refute PromEx.Plugins.Ecto in plugin_modules()
+  end
+
   # initialize_counters/0 reaches every handler on the events it seeds, so
   # these tests run apart from the async tests that attach to them.
   describe "initialize_counters/0" do
