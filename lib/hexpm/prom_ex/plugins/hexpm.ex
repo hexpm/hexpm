@@ -170,7 +170,9 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
           event_name: [:hexpm, :cdn, :purge_request, :stop],
           measurement: :duration,
           description: "How long a purge request to Fastly took.",
-          reporter_options: [buckets: [50, 100, 250, 500, 1_000, 2_500, 5_000, 10_000]],
+          reporter_options: [
+            buckets: [5, 10, 25, 50, 100, 250, 500, 1_000, 2_500, 5_000, 10_000]
+          ],
           tags: [:service],
           unit: {:native, :millisecond}
         ),
