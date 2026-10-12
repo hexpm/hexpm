@@ -213,6 +213,7 @@ defmodule Hexpm.Application do
   defp common_children(write_mode?) do
     [
       Hexpm.PromEx,
+      %{id: :initialize_counters, start: {Hexpm.PromEx, :initialize_counters, []}},
       {DBConnection.TelemetryListener, name: Hexpm.RepoBase.TelemetryListener},
       Hexpm.RepoBase,
       {Finch, name: Hexpm.Finch, pools: finch_pools()},

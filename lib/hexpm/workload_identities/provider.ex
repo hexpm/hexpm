@@ -28,4 +28,6 @@ defmodule Hexpm.WorkloadIdentities.Provider do
     do: Enum.find(@implementations, &(&1.issuer() == issuer))
 
   def known_issuers, do: Enum.map(@implementations, & &1.issuer())
+
+  def names, do: Enum.map(@implementations, & &1.name())
 end

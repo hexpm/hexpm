@@ -114,7 +114,30 @@ defmodule Hexpm.CDN.PurgeWorkerTest do
       assert {:error, {:status, 503, "unavailable"}} = perform_job(PurgeWorker, args)
     end
 
+    test "counts the finished job by result and rounds on an event of its own" do
+      ref = :telemetry_test.attach_event_handlers(self(), [[:hexpm, :cdn, :purge, :done]])
+      on_exit(fn -> :telemetry.detach(ref) end)
+
+      expect(Hexpm.CDN.Mock, :purge_key, 2, fn :fastly_hexrepo, ["k"] -> :ok end)
+      args = %{"service" => "fastly_hexrepo", "keys" => ["k"], "verify" => []}
+      assert :ok = perform_job(PurgeWorker, args)
+
+      assert_received {[:hexpm, :cdn, :purge, :done], ^ref, measurements,
+                       %{service: :fastly_hexrepo, result: :ok, rounds: 0}}
+
+      assert measurements == %{count: 1, absorbed: 0}
+
+      expect(Hexpm.CDN.Mock, :purge_key, fn :fastly_hexrepo, ["k"] -> {:error, :closed} end)
+      assert {:error, :closed} = perform_job(PurgeWorker, args)
+
+      assert_received {[:hexpm, :cdn, :purge, :done], ^ref, %{count: 1},
+                       %{service: :fastly_hexrepo, result: :error, rounds: 0}}
+    end
+
     test "absorbs the queued jobs for the same service" do
+      ref = :telemetry_test.attach_event_handlers(self(), [[:hexpm, :cdn, :purge, :done]])
+      on_exit(fn -> :telemetry.detach(ref) end)
+
       CDN.purge(:fastly_hexrepo, ["a"], verify: [%{url: "https://r/a", etag: "1"}])
       CDN.purge(:fastly_hexrepo, ["b"], verify: [%{url: "https://r/b", etag: "2"}])
       CDN.purge(:fastly_hexdocs, ["c"])
@@ -138,6 +161,12 @@ defmodule Hexpm.CDN.PurgeWorkerTest do
 
       assert [%{args: %{"keys" => ["a", "b"], "absorbed" => 1}}, %{args: %{"keys" => ["c"]}}] =
                jobs("completed")
+
+      assert_received {[:hexpm, :cdn, :purge, :done], ^ref, %{count: 1, absorbed: 1},
+                       %{service: :fastly_hexrepo}}
+
+      assert_received {[:hexpm, :cdn, :purge, :done], ^ref, %{count: 1, absorbed: 0},
+                       %{service: :fastly_hexdocs}}
     end
 
     test "keeps the latest write when absorbed jobs wrote the same object" do
