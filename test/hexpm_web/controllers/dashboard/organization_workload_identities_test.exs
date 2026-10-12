@@ -64,10 +64,11 @@ defmodule HexpmWeb.Dashboard.OrganizationWorkloadIdentitiesTest do
       assert body =~ "release.yml"
       assert body =~ "widget, gadget"
       assert body =~ "add-workload-identity-form"
-      refute body =~ "on your account to add and remove workload identities."
+      refute body =~ "Two-factor authentication on your account is required"
+      refute body =~ ~r/<fieldset[^>]*\sdisabled[\s>]/
     end
 
-    test "shows the workload identities without the form to an admin without 2FA", %{
+    test "disables the form for an admin without 2FA and links to enabling it", %{
       organization: organization
     } do
       admin = insert(:user)
@@ -86,9 +87,15 @@ defmodule HexpmWeb.Dashboard.OrganizationWorkloadIdentitiesTest do
         |> html_response(200)
 
       assert body =~ "acme/widget"
-      assert body =~ "on your account to add and remove workload identities."
-      assert body =~ ~s(href="/dashboard/security")
-      refute body =~ "add-workload-identity-form"
+
+      assert body =~
+               "Two-factor authentication on your account is required to add or remove workload identities."
+
+      assert body =~
+               ~s(href="/dashboard/security?return=#{URI.encode_www_form(path(organization))}")
+
+      assert body =~ "add-workload-identity-form"
+      assert body =~ ~r/<fieldset[^>]*\sdisabled[\s>]/
       refute body =~ "remove-workload-identity-#{identity.id}"
     end
 

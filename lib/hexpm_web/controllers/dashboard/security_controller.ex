@@ -7,6 +7,7 @@ defmodule HexpmWeb.Dashboard.SecurityController do
 
   def index(conn, params) do
     user = conn.assigns.current_user
+    conn = put_tfa_return(conn, user, params["return"])
     tfa_error = params["tfa_error"]
     show_modal = params["show_tfa_modal"]
     tfa_secret = get_session(conn, :tfa_setup_secret)
@@ -269,6 +270,16 @@ defmodule HexpmWeb.Dashboard.SecurityController do
       password_changeset: password_changeset,
       add_password_changeset: add_password_changeset
     )
+  end
+
+  # A page that requires 2FA links here with itself as `return`, and enabling
+  # 2FA sends the user back there.
+  defp put_tfa_return(conn, user, return) do
+    path = safe_return_path(return)
+
+    if path && not User.tfa_enabled?(user),
+      do: put_session(conn, :tfa_return_to, path),
+      else: conn
   end
 
   defp maybe_put_flash(conn, false), do: conn
