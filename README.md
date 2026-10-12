@@ -118,6 +118,30 @@ Re-run the task and restart (or call `Geolix.reload_databases/0`) to update.
 > locations are simply omitted until one is provisioned. `HEXPM_GEOIP_COUNTRY_PATH`
 > overrides the baked-in default.
 
+### Syntax Highlighting
+
+File previews, diffs and README code blocks are highlighted by
+[lumis](https://github.com/ericmj/lumis/tree/hexpm-serve) in a pool of
+`lumis serve` OS processes that the app talks to over Erlang ports
+(`HexpmWeb.SyntaxHighlight.Pool`). The first `mix deps.compile` builds the
+`lumis` executable with Cargo, so development needs Rust 1.95 or newer.
+
+Parsers come from the `lumis_wasm_*` dependencies in `mix.exs`, and nothing is
+downloaded at runtime. A language without one is shown as plain text. Each
+process loads all of them before it takes a request. A source that timed out or
+ended its process is shown as plain text for an hour without being highlighted
+again.
+
+| Variable                                  | Default                         |                                                                                         |
+| ----------------------------------------- | ------------------------------- | --------------------------------------------------------------------------------------- |
+| `HEXPM_SYNTAX_HIGHLIGHT_WORKERS`          | half the schedulers, at least 1 | Processes per node                                                                      |
+| `HEXPM_SYNTAX_HIGHLIGHT_TIMEOUT_MS`       | `1000`                          | Time a highlight may take before its process is closed and the file shown unhighlighted |
+| `HEXPM_SYNTAX_HIGHLIGHT_QUEUE_TIMEOUT_MS` | `1000`                          | Time to wait for a free process                                                         |
+| `HEXPM_SYNTAX_HIGHLIGHT_CPU_MS`           | `2000`                          | CPU time a request may use before the kernel kills its process, rounded up to seconds   |
+| `HEXPM_SYNTAX_HIGHLIGHT_MAX_DATA_MB`      | `256`                           | Heap limit of each process, on Linux                                                    |
+| `HEXPM_SYNTAX_HIGHLIGHT_NICE`             | `10`                            | Scheduling priority of the processes                                                    |
+| `HEXPM_SYNTAX_HIGHLIGHT_RECYCLE_RSS_MB`   | `256`                           | Peak memory after which a process is replaced                                           |
+
 ### Billing Integration Tests
 
 Integration tests exercise the full chain: hexpm -> hexpm_billing -> Stripe. They are excluded from regular `mix test` runs and require additional setup.

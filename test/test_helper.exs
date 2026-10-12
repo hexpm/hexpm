@@ -10,4 +10,12 @@ Hexpm.setup()
 Hexpm.BlockAddress.reload()
 Hexpm.Repository.RegistryBuilder.full(Hexpm.Repository.Repository.hexpm())
 Ecto.Adapters.SQL.Sandbox.mode(Hexpm.RepoBase, :manual)
+
+# Highlighting processes join the pool once they have loaded every language.
+true =
+  HexpmWeb.SyntaxHighlightHelpers.await_idle(
+    HexpmWeb.SyntaxHighlight.Pool,
+    Application.fetch_env!(:hexpm, HexpmWeb.SyntaxHighlight)[:workers]
+  )
+
 Hexpm.Fake.start()

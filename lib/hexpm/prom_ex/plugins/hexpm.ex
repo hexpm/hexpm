@@ -5,17 +5,19 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
   `Hexpm.WorkloadIdentities`), API authentication (`HexpmWeb.AuthHelpers`),
   registry builds (`Hexpm.Repository.RegistryWorker`) and CDN purges
   (`Hexpm.CDN.PurgeWorker`, `Hexpm.CDN.Fastly`), organization billing and
-  deletion (`Hexpm.Billing.Report`, `Hexpm.Accounts.OrganizationDeletions`), and
-  the number of Erlang nodes this node is connected to.
+  deletion (`Hexpm.Billing.Report`, `Hexpm.Accounts.OrganizationDeletions`),
+  syntax highlighting (`HexpmWeb.SyntaxHighlight`), and the number of Erlang
+  nodes this node is connected to.
 
   A counter series is created by its first event, and Prometheus' `increase()`
   needs two samples, so it never counts that first event. The counters are
   sums of each event's `:count` measurement, 1 when absent, and
   `initialize_counters/0` creates every series with a bounded set of labels at
-  zero when the application starts. Registry builds and purge jobs are counted
-  on a `:done` event of their own, since a zero on `:stop` would also reach
-  the duration histogram. The secret scan counters share their event with the
-  scan duration histogram, so they start with the first scan.
+  zero when the application starts. Registry builds, purge jobs and syntax
+  highlights are counted on a `:done` event of their own, since a zero on
+  `:stop` would also reach the duration histogram. The secret scan counters
+  share their event with the scan duration histogram, so they start with the
+  first scan.
   """
 
   use PromEx.Plugin
@@ -43,6 +45,7 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
     :response_not_sent,
     :db_connection_exit
   ]
+  @syntax_highlight_results [:ok, :timeout, :queue_timeout, :exit, :error, :unavailable, :skipped]
   @cdn_services [:fastly_hexrepo, :fastly_hexdocs, :fastly_hexdocs_private]
   @cdn_verify_results [:ok, :stale, :error]
 
@@ -149,6 +152,22 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
           measurement: &__MODULE__.count/1,
           description: "Registry builds that raised.",
           tags: [:type]
+        )
+      ]),
+      Event.build(:hexpm_syntax_highlight_event_metrics, [
+        sum("hexpm.syntax_highlight.total",
+          event_name: [:hexpm, :syntax_highlight, :done],
+          measurement: &__MODULE__.count/1,
+          description: "File previews, diffs and README code blocks highlighted, by result.",
+          tags: [:result]
+        ),
+        distribution("hexpm.syntax_highlight.duration.milliseconds",
+          event_name: [:hexpm, :syntax_highlight, :stop],
+          measurement: :duration,
+          description: "How long highlighting took, waiting for a worker included.",
+          reporter_options: [buckets: [5, 10, 25, 50, 100, 250, 500, 1_000, 2_500]],
+          tags: [:result],
+          unit: {:native, :millisecond}
         )
       ]),
       Event.build(:hexpm_sentry_event_metrics, [
@@ -311,6 +330,10 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
 
     for class <- @sentry_filtered_classes do
       :telemetry.execute([:hexpm, :sentry, :filtered], %{count: 0}, %{class: class})
+    end
+
+    for result <- @syntax_highlight_results do
+      :telemetry.execute([:hexpm, :syntax_highlight, :done], %{count: 0}, %{result: result})
     end
 
     pops = [:nearest | Application.fetch_env!(:hexpm, :fastly_probe_pops)]

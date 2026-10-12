@@ -48,6 +48,7 @@ defmodule Hexpm.PromExTest do
           [:hexpm, :sentry, :filtered],
           [:hexpm, :cdn, :verify, :stop],
           [:hexpm, :cdn, :purge, :done],
+          [:hexpm, :syntax_highlight, :done],
           [:db_connection, :connection_error],
           [:db_connection, :connected]
         ])
@@ -94,6 +95,8 @@ defmodule Hexpm.PromExTest do
       assert_received {[:hexpm, :cdn, :purge, :done], ^ref, %{count: 0, absorbed: 0},
                        %{service: :fastly_hexrepo, result: :error, rounds: 0}}
 
+      assert_received {[:hexpm, :syntax_highlight, :done], ^ref, %{count: 0}, %{result: :skipped}}
+
       assert_received {[:db_connection, :connection_error], ^ref, %{count: 0},
                        %{error: %DBConnection.ConnectionError{reason: :queue_timeout}}}
 
@@ -117,6 +120,8 @@ defmodule Hexpm.PromExTest do
       assert ~s(hexpm_registry_builder_build_total{result="ok",type="repository"} 0) in samples
 
       assert ~s(hexpm_cdn_purge_total{result="error",rounds="0",service="fastly_hexrepo"} 0) in samples
+
+      assert ~s(hexpm_syntax_highlight_total{result="queue_timeout"} 0) in samples
 
       assert Enum.all?(samples, &String.ends_with?(&1, " 0"))
       refute Enum.any?(samples, &String.contains?(&1, "_milliseconds"))
