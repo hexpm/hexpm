@@ -26,16 +26,16 @@ defmodule Hexpm.OAuth.Token do
 
     belongs_to :user, User
     belongs_to :organization, Organization
-    belongs_to :trusted_publisher, Hexpm.TrustedPublishers.TrustedPublisher
+    belongs_to :workload_identity, Hexpm.WorkloadIdentities.WorkloadIdentity
     belongs_to :client, Hexpm.OAuth.Client, references: :client_id, type: :binary_id
     belongs_to :user_session, UserSession
 
-    embeds_one :oidc_claims, Hexpm.TrustedPublishers.ClaimsSnapshot, on_replace: :delete
+    embeds_one :oidc_claims, Hexpm.WorkloadIdentities.ClaimsSnapshot, on_replace: :delete
 
     timestamps()
   end
 
-  @valid_grant_types ~w(authorization_code urn:ietf:params:oauth:grant-type:device_code refresh_token client_credentials trusted_publisher)
+  @valid_grant_types ~w(authorization_code urn:ietf:params:oauth:grant-type:device_code refresh_token client_credentials workload_identity)
 
   def changeset(token, attrs) do
     token
@@ -54,7 +54,7 @@ defmodule Hexpm.OAuth.Token do
       :user_session_id,
       :user_id,
       :organization_id,
-      :trusted_publisher_id,
+      :workload_identity_id,
       :client_id,
       :access_token,
       :refresh_token,
@@ -80,7 +80,7 @@ defmodule Hexpm.OAuth.Token do
       message: "a live token already exists for this device code"
     )
     |> unique_constraint(:grant_reference,
-      name: :oauth_tokens_trusted_publisher_grant_reference_index,
+      name: :oauth_tokens_workload_identity_grant_reference_index,
       message: "OIDC token has already been used"
     )
   end
@@ -93,7 +93,7 @@ defmodule Hexpm.OAuth.Token do
   def valid_grant_types, do: @valid_grant_types
 
   defp validate_client_present(changeset) do
-    if get_field(changeset, :grant_type) == "trusted_publisher" do
+    if get_field(changeset, :grant_type) == "workload_identity" do
       changeset
     else
       validate_required(changeset, [:client_id])
@@ -103,13 +103,13 @@ defmodule Hexpm.OAuth.Token do
   defp validate_subject_present(changeset) do
     user_id = get_field(changeset, :user_id)
     organization_id = get_field(changeset, :organization_id)
-    trusted_publisher_id = get_field(changeset, :trusted_publisher_id)
+    workload_identity_id = get_field(changeset, :workload_identity_id)
 
-    if is_nil(user_id) and is_nil(organization_id) and is_nil(trusted_publisher_id) do
+    if is_nil(user_id) and is_nil(organization_id) and is_nil(workload_identity_id) do
       add_error(
         changeset,
-        :trusted_publisher_id,
-        "user, organization, or trusted publisher required"
+        :workload_identity_id,
+        "user, organization, or workload identity required"
       )
     else
       changeset

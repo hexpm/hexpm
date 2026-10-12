@@ -156,15 +156,23 @@ defmodule HexpmWeb.SyntaxHighlightTest do
   end
 
   test "emits telemetry with the result" do
-    ref = :telemetry_test.attach_event_handlers(self(), [[:hexpm, :syntax_highlight, :stop]])
+    ref =
+      :telemetry_test.attach_event_handlers(self(), [
+        [:hexpm, :syntax_highlight, :stop],
+        [:hexpm, :syntax_highlight, :done]
+      ])
 
     SyntaxHighlight.highlight(":ok", "lib/app.ex", "source")
     assert_receive {[:hexpm, :syntax_highlight, :stop], ^ref, %{duration: _}, %{result: :ok}}
+    assert_receive {[:hexpm, :syntax_highlight, :done], ^ref, %{count: 1}, %{result: :ok}}
 
     capture_log(fn ->
       SyntaxHighlight.highlight(":ok", "lib/app.ex", "source", name: :no_such_pool)
     end)
 
     assert_receive {[:hexpm, :syntax_highlight, :stop], ^ref, _, %{result: :unavailable}}
+
+    assert_receive {[:hexpm, :syntax_highlight, :done], ^ref, %{count: 1},
+                    %{result: :unavailable}}
   end
 end

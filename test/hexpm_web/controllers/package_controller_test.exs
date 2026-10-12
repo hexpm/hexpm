@@ -247,6 +247,43 @@ defmodule HexpmWeb.PackageControllerTest do
       assert counts == 1
     end
 
+    test "groups the owner pages under a Settings tab that only full owners see" do
+      owner = insert(:user)
+      maintainer = insert(:user)
+
+      package =
+        insert(:package,
+          package_owners: [
+            build(:package_owner, user: owner, level: "full"),
+            build(:package_owner, user: maintainer, level: "maintainer")
+          ]
+        )
+
+      insert(:release, package: package, meta: build(:release_metadata, app: package.name))
+
+      tabs = fn conn ->
+        conn
+        |> get("/packages/#{package.name}")
+        |> response(200)
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#package-tabs a")
+        |> Enum.map(&(&1 |> LazyHTML.text(separator: " ") |> String.trim()))
+      end
+
+      assert build_conn() |> test_login(owner) |> tabs.() == [
+               "Documentation",
+               "1 Version",
+               "0 Dependencies",
+               "0 Dependants",
+               "Files",
+               "Activity",
+               "Settings"
+             ]
+
+      refute "Settings" in (build_conn() |> test_login(maintainer) |> tabs.())
+      refute "Settings" in tabs.(build_conn())
+    end
+
     test "banners the release on screen when an advisory affects it", %{package1: package1} do
       advise(package1, "GHSA-current-release", "0.0.2")
 
@@ -400,13 +437,13 @@ defmodule HexpmWeb.PackageControllerTest do
       assert response(conn, 200) =~ release.publisher.username
     end
 
-    test "show provenance for releases published by a trusted publisher", %{package1: package1} do
+    test "show provenance for releases published by a workload identity", %{package1: package1} do
       insert(
         :release,
         package: package1,
         version: "0.1.0",
         meta: build(:release_metadata, app: package1.name),
-        oidc_claims: %Hexpm.TrustedPublishers.ClaimsSnapshot{
+        oidc_claims: %Hexpm.WorkloadIdentities.ClaimsSnapshot{
           repository: "acme/widget",
           workflow_ref: "acme/widget/.github/workflows/release.yml@refs/tags/v0.1.0",
           sha: "0123456789abcdef0123456789abcdef01234567",

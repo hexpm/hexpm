@@ -8,17 +8,17 @@ defmodule HexpmWeb.AuthHelpers do
   alias Hexpm.SecurityLog
   alias Hexpm.Repository.{Package, Packages, PackageOwner, Repository}
   alias Hexpm.OAuth.Token
-  alias Hexpm.TrustedPublishers.TrustedPublisher
+  alias Hexpm.WorkloadIdentities.WorkloadIdentity
   alias HexpmWeb.BasicAuth
   alias HexpmWeb.Plugs.Attack
 
   def authorize(conn, opts) do
     user_or_organization = conn.assigns.current_user || conn.assigns.current_organization
-    trusted_publisher = Map.get(conn.assigns, :trusted_publisher)
+    workload_identity = Map.get(conn.assigns, :workload_identity)
 
     cond do
-      match?(%TrustedPublisher{}, trusted_publisher) ->
-        authorized_trusted_publisher(conn, trusted_publisher, opts)
+      match?(%WorkloadIdentity{}, workload_identity) ->
+        authorized_workload_identity(conn, workload_identity, opts)
 
       user_or_organization || opts[:authentication] != :required ->
         authorized(conn, user_or_organization, opts[:fun], opts)
@@ -62,22 +62,23 @@ defmodule HexpmWeb.AuthHelpers do
     end
   end
 
-  # Trusted-publisher tokens only reach endpoints that set allow_trusted_publisher: true
+  # Workload identity tokens only reach endpoints that set allow_workload_identity: true
   # (release/docs publish). This path intentionally does not apply opts[:fun]; it always
   # enforces package ownership for the bound package plus organization billing.
-  defp authorized_trusted_publisher(conn, %TrustedPublisher{} = trusted_publisher, opts) do
+  defp authorized_workload_identity(conn, %WorkloadIdentity{} = workload_identity, opts) do
     domains = Keyword.get(opts, :domains, [])
     auth_credential = conn.assigns.auth_credential
+    opts = Keyword.put(opts, :package_name, conn.params["name"])
 
     cond do
-      not Keyword.get(opts, :allow_trusted_publisher, false) ->
+      not Keyword.get(opts, :allow_workload_identity, false) ->
         error(conn, {:error, :auth})
 
-      not verify_permissions?(conn, auth_credential, domains) ->
+      not workload_identity_permissions?(conn, auth_credential, domains) ->
         error(conn, {:error, :domain})
 
       true ->
-        case package_owner(conn, trusted_publisher, opts) do
+        case package_owner(conn, workload_identity, opts) do
           :ok ->
             case organization_billing_active(conn, nil, opts) do
               :ok -> conn
@@ -88,6 +89,23 @@ defmodule HexpmWeb.AuthHelpers do
             error(conn, other)
         end
     end
+  end
+
+  # Permissions can only match a package scope against a package that exists,
+  # so a token creating a package must name it in its own scope.
+  defp workload_identity_permissions?(
+         %Plug.Conn{assigns: %{package: nil, repository: %Repository{} = repository}} = conn,
+         %Token{} = token,
+         domains
+       ) do
+    name = conn.params["name"]
+
+    "package" in domains and is_binary(name) and
+      "package:#{repository.name}/#{name}" in token.scopes
+  end
+
+  defp workload_identity_permissions?(conn, auth_credential, domains) do
+    verify_permissions?(conn, auth_credential, domains)
   end
 
   defp apply_authorization_fun({module, fun_name}, conn, user_or_organization) do
@@ -135,8 +153,8 @@ defmodule HexpmWeb.AuthHelpers do
   end
 
   # TOTP validation for write operations.
-  # Trusted-publisher tokens never reach this clause: they authenticate with user: nil
-  # and are handled by authorized_trusted_publisher/3 instead.
+  # Workload identity tokens never reach this clause: they authenticate with user: nil
+  # and are handled by authorized_workload_identity/3 instead.
   defp validate_totp_for_write_access(
          conn,
          %User{} = user,
@@ -390,19 +408,29 @@ defmodule HexpmWeb.AuthHelpers do
   def package_owner(
         %Repository{} = repository,
         %Package{} = package,
-        %TrustedPublisher{} = trusted_publisher,
+        %WorkloadIdentity{} = workload_identity,
         _opts
       ) do
     cond do
-      trusted_publisher.package_id == package.id -> :ok
+      workload_identity.package_id == package.id -> :ok
+      organization_publishes?(workload_identity, repository, package.name) -> :ok
       repository.id == 1 -> {:error, :auth}
       true -> {:error, :not_found}
     end
   end
 
-  # Pending publishers (create brand-new packages from CI) are deferred.
-  def package_owner(%Repository{} = repository, nil = _package, %TrustedPublisher{}, _opts) do
-    if repository.id == 1, do: {:error, :auth}, else: {:error, :not_found}
+  # Only an organization workload identity creates packages, named by the tarball.
+  def package_owner(
+        %Repository{} = repository,
+        nil = _package,
+        %WorkloadIdentity{} = workload_identity,
+        opts
+      ) do
+    cond do
+      organization_publishes?(workload_identity, repository, opts[:package_name]) -> :ok
+      repository.id == 1 -> {:error, :auth}
+      true -> {:error, :not_found}
+    end
   end
 
   def package_owner(
@@ -469,6 +497,17 @@ defmodule HexpmWeb.AuthHelpers do
   def package_owner(nil = _repository, _package, _user, _opts) do
     {:error, :not_found}
   end
+
+  defp organization_publishes?(
+         %WorkloadIdentity{organization_id: organization_id, role: "write", packages: packages},
+         %Repository{id: repository_id, organization_id: organization_id},
+         name
+       )
+       when not is_nil(organization_id) and repository_id != 1 and is_binary(name) do
+    is_nil(packages) or name in packages
+  end
+
+  defp organization_publishes?(_workload_identity, _repository, _name), do: false
 
   def organization_access(conn, user_or_organization, opts \\ [])
 

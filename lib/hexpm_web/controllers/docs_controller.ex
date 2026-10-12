@@ -2,7 +2,7 @@ defmodule HexpmWeb.DocsController do
   use HexpmWeb, :controller
 
   alias Hexpm.Accounts.{OrganizationTFA, SSO}
-  alias Hexpm.TrustedPublishers
+  alias Hexpm.WorkloadIdentities
 
   def index(conn, _params) do
     redirect(conn, to: ~p"/docs/usage")
@@ -133,14 +133,14 @@ defmodule HexpmWeb.DocsController do
     end
   end
 
-  def trusted_publishers(conn, _params) do
-    if TrustedPublishers.enabled?() do
+  def workload_identity(conn, _params) do
+    if WorkloadIdentities.enabled?() do
       render(
         conn,
         "layout.html",
-        view: "trusted_publishers.html",
-        view_name: :trusted_publishers,
-        title: "Trusted publishers",
+        view: "workload_identity.html",
+        view_name: :workload_identity,
+        title: "Workload Identity",
         container: "flex-1 flex flex-col"
       )
     else

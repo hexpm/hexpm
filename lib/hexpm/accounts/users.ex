@@ -155,6 +155,9 @@ defmodule Hexpm.Accounts.Users do
       |> Multi.insert(:reserved_username, %ReservedUsername{name: user.username},
         on_conflict: :nothing
       )
+      |> Multi.run(:archive_credentials, fn repo, _changes ->
+        {:ok, Hexpm.PurgeExpiredRecords.archive_user_credentials(repo, user)}
+      end)
       # Keys and OAuth tokens cascade when the user is deleted, but audit logs
       # reference both them and the user with ON DELETE SET NULL. Deleting them
       # in their own statements first keeps the cascade from hitting a foreign
@@ -168,6 +171,7 @@ defmodule Hexpm.Accounts.Users do
       |> Hexpm.Accounts.OrganizationTFA.protect_account_removal(user)
       |> Hexpm.Accounts.SSO.delete_user_transactions(user)
       |> AuditLogs.scrub_user(user)
+      |> Hexpm.PackageReports.notify_erasure(user)
       |> Multi.delete(:user, user, stale_error_field: :id)
       |> Hexpm.Accounts.SSO.delete_user_notifications(user)
 

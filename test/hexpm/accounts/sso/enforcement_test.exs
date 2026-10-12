@@ -308,10 +308,10 @@ defmodule Hexpm.Accounts.SSO.EnforcementTest do
   end
 
   describe "check/4" do
-    test "passes a trusted publisher on a governed organization", context do
+    test "passes a workload identity on a governed organization", context do
       {:ok, _connection} = require_sso(context)
 
-      assert Enforcement.check(context.organization, build(:trusted_publisher)) == :ok
+      assert Enforcement.check(context.organization, build(:workload_identity)) == :ok
     end
 
     test "passes a member of an optional organization", context do

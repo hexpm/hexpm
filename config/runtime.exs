@@ -132,12 +132,13 @@ if config_env() == :prod do
   config :hexpm, :varsel,
     report_url: System.fetch_env!("HEXPM_VARSEL_REPORT_URL"),
     audience: System.fetch_env!("HEXPM_VARSEL_JWT_AUDIENCE"),
+    erasure_url: System.fetch_env!("HEXPM_VARSEL_ERASURE_URL"),
     signing_key: System.fetch_env!("HEXPM_VARSEL_SIGNING_KEY"),
     key_id: System.fetch_env!("HEXPM_VARSEL_KEY_ID"),
     jwks: System.fetch_env!("HEXPM_VARSEL_JWKS")
 
-  config :hexpm, :trusted_publishers,
-    audience: System.fetch_env!("HEXPM_TRUSTED_PUBLISHERS_AUDIENCE")
+  config :hexpm, :workload_identity,
+    audience: System.fetch_env!("HEXPM_WORKLOAD_IDENTITY_AUDIENCE")
 
   config :hexpm, :hcaptcha,
     sitekey: System.fetch_env!("HEXPM_HCAPTCHA_SITEKEY"),

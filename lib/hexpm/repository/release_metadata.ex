@@ -3,7 +3,9 @@ defmodule Hexpm.Repository.ReleaseMetadata do
 
   @derive {HexpmWeb.Stale, last_modified: nil}
 
-  @app_format ~r/\A[^[:space:][:cntrl:]]+\z/
+  # Build tools use the app name as the package's build directory name, so it's
+  # a letter followed by letters, digits, "_" and "-"
+  @app_format ~r/\A[a-zA-Z][a-zA-Z0-9_-]*\z/
 
   embedded_schema do
     field :app, :string

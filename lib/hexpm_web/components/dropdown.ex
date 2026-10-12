@@ -25,6 +25,7 @@ defmodule HexpmWeb.Components.Dropdown do
   attr :label, :string, required: true
   attr :icon, :string, default: "chevron-down"
   attr :button_class, :string, default: nil
+  attr :align, :string, default: "right", values: ~w(left right)
   slot :inner_block, required: true
 
   def dropdown(assigns) do
@@ -49,7 +50,10 @@ defmodule HexpmWeb.Components.Dropdown do
 
       <div
         id={"#{@id}-menu"}
-        class="hidden absolute right-0 mt-2 w-48 bg-white border border-grey-200 rounded-lg shadow-lg py-2 z-10 dark:bg-grey-800 dark:border-grey-600"
+        class={[
+          "hidden absolute mt-2 w-48 bg-white border border-grey-200 rounded-lg shadow-lg py-2 z-10 dark:bg-grey-800 dark:border-grey-600",
+          if(@align == "left", do: "left-0", else: "right-0")
+        ]}
         phx-click-away={hide_dropdown(@id)}
       >
         {render_slot(@inner_block)}

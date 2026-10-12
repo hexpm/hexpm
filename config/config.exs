@@ -54,9 +54,9 @@ config :hexpm, secret_scan_notify: false
 
 config :hexpm, HexpmWeb.BasicAuth, schedule_enabled: true
 
-config :hexpm, :features, trusted_publishers: true
+config :hexpm, :features, workload_identity: true
 
-config :hexpm, :trusted_publishers, audience: "hexpm"
+config :hexpm, :workload_identity, audience: "hexpm"
 
 config :hexpm, :organization_sso,
   mode: :off,
@@ -68,7 +68,8 @@ config :hexpm, :varsel_impl, Hexpm.PackageReports.Varsel.Client
 
 config :hexpm, :varsel,
   report_url: "https://cna.erlef.org/api/hex/reports",
-  audience: "https://cna.erlef.org/api/hex/reports"
+  audience: "https://cna.erlef.org/api/hex/reports",
+  erasure_url: "https://cna.erlef.org/api/hex/erasures"
 
 config :hexpm, ecto_repos: [Hexpm.RepoBase]
 

@@ -24,7 +24,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     document = LazyHTML.from_document(html)
 
     [active_tab] =
-      LazyHTML.query(document, ~s(#org-tab-nav [data-active="true"])) |> Enum.to_list()
+      LazyHTML.query(document, ~s(#org-nav [data-active="true"])) |> Enum.to_list()
 
     active_tab
     |> LazyHTML.text(separator: " ")
@@ -55,6 +55,80 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         |> get("/dashboard/orgs")
 
       assert response(conn, 200) =~ "Create new organization"
+    end
+  end
+
+  describe "organization sidebar" do
+    defp org_nav(html) do
+      html
+      |> LazyHTML.from_document()
+      |> LazyHTML.query("#org-nav a")
+      |> Enum.map(fn link ->
+        link |> LazyHTML.text(separator: " ") |> String.replace(~r/\s+/, " ") |> String.trim()
+      end)
+    end
+
+    test "groups the sections an admin can reach", %{user: user, organization: organization} do
+      mock_customer(organization)
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      html =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/orgs/#{organization.name}/keys")
+        |> html_response(200)
+
+      assert org_nav(html) == [
+               "Profile",
+               "Members",
+               "Billing",
+               "Activity",
+               "Keys",
+               "Workload identities NEW",
+               "Packages",
+               "Policies NEW",
+               "Danger Zone"
+             ]
+
+      assert active_org_tab(html) == "Keys"
+      assert html =~ "Back to settings"
+      refute html =~ "Switch organization"
+    end
+
+    test "leaves out the admin sections for other members", %{
+      user: user,
+      organization: organization
+    } do
+      insert(:organization_user, organization: organization, user: user, role: "write")
+
+      html =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/orgs/#{organization.name}/keys")
+        |> html_response(200)
+
+      refute "Billing" in org_nav(html)
+    end
+
+    test "switches to the user's other organizations", %{user: user, organization: organization} do
+      insert(:organization_user, organization: organization, user: user, role: "write")
+      other = insert(:repository).organization
+      insert(:organization_user, organization: other, user: user, role: "read")
+
+      html =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/orgs/#{organization.name}/keys")
+        |> html_response(200)
+
+      document = LazyHTML.from_document(html)
+
+      assert [_link] =
+               document
+               |> LazyHTML.query(
+                 ~s(#organization-switcher a[href="/dashboard/orgs/#{other.name}"])
+               )
+               |> Enum.to_list()
     end
   end
 

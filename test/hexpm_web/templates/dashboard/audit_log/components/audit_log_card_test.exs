@@ -43,4 +43,39 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCardTest do
     assert html =~ "Logged in from Firefox on macOS"
     refute html =~ "United States"
   end
+
+  test "describes organization workload identity changes" do
+    stub(Hexpm.Geo.Mock, :lookup_country, fn _ -> nil end)
+
+    params = %{
+      "repository" => "acme/widget",
+      "role" => "write",
+      "organization" => %{"name" => "acme"}
+    }
+
+    html =
+      render_component(&AuditLogCard.audit_log_card/1,
+        audit_logs: [
+          login_log(%{action: "organization.workload_identity.add", params: params}),
+          login_log(%{action: "organization.workload_identity.remove", params: params})
+        ]
+      )
+
+    assert html =~ "Added the workload identity acme/widget (write) to acme"
+    assert html =~ "Removed the workload identity acme/widget (write) from acme"
+
+    any =
+      render_component(&AuditLogCard.audit_log_card/1,
+        audit_logs: [
+          login_log(%{
+            action: "organization.workload_identity.add",
+            params:
+              %{params | "repository" => "", "role" => "read"}
+              |> Map.put("repository_owner", "acme")
+          })
+        ]
+      )
+
+    assert any =~ "Added the workload identity for any repository owned by acme (read) to acme"
+  end
 end

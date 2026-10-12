@@ -18,6 +18,18 @@ defmodule Hexpm.PromEx do
     ] ++ oban_plugins()
   end
 
+  @doc """
+  Reports a zero for every counter series with a bounded set of labels, so the
+  first real event is an increase Prometheus can see. Started as a child right
+  after `Hexpm.PromEx`, before the repo connects and the endpoint takes
+  requests.
+  """
+  def initialize_counters() do
+    Hexpm.PromEx.Plugins.Hexpm.initialize_counters()
+    Hexpm.PromEx.Plugins.DbConnection.initialize_counters()
+    :ignore
+  end
+
   # Queue lengths are counted from the jobs table and zero-filled from the
   # node's own queue config, so a node that runs no queues never reports a
   # zero and its gauges keep the last count they saw. Only nodes that run the

@@ -12,6 +12,7 @@ defmodule Hexpm.Application do
 
     mode = mode()
     if web_mode?(mode), do: Hexpm.BlockAddress.start()
+    Hexpm.WorkloadIdentities.OIDC.start()
     children = children(mode, Hexpm.Repo.write_mode?())
 
     shutdown_on_eof()
@@ -210,6 +211,7 @@ defmodule Hexpm.Application do
   defp common_children(write_mode?) do
     [
       Hexpm.PromEx,
+      %{id: :initialize_counters, start: {Hexpm.PromEx, :initialize_counters, []}},
       {DBConnection.TelemetryListener, name: Hexpm.RepoBase.TelemetryListener},
       Hexpm.RepoBase,
       {Finch, name: Hexpm.Finch, pools: finch_pools()},

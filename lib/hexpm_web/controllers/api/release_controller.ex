@@ -16,7 +16,7 @@ defmodule HexpmWeb.API.ReleaseController do
        [
          authentication: :required,
          domains: [{"api", "write"}, "package"],
-         allow_trusted_publisher: true,
+         allow_workload_identity: true,
          fun: [{AuthHelpers, :package_owner}, {AuthHelpers, :organization_billing_active}]
        ]
        when action in [:create]
@@ -41,7 +41,7 @@ defmodule HexpmWeb.API.ReleaseController do
        [
          authentication: :required,
          domains: [{"api", "write"}, "package"],
-         allow_trusted_publisher: true,
+         allow_workload_identity: true,
          fun: [{AuthHelpers, :package_owner}, {AuthHelpers, :organization_billing_active}]
        ]
        when action in [:publish]
@@ -72,7 +72,7 @@ defmodule HexpmWeb.API.ReleaseController do
           outer_checksum,
           audit: audit_data(conn),
           replace: replace?,
-          trusted_publisher: trusted_publisher_context(conn)
+          workload_identity: workload_identity_context(conn)
         )
 
       {:error, errors} ->
@@ -135,7 +135,7 @@ defmodule HexpmWeb.API.ReleaseController do
 
   defp require_authentication(conn, _opts) do
     if conn.assigns.current_user || conn.assigns.current_organization ||
-         conn.assigns.trusted_publisher do
+         conn.assigns.workload_identity do
       conn
     else
       AuthHelpers.error(conn, {:error, :missing})
@@ -178,7 +178,7 @@ defmodule HexpmWeb.API.ReleaseController do
               outer_checksum,
               audit: audit_data(conn),
               replace: replace?,
-              trusted_publisher: trusted_publisher_context(conn)
+              workload_identity: workload_identity_context(conn)
             )
         end
 
@@ -295,16 +295,16 @@ defmodule HexpmWeb.API.ReleaseController do
 
   defp publisher_for(conn) do
     cond do
-      Map.get(conn.assigns, :trusted_publisher) -> nil
+      Map.get(conn.assigns, :workload_identity) -> nil
       conn.assigns.current_user -> conn.assigns.current_user
       conn.assigns.current_organization -> conn.assigns.current_organization.user
     end
   end
 
-  defp trusted_publisher_context(conn) do
-    case Map.get(conn.assigns, :trusted_publisher) do
-      %Hexpm.TrustedPublishers.TrustedPublisher{} = tp ->
-        %{trusted_publisher_id: tp.id, oidc_claims: conn.assigns.auth_credential.oidc_claims}
+  defp workload_identity_context(conn) do
+    case Map.get(conn.assigns, :workload_identity) do
+      %Hexpm.WorkloadIdentities.WorkloadIdentity{} = tp ->
+        %{workload_identity_id: tp.id, oidc_claims: conn.assigns.auth_credential.oidc_claims}
 
       _ ->
         nil

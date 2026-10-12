@@ -1,5 +1,5 @@
 defmodule HexpmWeb.API.UserContactControllerTest do
-  use HexpmWeb.ConnCase, async: true
+  use HexpmWeb.ConnCase, async: false
 
   @signing_key File.read!("test/fixtures/varsel_private.pem")
 
@@ -17,6 +17,19 @@ defmodule HexpmWeb.API.UserContactControllerTest do
              }
 
       assert get_resp_header(conn, "cache-control") == ["private, max-age=60"]
+      assert Repo.get_by(Hexpm.PackageReports.Disclosure, user_id: user.id)
+    end
+
+    test "is refused in read-only mode, since it records the disclosure" do
+      user = insert(:user)
+      Application.put_env(:hexpm, :read_only_mode, true)
+      on_exit(fn -> Application.put_env(:hexpm, :read_only_mode, false) end)
+
+      conn = lookup(user.username)
+
+      assert conn.status == 503
+      assert get_resp_header(conn, "retry-after") == ["60"]
+      refute Repo.get_by(Hexpm.PackageReports.Disclosure, user_id: user.id)
     end
 
     test "falls back to the username when the full name is blank" do
@@ -79,6 +92,7 @@ defmodule HexpmWeb.API.UserContactControllerTest do
       user = insert(:user, deactivated_at: DateTime.utc_now())
 
       assert json_response(lookup(user.username), 404)
+      refute Repo.get_by(Hexpm.PackageReports.Disclosure, user_id: user.id)
     end
 
     test "accepts an audience list that names hex.pm" do

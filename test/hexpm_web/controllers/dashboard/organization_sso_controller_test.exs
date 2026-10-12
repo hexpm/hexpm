@@ -53,7 +53,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
           "/dashboard/orgs/#{context.organization.name}/sso"
         ] do
       assert [tab] =
-               LazyHTML.query(document, ~s(#org-tab-nav a[href="#{path}"])) |> Enum.to_list()
+               LazyHTML.query(document, ~s(#org-nav a[href="#{path}"])) |> Enum.to_list()
 
       assert LazyHTML.text(tab) =~ "NEW"
     end
@@ -164,7 +164,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
 
     assert LazyHTML.query(
              document,
-             ~s(#org-tab-nav a[href="/dashboard/orgs/#{context.organization.name}/sso"])
+             ~s(#org-nav a[href="/dashboard/orgs/#{context.organization.name}/sso"])
            )
            |> Enum.to_list() == []
 

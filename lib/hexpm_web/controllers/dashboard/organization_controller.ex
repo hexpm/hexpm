@@ -14,10 +14,15 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   alias Hexpm.Accounts.SSO
   alias Hexpm.Accounts.SSO.{Connection, Enforcement}
   alias HexpmWeb.SSOEnforcement
+  alias Hexpm.WorkloadIdentities
+  alias Hexpm.WorkloadIdentities.WorkloadIdentity
 
   @policy_suggestion_limit 8
 
   plug :requires_login
+
+  plug :workload_identities_enabled
+       when action in [:workload_identities, :create_workload_identity, :delete_workload_identity]
 
   plug HexpmWeb.Plugs.Sudo
        when action in [
@@ -45,6 +50,9 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
               :change_plan,
               :create_key,
               :delete_key,
+              :workload_identities,
+              :create_workload_identity,
+              :delete_workload_identity,
               :show_invoice,
               :pay_invoice,
               :update_profile,
@@ -1011,6 +1019,124 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     end)
   end
 
+  def workload_identities(conn, %{"dashboard_org" => organization}) do
+    access_organization(conn, organization, "read", fn organization ->
+      render_index(conn, organization, tab: :workload_identities)
+    end)
+  end
+
+  def create_workload_identity(conn, %{"dashboard_org" => organization} = params) do
+    access_organization(conn, organization, "admin", fn organization ->
+      with :ok <- workload_identity_tfa(conn, organization),
+           :ok <- workload_identity_billing(conn, organization) do
+        do_create_workload_identity(conn, organization, params["workload_identity"] || %{})
+      end
+    end)
+  end
+
+  defp do_create_workload_identity(conn, organization, params) do
+    path = ~p"/dashboard/orgs/#{organization}/workload-identities"
+
+    case WorkloadIdentities.create(organization, params,
+           audit: audit_data(conn),
+           before_lookup: fn -> workload_identity_lookup_allowed(conn.assigns.current_user) end
+         ) do
+      {:ok, _workload_identity} ->
+        conn
+        |> put_flash(:info, "Workload identity added.")
+        |> redirect(to: path)
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        conn
+        |> put_status(400)
+        |> render_index(organization,
+          tab: :workload_identities,
+          workload_identity_changeset: changeset
+        )
+
+      {:error, :not_allowed} ->
+        conn
+        |> put_flash(:error, "This organization can't have workload identities.")
+        |> redirect(to: path)
+
+      {:error, :rate_limited} ->
+        conn
+        |> put_flash(
+          :error,
+          "Too many attempts to add a workload identity in the last hour. Try again later."
+        )
+        |> redirect(to: path)
+
+      {:error, :repository_not_found} ->
+        conn
+        |> put_flash(:error, "The GitHub repository could not be resolved.")
+        |> redirect(to: path)
+
+      {:error, _reason} ->
+        conn
+        |> put_flash(:error, "GitHub could not be reached, try again later.")
+        |> redirect(to: path)
+    end
+  end
+
+  def delete_workload_identity(conn, %{"dashboard_org" => organization, "id" => id}) do
+    access_organization(conn, organization, "admin", fn organization ->
+      path = ~p"/dashboard/orgs/#{organization}/workload-identities"
+
+      with :ok <- workload_identity_tfa(conn, organization) do
+        case WorkloadIdentities.get(organization, id) do
+          nil ->
+            conn
+            |> put_flash(:error, "The workload identity was not found.")
+            |> redirect(to: path)
+
+          workload_identity ->
+            {:ok, _} = WorkloadIdentities.delete(workload_identity, audit: audit_data(conn))
+
+            conn
+            |> put_flash(:info, "Workload identity removed.")
+            |> redirect(to: path)
+        end
+      end
+    end)
+  end
+
+  defp workload_identity_tfa(conn, organization) do
+    if User.tfa_enabled?(conn.assigns.current_user) do
+      :ok
+    else
+      conn
+      |> put_session(:tfa_return_to, ~p"/dashboard/orgs/#{organization}/workload-identities")
+      |> put_flash(:error, "Enable 2FA on your account before managing workload identities.")
+      |> redirect(to: ~p"/dashboard/security")
+    end
+  end
+
+  defp workload_identity_billing(conn, organization) do
+    if Organization.billing_active?(organization) do
+      :ok
+    else
+      conn
+      |> put_flash(:error, "This organization has no active billing subscription.")
+      |> redirect(to: ~p"/dashboard/orgs/#{organization}/workload-identities")
+    end
+  end
+
+  defp workload_identity_lookup_allowed(user) do
+    case HexpmWeb.Plugs.Attack.workload_identity_lookup_throttle(user.id) do
+      {:allow, _data} -> :ok
+      {:block, _data} -> {:error, :rate_limited}
+    end
+  end
+
+  defp workload_identities_enabled(conn, _opts) do
+    if WorkloadIdentities.enabled?() do
+      conn
+    else
+      not_found(conn)
+    end
+  end
+
   def update_profile(conn, %{"dashboard_org" => organization, "profile" => profile_params}) do
     access_organization(conn, organization, "admin", fn organization ->
       case Users.update_profile(organization.user, profile_params, audit: audit_data(conn)) do
@@ -1026,6 +1152,11 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
           |> render_index(organization)
       end
     end)
+  end
+
+  # A new workload identity defaults to fetching only.
+  defp workload_identity_changeset(organization) do
+    WorkloadIdentity.changeset(%WorkloadIdentity{}, %{"role" => "read"}, organization)
   end
 
   defp render_new(conn, opts \\ []) do
@@ -1107,6 +1238,13 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
     customer = customer(conn, organization, opts[:tab])
     keys = if opts[:tab] == :keys, do: Keys.all(organization), else: []
+
+    # The members tab warns that removing a member leaves these in place.
+    workload_identities =
+      if opts[:tab] in [:workload_identities, :members] and WorkloadIdentities.enabled?(),
+        do: WorkloadIdentities.list(organization),
+        else: []
+
     delete_key_path = ~p"/dashboard/orgs/#{organization}/keys"
     create_key_path = ~p"/dashboard/orgs/#{organization}/keys"
     packages = packages_assign(organization, opts[:tab])
@@ -1123,6 +1261,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       [
         title: "Dashboard - Organization",
         container: "container page dashboard",
+        sidebar: :organization,
         tab: opts[:tab] || :profile,
         changeset: user && User.update_profile(user, %{}),
         public_email: public_email && public_email.email,
@@ -1137,6 +1276,9 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         create_key_path: create_key_path,
         generated_key: opts[:generated_key],
         key_changeset: opts[:key_changeset] || key_changeset(),
+        workload_identities: workload_identities,
+        workload_identity_changeset:
+          opts[:workload_identity_changeset] || workload_identity_changeset(organization),
         packages: packages,
         add_member_changeset: opts[:add_member_changeset] || add_member_changeset(),
         new_organization_changeset: create_changeset(),

@@ -4,7 +4,8 @@ defmodule HexpmWeb.Components.PackageLayout do
 
   Renders the consistent header, tab navigation, and two-column layout.
   The sidebar (Checksum, Dependency Config, Package Details) is identical
-  on every tab and is rendered directly by this component.
+  on every tab and is rendered directly by this component. The pages under
+  the Settings tab show a section nav on the left instead of the sidebar.
   Each page only supplies its own tab content via the inner_content slot.
   """
   use Phoenix.Component
@@ -22,8 +23,10 @@ defmodule HexpmWeb.Components.PackageLayout do
   alias Hexpm.Docs.Files
   alias Hexpm.Repository.Owners
   alias Hexpm.Security.Advisories
-  alias Hexpm.TrustedPublishers
+  alias Hexpm.WorkloadIdentities
   alias HexpmWeb.ViewHelpers
+
+  @settings_tabs [:owners, :workload_identities]
 
   # All assigns below (except per-page ones) come from
   # `HexpmWeb.PackageLayoutAssigns.for_package/3`. Use that helper in every
@@ -87,12 +90,15 @@ defmodule HexpmWeb.Components.PackageLayout do
         assigns.current_release && Enum.count(assigns.current_release.requirements || [])
       )
 
-    tabs = package_tabs(assigns)
+    settings_sections = settings_sections(assigns)
+    tabs = package_tabs(assigns, settings_sections)
     mobile_entries = mobile_entries(tabs, assigns)
 
     assigns =
       assigns
       |> assign(:tabs, tabs)
+      |> assign(:settings?, assigns.active_tab in @settings_tabs)
+      |> assign(:settings_sections, settings_sections)
       |> assign(:mobile_entries, mobile_entries)
       |> assign(:active_package_tab, Enum.find(mobile_entries, & &1.checked?))
 
@@ -251,7 +257,10 @@ defmodule HexpmWeb.Components.PackageLayout do
             </div>
           </details>
 
-          <div class="hidden items-center border-b border-grey-200 dark:border-grey-700 overflow-x-auto overflow-y-hidden md:flex">
+          <div
+            id="package-tabs"
+            class="hidden items-center border-b border-grey-200 dark:border-grey-700 overflow-x-auto overflow-y-hidden md:flex"
+          >
             <%= for tab <- @tabs do %>
               <a
                 href={tab.path}
@@ -263,7 +272,34 @@ defmodule HexpmWeb.Components.PackageLayout do
             <% end %>
           </div>
 
-          <div class={unless(@wide?, do: "flex flex-col lg:flex-row gap-5")}>
+          <div :if={@settings?} class="flex flex-col md:flex-row gap-6 lg:gap-10">
+            <nav
+              id="package-settings-nav"
+              aria-label="Package settings"
+              class="hidden md:block md:w-48 lg:w-56 shrink-0 pt-1"
+            >
+              <h3 class="text-grey-600 dark:text-grey-300 text-xs font-semibold uppercase tracking-wider mb-3">
+                Access
+              </h3>
+              <ul class="space-y-1">
+                <li :for={section <- @settings_sections}>
+                  <a
+                    href={section.path}
+                    aria-current={section.active && "page"}
+                    class={settings_nav_class(section.active)}
+                  >
+                    {section.label}
+                  </a>
+                </li>
+              </ul>
+            </nav>
+
+            <div class="flex-1 min-w-0 pt-1">
+              {render_slot(@inner_content)}
+            </div>
+          </div>
+
+          <div :if={!@settings?} class={unless(@wide?, do: "flex flex-col lg:flex-row gap-5")}>
             <%!-- Left: Content Area --%>
             <div class="flex-1 min-w-0">
               <%!-- Tab Content --%>
@@ -568,7 +604,7 @@ defmodule HexpmWeb.Components.PackageLayout do
   defp advisories_path(package),
     do: "/packages/#{package.repository.name}/#{package.name}/advisories"
 
-  defp package_tabs(assigns) do
+  defp package_tabs(assigns, settings_sections) do
     [
       %{
         active: assigns.active_tab == :readme,
@@ -602,7 +638,7 @@ defmodule HexpmWeb.Components.PackageLayout do
           label: "Activity",
           path: audit_logs_path(assigns.package)
         }
-      ] ++ owners_tab(assigns) ++ trusted_publishers_tab(assigns)
+      ] ++ settings_tab(assigns, settings_sections)
   end
 
   defp files_tab(%{current_release: nil}), do: []
@@ -618,22 +654,20 @@ defmodule HexpmWeb.Components.PackageLayout do
     ]
   end
 
-  # A package owner row of the member's own is one way to reach the owners page
+  # A package owner row of the member's own is one way to reach the settings pages
   # and organization ownership is another, which leaves no row to find here. The
-  # controller has already decided, so being on the page is enough: without this
-  # the layout finds no active tab and the page it was asked for raises.
-  defp owners_tab(assigns) do
-    is_full_owner =
-      assigns.active_tab == :owners or
-        Owners.full_owner?(assigns.owners, assigns.current_user)
-
-    if is_full_owner do
+  # controller has already decided, so being on a settings page is enough: without
+  # this the layout finds no active tab and the page it was asked for raises.
+  defp settings_tab(assigns, sections) do
+    if assigns.active_tab in @settings_tabs or
+         Owners.full_owner?(assigns.owners, assigns.current_user) do
       [
         %{
-          active: assigns.active_tab == :owners,
-          icon: "user-group",
-          label: "Owners",
-          path: ViewHelpers.path_for_owners(assigns.package)
+          active: assigns.active_tab in @settings_tabs,
+          icon: "cog-6-tooth",
+          label: "Settings",
+          path: ViewHelpers.path_for_owners(assigns.package),
+          sections: sections
         }
       ]
     else
@@ -641,23 +675,27 @@ defmodule HexpmWeb.Components.PackageLayout do
     end
   end
 
-  defp trusted_publishers_tab(assigns) do
-    is_full_owner =
-      assigns.active_tab == :trusted_publishers or
-        Owners.full_owner?(assigns.owners, assigns.current_user)
-
-    if TrustedPublishers.enabled?() and is_full_owner do
-      [
-        %{
-          active: assigns.active_tab == :trusted_publishers,
-          icon: "key",
-          label: "Trusted publishers",
-          path: ViewHelpers.path_for_trusted_publishers(assigns.package)
-        }
-      ]
-    else
-      []
-    end
+  defp settings_sections(assigns) do
+    [
+      %{
+        active: assigns.active_tab == :owners,
+        icon: "user-group",
+        label: "Owners",
+        path: ViewHelpers.path_for_owners(assigns.package)
+      }
+    ] ++
+      if WorkloadIdentities.enabled?() do
+        [
+          %{
+            active: assigns.active_tab == :workload_identities,
+            icon: "key",
+            label: "Workload identities",
+            path: ViewHelpers.path_for_workload_identities(assigns.package)
+          }
+        ]
+      else
+        []
+      end
   end
 
   defp dependency_tab(%{current_release: nil}), do: []
@@ -737,6 +775,14 @@ defmodule HexpmWeb.Components.PackageLayout do
     do:
       "select-none flex items-center justify-between gap-3 px-4 py-3 text-sm font-medium text-grey-600 transition-colors hover:bg-grey-50 hover:text-grey-900 dark:text-grey-200 dark:hover:bg-grey-700/60 dark:hover:text-white"
 
+  defp settings_nav_class(true),
+    do:
+      "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors bg-purple-50 dark:bg-primary-900/40 text-purple-600 dark:text-primary-200 font-medium"
+
+  defp settings_nav_class(false),
+    do:
+      "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors text-grey-600 dark:text-grey-300 hover:text-grey-900 dark:hover:text-white"
+
   defp pluralize(1, singular, _plural), do: singular
   defp pluralize(_count, _singular, plural), do: plural
 
@@ -746,13 +792,19 @@ defmodule HexpmWeb.Components.PackageLayout do
     do: "#{count} #{pluralize(count, "Dependant", "Dependants")}"
 
   # The mobile menu lists the release's documentation files under the
-  # Documentation tab. `active` highlights the tab on desktop; `checked?` marks
-  # the one entry the page is on.
+  # Documentation tab and the settings sections under the Settings tab. `active`
+  # highlights the tab on desktop; `checked?` marks the one entry the page is on.
   defp mobile_entries([readme | tabs], assigns) do
     readme = Map.put(readme, :checked?, readme.active and assigns.doc_kind == :readme)
-    tabs = Enum.map(tabs, &Map.put(&1, :checked?, &1.active))
-    [readme | doc_kind_entries(assigns)] ++ tabs
+    [readme | doc_kind_entries(assigns)] ++ Enum.flat_map(tabs, &mobile_tab_entries/1)
   end
+
+  defp mobile_tab_entries(%{sections: sections} = tab) do
+    sections = Enum.map(sections, &Map.merge(&1, %{checked?: &1.active, indent?: true}))
+    [Map.put(tab, :checked?, false) | sections]
+  end
+
+  defp mobile_tab_entries(tab), do: [Map.put(tab, :checked?, tab.active)]
 
   defp doc_kind_entries(assigns) do
     assigns.doc_kinds

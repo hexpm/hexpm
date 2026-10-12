@@ -213,7 +213,7 @@ defmodule Hexpm.Repository.Releases do
 
     audit_data = Keyword.fetch!(opts, :audit)
     replace? = Keyword.fetch!(opts, :replace)
-    trusted_publisher = Keyword.get(opts, :trusted_publisher)
+    workload_identity = Keyword.get(opts, :workload_identity)
 
     Multi.new()
     |> Multi.run(:repository, fn _, _ -> {:ok, repository} end)
@@ -226,7 +226,7 @@ defmodule Hexpm.Repository.Releases do
       outer_checksum,
       meta,
       replace?,
-      trusted_publisher
+      workload_identity
     )
     |> Multi.run(:matched_advisories, fn repo, %{release: release} ->
       Hexpm.Security.Advisories.affect_release_with_existing_advisories(repo, release)
@@ -439,7 +439,7 @@ defmodule Hexpm.Repository.Releases do
          outer_checksum,
          meta,
          replace?,
-         trusted_publisher
+         workload_identity
        ) do
     version = meta["version"]
 
@@ -470,7 +470,7 @@ defmodule Hexpm.Repository.Releases do
                 inner_checksum,
                 outer_checksum,
                 replace?,
-                trusted_publisher
+                workload_identity
               )
             else
               Release.build(
@@ -480,7 +480,7 @@ defmodule Hexpm.Repository.Releases do
                 inner_checksum,
                 outer_checksum,
                 replace?,
-                trusted_publisher
+                workload_identity
               )
             end
 

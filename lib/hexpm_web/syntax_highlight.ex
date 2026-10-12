@@ -10,9 +10,9 @@ defmodule HexpmWeb.SyntaxHighlight do
   without being sent to the pool again, since each attempt would end another
   process.
 
-  Every call emits `[:hexpm, :syntax_highlight, :start | :stop]` telemetry,
-  with a `:result` of `:ok`, `:timeout`, `:queue_timeout`, `:exit`, `:error`,
-  `:unavailable` or `:skipped` on stop.
+  Every call emits `[:hexpm, :syntax_highlight, :start | :stop | :done]`
+  telemetry, with a `:result` of `:ok`, `:timeout`, `:queue_timeout`, `:exit`,
+  `:error`, `:unavailable` or `:skipped` on `:stop` and `:done`.
   """
 
   use GenServer
@@ -64,23 +64,32 @@ defmodule HexpmWeb.SyntaxHighlight do
     digest = :crypto.hash(:sha256, :erlang.term_to_binary({kind, language, source}))
 
     :telemetry.span([:hexpm, :syntax_highlight], %{}, fn ->
-      if skipped?(table, digest) do
-        {:error, %{result: :skipped}}
-      else
-        case Pool.highlight(kind, source, language, budget ++ opts) do
-          {:ok, result} ->
-            {{:ok, result}, %{result: :ok}}
-
-          {:error, reason} ->
-            if ended_process?(reason) do
-              :ets.insert(table, {digest, System.monotonic_time(:millisecond) + @skip_ttl})
-            end
-
-            Logger.warning("Failed to highlight #{label}: #{inspect(reason)}")
-            {:error, %{result: result(reason)}}
+      {reply, result} =
+        if skipped?(table, digest) do
+          {:error, :skipped}
+        else
+          request(kind, source, language, label, budget ++ opts, table, digest)
         end
-      end
+
+      metadata = %{result: result}
+      :telemetry.execute([:hexpm, :syntax_highlight, :done], %{count: 1}, metadata)
+      {reply, metadata}
     end)
+  end
+
+  defp request(kind, source, language, label, opts, table, digest) do
+    case Pool.highlight(kind, source, language, opts) do
+      {:ok, result} ->
+        {{:ok, result}, :ok}
+
+      {:error, reason} ->
+        if ended_process?(reason) do
+          :ets.insert(table, {digest, System.monotonic_time(:millisecond) + @skip_ttl})
+        end
+
+        Logger.warning("Failed to highlight #{label}: #{inspect(reason)}")
+        {:error, result(reason)}
+    end
   end
 
   defp ended_process?(:timeout), do: true

@@ -179,32 +179,89 @@ defmodule HexpmWeb.EmailView do
     def message(username, package) do
       "#{username} has been removed from owners of package #{package}."
     end
+
+    def workload_identities(package) do
+      "Removing an owner doesn't change #{package}'s workload identities, so anyone who can " <>
+        "run these workflows on GitHub can still publish it, including a removed owner " <>
+        "with access to the repositories:"
+    end
+
+    def review(url, format) do
+      "Review them at #{Common.link(url, url, format)}."
+    end
   end
 
-  defmodule TrustedPublisherAdd do
+  defmodule WorkloadIdentityAdd do
     def message(username, package) do
-      "#{username} added a trusted publisher to package #{package}."
+      "#{username} added a workload identity to package #{package}."
     end
 
     def warning(package) do
       "Anyone who can run this workflow can now publish #{package}. " <>
-        "If you did not expect this change, remove the publisher and review the package owners."
+        "If you did not expect this change, remove the workload identity and review the package owners."
     end
   end
 
-  defmodule TrustedPublisherRemove do
+  defmodule WorkloadIdentityRemove do
     def message(username, package) do
-      "#{username} removed a trusted publisher from package #{package}."
+      "#{username} removed a workload identity from package #{package}."
     end
   end
 
-  defmodule TrustedPublisherDetails do
+  defmodule WorkloadIdentityDetails do
     def lines(repository, workflow, environment) do
       [
         "GitHub repository: #{repository}",
         "Workflow: #{workflow}"
       ] ++ if(environment in [nil, ""], do: [], else: ["Environment: #{environment}"])
     end
+  end
+
+  defmodule OrganizationWorkloadIdentityAdd do
+    def message(username, organization) do
+      "#{username} added a workload identity to organization #{organization}."
+    end
+
+    def warning(role, organization, packages) do
+      "Anyone who can run a matching workflow can now #{reach(role, organization, packages)}. " <>
+        "If you did not expect this change, remove the workload identity and review the organization's admins."
+    end
+
+    defp reach("read", organization, _packages),
+      do: "fetch every package in the #{organization} repository"
+
+    defp reach("write", organization, nil),
+      do: "fetch, publish and create every package in the #{organization} repository"
+
+    defp reach("write", organization, _packages),
+      do:
+        "fetch every package in the #{organization} repository, " <>
+          "and publish and create the packages listed above"
+  end
+
+  defmodule OrganizationWorkloadIdentityRemove do
+    def message(username, organization) do
+      "#{username} removed a workload identity from organization #{organization}."
+    end
+  end
+
+  defmodule OrganizationWorkloadIdentityDetails do
+    def lines(role, owner, repository, workflow, environment, packages) do
+      [
+        "Role: #{role}",
+        "GitHub repository: #{repository_label(owner, repository)}",
+        "Workflow: #{if workflow in [nil, ""], do: "any", else: workflow}"
+      ] ++
+        if(environment in [nil, ""], do: [], else: ["Environment: #{environment}"]) ++
+        packages_line(role, packages)
+    end
+
+    defp repository_label(owner, ""), do: "any repository owned by #{owner}"
+    defp repository_label(_owner, repository), do: repository
+
+    defp packages_line("write", nil), do: ["Packages: all"]
+    defp packages_line("write", packages), do: ["Packages: #{Enum.join(packages, ", ")}"]
+    defp packages_line(_role, _packages), do: []
   end
 
   defmodule Verification do
