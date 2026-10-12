@@ -92,10 +92,11 @@ defmodule Hexpm.PromEx.Plugins.OutboundHttp do
     }
   end
 
+  # The queue events carry the request, the connect events the host they open
+  # a connection to.
   @doc false
-  def pool_tags(metadata) do
-    %{host: Map.get(metadata, :host, "unknown")}
-  end
+  def pool_tags(%{request: request}), do: %{host: request.host}
+  def pool_tags(%{host: host}), do: %{host: host}
 
   # A request that never got a response is still worth counting, so failures are
   # labelled rather than dropped.

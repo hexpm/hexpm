@@ -1,10 +1,43 @@
 defmodule Hexpm.PromEx.Plugins.OutboundHttpTest do
   use ExUnit.Case, async: true
 
+  import Hexpm.TestHelpers, only: [start_bandit: 1]
+
   alias Hexpm.PromEx.Plugins.OutboundHttp
+
+  defmodule Server do
+    @behaviour Plug
+
+    @impl Plug
+    def init(opts), do: opts
+
+    @impl Plug
+    def call(conn, _opts), do: Plug.Conn.send_resp(conn, 200, "ok")
+  end
+
+  @finch_events [
+    [:finch, :request, :stop],
+    [:finch, :request, :exception],
+    [:finch, :queue, :stop],
+    [:finch, :connect, :stop]
+  ]
 
   defp request(host \\ "s3.amazonaws.com", method \\ "GET") do
     Finch.build(method, "https://#{host}/")
+  end
+
+  defp metrics() do
+    [otp_app: :hexpm]
+    |> OutboundHttp.event_metrics()
+    |> List.wrap()
+    |> Enum.flat_map(& &1.metrics)
+  end
+
+  # The labels each metric on `event` exports for `metadata`.
+  defp labels(event, metadata) do
+    for metric <- metrics(), metric.event_name == event, uniq: true do
+      metadata |> metric.tag_values.() |> Map.take(metric.tags)
+    end
   end
 
   test "tags a response by host, method and status" do
@@ -25,18 +58,58 @@ defmodule Hexpm.PromEx.Plugins.OutboundHttpTest do
   end
 
   test "attaches to attempt and final outcome events" do
-    events =
-      [otp_app: :hexpm]
-      |> OutboundHttp.event_metrics()
-      |> List.wrap()
-      |> Enum.flat_map(& &1.metrics)
-      |> Enum.map(& &1.event_name)
-      |> Enum.uniq()
+    events = metrics() |> Enum.map(& &1.event_name) |> Enum.uniq()
 
     assert [:hexpm, :http, :request, :stop] in events
-    assert [:finch, :request, :stop] in events
-    assert [:finch, :request, :exception] in events
-    assert [:finch, :queue, :stop] in events
-    assert [:finch, :connect, :stop] in events
+
+    for event <- @finch_events do
+      assert event in events
+    end
+  end
+
+  describe "with the events Finch emits" do
+    setup do
+      port = start_bandit(Server)
+      start_supervised!({Finch, name: __MODULE__.Finch})
+
+      ref = :telemetry_test.attach_event_handlers(self(), @finch_events)
+      on_exit(fn -> :telemetry.detach(ref) end)
+
+      %{url: "http://localhost:#{port}/", ref: ref}
+    end
+
+    test "tags a response, its wait for the pool and its connection by host", %{
+      url: url,
+      ref: ref
+    } do
+      assert {:ok, %Finch.Response{status: 200}} =
+               :get |> Finch.build(url) |> Finch.request(__MODULE__.Finch)
+
+      assert_receive {[:finch, :request, :stop], ^ref, _, %{name: __MODULE__.Finch} = request}
+      assert_receive {[:finch, :queue, :stop], ^ref, _, %{name: __MODULE__.Finch} = queue}
+      assert_receive {[:finch, :connect, :stop], ^ref, _, %{name: __MODULE__.Finch} = connect}
+
+      assert labels([:finch, :request, :stop], request) == [
+               %{host: "localhost", method: "GET", status: 200}
+             ]
+
+      assert labels([:finch, :queue, :stop], queue) == [%{host: "localhost"}]
+      assert labels([:finch, :connect, :stop], connect) == [%{host: "localhost"}]
+    end
+
+    test "tags a request that raised by host, method and kind", %{url: url, ref: ref} do
+      assert_raise RuntimeError, "stream callback", fn ->
+        :get
+        |> Finch.build(url)
+        |> Finch.stream(__MODULE__.Finch, nil, fn _entry, _acc -> raise "stream callback" end)
+      end
+
+      assert_receive {[:finch, :request, :exception], ^ref, _,
+                      %{name: __MODULE__.Finch} = exception}
+
+      assert labels([:finch, :request, :exception], exception) == [
+               %{host: "localhost", method: "GET", kind: :error}
+             ]
+    end
   end
 end
