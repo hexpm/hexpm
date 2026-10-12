@@ -1,7 +1,7 @@
 defmodule Hexpm.PromEx.Plugins.OutboundHttpTest do
   use ExUnit.Case, async: true
 
-  import Hexpm.TestHelpers, only: [start_bandit: 1]
+  import Hexpm.TestHelpers, only: [capture_final_requests: 1, start_bandit: 1]
 
   alias Hexpm.PromEx.Plugins.OutboundHttp
 
@@ -20,6 +20,17 @@ defmodule Hexpm.PromEx.Plugins.OutboundHttpTest do
     [:finch, :request, :exception],
     [:finch, :queue, :stop],
     [:finch, :connect, :stop]
+  ]
+
+  # Each package's docs are fetched from its own subdomain, and the rest are
+  # hosts the alerts and dashboards select by name.
+  @hosts [
+    {"ecto.hexdocs.pm", "*.hexdocs.pm"},
+    {"ecto.staging.hexdocs.pm", "*.hexdocs.pm"},
+    {"hexdocs.pm", "hexdocs.pm"},
+    {"api.sendgrid.com", "api.sendgrid.com"},
+    {"api.github.com", "api.github.com"},
+    {"storage.googleapis.com", "storage.googleapis.com"}
   ]
 
   defp request(host \\ "s3.amazonaws.com", method \\ "GET") do
@@ -55,6 +66,19 @@ defmodule Hexpm.PromEx.Plugins.OutboundHttpTest do
 
   test "falls back when the result is not a response" do
     assert OutboundHttp.request_tags(%{request: request(), result: nil}).status == "unknown"
+  end
+
+  test "tags a final outcome by host the way it tags each attempt" do
+    for {host, label} <- @hosts do
+      [metadata] =
+        capture_final_requests(fn ->
+          Hexpm.HTTP.track_request(:head, "https://#{host}/ecto", fn -> {:ok, 200, [], ""} end)
+        end)
+
+      assert labels([:hexpm, :http, :request, :stop], metadata) == [
+               %{host: label, method: "HEAD", status: 200}
+             ]
+    end
   end
 
   test "attaches to attempt and final outcome events" do
@@ -95,6 +119,18 @@ defmodule Hexpm.PromEx.Plugins.OutboundHttpTest do
 
       assert labels([:finch, :queue, :stop], queue) == [%{host: "localhost"}]
       assert labels([:finch, :connect, :stop], connect) == [%{host: "localhost"}]
+
+      for {host, label} <- @hosts do
+        assert labels([:finch, :request, :stop], put_in(request.request.host, host)) == [
+                 %{host: label, method: "GET", status: 200}
+               ]
+
+        assert labels([:finch, :queue, :stop], put_in(queue.request.host, host)) == [
+                 %{host: label}
+               ]
+
+        assert labels([:finch, :connect, :stop], %{connect | host: host}) == [%{host: label}]
+      end
     end
 
     test "tags a request that raised by host, method and kind", %{url: url, ref: ref} do
@@ -110,6 +146,12 @@ defmodule Hexpm.PromEx.Plugins.OutboundHttpTest do
       assert labels([:finch, :request, :exception], exception) == [
                %{host: "localhost", method: "GET", kind: :error}
              ]
+
+      for {host, label} <- @hosts do
+        assert labels([:finch, :request, :exception], put_in(exception.request.host, host)) == [
+                 %{host: label, method: "GET", kind: :error}
+               ]
+      end
     end
   end
 end

@@ -7,7 +7,9 @@ defmodule Hexpm.PromEx.Plugins.OutboundHttp do
   without each library needing its own plugin.
 
   Requests are tagged by host rather than by full URL, which keeps the number of
-  series bounded by the handful of services we talk to.
+  series bounded by the handful of services we talk to. The CDN check after a
+  docs purge fetches each package's docs from its own `<package>.hexdocs.pm`
+  subdomain, so those hosts share the label `*.hexdocs.pm`.
   """
 
   use PromEx.Plugin
@@ -24,7 +26,8 @@ defmodule Hexpm.PromEx.Plugins.OutboundHttp do
         metric_prefix ++ [:request, :final, :total],
         event_name: [:hexpm, :http, :request, :stop],
         description: "Final outbound HTTP outcomes after all retries at instrumented call sites.",
-        tags: [:host, :method, :status]
+        tags: [:host, :method, :status],
+        tag_values: &__MODULE__.final_tags/1
       ),
       distribution(
         metric_prefix ++ [:request, :duration, :milliseconds],
@@ -75,9 +78,14 @@ defmodule Hexpm.PromEx.Plugins.OutboundHttp do
   end
 
   @doc false
+  def final_tags(metadata) do
+    %{metadata | host: host(metadata.host)}
+  end
+
+  @doc false
   def request_tags(%{request: request} = metadata) do
     %{
-      host: request.host,
+      host: host(request.host),
       method: request.method,
       status: status(Map.get(metadata, :result))
     }
@@ -86,7 +94,7 @@ defmodule Hexpm.PromEx.Plugins.OutboundHttp do
   @doc false
   def exception_tags(%{request: request} = metadata) do
     %{
-      host: request.host,
+      host: host(request.host),
       method: request.method,
       kind: Map.get(metadata, :kind, :error)
     }
@@ -95,8 +103,14 @@ defmodule Hexpm.PromEx.Plugins.OutboundHttp do
   # The queue events carry the request, the connect events the host they open
   # a connection to.
   @doc false
-  def pool_tags(%{request: request}), do: %{host: request.host}
-  def pool_tags(%{host: host}), do: %{host: host}
+  def pool_tags(%{request: request}), do: %{host: host(request.host)}
+  def pool_tags(%{host: host}), do: %{host: host(host)}
+
+  defp host(host) when is_binary(host) do
+    if String.ends_with?(host, ".hexdocs.pm"), do: "*.hexdocs.pm", else: host
+  end
+
+  defp host(host), do: host
 
   # A request that never got a response is still worth counting, so failures are
   # labelled rather than dropped.
