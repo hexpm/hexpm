@@ -66,7 +66,9 @@ defmodule Hexpm.PromExTest do
           [:hexpm, :cdn, :verify, :stop],
           [:hexpm, :cdn, :purge, :done],
           [:db_connection, :connection_error],
-          [:db_connection, :connected]
+          [:db_connection, :connected],
+          [:hexpm, :email, :deliver, :done],
+          [:hexpm, :email, :deliver, :raised]
         ])
 
       on_exit(fn -> :telemetry.detach(ref) end)
@@ -116,15 +118,22 @@ defmodule Hexpm.PromExTest do
 
       assert_received {[:db_connection, :connected], ^ref, %{count: 0}, %{}}
 
+      assert_received {[:hexpm, :email, :deliver, :done], ^ref, %{count: 0},
+                       %{type: "verification", outcome: "error"}}
+
+      assert_received {[:hexpm, :email, :deliver, :raised], ^ref, %{count: 0},
+                       %{type: "package_published"}}
+
       assert Hexpm.PromEx.Plugins.Hexpm.count(%{count: 0}) == 0
       assert Hexpm.PromEx.Plugins.Hexpm.count(%{duration: 10}) == 1
     end
 
     test "creates the series the first event increments and no histogram observation" do
       metrics =
-        [otp_app: :hexpm]
-        |> Hexpm.PromEx.Plugins.Hexpm.event_metrics()
-        |> Enum.flat_map(& &1.metrics)
+        for plugin <- [Hexpm.PromEx.Plugins.Hexpm, Hexpm.PromEx.Plugins.Email],
+            event <- List.wrap(plugin.event_metrics(otp_app: :hexpm)),
+            metric <- event.metrics,
+            do: metric
 
       start_supervised!(PromEx.Storage.Core.child_spec(__MODULE__.Metrics, metrics))
 
@@ -134,6 +143,14 @@ defmodule Hexpm.PromExTest do
       assert ~s(hexpm_registry_builder_build_total{result="ok",type="repository"} 0) in samples
 
       assert ~s(hexpm_cdn_purge_total{result="error",rounds="0",service="fastly_hexrepo"} 0) in samples
+
+      for type <- Hexpm.Emails.types() do
+        for outcome <- ["ok", "error"] do
+          assert ~s(hexpm_prom_ex_email_deliver_total{outcome="#{outcome}",type="#{type}"} 0) in samples
+        end
+
+        assert ~s(hexpm_prom_ex_email_deliver_exception_total{type="#{type}"} 0) in samples
+      end
 
       assert Enum.all?(samples, &String.ends_with?(&1, " 0"))
       refute Enum.any?(samples, &String.contains?(&1, "_milliseconds"))

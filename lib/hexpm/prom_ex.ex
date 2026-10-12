@@ -26,6 +26,7 @@ defmodule Hexpm.PromEx do
   def initialize_counters() do
     Hexpm.PromEx.Plugins.Hexpm.initialize_counters()
     Hexpm.PromEx.Plugins.DbConnection.initialize_counters()
+    Hexpm.PromEx.Plugins.Email.initialize_counters()
     :ignore
   end
 

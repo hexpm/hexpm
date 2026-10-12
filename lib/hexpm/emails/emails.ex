@@ -4,6 +4,18 @@ defmodule Hexpm.Emails do
   alias HexpmWeb.EmailView.Common
   alias Hexpm.Accounts.{Email, Organization, User}
 
+  @doc """
+  The types the builders tag their mail with. Each builder tags its mail with
+  its own name, and every public function here other than `render_body`,
+  which `Phoenix.Swoosh` defines, and this one is a builder.
+  """
+  def types() do
+    for {name, _arity} <- __MODULE__.__info__(:functions),
+        name not in [:render_body, :types],
+        uniq: true,
+        do: Atom.to_string(name)
+  end
+
   def owner_added(package, owners, owner) do
     base_email(:owner_added)
     |> email_to(owners)
