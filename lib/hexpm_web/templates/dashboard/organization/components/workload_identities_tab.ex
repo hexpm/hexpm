@@ -2,7 +2,8 @@ defmodule HexpmWeb.Dashboard.Organization.Components.WorkloadIdentitiesTab do
   @moduledoc """
   Workload identities tab content for the organization dashboard. Lists the
   GitHub Actions workflows that can fetch from the organization's repository,
-  and publish to it with the write role. Admins add and remove them.
+  and publish to it with the write role. Admins with 2FA on their account add
+  and remove them.
   """
   use Phoenix.Component
 
@@ -17,6 +18,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.WorkloadIdentitiesTab do
   import HexpmWeb.Components.Input, only: [text_input: 1, select_input: 1]
   import HexpmWeb.Components.Modal, only: [modal: 1, show_modal: 1, hide_modal: 1]
 
+  alias Hexpm.Accounts.User
   alias Hexpm.WorkloadIdentities.WorkloadIdentity
 
   attr :changeset, :any, required: true
@@ -25,9 +27,12 @@ defmodule HexpmWeb.Dashboard.Organization.Components.WorkloadIdentitiesTab do
   attr :workload_identities, :list, required: true
 
   def workload_identities_tab(assigns) do
+    admin? = admin?(assigns.current_user, assigns.organization)
+
     assigns =
       assigns
-      |> assign(:admin?, admin?(assigns.current_user, assigns.organization))
+      |> assign(:admin?, admin?)
+      |> assign(:manage?, admin? and User.tfa_enabled?(assigns.current_user))
       |> assign(:form, to_form(assigns.changeset, as: :workload_identity))
 
     ~H"""
@@ -73,7 +78,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.WorkloadIdentitiesTab do
             </div>
 
             <.icon_button
-              :if={@admin?}
+              :if={@manage?}
               icon="x-mark"
               variant="danger"
               aria-label={"Remove workload identity #{repository_label(workload_identity)}"}
@@ -94,10 +99,23 @@ defmodule HexpmWeb.Dashboard.Organization.Components.WorkloadIdentitiesTab do
         >
           Only organization admins can add and remove workload identities.
         </p>
+
+        <p
+          :if={@admin? and not @manage?}
+          class="px-6 py-3 border-t border-grey-200 dark:border-grey-700 bg-grey-50 dark:bg-grey-900 text-sm text-grey-600 dark:text-grey-300"
+        >
+          <a
+            href={~p"/dashboard/security"}
+            class="text-primary-600 dark:text-primary-300 hover:underline"
+          >
+            Enable two-factor authentication
+          </a>
+          on your account to add and remove workload identities.
+        </p>
       </div>
 
       <div
-        :if={@admin?}
+        :if={@manage?}
         class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg overflow-hidden"
       >
         <div class="px-6 py-5 border-b border-grey-200 dark:border-grey-700">
@@ -185,7 +203,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.WorkloadIdentitiesTab do
 
       <.modal
         :for={workload_identity <- @workload_identities}
-        :if={@admin?}
+        :if={@manage?}
         id={"remove-workload-identity-#{workload_identity.id}"}
         title="Remove workload identity?"
         max_width="md"

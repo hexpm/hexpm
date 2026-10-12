@@ -64,6 +64,32 @@ defmodule HexpmWeb.Dashboard.OrganizationWorkloadIdentitiesTest do
       assert body =~ "release.yml"
       assert body =~ "widget, gadget"
       assert body =~ "add-workload-identity-form"
+      refute body =~ "on your account to add and remove workload identities."
+    end
+
+    test "shows the workload identities without the form to an admin without 2FA", %{
+      organization: organization
+    } do
+      admin = insert(:user)
+      insert(:organization_user, organization: organization, user: admin, role: "admin")
+
+      identity =
+        insert(:organization_workload_identity,
+          organization: organization,
+          repository: "acme/widget"
+        )
+
+      body =
+        build_conn()
+        |> test_login(admin)
+        |> get(path(organization))
+        |> html_response(200)
+
+      assert body =~ "acme/widget"
+      assert body =~ "on your account to add and remove workload identities."
+      assert body =~ ~s(href="/dashboard/security")
+      refute body =~ "add-workload-identity-form"
+      refute body =~ "remove-workload-identity-#{identity.id}"
     end
 
     test "shows the workload identities without the form to a write member", %{
