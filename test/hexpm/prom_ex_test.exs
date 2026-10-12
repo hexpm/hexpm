@@ -60,6 +60,7 @@ defmodule Hexpm.PromExTest do
           [:hexpm, :organization_deletions, :run],
           [:hexpm, :workload_identity, :mint, :success],
           [:hexpm, :api, :authenticate],
+          [:hexpm, :http, :response],
           [:hexpm, :registry_builder, :build, :done],
           [:hexpm, :registry_builder, :build, :exception],
           [:hexpm, :sentry, :filtered],
@@ -93,6 +94,8 @@ defmodule Hexpm.PromExTest do
 
       assert_received {[:hexpm, :api, :authenticate], ^ref, %{count: 0},
                        %{scheme: :key, result: :revoked_key}}
+
+      assert_received {[:hexpm, :http, :response], ^ref, %{count: 0}, %{status_class: "5xx"}}
 
       assert_received {[:hexpm, :registry_builder, :build, :done], ^ref, %{count: 0},
                        %{type: :repository, result: :ok}}
@@ -149,6 +152,10 @@ defmodule Hexpm.PromExTest do
       assert ~s(hexpm_cdn_purge_total{result="error",rounds="0",service="fastly_hexrepo"} 0) in samples
 
       assert ~s(hexpm_cdn_purge_absorbed_total{service="fastly_hexrepo"} 0) in samples
+
+      for status_class <- ~w(1xx 2xx 3xx 4xx 5xx) do
+        assert ~s(hexpm_http_response_total{status_class="#{status_class}"} 0) in samples
+      end
 
       for type <- Hexpm.Emails.types() do
         for outcome <- ["ok", "error"] do

@@ -3,10 +3,11 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
   PromEx plugin for hex.pm business metrics: the domain events emitted from
   the contexts (see `Hexpm.Repository.Releases`, `Hexpm.Accounts.Users` and
   `Hexpm.WorkloadIdentities`), API authentication (`HexpmWeb.AuthHelpers`),
-  registry builds (`Hexpm.Repository.RegistryWorker`) and CDN purges
-  (`Hexpm.CDN.PurgeWorker`, `Hexpm.CDN.Fastly`), organization billing and
-  deletion (`Hexpm.Billing.Report`, `Hexpm.Accounts.OrganizationDeletions`), and
-  the number of Erlang nodes this node is connected to.
+  the responses Bandit sends (`HexpmWeb.BanditTelemetry`), registry builds
+  (`Hexpm.Repository.RegistryWorker`) and CDN purges (`Hexpm.CDN.PurgeWorker`,
+  `Hexpm.CDN.Fastly`), organization billing and deletion
+  (`Hexpm.Billing.Report`, `Hexpm.Accounts.OrganizationDeletions`), and the
+  number of Erlang nodes this node is connected to.
 
   A counter series is created by its first event, and Prometheus' `increase()`
   needs two samples, so it never counts that first event. The counters are
@@ -43,6 +44,7 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
     :response_not_sent,
     :db_connection_exit
   ]
+  @http_status_classes ["1xx", "2xx", "3xx", "4xx", "5xx"]
   @cdn_services [:fastly_hexrepo, :fastly_hexdocs, :fastly_hexdocs_private]
   @cdn_verify_results [:ok, :stale, :error]
 
@@ -125,6 +127,15 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
           measurement: &__MODULE__.count/1,
           description: "API requests that carried an Authorization header, by scheme and result.",
           tags: [:scheme, :result]
+        )
+      ]),
+      Event.build(:hexpm_http_event_metrics, [
+        sum("hexpm.http.response.total",
+          event_name: [:hexpm, :http, :response],
+          measurement: :count,
+          description:
+            "Responses Bandit sent for the endpoint by status class, the ones it sends itself when a plug raises or sends nothing included.",
+          tags: [:status_class]
         )
       ]),
       Event.build(:hexpm_registry_builder_event_metrics, [
@@ -296,6 +307,10 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
         scheme: scheme,
         result: result
       })
+    end
+
+    for status_class <- @http_status_classes do
+      :telemetry.execute([:hexpm, :http, :response], %{count: 0}, %{status_class: status_class})
     end
 
     for type <- @registry_build_types do
