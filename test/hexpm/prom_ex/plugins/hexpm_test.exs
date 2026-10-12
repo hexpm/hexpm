@@ -23,7 +23,7 @@ defmodule Hexpm.PromEx.Plugins.HexpmTest do
       |> Enum.flat_map(& &1.metrics)
       |> Enum.filter(&(&1.event_name == [:hexpm, :api, :authenticate]))
 
-    assert %Telemetry.Metrics.Counter{tags: [:scheme, :result]} = counter
+    assert %Telemetry.Metrics.Sum{tags: [:scheme, :result]} = counter
   end
 
   test "measures the number of connected nodes" do

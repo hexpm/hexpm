@@ -67,24 +67,33 @@ defmodule Hexpm.CDN.PurgeWorker do
     }
 
     :telemetry.span([:hexpm, :cdn, :purge], metadata, fn ->
-      case purge_and_verify(job, service, keys, targets) do
-        {:ok, rounds} ->
-          Logger.info(%{
-            message: "CDN purge verified",
-            event: "cdn.purge",
-            service: service,
-            keys: keys,
-            verified: length(targets),
-            rounds: rounds,
-            absorbed: metadata.absorbed,
-            job_id: job.id
-          })
+      {result, metadata} =
+        case purge_and_verify(job, service, keys, targets) do
+          {:ok, rounds} ->
+            Logger.info(%{
+              message: "CDN purge verified",
+              event: "cdn.purge",
+              service: service,
+              keys: keys,
+              verified: length(targets),
+              rounds: rounds,
+              absorbed: metadata.absorbed,
+              job_id: job.id
+            })
 
-          {:ok, Map.merge(metadata, %{result: :ok, rounds: rounds})}
+            {:ok, Map.merge(metadata, %{result: :ok, rounds: rounds})}
 
-        {:error, reason} ->
-          {{:error, reason}, Map.merge(metadata, %{result: :error, rounds: 0})}
-      end
+          {:error, reason} ->
+            {{:error, reason}, Map.merge(metadata, %{result: :error, rounds: 0})}
+        end
+
+      :telemetry.execute(
+        [:hexpm, :cdn, :purge, :done],
+        %{count: 1, absorbed: metadata.absorbed},
+        metadata
+      )
+
+      {result, metadata}
     end)
   end
 

@@ -338,17 +338,22 @@ defmodule Hexpm.Repository.RegistryWorkerTest do
     end
   end
 
-  test "emits a build event with the type and result", %{package: package} do
-    :telemetry.attach(
-      "registry-build-#{inspect(self())}",
-      [:hexpm, :registry_builder, :build, :stop],
-      fn _event, measurements, metadata, pid -> send(pid, {:build, measurements, metadata}) end,
-      self()
-    )
+  test "emits build events with the type and result", %{package: package} do
+    ref =
+      :telemetry_test.attach_event_handlers(self(), [
+        [:hexpm, :registry_builder, :build, :stop],
+        [:hexpm, :registry_builder, :build, :done]
+      ])
+
+    on_exit(fn -> :telemetry.detach(ref) end)
 
     {:ok, _} = RegistryWorker.enqueue_package(package)
     Oban.drain_queue(queue: :registry)
 
-    assert_receive {:build, %{duration: _}, %{type: :package, result: :ok}}
+    assert_receive {[:hexpm, :registry_builder, :build, :stop], ^ref, %{duration: _},
+                    %{type: :package, result: :ok}}
+
+    assert_receive {[:hexpm, :registry_builder, :build, :done], ^ref, %{count: 1},
+                    %{type: :package, result: :ok}}
   end
 end

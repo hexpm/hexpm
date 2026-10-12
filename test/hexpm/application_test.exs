@@ -229,6 +229,16 @@ defmodule Hexpm.ApplicationTest do
       refute Hexpm.Hexdocs.Debouncer in ids
       refute Hexpm.Preview.Queue in ids
     end
+
+    test "starts the counters at zero once PromEx is attached and before the repo connects" do
+      for mode <- [:web, :worker] do
+        children = child_ids_in_order(Application.children(mode))
+        index = child_index(children, :initialize_counters)
+
+        assert index == child_index(children, Hexpm.PromEx) + 1
+        assert index < child_index(children, DBConnection.TelemetryListener)
+      end
+    end
   end
 
   defp child_ids(children) do
