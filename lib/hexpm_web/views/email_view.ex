@@ -25,6 +25,10 @@ defmodule HexpmWeb.EmailView do
 
     def support_email(), do: "support@hex.pm"
 
+    # A value one user typed, shown in mail to other users, can't break the line
+    # it is on, or it would read as a paragraph written by hex.pm.
+    def single_line(text), do: String.replace(text, ~r/[\p{Cc}\p{Zl}\p{Zp}]/u, "\u{FFFD}")
+
     # Smart link wrapping - add <a> only for HTML format
     def link(url, text, :html) do
       safe_to_string(
@@ -213,8 +217,13 @@ defmodule HexpmWeb.EmailView do
       [
         "GitHub repository: #{repository}",
         "Workflow: #{workflow}"
-      ] ++ if(environment in [nil, ""], do: [], else: ["Environment: #{environment}"])
+      ] ++ environment_line(environment)
     end
+
+    def environment_line(environment) when environment in [nil, ""], do: []
+
+    def environment_line(environment),
+      do: ["Environment: #{Common.single_line(environment)}"]
   end
 
   defmodule OrganizationWorkloadIdentityAdd do
@@ -252,7 +261,7 @@ defmodule HexpmWeb.EmailView do
         "GitHub repository: #{repository_label(owner, repository)}",
         "Workflow: #{if workflow in [nil, ""], do: "any", else: workflow}"
       ] ++
-        if(environment in [nil, ""], do: [], else: ["Environment: #{environment}"]) ++
+        WorkloadIdentityDetails.environment_line(environment) ++
         packages_line(role, packages)
     end
 
