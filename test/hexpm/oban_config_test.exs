@@ -56,6 +56,7 @@ defmodule Hexpm.ObanConfigTest do
           Hexpm.Diff.Worker,
           Hexpm.Hexdocs.Workers.Upload,
           Hexpm.Hexdocs.Workers.Search,
+          Hexpm.Hexdocs.Workers.DeleteSearch,
           Hexpm.Hexdocs.Workers.Delete,
           Hexpm.Hexdocs.Workers.Sitemap,
           Hexpm.Preview.Workers.Upload,

@@ -50,6 +50,12 @@ defmodule Hexpm.AdminTasks do
       iex> AdminTasks.remove_package("hexpm", "seo_pkg", reason: :seo_spam)
       :ok
 
+      # Take a package out of hexdocs search, and put it back
+      iex> AdminTasks.disable_search("noisy_pkg", delete_index: true, notify: true)
+      :ok
+      iex> AdminTasks.enable_search("noisy_pkg", reindex: true)
+      :ok
+
       # Send an email
       iex> AdminTasks.send_email(["bob@example.com"], "Hex.pm - Subject", "Body")
       {:ok, 1}
@@ -78,6 +84,7 @@ defmodule Hexpm.AdminTasks do
 
   alias Hexpm.AdminTasks.Reasons
   alias Hexpm.Emails.{Outbox, OutboxEntry, OutboxLock}
+  alias Hexpm.Hexdocs
 
   @announcement_category "admin.announcement"
   # Announcements queue behind transactional mail: package reports, secret-scan
@@ -621,6 +628,121 @@ defmodule Hexpm.AdminTasks do
     end
 
     :ok
+  end
+
+  @doc """
+  Stops indexing a hexpm package's documentation for the search on
+  hexdocs.pm. The search indexer skips the package's new versions until
+  `enable_search/2` is called.
+
+  ## Options
+
+  - `:delete_index` - Also removes the versions already in the search index.
+    Defaults to `false`.
+  - `:notify` - Emails the owners that the package was taken out of search,
+    why, and that carrying on may get the package removed and its publishers
+    banned. Defaults to `false`.
+
+  ## Examples
+
+      iex> AdminTasks.disable_search("noisy_pkg")
+      :ok
+
+      iex> AdminTasks.disable_search("noisy_pkg", delete_index: true, notify: true)
+      :ok
+  """
+  @spec disable_search(String.t(), keyword()) :: :ok | {:error, atom()}
+  def disable_search(package_name, opts \\ []) do
+    delete_index? = Keyword.get(opts, :delete_index, false)
+    notify? = Keyword.get(opts, :notify, false)
+
+    with {:ok, package} <- find_package("hexpm", package_name) do
+      {:ok, _} =
+        Repo.transaction(fn ->
+          Packages.set_search_disabled(package, true)
+
+          if delete_index? do
+            for version <- docs_versions(package) do
+              %{package: package.name, version: to_string(version)}
+              |> Hexdocs.Workers.DeleteSearch.new()
+              |> Oban.insert!()
+            end
+          end
+        end)
+
+      if notify?, do: notify_search_disabled(package, delete_index?)
+      :ok
+    end
+  end
+
+  @doc """
+  Indexes a hexpm package's documentation for the search on hexdocs.pm
+  again after `disable_search/2`.
+
+  ## Options
+
+  - `:reindex` - Queues every version with docs for indexing, which puts
+    back what `disable_search/2` removed. Without it only versions published
+    from now on are indexed. Defaults to `false`.
+
+  ## Examples
+
+      iex> AdminTasks.enable_search("noisy_pkg", reindex: true)
+      :ok
+  """
+  @spec enable_search(String.t(), keyword()) :: :ok | {:error, atom()}
+  def enable_search(package_name, opts \\ []) do
+    reindex? = Keyword.get(opts, :reindex, false)
+
+    with {:ok, package} <- find_package("hexpm", package_name) do
+      {:ok, _} =
+        Repo.transaction(fn ->
+          Packages.set_search_disabled(package, false)
+
+          if reindex? do
+            for version <- docs_versions(package) do
+              %{key: Hexdocs.Bucket.archive_key("hexpm", package.name, version)}
+              |> Hexdocs.Workers.Search.new()
+              |> Oban.insert!()
+            end
+          end
+        end)
+
+      :ok
+    end
+  end
+
+  @doc """
+  The hexpm packages `disable_search/2` took out of the search, and when.
+
+  ## Examples
+
+      iex> AdminTasks.search_disabled_packages()
+      [%{name: "noisy_pkg", disabled_at: ~U[2026-10-13 12:00:00.000000Z]}]
+  """
+  @spec search_disabled_packages() :: [%{name: String.t(), disabled_at: DateTime.t()}]
+  def search_disabled_packages() do
+    from(p in Package,
+      join: r in assoc(p, :repository),
+      where: r.name == "hexpm" and not is_nil(p.search_disabled_at),
+      order_by: p.name,
+      select: %{name: p.name, disabled_at: p.search_disabled_at}
+    )
+    |> Repo.all()
+  end
+
+  defp docs_versions(package) do
+    {versions, _retired_versions} = Releases.docs_versions("hexpm", package.name)
+    versions
+  end
+
+  defp notify_search_disabled(package, removed?) do
+    description = "owners of #{package.name}"
+
+    case Emails.package_search_disabled(removal_recipients(package), package.name, removed?) do
+      %{to: []} -> Logger.error("Disabled search but found no address for #{description}")
+      email -> deliver(email, description)
+    end
   end
 
   @doc """

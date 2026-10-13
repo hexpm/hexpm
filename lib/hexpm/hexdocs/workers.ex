@@ -49,6 +49,8 @@ defmodule Hexpm.Hexdocs.Workers.Search do
   require Logger
 
   @stale_snooze 15
+  # Long enough for Typesense to free memory or for its capacity to be raised.
+  @rejected_snooze 300
 
   @impl Oban.Worker
   def timeout(_job), do: 270_000
@@ -66,6 +68,33 @@ defmodule Hexpm.Hexdocs.Workers.Search do
       })
 
       {:snooze, @stale_snooze}
+
+    error in Hexpm.Hexdocs.Search.WriteRejectedError ->
+      Logger.warning(%{
+        message: "Search index rejected the write, snoozing",
+        event: "hexdocs.search_rejected",
+        key: key,
+        error: Exception.message(error),
+        snooze: @rejected_snooze
+      })
+
+      {:snooze, @rejected_snooze}
+  end
+end
+
+defmodule Hexpm.Hexdocs.Workers.DeleteSearch do
+  use Oban.Worker,
+    queue: :heavy,
+    priority: 3,
+    max_attempts: 5,
+    unique: [period: :infinity, states: :incomplete, fields: [:worker, :args]]
+
+  @impl Oban.Worker
+  def timeout(_job), do: 270_000
+
+  @impl Oban.Worker
+  def perform(%Oban.Job{args: %{"package" => package, "version" => version}}) do
+    Hexpm.Hexdocs.delete_search(package, version)
   end
 end
 
