@@ -6,6 +6,7 @@ defmodule Hexpm.Application do
   def start(_type, _args) do
     :logger.add_handler(:sentry_handler, Sentry.LoggerHandler, %{})
     Hexpm.Emails.Telemetry.attach()
+    HexpmWeb.BanditTelemetry.attach()
 
     read_only_mode()
     setup_tmp_dir()

@@ -125,7 +125,7 @@ defmodule Hexpm.CDN.PurgeWorkerTest do
       assert_received {[:hexpm, :cdn, :purge, :done], ^ref, measurements,
                        %{service: :fastly_hexrepo, result: :ok, rounds: 0}}
 
-      assert measurements == %{count: 1, absorbed: 0}
+      assert measurements == %{count: 1}
 
       expect(Hexpm.CDN.Mock, :purge_key, fn :fastly_hexrepo, ["k"] -> {:error, :closed} end)
       assert {:error, :closed} = perform_job(PurgeWorker, args)
@@ -135,7 +135,7 @@ defmodule Hexpm.CDN.PurgeWorkerTest do
     end
 
     test "absorbs the queued jobs for the same service" do
-      ref = :telemetry_test.attach_event_handlers(self(), [[:hexpm, :cdn, :purge, :done]])
+      ref = :telemetry_test.attach_event_handlers(self(), [[:hexpm, :cdn, :purge, :absorb]])
       on_exit(fn -> :telemetry.detach(ref) end)
 
       CDN.purge(:fastly_hexrepo, ["a"], verify: [%{url: "https://r/a", etag: "1"}])
@@ -162,11 +162,39 @@ defmodule Hexpm.CDN.PurgeWorkerTest do
       assert [%{args: %{"keys" => ["a", "b"], "absorbed" => 1}}, %{args: %{"keys" => ["c"]}}] =
                jobs("completed")
 
-      assert_received {[:hexpm, :cdn, :purge, :done], ^ref, %{count: 1, absorbed: 1},
+      assert_received {[:hexpm, :cdn, :purge, :absorb], ^ref, %{count: 1},
                        %{service: :fastly_hexrepo}}
 
-      assert_received {[:hexpm, :cdn, :purge, :done], ^ref, %{count: 1, absorbed: 0},
-                       %{service: :fastly_hexdocs}}
+      refute_received {[:hexpm, :cdn, :purge, :absorb], ^ref, _, _}
+    end
+
+    test "reports the jobs it absorbed once when an attempt fails and is retried" do
+      ref =
+        :telemetry_test.attach_event_handlers(self(), [
+          [:hexpm, :cdn, :purge, :absorb],
+          [:hexpm, :cdn, :purge, :done]
+        ])
+
+      on_exit(fn -> :telemetry.detach(ref) end)
+
+      CDN.purge(:fastly_hexrepo, ["a"])
+      CDN.purge(:fastly_hexrepo, ["b"])
+
+      expect(Hexpm.CDN.Mock, :purge_key, fn :fastly_hexrepo, ["a", "b"] -> {:error, :closed} end)
+      assert %{failure: 1} = Oban.drain_queue(queue: :purge, with_limit: 1)
+
+      assert_received {[:hexpm, :cdn, :purge, :absorb], ^ref, %{count: 1},
+                       %{service: :fastly_hexrepo}}
+
+      assert_received {[:hexpm, :cdn, :purge, :done], ^ref, %{count: 1}, %{result: :error}}
+
+      expect(Hexpm.CDN.Mock, :purge_key, 2, fn :fastly_hexrepo, ["a", "b"] -> :ok end)
+      assert %{success: 1} = Oban.drain_queue(queue: :purge, with_scheduled: true)
+
+      assert_received {[:hexpm, :cdn, :purge, :done], ^ref, %{count: 1}, %{result: :ok}}
+      refute_received {[:hexpm, :cdn, :purge, :absorb], ^ref, _, _}
+
+      assert [%{args: %{"keys" => ["a", "b"], "absorbed" => 1}, attempt: 2}] = jobs("completed")
     end
 
     test "keeps the latest write when absorbed jobs wrote the same object" do

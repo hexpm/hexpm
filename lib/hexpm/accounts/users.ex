@@ -91,10 +91,11 @@ defmodule Hexpm.Accounts.Users do
 
     case Repo.transaction(multi) do
       {:ok, %{user: %{emails: [email]} = user}} ->
+        :telemetry.execute([:hexpm, :accounts, :user_created], %{count: 1}, %{})
+
         Emails.verification(user, email)
         |> Mailer.deliver!()
 
-        :telemetry.execute([:hexpm, :accounts, :user_created], %{count: 1}, %{})
         {:ok, user}
 
       {:error, :user, changeset, _} ->
@@ -779,12 +780,13 @@ defmodule Hexpm.Accounts.Users do
 
     case Repo.transaction(multi) do
       {:ok, %{user: user}} ->
+        :telemetry.execute([:hexpm, :accounts, :user_created], %{count: 1}, %{})
+
         if not confirmed? do
           Emails.verification(user, List.first(user.emails))
           |> Mailer.deliver!()
         end
 
-        :telemetry.execute([:hexpm, :accounts, :user_created], %{count: 1}, %{})
         {:ok, user}
 
       {:error, :user, changeset, _} ->

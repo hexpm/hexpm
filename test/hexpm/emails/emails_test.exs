@@ -17,6 +17,49 @@ defmodule Hexpm.EmailsTest do
       assert Emails.announcement("bob@example.com", "Subject", "Body").private.type ==
                "announcement"
     end
+
+    # The delivery counters start a series at zero for each of types/0, so it
+    # has to name every type a builder tags its mail with.
+    test "types/0 lists every builder, and each tags its mail with its own name" do
+      {:ok, ast} =
+        :compile
+        |> Emails.module_info()
+        |> Keyword.fetch!(:source)
+        |> File.read!()
+        |> Code.string_to_quoted()
+
+      {_ast, builders} =
+        Macro.prewalk(ast, %{}, fn
+          {:def, _meta, [{name, _, args} | _]} = node, builders
+          when is_list(args) and name != :types ->
+            {node, Map.put(builders, Atom.to_string(name), tagged_types(node))}
+
+          node, builders ->
+            {node, builders}
+        end)
+
+      assert Enum.sort(Emails.types()) == Enum.sort(Map.keys(builders))
+
+      for {name, types} <- builders do
+        assert types == [name], "#{name} tags its mail with #{inspect(types)}"
+      end
+    end
+  end
+
+  # The types passed to base_email/1, or to a helper that passes them on.
+  defp tagged_types(ast) do
+    {_ast, types} =
+      Macro.prewalk(ast, [], fn
+        {fun, _meta, [type | _]} = node, types when is_atom(fun) and is_atom(type) ->
+          if fun == :base_email or String.ends_with?(Atom.to_string(fun), "_email"),
+            do: {node, [Atom.to_string(type) | types]},
+            else: {node, types}
+
+        node, types ->
+          {node, types}
+      end)
+
+    Enum.uniq(types)
   end
 
   describe "organization data deletion emails" do

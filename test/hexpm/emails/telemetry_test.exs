@@ -64,6 +64,34 @@ defmodule Hexpm.Emails.TelemetryTest do
            } = line
   end
 
+  test "reports each delivery to the counters by type and outcome", context do
+    ref =
+      :telemetry_test.attach_event_handlers(self(), [
+        [:hexpm, :email, :deliver, :done],
+        [:hexpm, :email, :deliver, :raised]
+      ])
+
+    on_exit(fn -> :telemetry.detach(ref) end)
+
+    put_adapter(context, Emails.ProviderIdAdapter, [])
+    Mailer.deliver!(announcement())
+
+    assert_received {[:hexpm, :email, :deliver, :done], ^ref, %{count: 1},
+                     %{type: "announcement", outcome: "ok"}}
+
+    put_adapter(context, Emails.FailingAdapter, [])
+    {:error, :mail_unavailable} = Mailer.deliver(announcement())
+
+    assert_received {[:hexpm, :email, :deliver, :done], ^ref, %{count: 1},
+                     %{type: "announcement", outcome: "error"}}
+
+    put_adapter(context, RaisingAdapter, [])
+    assert_raise RuntimeError, fn -> Mailer.deliver!(announcement()) end
+
+    assert_received {[:hexpm, :email, :deliver, :raised], ^ref, %{count: 1},
+                     %{type: "announcement"}}
+  end
+
   test "an outbox delivery names its entry and category" do
     entry = Outbox.enqueue!(announcement(), category: "admin.announcement")
 

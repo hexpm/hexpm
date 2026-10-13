@@ -6,9 +6,17 @@ defmodule Hexpm.PromEx.Plugins.Email do
   Every builder in `Hexpm.Emails` tags its mail with a type, so the series are
   bounded by the number of builders. The outcome is `ok`, the provider's HTTP
   status when it refused the mail, or `error` when there was no response.
+
+  The counters are sums of the `:count` of the events `Hexpm.Emails.Telemetry`
+  emits for each of Swoosh's, so `initialize_counters/0` can create every
+  type's series at zero without the zero reaching the duration histogram,
+  which reads Swoosh's event.
   """
 
   use PromEx.Plugin
+
+  @deliver_event [:hexpm, :email, :deliver, :done]
+  @exception_event [:hexpm, :email, :deliver, :raised]
 
   @impl true
   def event_metrics(opts) do
@@ -16,12 +24,12 @@ defmodule Hexpm.PromEx.Plugins.Email do
     metric_prefix = Keyword.get(opts, :metric_prefix, PromEx.metric_prefix(otp_app, :email))
 
     Event.build(:hexpm_email_event_metrics, [
-      counter(
+      sum(
         metric_prefix ++ [:deliver, :total],
-        event_name: [:swoosh, :deliver, :stop],
+        event_name: @deliver_event,
+        measurement: :count,
         description: "Mail handed to the provider, by email type and outcome.",
-        tags: [:type, :outcome],
-        tag_values: &__MODULE__.deliver_tags/1
+        tags: [:type, :outcome]
       ),
       distribution(
         metric_prefix ++ [:deliver, :duration, :milliseconds],
@@ -33,19 +41,51 @@ defmodule Hexpm.PromEx.Plugins.Email do
         tag_values: &__MODULE__.type_tags/1,
         unit: {:native, :millisecond}
       ),
-      counter(
+      sum(
         metric_prefix ++ [:deliver, :exception, :total],
-        event_name: [:swoosh, :deliver, :exception],
+        event_name: @exception_event,
+        measurement: :count,
         description: "Deliveries that raised.",
-        tags: [:type],
-        tag_values: &__MODULE__.type_tags/1
+        tags: [:type]
       )
     ])
   end
 
-  @doc false
-  def deliver_tags(metadata) do
-    %{type: type(metadata), outcome: outcome(metadata)}
+  @doc """
+  Reports one delivery Swoosh finished, from its `[:swoosh, :deliver, :stop]`
+  metadata.
+  """
+  def delivered(metadata) do
+    :telemetry.execute(@deliver_event, %{count: 1}, %{
+      type: type(metadata),
+      outcome: outcome(metadata)
+    })
+  end
+
+  @doc """
+  Reports one delivery that raised, from its `[:swoosh, :deliver, :exception]`
+  metadata.
+  """
+  def raised(metadata) do
+    :telemetry.execute(@exception_event, %{count: 1}, %{type: type(metadata)})
+  end
+
+  @doc """
+  Reports a zero for every email type's deliveries that succeeded or failed
+  without a response, and for its deliveries that raised, so the first real
+  event is an increase Prometheus can see. Called by
+  `Hexpm.PromEx.initialize_counters/0`.
+  """
+  def initialize_counters() do
+    for type <- Hexpm.Emails.types() do
+      for outcome <- ["ok", "error"] do
+        :telemetry.execute(@deliver_event, %{count: 0}, %{type: type, outcome: outcome})
+      end
+
+      :telemetry.execute(@exception_event, %{count: 0}, %{type: type})
+    end
+
+    :ok
   end
 
   @doc false
