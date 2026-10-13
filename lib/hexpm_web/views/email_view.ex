@@ -985,6 +985,40 @@ defmodule HexpmWeb.EmailView do
     end
   end
 
+  defmodule PackageSearchDisabled do
+    defdelegate reason_heading(), to: Common
+    defdelegate terms_notice(format), to: Common
+
+    def title(package, true), do: "#{package} has been removed from HexDocs search"
+
+    def title(package, false),
+      do: "New versions of #{package} will not be added to HexDocs search"
+
+    def message(package, true) do
+      "The Hex.pm team has removed the documentation of #{package} from the search on " <>
+        "hexdocs.pm, and new versions will not be added to it. The documentation is still " <>
+        "published on hexdocs.pm and the package itself is unaffected."
+    end
+
+    def message(package, false) do
+      "The Hex.pm team has stopped adding new versions of #{package} to the search on " <>
+        "hexdocs.pm. Versions already in the search stay there, the documentation is still " <>
+        "published on hexdocs.pm and the package itself is unaffected."
+    end
+
+    def reason() do
+      "The search on hexdocs.pm is shared by every package on Hex.pm. The documentation " <>
+        "published for this package took up a disproportionate share of it, through an " <>
+        "unusually high number of releases or amount of documentation, which puts an undue " <>
+        "burden on the service."
+    end
+
+    def warning() do
+      "If this continues, the package may be removed from Hex.pm and the accounts " <>
+        "publishing it may be banned."
+    end
+  end
+
   defmodule ReleaseRemoved do
     defdelegate reason_heading(), to: Common
     defdelegate terms_notice(format), to: Common

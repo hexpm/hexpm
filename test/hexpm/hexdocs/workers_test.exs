@@ -363,6 +363,49 @@ defmodule Hexpm.Hexdocs.WorkersTest do
     end)
   end
 
+  test "search leaves a package with search disabled out of the index" do
+    package = insert(:package, name: "unsearched_docs", search_disabled_at: DateTime.utc_now())
+    release = insert(:release, package: package, version: "1.0.0", has_docs: true)
+    key = "docs/#{package.name}-#{release.version}.tar.gz"
+
+    search_data =
+      ~s(searchData={"items":[{"type":"module","ref":"A.html","title":"A","doc":"A module"}]})
+
+    Hexpm.Store.put(
+      :repo_bucket,
+      key,
+      create_docs_tar([{"search_data-#{package.name}.js", search_data}])
+    )
+
+    # The mock has no expectations, so any index or delete call raises.
+    use_search_mock(fn ->
+      assert :ok = perform_job(Workers.Search, %{key: key})
+    end)
+  end
+
+  test "delete search removes the version while search is disabled" do
+    package = insert(:package, name: "removed_search", search_disabled_at: DateTime.utc_now())
+
+    use_search_mock(fn ->
+      expect(Hexpm.Hexdocs.Search.Mock, :delete, fn name, version ->
+        assert name == package.name
+        assert version == "1.0.0"
+        :ok
+      end)
+
+      assert :ok = perform_job(Workers.DeleteSearch, %{package: package.name, version: "1.0.0"})
+      verify!()
+    end)
+  end
+
+  test "delete search leaves the version once search is enabled again" do
+    package = insert(:package, name: "restored_search")
+
+    use_search_mock(fn ->
+      assert :ok = perform_job(Workers.DeleteSearch, %{package: package.name, version: "1.0.0"})
+    end)
+  end
+
   test "deleting latest docs promotes rewritten fallback docs" do
     package = insert(:package, name: "promoted_docs", docs_updated_at: DateTime.utc_now())
     fallback = insert(:release, package: package, version: "1.0.0", has_docs: true)

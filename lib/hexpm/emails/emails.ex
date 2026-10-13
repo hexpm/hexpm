@@ -1,7 +1,7 @@
 defmodule Hexpm.Emails do
   use Phoenix.Swoosh, view: HexpmWeb.EmailView
 
-  alias HexpmWeb.EmailView.Common
+  alias HexpmWeb.EmailView.{Common, PackageSearchDisabled}
   alias Hexpm.Accounts.{Email, Organization, User}
 
   def owner_added(package, owners, owner) do
@@ -148,6 +148,15 @@ defmodule Hexpm.Emails do
     |> assign(:package, package)
     |> assign(:reason, reason)
     |> render_body(:package_removed)
+  end
+
+  def package_search_disabled(owners, package, removed?) do
+    base_email(:package_search_disabled)
+    |> email_to(owners)
+    |> subject("Hex.pm - #{PackageSearchDisabled.title(package, removed?)}")
+    |> assign(:package, package)
+    |> assign(:removed, removed?)
+    |> render_body(:package_search_disabled)
   end
 
   def release_removed(owners, package, version, remaining, reason) do
