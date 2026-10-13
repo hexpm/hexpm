@@ -65,6 +65,53 @@ defmodule Hexpm.Hexdocs.Search.TypesenseTest do
     assert events == [%{host: "typesense.example", method: "POST", status: 200}]
   end
 
+  @items [%{"type" => "module", "ref" => "Example.html", "title" => "Example", "doc" => "Doc"}]
+  @rejection ~s({"message": "Rejecting write: running out of resource type: OUT_OF_MEMORY"})
+
+  test "raises WriteRejectedError when Typesense refuses the import" do
+    expect(Hexpm.HTTP.Mock, :post, fn _url, _headers, _body, _opts ->
+      {:ok, 422, [], @rejection}
+    end)
+
+    error =
+      assert_raise Hexpm.Hexdocs.Search.WriteRejectedError, fn ->
+        Typesense.index("package", "1.0.0", "elixir", @items)
+      end
+
+    assert error.message =~ "package 1.0.0"
+    assert error.message =~ "OUT_OF_MEMORY"
+  end
+
+  test "raises WriteRejectedError when the refusal follows earlier results" do
+    expect(Hexpm.HTTP.Mock, :post, fn _url, _headers, _body, _opts ->
+      {:ok, 200, [], ~s({"success":true}) <> @rejection}
+    end)
+
+    assert_raise Hexpm.Hexdocs.Search.WriteRejectedError, ~r/OUT_OF_MEMORY/, fn ->
+      Typesense.index("package", "1.0.0", "elixir", @items)
+    end
+  end
+
+  test "includes the response body when the import fails" do
+    expect(Hexpm.HTTP.Mock, :post, fn _url, _headers, _body, _opts ->
+      {:ok, 404, [], ~s({"message": "Not Found"})}
+    end)
+
+    assert_raise RuntimeError, ~r/status=404 body=\{"message": "Not Found"\}/, fn ->
+      Typesense.index("package", "1.0.0", "elixir", @items)
+    end
+  end
+
+  test "raises with the line when an import result isn't JSON" do
+    expect(Hexpm.HTTP.Mock, :post, fn _url, _headers, _body, _opts ->
+      {:ok, 200, [], "not json"}
+    end)
+
+    assert_raise RuntimeError, ~r/Unexpected import response for package 1.0.0: not json/, fn ->
+      Typesense.index("package", "1.0.0", "elixir", @items)
+    end
+  end
+
   test "deletes all search documents for a package version" do
     expect(Hexpm.HTTP.Mock, :delete, fn url, headers, receive_timeout: 60_000 ->
       assert url ==

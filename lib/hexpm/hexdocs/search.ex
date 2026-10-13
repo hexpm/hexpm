@@ -1,6 +1,10 @@
 defmodule Hexpm.Hexdocs.Search do
   require Logger
 
+  defmodule WriteRejectedError do
+    defexception [:message]
+  end
+
   @callback index(String.t(), Version.t() | String.t(), String.t(), [map]) :: :ok
   @callback delete(String.t(), Version.t() | String.t()) :: :ok
 
