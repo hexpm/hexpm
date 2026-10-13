@@ -129,8 +129,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
   end
 
   test "the runtime gate hides setup and action routes", context do
-    config = Application.fetch_env!(:hexpm, :organization_sso)
-    Application.put_env(:hexpm, :organization_sso, Keyword.put(config, :mode, :off))
+    put_feature_flag(:organization_sso, mode: :off)
 
     build_conn()
     |> test_login(context.admin)
@@ -146,13 +145,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
   end
 
   test "an empty beta allowlist keeps every organization SSO surface hidden", context do
-    config = Application.fetch_env!(:hexpm, :organization_sso)
-
-    app_env(
-      :hexpm,
-      :organization_sso,
-      Keyword.merge(config, mode: :beta, beta_organizations: [])
-    )
+    put_feature_flag(:organization_sso, mode: :beta, beta_organizations: [])
 
     html =
       build_conn()
@@ -911,15 +904,9 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
       insert(:organization_user, organization: other, user: context.admin, role: "admin")
       insert(:organization_sso_connection, organization: other)
 
-      config = Application.fetch_env!(:hexpm, :organization_sso)
-
-      app_env(
-        :hexpm,
-        :organization_sso,
-        Keyword.merge(config,
-          mode: :beta,
-          beta_organizations: [context.organization.name, other.name]
-        )
+      put_feature_flag(:organization_sso,
+        mode: :beta,
+        beta_organizations: [context.organization.name, other.name]
       )
 
       conn =
@@ -1127,13 +1114,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
   end
 
   defp enable_beta_for(organization) do
-    config = Application.fetch_env!(:hexpm, :organization_sso)
-
-    app_env(
-      :hexpm,
-      :organization_sso,
-      Keyword.merge(config, mode: :beta, beta_organizations: [organization.name])
-    )
+    put_feature_flag(:organization_sso, mode: :beta, beta_organizations: [organization.name])
   end
 
   defp connection_status(context) do

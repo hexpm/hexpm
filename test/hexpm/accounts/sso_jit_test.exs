@@ -23,20 +23,12 @@ defmodule Hexpm.Accounts.SSOJITTest do
   end
 
   setup do
-    app_env(:hexpm, :organization_tfa, mode: :enabled, beta_organizations: [])
+    put_feature_flag(:organization_tfa, mode: :enabled, beta_organizations: [])
     organization = insert(:organization, billing_seats: 3)
     admin = insert(:user)
     insert(:organization_user, organization: organization, user: admin, role: "admin")
 
-    config = Application.fetch_env!(:hexpm, :organization_sso)
-
-    Application.put_env(
-      :hexpm,
-      :organization_sso,
-      Keyword.merge(config, mode: :beta, beta_organizations: [organization.name])
-    )
-
-    on_exit(fn -> Application.put_env(:hexpm, :organization_sso, config) end)
+    put_feature_flag(:organization_sso, mode: :beta, beta_organizations: [organization.name])
 
     Resolver.start()
     app_env(:hexpm, :domain_dns_resolver, Resolver)

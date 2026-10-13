@@ -54,13 +54,9 @@ config :hexpm, secret_scan_notify: false
 
 config :hexpm, HexpmWeb.BasicAuth, schedule_enabled: true
 
-config :hexpm, :features, workload_identity: true
-
 config :hexpm, :workload_identity, audience: "hexpm"
 
 config :hexpm, :organization_sso,
-  mode: :off,
-  beta_organizations: [],
   all_organizations: false,
   oidc_impl: Hexpm.Accounts.SSO.OIDC.Oidcc
 

@@ -3,9 +3,9 @@ defmodule HexpmWeb.PackageWorkloadIdentityController do
 
   alias HexpmWeb.{PackageLayoutAssigns, RepositoryAccess, SSOEnforcement, ViewHelpers}
 
-  plug :feature_enabled
   plug :requires_login
   plug :fetch_package
+  plug :feature_enabled
   plug :requires_full_owner
   plug :requires_tfa
   plug HexpmWeb.Plugs.Sudo
@@ -109,7 +109,7 @@ defmodule HexpmWeb.PackageWorkloadIdentityController do
   end
 
   defp feature_enabled(conn, _opts) do
-    if WorkloadIdentities.enabled?() do
+    if WorkloadIdentities.enabled?(conn.assigns.package) do
       conn
     else
       conn

@@ -1,14 +1,16 @@
 defmodule Hexpm.Accounts.SSO.Features do
   alias Hexpm.Accounts.Organization
+  alias Hexpm.FeatureFlags
 
   @doc """
   Whether an organization may configure SSO.
   """
-  def enabled?(%Organization{name: name} = organization) do
-    case config()[:mode] do
-      :off -> false
-      :beta -> name in config()[:beta_organizations]
-      :enabled -> config()[:all_organizations] || Organization.billing_active?(organization)
+  def enabled?(%Organization{} = organization) do
+    if FeatureFlags.mode(:organization_sso) == :enabled do
+      Application.fetch_env!(:hexpm, :organization_sso)[:all_organizations] ||
+        Organization.billing_active?(organization)
+    else
+      active?(organization)
     end
   end
 
@@ -20,23 +22,8 @@ defmodule Hexpm.Accounts.SSO.Features do
   must not lock its members out of authenticating either, so this drops the
   billing check and keeps the kill switch and the beta allowlist.
   """
-  def active?(%Organization{name: name}) do
-    case config()[:mode] do
-      :off -> false
-      :beta -> name in config()[:beta_organizations]
-      :enabled -> true
-    end
-  end
+  def active?(%Organization{} = organization),
+    do: FeatureFlags.enabled?(:organization_sso, organization)
 
-  def available? do
-    case config()[:mode] do
-      :off -> false
-      :beta -> config()[:beta_organizations] != []
-      :enabled -> true
-    end
-  end
-
-  defp config do
-    Application.fetch_env!(:hexpm, :organization_sso)
-  end
+  def available?, do: FeatureFlags.available?(:organization_sso)
 end

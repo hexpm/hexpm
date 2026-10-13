@@ -134,7 +134,7 @@ defmodule HexpmWeb.DocsController do
   end
 
   def workload_identity(conn, _params) do
-    if WorkloadIdentities.enabled?() do
+    if WorkloadIdentities.available?() do
       render(
         conn,
         "layout.html",

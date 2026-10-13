@@ -16,7 +16,7 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
   alias Hexpm.UserSession
 
   setup do
-    app_env(:hexpm, :organization_tfa, mode: :enabled, beta_organizations: [])
+    put_feature_flag(:organization_tfa, mode: :enabled, beta_organizations: [])
     :ok
   end
 
@@ -62,8 +62,8 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
           {:enabled, [], true, true}
         ],
         sso_mode <- [:off, :enabled] do
-      app_env(:hexpm, :organization_tfa, mode: mode, beta_organizations: names)
-      app_env(:hexpm, :organization_sso, mode: sso_mode, beta_organizations: [])
+      put_feature_flag(:organization_tfa, mode: mode, beta_organizations: names)
+      put_feature_flag(:organization_sso, mode: sso_mode, beta_organizations: [])
       assert OrganizationTFA.enabled?(c.organization) == enabled?
       assert OrganizationTFA.available?() == available?
       assert OrganizationTFA.configurable?(c.organization) == enabled?
@@ -86,10 +86,10 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
           %{"enforcement" => "immediate"},
           %{"enforcement" => "transition", "grace_days" => "14"}
         ] do
-      app_env(:hexpm, :organization_tfa, mode: :enabled, beta_organizations: [])
+      put_feature_flag(:organization_tfa, mode: :enabled, beta_organizations: [])
       c = context()
       assert {:ok, organization} = configure(c, policy)
-      app_env(:hexpm, :organization_tfa, mode: :beta, beta_organizations: ["other"])
+      put_feature_flag(:organization_tfa, mode: :beta, beta_organizations: ["other"])
       refute OrganizationTFA.enabled?(organization)
       assert OrganizationTFA.configurable?(organization)
       assert OrganizationTFA.enforced?(organization, organization.tfa_required_at)
@@ -115,12 +115,12 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
   end
 
   test "the global switch off suspends enforcement while keeping policies and management" do
-    app_env(:hexpm, :organization_tfa, mode: :enabled, beta_organizations: [])
+    put_feature_flag(:organization_tfa, mode: :enabled, beta_organizations: [])
     c = context()
     assert {:ok, organization} = configure(c, %{"enforcement" => "immediate"})
     assert OrganizationAuth.check(organization, c.member) == {:error, :tfa_required}
 
-    app_env(:hexpm, :organization_tfa, mode: :off, beta_organizations: [])
+    put_feature_flag(:organization_tfa, mode: :off, beta_organizations: [])
 
     # The policy row is untouched, but nothing enforces.
     assert OrganizationTFA.scheduled?(organization)
@@ -138,7 +138,7 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
 
     # It can still be managed while off, and flipping back resumes it unchanged.
     assert OrganizationTFA.configurable?(organization)
-    app_env(:hexpm, :organization_tfa, mode: :enabled, beta_organizations: [])
+    put_feature_flag(:organization_tfa, mode: :enabled, beta_organizations: [])
     assert OrganizationTFA.enforced?(organization, organization.tfa_required_at)
     assert OrganizationAuth.check(organization, c.member) == {:error, :tfa_required}
   end
@@ -442,9 +442,7 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
 
   test "SSO and 2FA requirements are tracked independently, including SSO exemptions" do
     c = context()
-    config = Application.fetch_env!(:hexpm, :organization_sso)
-    Application.put_env(:hexpm, :organization_sso, Keyword.merge(config, mode: :enabled))
-    on_exit(fn -> Application.put_env(:hexpm, :organization_sso, config) end)
+    put_feature_flag(:organization_sso, mode: :enabled)
     {:ok, org} = configure(c, %{"enforcement" => "immediate"})
 
     connection =
@@ -787,9 +785,7 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
   test "an authorization tracks enrollment and the target session's SSO access separately" do
     c = context()
     {:ok, org} = configure(c, %{"enforcement" => "immediate"})
-    config = Application.fetch_env!(:hexpm, :organization_sso)
-    Application.put_env(:hexpm, :organization_sso, Keyword.put(config, :mode, :enabled))
-    on_exit(fn -> Application.put_env(:hexpm, :organization_sso, config) end)
+    put_feature_flag(:organization_sso, mode: :enabled)
 
     connection =
       insert(:organization_sso_connection,

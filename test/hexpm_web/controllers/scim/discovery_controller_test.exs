@@ -52,13 +52,7 @@ defmodule HexpmWeb.SCIM.DiscoveryControllerTest do
   end
 
   test "the token stops working when the organization leaves the beta", context do
-    config = Application.fetch_env!(:hexpm, :organization_sso)
-
-    app_env(
-      :hexpm,
-      :organization_sso,
-      Keyword.merge(config, beta_organizations: ["someone-else"])
-    )
+    put_feature_flag(:organization_sso, beta_organizations: ["someone-else"])
 
     assert scim_json_response(scim_get(context.token, "/scim/v2/ServiceProviderConfig"), 401)
   end
@@ -168,8 +162,7 @@ defmodule HexpmWeb.SCIM.DiscoveryControllerTest do
   end
 
   test "the surface does not exist while SSO is off", context do
-    config = Application.fetch_env!(:hexpm, :organization_sso)
-    app_env(:hexpm, :organization_sso, Keyword.put(config, :mode, :off))
+    put_feature_flag(:organization_sso, mode: :off)
 
     assert scim_json_response(scim_get(context.token, "/scim/v2/ServiceProviderConfig"), 404)
   end
@@ -190,13 +183,9 @@ defmodule HexpmWeb.SCIM.DiscoveryControllerTest do
   end
 
   defp enable_beta_for(organization) do
-    config = Application.fetch_env!(:hexpm, :organization_sso)
-    names = Enum.uniq([organization.name | Keyword.get(config, :beta_organizations, [])])
+    config = Application.fetch_env!(:hexpm, :feature_flags)[:organization_sso]
+    names = Enum.uniq([organization.name | config[:beta_organizations]])
 
-    app_env(
-      :hexpm,
-      :organization_sso,
-      Keyword.merge(config, mode: :beta, beta_organizations: names)
-    )
+    put_feature_flag(:organization_sso, mode: :beta, beta_organizations: names)
   end
 end

@@ -67,9 +67,7 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
       full_owner: full_owner,
       package: package
     } do
-      previous = Application.get_env(:hexpm, :features)
-      Application.put_env(:hexpm, :features, workload_identity: false)
-      on_exit(fn -> Application.put_env(:hexpm, :features, previous) end)
+      put_feature_flag(:workload_identity, mode: :off)
 
       document =
         build_conn()
@@ -141,9 +139,7 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
       full_owner: full_owner,
       package: package
     } do
-      previous = Application.get_env(:hexpm, :features)
-      Application.put_env(:hexpm, :features, workload_identity: false)
-      on_exit(fn -> Application.put_env(:hexpm, :features, previous) end)
+      put_feature_flag(:workload_identity, mode: :off)
 
       conn =
         build_conn()
@@ -151,6 +147,58 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
         |> get("/packages/#{package.name}/workload-identities")
 
       assert conn.status == 404
+    end
+
+    test "shows the page in beta when any owner is on the user list", %{
+      full_owner: full_owner,
+      maintainer: maintainer,
+      package: package
+    } do
+      put_feature_flag(:workload_identity,
+        mode: :beta,
+        beta_users: [maintainer.username],
+        beta_organizations: []
+      )
+
+      document =
+        build_conn()
+        |> test_login(full_owner)
+        |> get("/packages/#{package.name}/workload-identities")
+        |> html_response(200)
+        |> LazyHTML.from_document()
+
+      assert settings_nav(document) == [
+               {"Owners", nil},
+               {"Workload identities", "page"}
+             ]
+    end
+
+    test "returns 404 and leaves out the settings nav entry in beta when no owner is listed", %{
+      full_owner: full_owner,
+      non_owner: non_owner,
+      package: package
+    } do
+      put_feature_flag(:workload_identity,
+        mode: :beta,
+        beta_users: [non_owner.username],
+        beta_organizations: []
+      )
+
+      conn =
+        build_conn()
+        |> test_login(full_owner)
+        |> get("/packages/#{package.name}/workload-identities")
+
+      assert conn.status == 404
+
+      document =
+        build_conn()
+        |> test_login(full_owner)
+        |> get("/packages/#{package.name}/owners")
+        |> html_response(200)
+        |> LazyHTML.from_document()
+
+      assert settings_nav(document) == [{"Owners", "page"}]
     end
   end
 

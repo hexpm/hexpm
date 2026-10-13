@@ -334,6 +334,11 @@ defmodule Hexpm.TestHelpers do
     end)
   end
 
+  def put_feature_flag(flag, opts) do
+    flags = Application.fetch_env!(:hexpm, :feature_flags)
+    app_env(:hexpm, :feature_flags, Keyword.update!(flags, flag, &Keyword.merge(&1, opts)))
+  end
+
   # The test endpoint's force_ssl exclusion, see config/test.exs
   def without_forwarded_proto?(conn) do
     Plug.Conn.get_req_header(conn, "x-forwarded-proto") == []
