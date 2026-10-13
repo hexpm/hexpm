@@ -637,8 +637,8 @@ defmodule Hexpm.AdminTasks do
 
   ## Options
 
-  - `:delete_index` - Also removes the versions already in the search index.
-    Defaults to `false`.
+  - `:delete_index` - Also removes the versions already in the search index,
+    below the publish jobs. Defaults to `false`.
   - `:notify` - Emails the owners that the package was taken out of search,
     why, and that carrying on may get the package removed and its publishers
     banned. Defaults to `false`.
@@ -681,9 +681,9 @@ defmodule Hexpm.AdminTasks do
 
   ## Options
 
-  - `:reindex` - Queues every version with docs for indexing, which puts
-    back what `disable_search/2` removed. Without it only versions published
-    from now on are indexed. Defaults to `false`.
+  - `:reindex` - Queues every version with docs for indexing, below the
+    publish jobs, which puts back what `disable_search/2` removed. Without it
+    only versions published from now on are indexed. Defaults to `false`.
 
   ## Examples
 
@@ -702,7 +702,7 @@ defmodule Hexpm.AdminTasks do
           if reindex? do
             for version <- docs_versions(package) do
               %{key: Hexdocs.Bucket.archive_key("hexpm", package.name, version)}
-              |> Hexdocs.Workers.Search.new()
+              |> Hexdocs.Workers.Search.new(priority: 9)
               |> Oban.insert!()
             end
           end

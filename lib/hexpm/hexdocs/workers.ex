@@ -85,7 +85,8 @@ end
 defmodule Hexpm.Hexdocs.Workers.DeleteSearch do
   use Oban.Worker,
     queue: :heavy,
-    priority: 3,
+    # Below the publish jobs sharing the queue.
+    priority: 9,
     max_attempts: 5,
     unique: [period: :infinity, states: :incomplete, fields: [:worker, :args]]
 
