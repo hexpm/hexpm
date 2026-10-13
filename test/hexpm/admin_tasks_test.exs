@@ -799,6 +799,7 @@ defmodule Hexpm.AdminTasksTest do
         all_enqueued(worker: Hexpm.Hexdocs.Workers.DeleteSearch)
         |> Enum.map(fn job ->
           assert job.args["package"] == package.name
+          assert job.priority == 9
           job.args["version"]
         end)
 
@@ -883,7 +884,10 @@ defmodule Hexpm.AdminTasksTest do
 
       keys =
         all_enqueued(worker: Hexpm.Hexdocs.Workers.Search)
-        |> Enum.map(& &1.args["key"])
+        |> Enum.map(fn job ->
+          assert job.priority == 9
+          job.args["key"]
+        end)
 
       assert Enum.sort(keys) == [
                "docs/#{package.name}-1.0.0.tar.gz",
