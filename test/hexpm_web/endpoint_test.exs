@@ -11,6 +11,22 @@ defmodule HexpmWeb.EndpointTest do
     :telemetry.detach(ref)
   end
 
+  for path <- ["/_test/raise", "/_test/exit", "/_test/throw"] do
+    test "answers a crash in #{path} with a 500 through the endpoint's plugs" do
+      ref = :telemetry_test.attach_event_handlers(self(), [[:phoenix, :endpoint, :stop]])
+
+      {500, headers, _body} =
+        assert_error_sent(500, fn -> get(build_conn(), unquote(path)) end)
+
+      assert List.keymember?(headers, "x-request-id", 0)
+
+      assert_received {[:phoenix, :endpoint, :stop], ^ref, %{duration: _},
+                       %{conn: %Plug.Conn{request_path: unquote(path), status: 500}}}
+
+      :telemetry.detach(ref)
+    end
+  end
+
   test "ignores a client-supplied request id" do
     conn =
       build_conn()
