@@ -151,9 +151,43 @@ defmodule HexpmWeb.Dashboard.OrganizationWorkloadIdentitiesTest do
       admin: admin,
       organization: organization
     } do
-      previous = Application.get_env(:hexpm, :features)
-      Application.put_env(:hexpm, :features, workload_identity: false)
-      on_exit(fn -> Application.put_env(:hexpm, :features, previous) end)
+      put_feature_flag(:workload_identity, mode: :off)
+
+      conn = build_conn() |> test_login(admin) |> get(path(organization))
+      assert conn.status == 404
+
+      body =
+        build_conn()
+        |> test_login(admin)
+        |> get("/dashboard/orgs/#{organization.name}")
+        |> html_response(200)
+
+      refute body =~ path(organization)
+    end
+
+    test "shows the page and the tab in beta for an organization on the list", %{
+      admin: admin,
+      organization: organization
+    } do
+      put_feature_flag(:workload_identity,
+        mode: :beta,
+        beta_users: [],
+        beta_organizations: [organization.name]
+      )
+
+      body = build_conn() |> test_login(admin) |> get(path(organization)) |> html_response(200)
+      assert body =~ ~s(href="#{path(organization)}")
+    end
+
+    test "returns 404 and hides the tab in beta for an organization not on the list", %{
+      admin: admin,
+      organization: organization
+    } do
+      put_feature_flag(:workload_identity,
+        mode: :beta,
+        beta_users: [admin.username],
+        beta_organizations: ["someone-else"]
+      )
 
       conn = build_conn() |> test_login(admin) |> get(path(organization))
       assert conn.status == 404

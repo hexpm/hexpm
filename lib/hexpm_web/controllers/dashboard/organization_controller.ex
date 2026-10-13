@@ -1130,7 +1130,9 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   end
 
   defp workload_identities_enabled(conn, _opts) do
-    if WorkloadIdentities.enabled?() do
+    organization = Organizations.get(conn.params["dashboard_org"])
+
+    if organization && WorkloadIdentities.enabled?(organization) do
       conn
     else
       not_found(conn)
@@ -1241,9 +1243,10 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
     # The members tab warns that removing a member leaves these in place.
     workload_identities =
-      if opts[:tab] in [:workload_identities, :members] and WorkloadIdentities.enabled?(),
-        do: WorkloadIdentities.list(organization),
-        else: []
+      if opts[:tab] in [:workload_identities, :members] and
+           WorkloadIdentities.enabled?(organization),
+         do: WorkloadIdentities.list(organization),
+         else: []
 
     delete_key_path = ~p"/dashboard/orgs/#{organization}/keys"
     create_key_path = ~p"/dashboard/orgs/#{organization}/keys"

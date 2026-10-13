@@ -273,7 +273,7 @@ defmodule HexpmWeb.SCIM.UserControllerTest do
   end
 
   test "a 2FA policy the person has not met is a 409 naming the fix", context do
-    app_env(:hexpm, :organization_tfa, mode: :enabled, beta_organizations: [])
+    put_feature_flag(:organization_tfa, mode: :enabled, beta_organizations: [])
 
     context.organization
     |> Ecto.Changeset.change(tfa_required_at: DateTime.add(DateTime.utc_now(), 14 * 86_400))
@@ -398,12 +398,6 @@ defmodule HexpmWeb.SCIM.UserControllerTest do
   end
 
   defp enable_beta_for(organization) do
-    config = Application.fetch_env!(:hexpm, :organization_sso)
-
-    app_env(
-      :hexpm,
-      :organization_sso,
-      Keyword.merge(config, mode: :beta, beta_organizations: [organization.name])
-    )
+    put_feature_flag(:organization_sso, mode: :beta, beta_organizations: [organization.name])
   end
 end

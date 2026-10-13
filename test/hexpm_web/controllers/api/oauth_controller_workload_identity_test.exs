@@ -289,9 +289,7 @@ defmodule HexpmWeb.API.OAuthControllerWorkloadIdentityTest do
   test "returns unsupported_grant_type when the feature is disabled", %{
     package: package
   } do
-    previous = Application.get_env(:hexpm, :features)
-    Application.put_env(:hexpm, :features, workload_identity: false)
-    on_exit(fn -> Application.put_env(:hexpm, :features, previous) end)
+    put_feature_flag(:workload_identity, mode: :off)
 
     oidc = WorkloadIdentityHelpers.sign_oidc_claims(WorkloadIdentityHelpers.github_claims())
 

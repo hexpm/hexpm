@@ -13,7 +13,7 @@ defmodule HexpmWeb.API.OIDCController do
   end
 
   defp feature_enabled(conn, _opts) do
-    if WorkloadIdentities.enabled?() do
+    if WorkloadIdentities.available?() do
       conn
     else
       conn

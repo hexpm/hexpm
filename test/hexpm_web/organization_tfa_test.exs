@@ -7,7 +7,7 @@ defmodule HexpmWeb.OrganizationTFATest do
 
   setup do
     PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage)
-    app_env(:hexpm, :organization_tfa, mode: :enabled, beta_organizations: [])
+    put_feature_flag(:organization_tfa, mode: :enabled, beta_organizations: [])
     stub(Hexpm.Billing.Mock, :get, fn _, _ -> nil end)
     admin = insert(:user_with_tfa)
     member = insert(:user)
@@ -88,7 +88,7 @@ defmodule HexpmWeb.OrganizationTFATest do
           [mode: :beta, beta_organizations: []],
           [mode: :beta, beta_organizations: [c.organization.name <> "_other"]]
         ] do
-      app_env(:hexpm, :organization_tfa, rollout)
+      put_feature_flag(:organization_tfa, rollout)
       body = conn |> recycle() |> get(path <> "/members") |> html_response(200)
       refute body =~ "organization-tfa-policy"
       refused = conn |> recycle() |> post(path <> "/tfa", %{policy: %{enforcement: "immediate"}})
@@ -97,7 +97,7 @@ defmodule HexpmWeb.OrganizationTFATest do
       refute Repo.get!(Hexpm.Accounts.Organization, c.organization.id).tfa_required_at
     end
 
-    app_env(:hexpm, :organization_tfa, mode: :beta, beta_organizations: [c.organization.name])
+    put_feature_flag(:organization_tfa, mode: :beta, beta_organizations: [c.organization.name])
     body = conn |> recycle() |> get(path <> "/members") |> html_response(200)
     assert body =~ "organization-tfa-policy"
     accepted = conn |> recycle() |> post(path <> "/tfa", %{policy: %{enforcement: "immediate"}})
@@ -105,14 +105,14 @@ defmodule HexpmWeb.OrganizationTFATest do
     deadline = Repo.get!(Hexpm.Accounts.Organization, c.organization.id).tfa_required_at
     assert deadline
 
-    app_env(:hexpm, :organization_tfa, mode: :beta, beta_organizations: [])
+    put_feature_flag(:organization_tfa, mode: :beta, beta_organizations: [])
     body = conn |> recycle() |> get(path <> "/members") |> html_response(200)
     assert body =~ "organization-tfa-policy"
     kept = conn |> recycle() |> post(path <> "/tfa", %{policy: %{enforcement: "keep"}})
     assert Phoenix.Flash.get(kept.assigns.flash, :info) =~ "updated"
     assert Repo.get!(Hexpm.Accounts.Organization, c.organization.id).tfa_required_at == deadline
 
-    app_env(:hexpm, :organization_tfa, mode: :off, beta_organizations: [])
+    put_feature_flag(:organization_tfa, mode: :off, beta_organizations: [])
     body = conn |> recycle() |> get(path <> "/members") |> html_response(200)
     assert body =~ "organization-tfa-policy"
     assert body =~ "Hex has paused organization 2FA enforcement"

@@ -1,64 +1,47 @@
 import Config
 
-organization_tfa_mode =
-  case System.get_env("HEXPM_ORGANIZATION_TFA_MODE", "off") do
-    "off" ->
-      :off
-
-    "beta" ->
-      :beta
-
-    "enabled" ->
-      :enabled
-
-    value ->
-      raise "invalid HEXPM_ORGANIZATION_TFA_MODE #{inspect(value)}; expected off, beta, or enabled"
-  end
-
-organization_tfa_beta_organizations =
-  System.get_env("HEXPM_ORGANIZATION_TFA_BETA_ORGANIZATIONS", "")
-  |> String.split(",", trim: true)
-  |> Enum.map(&String.trim/1)
-  |> Enum.reject(&(&1 == ""))
-  |> Enum.uniq()
-
-config :hexpm, :organization_tfa,
-  mode: organization_tfa_mode,
-  beta_organizations: organization_tfa_beta_organizations
-
-default_sso_mode = if config_env() == :dev, do: "enabled", else: "off"
-
-sso_mode =
-  case System.get_env("HEXPM_SSO_MODE", default_sso_mode) do
+env_mode = fn name, default ->
+  case System.get_env(name, default) do
     "off" -> :off
     "beta" -> :beta
     "enabled" -> :enabled
-    value -> raise "invalid HEXPM_SSO_MODE #{inspect(value)}; expected off, beta, or enabled"
+    value -> raise "invalid #{name} #{inspect(value)}; expected off, beta, or enabled"
   end
+end
 
-sso_beta_organizations =
-  System.get_env("HEXPM_SSO_BETA_ORGANIZATIONS", "")
+env_list = fn name ->
+  System.get_env(name, "")
   |> String.split(",", trim: true)
   |> Enum.map(&String.trim/1)
   |> Enum.reject(&(&1 == ""))
   |> Enum.uniq()
+end
+
+config :hexpm, :feature_flags,
+  organization_sso: [
+    mode: env_mode.("HEXPM_SSO_MODE", if(config_env() == :dev, do: "enabled", else: "off")),
+    beta_organizations: env_list.("HEXPM_SSO_BETA_ORGANIZATIONS")
+  ],
+  organization_tfa: [
+    mode: env_mode.("HEXPM_ORGANIZATION_TFA_MODE", "off"),
+    beta_organizations: env_list.("HEXPM_ORGANIZATION_TFA_BETA_ORGANIZATIONS")
+  ],
+  workload_identity: [
+    mode:
+      env_mode.(
+        "HEXPM_WORKLOAD_IDENTITY_MODE",
+        if(config_env() == :prod, do: "off", else: "enabled")
+      ),
+    beta_users: env_list.("HEXPM_WORKLOAD_IDENTITY_BETA_USERS"),
+    beta_organizations: env_list.("HEXPM_WORKLOAD_IDENTITY_BETA_ORGANIZATIONS")
+  ]
 
 sso_exempt_issuer_hosts =
-  if config_env() == :prod do
-    []
-  else
-    System.get_env("HEXPM_SSO_EXEMPT_ISSUER_HOSTS", "")
-    |> String.split(",", trim: true)
-    |> Enum.map(&String.trim/1)
-    |> Enum.reject(&(&1 == ""))
-    |> Enum.uniq()
-  end
+  if config_env() == :prod,
+    do: [],
+    else: env_list.("HEXPM_SSO_EXEMPT_ISSUER_HOSTS")
 
 config :hexpm, sso_exempt_issuer_hosts: sso_exempt_issuer_hosts
-
-config :hexpm, :organization_sso,
-  mode: sso_mode,
-  beta_organizations: sso_beta_organizations
 
 if config_env() == :prod do
   mode =

@@ -131,7 +131,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.OrgNav do
          [{:audit_logs, "Activity", ~p"/dashboard/orgs/#{organization}/audit-logs"}]},
       {"Access",
        [{:keys, "Keys", ~p"/dashboard/orgs/#{organization}/keys"}] ++
-         if(WorkloadIdentities.enabled?(),
+         if(WorkloadIdentities.enabled?(organization),
            do: [
              {:workload_identities, "Workload identities",
               ~p"/dashboard/orgs/#{organization}/workload-identities"}

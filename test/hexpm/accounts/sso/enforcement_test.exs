@@ -11,15 +11,7 @@ defmodule Hexpm.Accounts.SSO.EnforcementTest do
     insert(:organization_user, organization: organization, user: admin, role: "admin")
     insert(:organization_user, organization: organization, user: member, role: "write")
 
-    config = Application.fetch_env!(:hexpm, :organization_sso)
-
-    Application.put_env(
-      :hexpm,
-      :organization_sso,
-      Keyword.merge(config, mode: :beta, beta_organizations: [organization.name])
-    )
-
-    on_exit(fn -> Application.put_env(:hexpm, :organization_sso, config) end)
+    put_feature_flag(:organization_sso, mode: :beta, beta_organizations: [organization.name])
 
     connection =
       insert(:organization_sso_connection,
@@ -107,8 +99,7 @@ defmodule Hexpm.Accounts.SSO.EnforcementTest do
     end
 
     test "is optional for an organization outside the beta allowlist", context do
-      config = Application.fetch_env!(:hexpm, :organization_sso)
-      Application.put_env(:hexpm, :organization_sso, Keyword.put(config, :beta_organizations, []))
+      put_feature_flag(:organization_sso, beta_organizations: [])
 
       connection = %{context.connection | enforcement_mode: "required"}
 
@@ -824,13 +815,7 @@ defmodule Hexpm.Accounts.SSO.EnforcementTest do
       other = insert(:organization)
       insert(:organization_user, organization: other, user: admin, role: "admin")
 
-      config = Application.fetch_env!(:hexpm, :organization_sso)
-
-      Application.put_env(
-        :hexpm,
-        :organization_sso,
-        Keyword.put(config, :beta_organizations, [other.name])
-      )
+      put_feature_flag(:organization_sso, beta_organizations: [other.name])
 
       assert {:error, :not_configured} =
                SSO.configure_enforcement(other, %{"enforcement_mode" => "pilot"},
@@ -1120,13 +1105,7 @@ defmodule Hexpm.Accounts.SSO.EnforcementTest do
   end
 
   defp lapse_billing(context) do
-    config = Application.fetch_env!(:hexpm, :organization_sso)
-
-    Application.put_env(
-      :hexpm,
-      :organization_sso,
-      Keyword.merge(config, mode: :enabled, all_organizations: false)
-    )
+    put_feature_flag(:organization_sso, mode: :enabled)
 
     Repo.update_all(
       from(o in Hexpm.Accounts.Organization, where: o.id == ^context.organization.id),
