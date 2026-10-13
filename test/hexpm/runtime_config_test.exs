@@ -255,10 +255,10 @@ defmodule Hexpm.RuntimeConfigTest do
     end
   end
 
-  test "workload identity defaults to off in prod and enabled in dev and test" do
-    for {env, mode} <- [dev: :enabled, test: :enabled, prod: :off] do
+  test "workload identity defaults to enabled in every environment" do
+    for env <- [:dev, :test, :prod] do
       assert read_runtime(@web_env, env)[:hexpm][:feature_flags][:workload_identity] == [
-               mode: mode,
+               mode: :enabled,
                beta_users: [],
                beta_organizations: []
              ]
