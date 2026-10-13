@@ -400,6 +400,52 @@ defmodule HexpmWeb.API.OAuthControllerWorkloadIdentityTest do
       assert body["error_description"] == "No matching workload identity"
     end
 
+    test "answers an invalid package name in an existing organization like an unknown organization",
+         %{repository: repository} do
+      oidc =
+        WorkloadIdentityHelpers.github_claims(
+          repository_owner: "attacker",
+          repository_owner_id: "999",
+          repository_id: "888"
+        )
+        |> WorkloadIdentityHelpers.sign_oidc_claims()
+
+      existing =
+        build_conn()
+        |> post("/api/oauth/token", mint_params(oidc, "package:#{repository.name}/Not-Valid"))
+
+      missing =
+        build_conn()
+        |> post("/api/oauth/token", mint_params(oidc, "package:missing/Not-Valid"))
+
+      assert {existing.status, JSON.decode!(existing.resp_body)} ==
+               {missing.status, JSON.decode!(missing.resp_body)}
+    end
+
+    test "answers an absent package with a legacy name like an existing one",
+         %{repository: repository} do
+      insert(:package, name: "Legacy_Pkg", repository_id: repository.id)
+
+      oidc =
+        WorkloadIdentityHelpers.github_claims(
+          repository_owner: "attacker",
+          repository_owner_id: "999",
+          repository_id: "888"
+        )
+        |> WorkloadIdentityHelpers.sign_oidc_claims()
+
+      existing =
+        build_conn()
+        |> post("/api/oauth/token", mint_params(oidc, "package:#{repository.name}/Legacy_Pkg"))
+
+      absent =
+        build_conn()
+        |> post("/api/oauth/token", mint_params(oidc, "package:#{repository.name}/Other_Legacy"))
+
+      assert {absent.status, JSON.decode!(absent.resp_body)} ==
+               {existing.status, JSON.decode!(existing.resp_body)}
+    end
+
     test "names inactive billing after a match", %{repository: repository} do
       repository.organization
       |> Ecto.Changeset.change(billing_active: false)

@@ -386,27 +386,29 @@ defmodule Hexpm.WorkloadIdentities do
   defp find_package_identity(repository, package_name, provider, claims) do
     package = Packages.get(repository, package_name)
 
-    with :ok <- check_package_name(package, package_name) do
-      workload_identities =
-        repository
-        |> package_identities_query(package, package_name)
-        |> for_provider(provider)
-        |> Repo.all()
+    workload_identities =
+      repository
+      |> package_identities_query(package, package_name)
+      |> for_provider(provider)
+      |> Repo.all()
 
-      case Enum.find(workload_identities, &provider.match?(&1, claims)) do
-        nil ->
-          if is_nil(package) and workload_identities == [],
-            do: {:error, :package_not_found},
-            else: {:error, :no_matching_identity}
+    case Enum.find(workload_identities, &provider.match?(&1, claims)) do
+      nil ->
+        if is_nil(package) and workload_identities == [],
+          do: {:error, :package_not_found},
+          else: {:error, :no_matching_identity}
 
-        workload_identity ->
+      workload_identity ->
+        with :ok <- check_package_name(package, package_name) do
           {:ok, workload_identity, "package:#{repository.name}/#{package_name}"}
-      end
+        end
     end
   end
 
-  # Some existing packages predate the current name rules, so only a name that
-  # no package has yet must be one a package can be created with.
+  # Checked after a match, so a workflow that matches nothing learns nothing
+  # about which organizations or packages exist. Some existing packages predate
+  # the current name rules, so only a name that no package has yet must be one
+  # a package can be created with.
   defp check_package_name(%Package{}, _package_name), do: :ok
 
   defp check_package_name(nil, package_name) do
