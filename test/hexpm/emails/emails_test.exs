@@ -548,6 +548,67 @@ defmodule Hexpm.EmailsTest do
     end
   end
 
+  describe "workload identity emails" do
+    @environment "production\n\nReset your password at https://example.com/reset"
+
+    test "keep an environment with control characters on its own line" do
+      workload_identity = %Hexpm.WorkloadIdentities.WorkloadIdentity{
+        package: build(:package, name: "cowboy"),
+        repository: "acme/widget",
+        workflow: "release.yml",
+        environment: @environment
+      }
+
+      for email <- [
+            Emails.workload_identity_added(workload_identity, [build(:user)], build(:user)),
+            Emails.workload_identity_removed(workload_identity, [build(:user)], build(:user))
+          ] do
+        refute email.text_body =~ "\nReset your password"
+      end
+    end
+
+    test "keep an organization environment with control characters on its own line" do
+      organization = %Organization{name: "acme", organization_users: []}
+
+      workload_identity = %Hexpm.WorkloadIdentities.WorkloadIdentity{
+        role: "write",
+        repository_owner: "acme",
+        repository: "acme/widget",
+        workflow: "release.yml",
+        environment: @environment
+      }
+
+      for email <- [
+            Emails.organization_workload_identity_added(
+              workload_identity,
+              organization,
+              build(:user)
+            ),
+            Emails.organization_workload_identity_removed(
+              workload_identity,
+              organization,
+              build(:user)
+            )
+          ] do
+        refute email.text_body =~ "\nReset your password"
+      end
+    end
+  end
+
+  describe "API key emails" do
+    test "keep a key name with control characters on its own line" do
+      organization = %Organization{name: "acme", organization_users: []}
+      key = %Hexpm.Accounts.Key{name: "ci\n\nReset your password at https://example.com/reset"}
+
+      for email <- [
+            Emails.api_key_created(organization, key),
+            Emails.api_key_revoked(organization, key)
+          ] do
+        refute email.text_body =~ "\nReset your password"
+      end
+    end
+  end
+
   describe "links" do
     test "Common.link emits anchors with explicit styles" do
       html = Common.link("https://example.com", "click", :html)

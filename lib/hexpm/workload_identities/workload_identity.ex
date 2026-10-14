@@ -83,6 +83,9 @@ defmodule Hexpm.WorkloadIdentities.WorkloadIdentity do
     |> validate_repository()
     |> validate_format(:workflow, ~r/\A[A-Za-z0-9._-]+\.(yml|yaml)\z/)
     |> validate_format(:repository_id, ~r/\A[1-9][0-9]*\z/)
+    |> validate_format(:environment, ~r/\A[^\p{Cc}\p{Zl}\p{Zp}]*\z/u,
+      message: "must not contain control characters or line breaks"
+    )
     |> put_issuer()
   end
 

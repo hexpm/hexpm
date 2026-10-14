@@ -2,6 +2,6 @@ New API Key Created
 
 <%= Common.greeting(@username) %>
 
-A new API key named "<%= @key_name %>" has been created on the <%= @username %> Hex.pm account.
+A new API key named "<%= Common.single_line(@key_name) %>" has been created on the <%= @username %> Hex.pm account.
 
 <%= Common.unauthorized_change_notice(:text) %>
