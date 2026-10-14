@@ -25,28 +25,49 @@ defmodule Hexpm.Hexdocs.Search.Typesense do
     case request(:post, url, fn ->
            Hexpm.HTTP.impl().post(url, headers, ndjson, receive_timeout: @timeout)
          end) do
-      {:ok, 200, _headers, body} ->
+      {:ok, status, _headers, body} ->
+        body = IO.iodata_to_binary(body)
+        check_rejected!(body, package, version)
+
+        if status != 200 do
+          raise "Failed to index search items for #{package} #{version}: " <>
+                  "status=#{status} body=#{excerpt(body)}"
+        end
+
         body
-        |> IO.iodata_to_binary()
         |> String.split("\n", trim: true)
         |> Enum.zip(search_items)
         |> Enum.each(fn {response, item} ->
-          case JSON.decode!(response) do
-            %{"success" => true} ->
+          case JSON.decode(response) do
+            {:ok, %{"success" => true}} ->
               :ok
 
-            %{"success" => false, "error" => error} ->
+            {:ok, %{"success" => false, "error" => error}} ->
               raise "Failed to index search item #{inspect(item)} for #{package} #{version}: #{inspect(error)}"
+
+            _other ->
+              raise "Unexpected import response for #{package} #{version}: #{excerpt(response)}"
           end
         end)
-
-      {:ok, status, _headers, _body} ->
-        raise "Failed to index search items for #{package} #{version}: status=#{status}"
 
       {:error, reason} ->
         raise "Failed to index search items #{package} #{version}: #{inspect(reason)}"
     end
   end
+
+  # Typesense refuses writes while a node is short on memory or disk. A request
+  # it refuses outright gets a 422. When the refusal hits a later chunk of an
+  # import that already started answering, the 200 response carries the
+  # refusal after the results of the earlier chunks.
+  defp check_rejected!(body, package, version) do
+    if body =~ "Rejecting write" do
+      raise Hexpm.Hexdocs.Search.WriteRejectedError,
+        message: "Typesense rejected the search items for #{package} #{version}: #{excerpt(body)}"
+    end
+  end
+
+  # The end of the body, where a refusal lands in an import response.
+  defp excerpt(body), do: String.slice(body, -500, 500)
 
   @impl true
   def delete(package, version) do
@@ -60,8 +81,9 @@ defmodule Hexpm.Hexdocs.Search.Typesense do
       {:ok, 200, _headers, _body} ->
         :ok
 
-      {:ok, status, _headers, _body} ->
-        raise "Failed to delete search items for #{package} #{version}: status=#{status}"
+      {:ok, status, _headers, body} ->
+        raise "Failed to delete search items for #{package} #{version}: " <>
+                "status=#{status} body=#{excerpt(IO.iodata_to_binary(body))}"
 
       {:error, reason} ->
         raise "Failed to delete search items for #{package} #{version}: #{inspect(reason)}"

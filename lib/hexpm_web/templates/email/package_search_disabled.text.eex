@@ -1,0 +1,11 @@
+<%= PackageSearchDisabled.title(@package, @removed) %>
+
+<%= PackageSearchDisabled.message(@package, @removed) %>
+
+<%= PackageSearchDisabled.reason_heading() %>
+
+<%= PackageSearchDisabled.reason() %>
+
+<%= PackageSearchDisabled.warning() %>
+
+<%= PackageSearchDisabled.terms_notice(:text) %>

@@ -17,6 +17,49 @@ defmodule Hexpm.EmailsTest do
       assert Emails.announcement("bob@example.com", "Subject", "Body").private.type ==
                "announcement"
     end
+
+    # The delivery counters start a series at zero for each of types/0, so it
+    # has to name every type a builder tags its mail with.
+    test "types/0 lists every builder, and each tags its mail with its own name" do
+      {:ok, ast} =
+        :compile
+        |> Emails.module_info()
+        |> Keyword.fetch!(:source)
+        |> File.read!()
+        |> Code.string_to_quoted()
+
+      {_ast, builders} =
+        Macro.prewalk(ast, %{}, fn
+          {:def, _meta, [{name, _, args} | _]} = node, builders
+          when is_list(args) and name != :types ->
+            {node, Map.put(builders, Atom.to_string(name), tagged_types(node))}
+
+          node, builders ->
+            {node, builders}
+        end)
+
+      assert Enum.sort(Emails.types()) == Enum.sort(Map.keys(builders))
+
+      for {name, types} <- builders do
+        assert types == [name], "#{name} tags its mail with #{inspect(types)}"
+      end
+    end
+  end
+
+  # The types passed to base_email/1, or to a helper that passes them on.
+  defp tagged_types(ast) do
+    {_ast, types} =
+      Macro.prewalk(ast, [], fn
+        {fun, _meta, [type | _]} = node, types when is_atom(fun) and is_atom(type) ->
+          if fun == :base_email or String.ends_with?(Atom.to_string(fun), "_email"),
+            do: {node, [Atom.to_string(type) | types]},
+            else: {node, types}
+
+        node, types ->
+          {node, types}
+      end)
+
+    Enum.uniq(types)
   end
 
   describe "organization data deletion emails" do
@@ -502,6 +545,67 @@ defmodule Hexpm.EmailsTest do
 
       assert email.text_body =~ "taken no other action"
       assert email.text_body =~ "never the value itself"
+    end
+  end
+
+  describe "workload identity emails" do
+    @environment "production\n\nReset your password at https://example.com/reset"
+
+    test "keep an environment with control characters on its own line" do
+      workload_identity = %Hexpm.WorkloadIdentities.WorkloadIdentity{
+        package: build(:package, name: "cowboy"),
+        repository: "acme/widget",
+        workflow: "release.yml",
+        environment: @environment
+      }
+
+      for email <- [
+            Emails.workload_identity_added(workload_identity, [build(:user)], build(:user)),
+            Emails.workload_identity_removed(workload_identity, [build(:user)], build(:user))
+          ] do
+        refute email.text_body =~ "\nReset your password"
+      end
+    end
+
+    test "keep an organization environment with control characters on its own line" do
+      organization = %Organization{name: "acme", organization_users: []}
+
+      workload_identity = %Hexpm.WorkloadIdentities.WorkloadIdentity{
+        role: "write",
+        repository_owner: "acme",
+        repository: "acme/widget",
+        workflow: "release.yml",
+        environment: @environment
+      }
+
+      for email <- [
+            Emails.organization_workload_identity_added(
+              workload_identity,
+              organization,
+              build(:user)
+            ),
+            Emails.organization_workload_identity_removed(
+              workload_identity,
+              organization,
+              build(:user)
+            )
+          ] do
+        refute email.text_body =~ "\nReset your password"
+      end
+    end
+  end
+
+  describe "API key emails" do
+    test "keep a key name with control characters on its own line" do
+      organization = %Organization{name: "acme", organization_users: []}
+      key = %Hexpm.Accounts.Key{name: "ci\n\nReset your password at https://example.com/reset"}
+
+      for email <- [
+            Emails.api_key_created(organization, key),
+            Emails.api_key_revoked(organization, key)
+          ] do
+        refute email.text_body =~ "\nReset your password"
+      end
     end
   end
 

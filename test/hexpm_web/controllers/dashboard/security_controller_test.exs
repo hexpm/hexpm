@@ -35,6 +35,37 @@ defmodule HexpmWeb.Dashboard.SecurityControllerTest do
       assert result =~ "Enable"
     end
 
+    test "keeps a local return path for after 2FA is enabled" do
+      user = insert(:user)
+      return = "/dashboard/orgs/acme/workload-identities"
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/security", %{"return" => return})
+
+      assert response(conn, 200)
+      assert get_session(conn, :tfa_return_to) == return
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/security", %{"return" => "//example.com"})
+
+      assert response(conn, 200)
+      refute get_session(conn, :tfa_return_to)
+    end
+
+    test "ignores the return path when 2FA is already enabled", c do
+      conn =
+        build_conn()
+        |> test_login(c.user)
+        |> get("/dashboard/security", %{"return" => "/dashboard/orgs/acme/workload-identities"})
+
+      assert response(conn, 200)
+      refute get_session(conn, :tfa_return_to)
+    end
+
     test "shows modal when tfa_setup_secret is in session" do
       user = insert(:user)
       secret = Hexpm.Accounts.TFA.generate_secret()

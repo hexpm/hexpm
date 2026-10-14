@@ -90,7 +90,7 @@ defmodule HexpmWeb.Components.PackageLayout do
         assigns.current_release && Enum.count(assigns.current_release.requirements || [])
       )
 
-    settings_sections = settings_sections(assigns)
+    settings_sections = if settings_tab?(assigns), do: settings_sections(assigns), else: []
     tabs = package_tabs(assigns, settings_sections)
     mobile_entries = mobile_entries(tabs, assigns)
 
@@ -658,21 +658,23 @@ defmodule HexpmWeb.Components.PackageLayout do
   # and organization ownership is another, which leaves no row to find here. The
   # controller has already decided, so being on a settings page is enough: without
   # this the layout finds no active tab and the page it was asked for raises.
+  defp settings_tab?(assigns) do
+    assigns.active_tab in @settings_tabs or
+      Owners.full_owner?(assigns.owners, assigns.current_user)
+  end
+
+  defp settings_tab(_assigns, []), do: []
+
   defp settings_tab(assigns, sections) do
-    if assigns.active_tab in @settings_tabs or
-         Owners.full_owner?(assigns.owners, assigns.current_user) do
-      [
-        %{
-          active: assigns.active_tab in @settings_tabs,
-          icon: "cog-6-tooth",
-          label: "Settings",
-          path: ViewHelpers.path_for_owners(assigns.package),
-          sections: sections
-        }
-      ]
-    else
-      []
-    end
+    [
+      %{
+        active: assigns.active_tab in @settings_tabs,
+        icon: "cog-6-tooth",
+        label: "Settings",
+        path: ViewHelpers.path_for_owners(assigns.package),
+        sections: sections
+      }
+    ]
   end
 
   defp settings_sections(assigns) do
@@ -684,7 +686,7 @@ defmodule HexpmWeb.Components.PackageLayout do
         path: ViewHelpers.path_for_owners(assigns.package)
       }
     ] ++
-      if WorkloadIdentities.enabled?() do
+      if WorkloadIdentities.enabled?(assigns.package) do
         [
           %{
             active: assigns.active_tab == :workload_identities,

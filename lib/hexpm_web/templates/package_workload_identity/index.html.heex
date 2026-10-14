@@ -130,6 +130,9 @@
               placeholder="Any"
             />
           </div>
+          <p class="text-xs text-grey-500 dark:text-grey-300">
+            The environment is required when the GitHub repository is public. Its protection rules, such as required reviewers or allowed branches, run before the workflow can get a token.
+          </p>
 
           <.text_input
             field={form[:repository_id]}

@@ -7,7 +7,9 @@ defmodule Hexpm.PromEx.Plugins.OutboundHttp do
   without each library needing its own plugin.
 
   Requests are tagged by host rather than by full URL, which keeps the number of
-  series bounded by the handful of services we talk to.
+  series bounded by the handful of services we talk to. The CDN check after a
+  docs purge fetches each package's docs from its own `<package>.hexdocs.pm`
+  subdomain, so those hosts share the label `*.hexdocs.pm`.
   """
 
   use PromEx.Plugin
@@ -24,7 +26,8 @@ defmodule Hexpm.PromEx.Plugins.OutboundHttp do
         metric_prefix ++ [:request, :final, :total],
         event_name: [:hexpm, :http, :request, :stop],
         description: "Final outbound HTTP outcomes after all retries at instrumented call sites.",
-        tags: [:host, :method, :status]
+        tags: [:host, :method, :status],
+        tag_values: &__MODULE__.final_tags/1
       ),
       distribution(
         metric_prefix ++ [:request, :duration, :milliseconds],
@@ -75,9 +78,14 @@ defmodule Hexpm.PromEx.Plugins.OutboundHttp do
   end
 
   @doc false
+  def final_tags(metadata) do
+    %{metadata | host: host(metadata.host)}
+  end
+
+  @doc false
   def request_tags(%{request: request} = metadata) do
     %{
-      host: request.host,
+      host: host(request.host),
       method: request.method,
       status: status(Map.get(metadata, :result))
     }
@@ -86,22 +94,41 @@ defmodule Hexpm.PromEx.Plugins.OutboundHttp do
   @doc false
   def exception_tags(%{request: request} = metadata) do
     %{
-      host: request.host,
+      host: host(request.host),
       method: request.method,
       kind: Map.get(metadata, :kind, :error)
     }
   end
 
+  # The queue events carry the request, the connect events the host they open
+  # a connection to.
   @doc false
-  def pool_tags(metadata) do
-    %{host: Map.get(metadata, :host, "unknown")}
+  def pool_tags(%{request: request}), do: %{host: host(request.host)}
+  def pool_tags(%{host: host}), do: %{host: host(host)}
+
+  defp host(host) when is_binary(host) do
+    if String.ends_with?(host, ".hexdocs.pm"), do: "*.hexdocs.pm", else: host
   end
 
+  defp host(host), do: host
+
   # A request that never got a response is still worth counting, so failures are
-  # labelled rather than dropped.
-  defp status({:ok, %{status: status}}), do: status
+  # labelled rather than dropped. Finch.request/3 returns the response and
+  # Finch.stream_while/5 its accumulator, which Req's adapter, and so ExAws,
+  # keeps as the request next to the response it builds.
+  defp status({:ok, %{status: status}}) when is_integer(status), do: status
+  defp status({:ok, {%Req.Request{}, response}}), do: req_status(response)
   defp status({:ok, _other}), do: "ok"
   defp status({:error, %{__struct__: module}}), do: inspect(module)
+  defp status({:error, %{__struct__: module}, _acc}), do: inspect(module)
   defp status({:error, _other}), do: "error"
+  defp status({:error, _other, _acc}), do: "error"
   defp status(_), do: "unknown"
+
+  # Req collects a response into {status, headers, body, trailers}, or into a
+  # Req.Response when it streams the body into a function or a collectable.
+  defp req_status({status, _headers, _body, _trailers}) when is_integer(status), do: status
+  defp req_status(%Req.Response{status: status}), do: status
+  defp req_status({_collector, %Req.Response{status: status}}), do: status
+  defp req_status(_response), do: "ok"
 end

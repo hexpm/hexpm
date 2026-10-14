@@ -67,24 +67,29 @@ defmodule Hexpm.CDN.PurgeWorker do
     }
 
     :telemetry.span([:hexpm, :cdn, :purge], metadata, fn ->
-      case purge_and_verify(job, service, keys, targets) do
-        {:ok, rounds} ->
-          Logger.info(%{
-            message: "CDN purge verified",
-            event: "cdn.purge",
-            service: service,
-            keys: keys,
-            verified: length(targets),
-            rounds: rounds,
-            absorbed: metadata.absorbed,
-            job_id: job.id
-          })
+      {result, metadata} =
+        case purge_and_verify(job, service, keys, targets) do
+          {:ok, rounds} ->
+            Logger.info(%{
+              message: "CDN purge verified",
+              event: "cdn.purge",
+              service: service,
+              keys: keys,
+              verified: length(targets),
+              rounds: rounds,
+              absorbed: metadata.absorbed,
+              job_id: job.id
+            })
 
-          {:ok, Map.merge(metadata, %{result: :ok, rounds: rounds})}
+            {:ok, Map.merge(metadata, %{result: :ok, rounds: rounds})}
 
-        {:error, reason} ->
-          {{:error, reason}, Map.merge(metadata, %{result: :error, rounds: 0})}
-      end
+          {:error, reason} ->
+            {{:error, reason}, Map.merge(metadata, %{result: :error, rounds: 0})}
+        end
+
+      :telemetry.execute([:hexpm, :cdn, :purge, :done], %{count: 1}, metadata)
+
+      {result, metadata}
     end)
   end
 
@@ -202,13 +207,15 @@ defmodule Hexpm.CDN.PurgeWorker do
   # Merges the available jobs for the same service into this one. Runs in a
   # transaction: the siblings are row-locked so a concurrent job on another
   # node skips them, and this job's arguments are rewritten alongside the
-  # cancellations so a later attempt still carries the absorbed keys.
+  # cancellations so a later attempt still carries the absorbed keys. The
+  # arguments count every job absorbed over all attempts, so the jobs this
+  # attempt absorbed are reported once they are committed.
   defp absorb_siblings(%Oban.Job{id: nil, args: args}), do: args
 
   defp absorb_siblings(%Oban.Job{id: id, args: %{"service" => service} = args} = job) do
     worker = Oban.Worker.to_string(__MODULE__)
 
-    {:ok, args} =
+    {:ok, {args, absorbed}} =
       Repo.transaction(fn ->
         siblings =
           Repo.all(
@@ -223,14 +230,21 @@ defmodule Hexpm.CDN.PurgeWorker do
 
         {args, absorbed} = merge(args, siblings)
 
-        if absorbed == [] do
-          args
-        else
+        if absorbed != [] do
           {:ok, _} = Oban.cancel_all_jobs(from(j in Oban.Job, where: j.id in ^absorbed))
           job |> change(args: args) |> Repo.update!()
-          args
         end
+
+        {args, absorbed}
       end)
+
+    if absorbed != [] do
+      :telemetry.execute(
+        [:hexpm, :cdn, :purge, :absorb],
+        %{count: length(absorbed)},
+        %{service: String.to_existing_atom(service)}
+      )
+    end
 
     args
   end

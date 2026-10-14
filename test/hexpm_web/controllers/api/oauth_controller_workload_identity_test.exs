@@ -289,9 +289,7 @@ defmodule HexpmWeb.API.OAuthControllerWorkloadIdentityTest do
   test "returns unsupported_grant_type when the feature is disabled", %{
     package: package
   } do
-    previous = Application.get_env(:hexpm, :features)
-    Application.put_env(:hexpm, :features, workload_identity: false)
-    on_exit(fn -> Application.put_env(:hexpm, :features, previous) end)
+    put_feature_flag(:workload_identity, mode: :off)
 
     oidc = WorkloadIdentityHelpers.sign_oidc_claims(WorkloadIdentityHelpers.github_claims())
 
@@ -398,6 +396,52 @@ defmodule HexpmWeb.API.OAuthControllerWorkloadIdentityTest do
 
       assert body["error"] == "access_denied"
       assert body["error_description"] == "No matching workload identity"
+    end
+
+    test "answers an invalid package name in an existing organization like an unknown organization",
+         %{repository: repository} do
+      oidc =
+        WorkloadIdentityHelpers.github_claims(
+          repository_owner: "attacker",
+          repository_owner_id: "999",
+          repository_id: "888"
+        )
+        |> WorkloadIdentityHelpers.sign_oidc_claims()
+
+      existing =
+        build_conn()
+        |> post("/api/oauth/token", mint_params(oidc, "package:#{repository.name}/Not-Valid"))
+
+      missing =
+        build_conn()
+        |> post("/api/oauth/token", mint_params(oidc, "package:missing/Not-Valid"))
+
+      assert {existing.status, JSON.decode!(existing.resp_body)} ==
+               {missing.status, JSON.decode!(missing.resp_body)}
+    end
+
+    test "answers an absent package with a legacy name like an existing one",
+         %{repository: repository} do
+      insert(:package, name: "Legacy_Pkg", repository_id: repository.id)
+
+      oidc =
+        WorkloadIdentityHelpers.github_claims(
+          repository_owner: "attacker",
+          repository_owner_id: "999",
+          repository_id: "888"
+        )
+        |> WorkloadIdentityHelpers.sign_oidc_claims()
+
+      existing =
+        build_conn()
+        |> post("/api/oauth/token", mint_params(oidc, "package:#{repository.name}/Legacy_Pkg"))
+
+      absent =
+        build_conn()
+        |> post("/api/oauth/token", mint_params(oidc, "package:#{repository.name}/Other_Legacy"))
+
+      assert {absent.status, JSON.decode!(absent.resp_body)} ==
+               {existing.status, JSON.decode!(existing.resp_body)}
     end
 
     test "names inactive billing after a match", %{repository: repository} do

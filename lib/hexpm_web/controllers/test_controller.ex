@@ -250,6 +250,14 @@ defmodule HexpmWeb.TestController do
     raise "test error"
   end
 
+  def exit_process(_conn, _params) do
+    exit(:test_exit)
+  end
+
+  def throw_value(_conn, _params) do
+    throw(:test_throw)
+  end
+
   defp send_object(nil, conn), do: send_resp(conn, 404, "")
   defp send_object(obj, conn), do: send_resp(conn, 200, obj)
 end

@@ -90,37 +90,64 @@ defmodule Hexpm.Hexdocs do
   def search(key) do
     {repository, package, version} = key_components!(key)
 
-    if repository == "hexpm" do
-      version =
-        case Version.parse(version) do
-          {:ok, parsed} -> parsed
-          :error when package in @special_package_names -> version
-        end
+    cond do
+      repository != "hexpm" ->
+        Logger.warning("SKIPPING SEARCH INDEX #{key} (repository is not hexpm)")
 
-      {dir, files, checksum} = download_and_unpack!(key, repository, package, version)
+      Packages.search_disabled?(repository, package) ->
+        Logger.info("SKIPPING SEARCH INDEX #{key} (search is disabled for the package)")
 
-      files_with_content =
-        Enum.flat_map(files, fn path ->
-          if String.starts_with?(Path.basename(path), "search_data-") do
-            [{path, File.read!(Path.join(dir, path))}]
-          else
-            []
-          end
-        end)
+      true ->
+        index_search(key, repository, package, version)
+    end
 
-      case Search.find_search_items(package, version, files_with_content) do
-        {proglang, items} ->
-          Search.delete(package, version)
-          Search.index(package, version, proglang, items)
+    :ok
+  end
 
-        nil ->
-          Search.delete(package, version)
-          Logger.info("SKIPPING SEARCH INDEX #{key} (invalid or missing search items)")
+  defp index_search(key, repository, package, version) do
+    version =
+      case Version.parse(version) do
+        {:ok, parsed} -> parsed
+        :error when package in @special_package_names -> version
       end
 
-      ensure_archive_current!(key, checksum)
+    {dir, files, checksum} = download_and_unpack!(key, repository, package, version)
+
+    files_with_content =
+      Enum.flat_map(files, fn path ->
+        if String.starts_with?(Path.basename(path), "search_data-") do
+          [{path, File.read!(Path.join(dir, path))}]
+        else
+          []
+        end
+      end)
+
+    case Search.find_search_items(package, version, files_with_content) do
+      {proglang, items} ->
+        Search.delete(package, version)
+        Search.index(package, version, proglang, items)
+
+      nil ->
+        Search.delete(package, version)
+        Logger.info("SKIPPING SEARCH INDEX #{key} (invalid or missing search items)")
+    end
+
+    ensure_archive_current!(key, checksum)
+  end
+
+  @doc """
+  Removes a version of a hexpm package from the search index.
+
+  Does nothing once search is enabled for the package again, so a removal
+  that runs after the package was put back doesn't undo the reindex.
+  """
+  def delete_search(package, version) do
+    if Packages.search_disabled?("hexpm", package) do
+      Search.delete(package, version)
     else
-      Logger.warning("SKIPPING SEARCH INDEX #{key} (repository is not hexpm)")
+      Logger.info(
+        "SKIPPING SEARCH DELETE #{package} #{version} (search is enabled for the package)"
+      )
     end
 
     :ok

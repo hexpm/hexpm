@@ -64,6 +64,23 @@ defmodule Hexpm.Repository.Packages do
       preload: [:references, :affected_versions]
   end
 
+  def search_disabled?(repository, name) do
+    from(package in Package,
+      join: repository in assoc(package, :repository),
+      where: repository.name == ^repository and package.name == ^name,
+      where: not is_nil(package.search_disabled_at)
+    )
+    |> Repo.exists?()
+  end
+
+  def set_search_disabled(package, disabled?) do
+    disabled_at = if disabled?, do: DateTime.utc_now()
+
+    package
+    |> Ecto.Changeset.change(search_disabled_at: disabled_at)
+    |> Repo.update!()
+  end
+
   def owner_with_access?(package, user, level \\ "maintainer") do
     repository = package.repository
     role = PackageOwner.level_to_organization_role(level)

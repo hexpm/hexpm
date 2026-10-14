@@ -670,6 +670,8 @@ defmodule HexpmWeb.Router do
       pipe_through :browser
 
       get "/raise", TestController, :raise_error
+      get "/exit", TestController, :exit_process
+      get "/throw", TestController, :throw_value
     end
   end
 

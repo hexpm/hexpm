@@ -58,11 +58,12 @@ defmodule Hexpm.WorkloadIdentities.Provider.GitHub do
     repository_id = to_string_or_nil(claims["repository_id"])
     workflow = workflow_filename(claims)
     environment = claims["environment"] || ""
+    visibility = claims["repository_visibility"]
 
     repository_matches?(workload_identity, repository, repository_id) and
       owner_id == workload_identity.repository_owner_id and
       workflow_matches?(workload_identity, workflow) and
-      environment_matches?(workload_identity, environment)
+      environment_matches?(workload_identity, environment, visibility)
   end
 
   # An organization read workload identity with no repository matches every repository
@@ -120,10 +121,18 @@ defmodule Hexpm.WorkloadIdentities.Provider.GitHub do
 
   defp workflow_matches?(_workload_identity, _actual), do: false
 
-  defp environment_matches?(%{environment: env}, _token_environment) when env in [nil, ""],
+  # A workload identity that publishes from a public repository must name an
+  # environment, see `WorkloadIdentity.validate_public_environment/2`. One added
+  # while its repository was private may have none, so it stops matching once
+  # the repository is public.
+  defp environment_matches?(%{role: "write", environment: env}, _actual, "public")
+       when env in [nil, ""],
+       do: false
+
+  defp environment_matches?(%{environment: env}, _actual, _visibility) when env in [nil, ""],
     do: true
 
-  defp environment_matches?(%{environment: expected}, actual),
+  defp environment_matches?(%{environment: expected}, actual, _visibility),
     do: downcase(expected) == downcase(actual)
 
   # Prefer workflow_ref (calling workflow, always in the trusted repo) over
@@ -183,9 +192,14 @@ defmodule Hexpm.WorkloadIdentities.Provider.GitHub do
   # owner id alone and returns no repository id for the caller to supply.
   defp fetch_repository_ids(owner, name) do
     case github_get("/repos/#{URI.encode(owner)}/#{URI.encode(name)}") do
-      {:ok, %{"id" => repository_id, "owner" => %{"id" => owner_id}}}
+      {:ok, %{"id" => repository_id, "owner" => %{"id" => owner_id}} = body}
       when is_integer(repository_id) and is_integer(owner_id) ->
-        {:ok, %{repository_owner_id: owner_id, repository_id: repository_id}}
+        {:ok,
+         %{
+           repository_owner_id: owner_id,
+           repository_id: repository_id,
+           public: body["visibility"] == "public"
+         }}
 
       {:ok, _body} ->
         {:error, :invalid_github_response}

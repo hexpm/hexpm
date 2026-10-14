@@ -63,7 +63,7 @@ defmodule HexpmWeb.DocsView do
   end
 
   defp workload_identity_link() do
-    if Hexpm.WorkloadIdentities.enabled?(),
+    if Hexpm.WorkloadIdentities.available?(),
       do: [
         %{
           view: :workload_identity,

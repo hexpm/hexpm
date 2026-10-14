@@ -6,6 +6,7 @@ defmodule Hexpm.Application do
   def start(_type, _args) do
     :logger.add_handler(:sentry_handler, Sentry.LoggerHandler, %{})
     Hexpm.Emails.Telemetry.attach()
+    HexpmWeb.BanditTelemetry.attach()
 
     read_only_mode()
     setup_tmp_dir()
@@ -214,6 +215,7 @@ defmodule Hexpm.Application do
   defp common_children(write_mode?) do
     [
       Hexpm.PromEx,
+      %{id: :initialize_counters, start: {Hexpm.PromEx, :initialize_counters, []}},
       {DBConnection.TelemetryListener, name: Hexpm.RepoBase.TelemetryListener},
       Hexpm.RepoBase,
       {Finch, name: Hexpm.Finch, pools: finch_pools()},
@@ -268,13 +270,7 @@ defmodule Hexpm.Application do
 
   if Mix.env() == :prod do
     defp goth_spec() do
-      credentials =
-        "HEXPM_GCP_CREDENTIALS"
-        |> System.fetch_env!()
-        |> JSON.decode!()
-
-      options = [scope: "https://www.googleapis.com/auth/devstorage.read_write"]
-      {Goth, name: Hexpm.Goth, source: {:service_account, credentials, options}}
+      {Goth, name: Hexpm.Goth, source: {:metadata, []}}
     end
   else
     defp goth_spec, do: nil

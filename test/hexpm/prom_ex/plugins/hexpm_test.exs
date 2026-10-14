@@ -23,7 +23,21 @@ defmodule Hexpm.PromEx.Plugins.HexpmTest do
       |> Enum.flat_map(& &1.metrics)
       |> Enum.filter(&(&1.event_name == [:hexpm, :api, :authenticate]))
 
-    assert %Telemetry.Metrics.Counter{tags: [:scheme, :result]} = counter
+    assert %Telemetry.Metrics.Sum{tags: [:scheme, :result]} = counter
+  end
+
+  test "resolves purge requests to Fastly, which mostly answer within 50ms" do
+    [duration] =
+      [otp_app: :hexpm]
+      |> Plugin.event_metrics()
+      |> Enum.flat_map(& &1.metrics)
+      |> Enum.filter(&(&1.name == [:hexpm, :cdn, :purge_request, :duration, :milliseconds]))
+
+    buckets = duration.reporter_options[:buckets]
+
+    assert Enum.count(buckets, &(&1 <= 50)) >= 4
+    assert Enum.max(buckets) == 10_000
+    assert buckets == Enum.sort(buckets)
   end
 
   test "measures the number of connected nodes" do

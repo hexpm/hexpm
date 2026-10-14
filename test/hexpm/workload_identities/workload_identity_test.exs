@@ -118,6 +118,30 @@ defmodule Hexpm.WorkloadIdentities.WorkloadIdentityTest do
       assert changeset.valid?
     end
 
+    test "rejects an environment with control characters", %{package: package} do
+      for environment <- [
+            "production\n\nReset your password at https://example.com/reset",
+            "production\r\nNotice",
+            "production\u0000"
+          ] do
+        changeset =
+          WorkloadIdentity.changeset(
+            %WorkloadIdentity{},
+            %{
+              "provider" => "github",
+              "repository_owner" => "acme",
+              "repository" => "widget",
+              "workflow" => "release.yml",
+              "environment" => environment
+            },
+            package
+          )
+
+        assert Map.has_key?(errors_on(changeset), :environment),
+               "accepted environment #{inspect(environment)}"
+      end
+    end
+
     test "rejects repository owned by a different owner", %{package: package} do
       changeset =
         WorkloadIdentity.changeset(
@@ -234,6 +258,21 @@ defmodule Hexpm.WorkloadIdentities.WorkloadIdentityTest do
         )
 
       assert "must be valid package names" in List.wrap(errors_on(changeset).packages)
+    end
+
+    test "rejects an environment with control characters", %{organization: organization} do
+      changeset =
+        WorkloadIdentity.changeset(
+          %WorkloadIdentity{},
+          organization_params(%{
+            "role" => "write",
+            "workflow" => "release.yml",
+            "environment" => "production\n\nReset your password at https://example.com/reset"
+          }),
+          organization
+        )
+
+      assert Map.has_key?(errors_on(changeset), :environment)
     end
 
     test "rejects a null package name", %{organization: organization} do

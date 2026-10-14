@@ -103,10 +103,7 @@ config :hexpm, :hcaptcha,
   sitekey: "sitekey",
   secret: "secret"
 
-config :hexpm, :organization_sso,
-  mode: :off,
-  beta_organizations: [],
-  oidc_impl: Hexpm.Accounts.SSO.OIDC.Mock
+config :hexpm, :organization_sso, oidc_impl: Hexpm.Accounts.SSO.OIDC.Mock
 
 config :hexpm, :varsel_impl, Hexpm.PackageReports.Varsel.Mock
 

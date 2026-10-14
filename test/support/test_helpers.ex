@@ -334,6 +334,11 @@ defmodule Hexpm.TestHelpers do
     end)
   end
 
+  def put_feature_flag(flag, opts) do
+    flags = Application.fetch_env!(:hexpm, :feature_flags)
+    app_env(:hexpm, :feature_flags, Keyword.update!(flags, flag, &Keyword.merge(&1, opts)))
+  end
+
   # The test endpoint's force_ssl exclusion, see config/test.exs
   def without_forwarded_proto?(conn) do
     Plug.Conn.get_req_header(conn, "x-forwarded-proto") == []
@@ -431,6 +436,52 @@ defmodule Hexpm.TestHelpers do
     end
 
     collect_events(handler, [])
+  end
+
+  @doc """
+  Starts a Bandit server for `plug` on a free loopback port under the test
+  supervisor and returns the port. Stopping a ThousandIsland server closes the
+  listener before its acceptor stops, and an acceptor that hasn't fetched the
+  listener socket yet crashes, so this waits until it has.
+  """
+  def start_bandit(plug) do
+    ref =
+      :telemetry_test.attach_event_handlers(self(), [
+        [:thousand_island, :listener, :start],
+        [:thousand_island, :acceptor, :start]
+      ])
+
+    server =
+      ExUnit.Callbacks.start_supervised!(
+        {Bandit,
+         plug: plug,
+         ip: :loopback,
+         port: 0,
+         startup_log: false,
+         thousand_island_options: [num_acceptors: 1]}
+      )
+
+    {:ok, {_address, port}} = ThousandIsland.listener_info(server)
+
+    listener =
+      receive do
+        {[:thousand_island, :listener, :start], ^ref, _measurements,
+         %{local_port: ^port, telemetry_span_context: listener}} ->
+          listener
+      after
+        5_000 -> raise "Bandit's listener on port #{port} didn't start"
+      end
+
+    receive do
+      {[:thousand_island, :acceptor, :start], ^ref, _measurements,
+       %{parent_telemetry_span_context: ^listener}} ->
+        :ok
+    after
+      5_000 -> raise "Bandit's acceptor on port #{port} didn't start"
+    end
+
+    :telemetry.detach(ref)
+    port
   end
 
   @doc """

@@ -1,7 +1,8 @@
 defmodule Hexpm.Emails.Telemetry do
   @moduledoc """
   Logs one line per delivery attempt, so the mail we handed to the provider
-  can be matched against what the provider reports.
+  can be matched against what the provider reports, and reports the attempt
+  to the delivery counters (`Hexpm.PromEx.Plugins.Email`).
   """
 
   require Logger
@@ -16,6 +17,8 @@ defmodule Hexpm.Emails.Telemetry do
 
   @doc false
   def handle_event([:swoosh, :deliver, :stop], measurements, metadata, _config) do
+    Metrics.delivered(metadata)
+
     case metadata do
       %{error: error} ->
         log(:warning, metadata, measurements, error: inspect(error, printable_limit: 200))
@@ -26,6 +29,8 @@ defmodule Hexpm.Emails.Telemetry do
   end
 
   def handle_event([:swoosh, :deliver, :exception], measurements, metadata, _config) do
+    Metrics.raised(metadata)
+
     log(:warning, metadata, measurements,
       outcome: "exception",
       kind: metadata[:kind],

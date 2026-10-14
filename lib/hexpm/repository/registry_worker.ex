@@ -56,7 +56,9 @@ defmodule Hexpm.Repository.RegistryWorker do
 
     :telemetry.span([:hexpm, :registry_builder, :build], metadata, fn ->
       result = build(job)
-      {result, Map.put(metadata, :result, result_tag(result))}
+      metadata = Map.put(metadata, :result, result_tag(result))
+      :telemetry.execute([:hexpm, :registry_builder, :build, :done], %{count: 1}, metadata)
+      {result, metadata}
     end)
   end
 

@@ -36,13 +36,7 @@ defmodule Hexpm.Accounts.SCIMTest do
 
     connection = %{connection | organization: organization}
 
-    config = Application.fetch_env!(:hexpm, :organization_sso)
-
-    app_env(
-      :hexpm,
-      :organization_sso,
-      Keyword.merge(config, mode: :beta, beta_organizations: [organization.name])
-    )
+    put_feature_flag(:organization_sso, mode: :beta, beta_organizations: [organization.name])
 
     %{organization: organization, admin: admin, connection: connection}
   end
@@ -1268,7 +1262,7 @@ defmodule Hexpm.Accounts.SCIMTest do
   end
 
   defp require_tfa(organization) do
-    app_env(:hexpm, :organization_tfa, mode: :enabled, beta_organizations: [])
+    put_feature_flag(:organization_tfa, mode: :enabled, beta_organizations: [])
 
     organization
     |> Ecto.Changeset.change(tfa_required_at: DateTime.add(DateTime.utc_now(), 14 * 86_400))

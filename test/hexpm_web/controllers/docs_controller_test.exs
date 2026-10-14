@@ -102,19 +102,12 @@ defmodule HexpmWeb.DocsControllerTest do
   end
 
   test "hides the organization SSO guide and navigation when SSO is off" do
-    config = Application.fetch_env!(:hexpm, :organization_sso)
-    app_env(:hexpm, :organization_sso, Keyword.put(config, :mode, :off))
+    put_feature_flag(:organization_sso, mode: :off)
     assert_sso_docs_hidden()
   end
 
   test "hides the organization SSO guide and navigation for an empty beta allowlist" do
-    config = Application.fetch_env!(:hexpm, :organization_sso)
-
-    app_env(
-      :hexpm,
-      :organization_sso,
-      Keyword.merge(config, mode: :beta, beta_organizations: [])
-    )
+    put_feature_flag(:organization_sso, mode: :beta, beta_organizations: [])
 
     assert_sso_docs_hidden()
   end
@@ -149,7 +142,7 @@ defmodule HexpmWeb.DocsControllerTest do
   end
 
   test "hides the Workload Identity guide and navigation when the feature is off" do
-    app_env(:hexpm, :features, workload_identity: false)
+    put_feature_flag(:workload_identity, mode: :off)
 
     build_conn()
     |> get("/docs/workload-identity")
@@ -161,6 +154,20 @@ defmodule HexpmWeb.DocsControllerTest do
       |> html_response(200)
 
     refute html =~ ~s(href="/docs/workload-identity")
+  end
+
+  test "shows the Workload Identity guide in beta once a user or organization is listed" do
+    put_feature_flag(:workload_identity, mode: :beta, beta_users: [], beta_organizations: [])
+
+    build_conn()
+    |> get("/docs/workload-identity")
+    |> response(404)
+
+    put_feature_flag(:workload_identity, beta_users: ["someone"])
+
+    build_conn()
+    |> get("/docs/workload-identity")
+    |> html_response(200)
   end
 
   test "publish docs link to Workload Identity when the feature is on" do
@@ -176,7 +183,7 @@ defmodule HexpmWeb.DocsControllerTest do
   end
 
   test "2FA documentation and navigation follow their own rollout availability" do
-    app_env(:hexpm, :organization_sso, mode: :off, beta_organizations: [])
+    put_feature_flag(:organization_sso, mode: :off, beta_organizations: [])
 
     for {config, visible?} <- [
           {[mode: :off, beta_organizations: ["pilot"]], false},
@@ -184,7 +191,7 @@ defmodule HexpmWeb.DocsControllerTest do
           {[mode: :beta, beta_organizations: ["pilot"]], true},
           {[mode: :enabled, beta_organizations: []], true}
         ] do
-      app_env(:hexpm, :organization_tfa, config)
+      put_feature_flag(:organization_tfa, config)
       html = build_conn() |> get("/docs/usage") |> html_response(200)
       assert html =~ ~s(href="/docs/organization-tfa") == visible?
       refute html =~ ~s(href="/docs/organization-sso")
@@ -228,16 +235,10 @@ defmodule HexpmWeb.DocsControllerTest do
   end
 
   defp enable_sso_docs do
-    config = Application.fetch_env!(:hexpm, :organization_sso)
-
-    app_env(
-      :hexpm,
-      :organization_sso,
-      Keyword.merge(config, mode: :beta, beta_organizations: ["pilot"])
-    )
+    put_feature_flag(:organization_sso, mode: :beta, beta_organizations: ["pilot"])
   end
 
   defp enable_workload_identity_docs do
-    app_env(:hexpm, :features, workload_identity: true)
+    put_feature_flag(:workload_identity, mode: :enabled)
   end
 end

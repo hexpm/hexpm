@@ -8,7 +8,8 @@ defmodule Hexpm.WorkloadIdentities.Provider do
   @type claims :: map()
   @type immutable_ids :: %{
           required(:repository_owner_id) => String.t() | integer(),
-          optional(:repository_id) => String.t() | integer() | nil
+          optional(:repository_id) => String.t() | integer() | nil,
+          optional(:public) => boolean()
         }
 
   @callback name() :: String.t()
@@ -27,4 +28,6 @@ defmodule Hexpm.WorkloadIdentities.Provider do
     do: Enum.find(@implementations, &(&1.issuer() == issuer))
 
   def known_issuers, do: Enum.map(@implementations, & &1.issuer())
+
+  def names, do: Enum.map(@implementations, & &1.name())
 end

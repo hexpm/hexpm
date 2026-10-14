@@ -773,6 +773,148 @@ defmodule Hexpm.AdminTasksTest do
     end
   end
 
+  describe "disable_search/2" do
+    test "disables search for the package and leaves the index alone" do
+      package = insert(:package)
+      insert(:release, package: package, version: "1.0.0", has_docs: true)
+      insert(:package_owner, package: package, user: insert(:user))
+
+      assert :ok = AdminTasks.disable_search(package.name)
+
+      assert Repo.get!(Package, package.id).search_disabled_at
+      assert Hexpm.Repository.Packages.search_disabled?("hexpm", package.name)
+      refute_enqueued(worker: Hexpm.Hexdocs.Workers.DeleteSearch)
+      refute_email_sent()
+    end
+
+    test "removes every version with docs from the index with delete_index" do
+      package = insert(:package)
+      insert(:release, package: package, version: "1.0.0", has_docs: true)
+      insert(:release, package: package, version: "1.1.0", has_docs: true)
+      insert(:release, package: package, version: "1.2.0", has_docs: false)
+
+      assert :ok = AdminTasks.disable_search(package.name, delete_index: true)
+
+      versions =
+        all_enqueued(worker: Hexpm.Hexdocs.Workers.DeleteSearch)
+        |> Enum.map(fn job ->
+          assert job.args["package"] == package.name
+          assert job.priority == 9
+          job.args["version"]
+        end)
+
+      assert Enum.sort(versions) == ["1.0.0", "1.1.0"]
+    end
+
+    test "emails every owner that the package left search with notify" do
+      package = insert(:package)
+      owner = insert(:user)
+      other_owner = insert(:user)
+      insert(:package_owner, package: package, user: owner)
+      insert(:package_owner, package: package, user: other_owner)
+
+      assert :ok = AdminTasks.disable_search(package.name, delete_index: true, notify: true)
+
+      assert_email_sent(fn email ->
+        assert Enum.sort(Enum.map(email.to, &elem(&1, 1))) ==
+                 Enum.sort([User.email(owner, :primary), User.email(other_owner, :primary)])
+
+        assert email.subject == "Hex.pm - #{package.name} has been removed from HexDocs search"
+        assert email.text_body =~ "removed the documentation of #{package.name} from the search"
+        assert email.text_body =~ "undue burden"
+        assert email.text_body =~ "accounts publishing it may be banned"
+        assert email.html_body =~ "accounts publishing it may be banned"
+      end)
+    end
+
+    test "tells owners only new versions are left out without delete_index" do
+      package = insert(:package)
+      insert(:package_owner, package: package, user: insert(:user))
+
+      assert :ok = AdminTasks.disable_search(package.name, notify: true)
+
+      assert_email_sent(fn email ->
+        assert email.subject ==
+                 "Hex.pm - New versions of #{package.name} will not be added to HexDocs search"
+
+        assert email.text_body =~ "Versions already in the search stay there"
+      end)
+    end
+
+    test "logs instead of returning a bare :ok when nobody is reachable" do
+      package = insert(:package)
+
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          assert :ok = AdminTasks.disable_search(package.name, notify: true)
+        end)
+
+      assert log =~ "Disabled search but found no address for owners of #{package.name}"
+      refute_email_sent()
+    end
+
+    test "returns an error for a package outside hexpm" do
+      repository = insert(:repository)
+      package = insert(:package, repository_id: repository.id)
+
+      assert {:error, :package_not_found} = AdminTasks.disable_search(package.name)
+      refute Repo.get!(Package, package.id).search_disabled_at
+    end
+  end
+
+  describe "enable_search/2" do
+    test "enables search for the package without reindexing" do
+      package = insert(:package, search_disabled_at: DateTime.utc_now())
+      insert(:release, package: package, version: "1.0.0", has_docs: true)
+
+      assert :ok = AdminTasks.enable_search(package.name)
+
+      refute Repo.get!(Package, package.id).search_disabled_at
+      refute Hexpm.Repository.Packages.search_disabled?("hexpm", package.name)
+      refute_enqueued(worker: Hexpm.Hexdocs.Workers.Search)
+    end
+
+    test "queues every version with docs for indexing with reindex" do
+      package = insert(:package, search_disabled_at: DateTime.utc_now())
+      insert(:release, package: package, version: "1.0.0", has_docs: true)
+      insert(:release, package: package, version: "2.0.0", has_docs: true)
+      insert(:release, package: package, version: "2.1.0", has_docs: false)
+
+      assert :ok = AdminTasks.enable_search(package.name, reindex: true)
+
+      keys =
+        all_enqueued(worker: Hexpm.Hexdocs.Workers.Search)
+        |> Enum.map(fn job ->
+          assert job.priority == 9
+          job.args["key"]
+        end)
+
+      assert Enum.sort(keys) == [
+               "docs/#{package.name}-1.0.0.tar.gz",
+               "docs/#{package.name}-2.0.0.tar.gz"
+             ]
+    end
+
+    test "returns an error for a nonexistent package" do
+      assert {:error, :package_not_found} = AdminTasks.enable_search("nonexistent")
+    end
+  end
+
+  describe "search_disabled_packages/0" do
+    test "lists the hexpm packages with search disabled" do
+      disabled_at = ~U[2026-10-13 12:00:00.000000Z]
+      package = insert(:package, search_disabled_at: disabled_at)
+      insert(:package)
+
+      repository = insert(:repository)
+      insert(:package, repository_id: repository.id, search_disabled_at: disabled_at)
+
+      assert AdminTasks.search_disabled_packages() == [
+               %{name: package.name, disabled_at: disabled_at}
+             ]
+    end
+  end
+
   describe "remove_release/3 diff cache" do
     test "drops the package's cached diffs" do
       package = insert(:package)

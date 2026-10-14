@@ -9,16 +9,24 @@ defmodule Hexpm.WorkloadIdentities do
 
   use Hexpm.Context
 
+  alias Hexpm.FeatureFlags
   alias Hexpm.OAuth.{JWT, Token}
   alias Hexpm.Repository.{Package, Repositories, Repository}
   alias Hexpm.WorkloadIdentities.{OIDC, Provider, WorkloadIdentity, VerifiedToken}
 
   @mint_expires_in 15 * 60
 
-  def enabled? do
-    features = Application.get_env(:hexpm, :features, [])
-    Keyword.get(features, :workload_identity, false)
-  end
+  @doc """
+  Whether workload identities are on for anyone, which shows the docs and
+  accepts OIDC tokens at all.
+  """
+  def available?, do: FeatureFlags.available?(:workload_identity)
+
+  @doc """
+  Whether an organization or a package may configure and use workload
+  identities, see `Hexpm.FeatureFlags.enabled?/2`.
+  """
+  def enabled?(owner), do: FeatureFlags.enabled?(:workload_identity, owner)
 
   def audience, do: OIDC.audience()
 
@@ -100,13 +108,25 @@ defmodule Hexpm.WorkloadIdentities do
         }
 
         with :ok <- before_lookup.(),
-             {:ok, immutable_ids} <- provider.resolve_immutable_ids(resolve_attrs) do
+             {:ok, immutable_ids} <- provider.resolve_immutable_ids(resolve_attrs),
+             {:ok, changeset} <- check_public_environment(changeset, immutable_ids) do
           insert_identity(owner, changeset, immutable_ids, audit_data)
         end
       else
         {:error, %{changeset | action: :insert}}
       end
     end
+  end
+
+  # Checked before the resolved ids go into the changeset, so the form shows
+  # the repository ID as it was typed.
+  defp check_public_environment(changeset, immutable_ids) do
+    public? = Map.get(immutable_ids, :public, false)
+    changeset = WorkloadIdentity.validate_public_environment(changeset, public?)
+
+    if changeset.valid?,
+      do: {:ok, changeset},
+      else: {:error, %{changeset | action: :insert}}
   end
 
   defp insert_identity(owner, changeset, immutable_ids, audit_data) do
@@ -268,6 +288,7 @@ defmodule Hexpm.WorkloadIdentities do
          :ok <- check_unused(claims),
          {:ok, repository} <- fetch_repository(opts),
          {:ok, workload_identity, scope} <- find_identity(repository, provider, claims, opts),
+         :ok <- check_enabled(workload_identity),
          :ok <- check_billing(repository),
          {:ok, token} <- mint_token(workload_identity, scope, claims, provider) do
       :telemetry.execute([:hexpm, :workload_identity, :mint, :success], %{count: 1}, %{
@@ -292,7 +313,16 @@ defmodule Hexpm.WorkloadIdentities do
   defp tap_failure(result), do: result
 
   defp enabled_guard do
-    if enabled?(), do: :ok, else: {:error, :disabled}
+    if available?(), do: :ok, else: {:error, :disabled}
+  end
+
+  defp check_enabled(workload_identity) do
+    owner =
+      if workload_identity.package_id,
+        do: workload_identity.package,
+        else: workload_identity.organization
+
+    if enabled?(owner), do: :ok, else: {:error, :disabled}
   end
 
   defp fetch_issuer(%{"iss" => issuer}) when is_binary(issuer) and issuer != "" do
@@ -374,27 +404,30 @@ defmodule Hexpm.WorkloadIdentities do
   defp find_package_identity(repository, package_name, provider, claims) do
     package = Packages.get(repository, package_name)
 
-    with :ok <- check_package_name(package, package_name) do
-      workload_identities =
-        repository
-        |> package_identities_query(package, package_name)
-        |> for_provider(provider)
-        |> Repo.all()
+    workload_identities =
+      repository
+      |> package_identities_query(package, package_name)
+      |> for_provider(provider)
+      |> Repo.all()
 
-      case Enum.find(workload_identities, &provider.match?(&1, claims)) do
-        nil ->
-          if is_nil(package) and workload_identities == [],
-            do: {:error, :package_not_found},
-            else: {:error, :no_matching_identity}
+    case Enum.find(workload_identities, &provider.match?(&1, claims)) do
+      nil ->
+        if is_nil(package) and workload_identities == [],
+          do: {:error, :package_not_found},
+          else: {:error, :no_matching_identity}
 
-        workload_identity ->
-          {:ok, workload_identity, "package:#{repository.name}/#{package_name}"}
-      end
+      workload_identity ->
+        with :ok <- check_package_name(package, package_name) do
+          {:ok, with_owner(workload_identity, repository, package),
+           "package:#{repository.name}/#{package_name}"}
+        end
     end
   end
 
-  # Some existing packages predate the current name rules, so only a name that
-  # no package has yet must be one a package can be created with.
+  # Checked after a match, so a workflow that matches nothing learns nothing
+  # about which organizations or packages exist. Some existing packages predate
+  # the current name rules, so only a name that no package has yet must be one
+  # a package can be created with.
   defp check_package_name(%Package{}, _package_name), do: :ok
 
   defp check_package_name(nil, package_name) do
@@ -426,10 +459,21 @@ defmodule Hexpm.WorkloadIdentities do
     |> Repo.all()
     |> Enum.find(&provider.match?(&1, claims))
     |> case do
-      nil -> {:error, :no_matching_identity}
-      workload_identity -> {:ok, workload_identity, "repository:#{repository.name}"}
+      nil ->
+        {:error, :no_matching_identity}
+
+      workload_identity ->
+        {:ok, with_owner(workload_identity, repository, nil), "repository:#{repository.name}"}
     end
   end
+
+  # The public repository's identities belong to the package, the others to the
+  # repository's organization.
+  defp with_owner(workload_identity, %Repository{id: 1}, package),
+    do: %{workload_identity | package: package}
+
+  defp with_owner(workload_identity, repository, _package),
+    do: %{workload_identity | organization: repository.organization}
 
   defp organization_identities_query(%Repository{id: 1}, _roles, _package_name) do
     from(tp in WorkloadIdentity, where: false)

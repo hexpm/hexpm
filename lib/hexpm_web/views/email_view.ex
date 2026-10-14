@@ -25,6 +25,10 @@ defmodule HexpmWeb.EmailView do
 
     def support_email(), do: "support@hex.pm"
 
+    # A value one user typed, shown in mail to other users, can't break the line
+    # it is on, or it would read as a paragraph written by hex.pm.
+    def single_line(text), do: String.replace(text, ~r/[\p{Cc}\p{Zl}\p{Zp}]/u, "\u{FFFD}")
+
     # Smart link wrapping - add <a> only for HTML format
     def link(url, text, :html) do
       safe_to_string(
@@ -213,8 +217,13 @@ defmodule HexpmWeb.EmailView do
       [
         "GitHub repository: #{repository}",
         "Workflow: #{workflow}"
-      ] ++ if(environment in [nil, ""], do: [], else: ["Environment: #{environment}"])
+      ] ++ environment_line(environment)
     end
+
+    def environment_line(environment) when environment in [nil, ""], do: []
+
+    def environment_line(environment),
+      do: ["Environment: #{Common.single_line(environment)}"]
   end
 
   defmodule OrganizationWorkloadIdentityAdd do
@@ -252,7 +261,7 @@ defmodule HexpmWeb.EmailView do
         "GitHub repository: #{repository_label(owner, repository)}",
         "Workflow: #{if workflow in [nil, ""], do: "any", else: workflow}"
       ] ++
-        if(environment in [nil, ""], do: [], else: ["Environment: #{environment}"]) ++
+        WorkloadIdentityDetails.environment_line(environment) ++
         packages_line(role, packages)
     end
 
@@ -982,6 +991,40 @@ defmodule HexpmWeb.EmailView do
     def message(package) do
       "The package #{package} and all of its releases have been removed from Hex.pm " <>
         "by the Hex.pm team."
+    end
+  end
+
+  defmodule PackageSearchDisabled do
+    defdelegate reason_heading(), to: Common
+    defdelegate terms_notice(format), to: Common
+
+    def title(package, true), do: "#{package} has been removed from HexDocs search"
+
+    def title(package, false),
+      do: "New versions of #{package} will not be added to HexDocs search"
+
+    def message(package, true) do
+      "The Hex.pm team has removed the documentation of #{package} from the search on " <>
+        "hexdocs.pm, and new versions will not be added to it. The documentation is still " <>
+        "published on hexdocs.pm and the package itself is unaffected."
+    end
+
+    def message(package, false) do
+      "The Hex.pm team has stopped adding new versions of #{package} to the search on " <>
+        "hexdocs.pm. Versions already in the search stay there, the documentation is still " <>
+        "published on hexdocs.pm and the package itself is unaffected."
+    end
+
+    def reason() do
+      "The search on hexdocs.pm is shared by every package on Hex.pm. The documentation " <>
+        "published for this package took up a disproportionate share of it, through an " <>
+        "unusually high number of releases or amount of documentation, which puts an undue " <>
+        "burden on the service."
+    end
+
+    def warning() do
+      "If this continues, the package may be removed from Hex.pm and the accounts " <>
+        "publishing it may be banned."
     end
   end
 

@@ -8,14 +8,26 @@ defmodule Hexpm.PromEx do
     [
       Plugins.Application,
       Plugins.Beam,
-      {Plugins.Phoenix, router: HexpmWeb.Router, endpoint: HexpmWeb.Endpoint},
-      {Plugins.Ecto, repos: [Hexpm.RepoBase]},
+      {Hexpm.PromEx.Plugins.Phoenix, router: HexpmWeb.Router, endpoint: HexpmWeb.Endpoint},
+      {Hexpm.PromEx.Plugins.Ecto, repos: [Hexpm.RepoBase]},
       Hexpm.PromEx.Plugins.Hexpm,
-      Hexpm.PromEx.Plugins.EctoLatency,
       Hexpm.PromEx.Plugins.DbConnection,
       Hexpm.PromEx.Plugins.OutboundHttp,
       Hexpm.PromEx.Plugins.Email
     ] ++ oban_plugins()
+  end
+
+  @doc """
+  Reports a zero for every counter series with a bounded set of labels, so the
+  first real event is an increase Prometheus can see. Started as a child right
+  after `Hexpm.PromEx`, before the repo connects and the endpoint takes
+  requests.
+  """
+  def initialize_counters() do
+    Hexpm.PromEx.Plugins.Hexpm.initialize_counters()
+    Hexpm.PromEx.Plugins.DbConnection.initialize_counters()
+    Hexpm.PromEx.Plugins.Email.initialize_counters()
+    :ignore
   end
 
   # Queue lengths are counted from the jobs table and zero-filled from the

@@ -83,6 +83,9 @@ defmodule Hexpm.WorkloadIdentities.WorkloadIdentity do
     |> validate_repository()
     |> validate_format(:workflow, ~r/\A[A-Za-z0-9._-]+\.(yml|yaml)\z/)
     |> validate_format(:repository_id, ~r/\A[1-9][0-9]*\z/)
+    |> validate_format(:environment, ~r/\A[^\p{Cc}\p{Zl}\p{Zp}]*\z/u,
+      message: "must not contain control characters or line breaks"
+    )
     |> put_issuer()
   end
 
@@ -191,6 +194,24 @@ defmodule Hexpm.WorkloadIdentities.WorkloadIdentity do
     |> put_repository_id(Map.get(attrs, :repository_id))
     |> validate_required([:repository_owner_id])
   end
+
+  @doc """
+  Requires an environment on a workload identity that publishes from a public
+  repository.
+
+  GitHub offers environments in public repositories on every plan, and their
+  protection rules are the only check GitHub runs before a job gets a token.
+  Private repositories only have environments on paid GitHub plans.
+  """
+  def validate_public_environment(changeset, true = _public?) do
+    if get_field(changeset, :role) == "write" and get_field(changeset, :environment) in [nil, ""] do
+      add_error(changeset, :environment, "is required for a public repository")
+    else
+      changeset
+    end
+  end
+
+  def validate_public_environment(changeset, false = _public?), do: changeset
 
   # A repository recreated under the same name is a different repository, so a
   # workload identity is never stored without a pinned repository id. Hex cannot read
