@@ -24,7 +24,7 @@ defmodule Hexpm.Repository.Owners do
   are, shown to whoever removes an owner.
   """
   def workload_identities(package) do
-    if Hexpm.WorkloadIdentities.enabled?(),
+    if Hexpm.WorkloadIdentities.enabled?(package),
       do: Hexpm.WorkloadIdentities.list(package),
       else: []
   end

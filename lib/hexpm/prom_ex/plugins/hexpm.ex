@@ -3,10 +3,11 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
   PromEx plugin for hex.pm business metrics: the domain events emitted from
   the contexts (see `Hexpm.Repository.Releases`, `Hexpm.Accounts.Users` and
   `Hexpm.WorkloadIdentities`), API authentication (`HexpmWeb.AuthHelpers`),
-  registry builds (`Hexpm.Repository.RegistryWorker`) and CDN purges
-  (`Hexpm.CDN.PurgeWorker`, `Hexpm.CDN.Fastly`), organization billing and
-  deletion (`Hexpm.Billing.Report`, `Hexpm.Accounts.OrganizationDeletions`), and
-  the number of Erlang nodes this node is connected to.
+  the responses Bandit sends (`HexpmWeb.BanditTelemetry`), registry builds
+  (`Hexpm.Repository.RegistryWorker`) and CDN purges (`Hexpm.CDN.PurgeWorker`,
+  `Hexpm.CDN.Fastly`), organization billing and deletion
+  (`Hexpm.Billing.Report`, `Hexpm.Accounts.OrganizationDeletions`), and the
+  number of Erlang nodes this node is connected to.
 
   A counter series is created by its first event, and Prometheus' `increase()`
   needs two samples, so it never counts that first event. The counters are
@@ -43,6 +44,7 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
     :response_not_sent,
     :db_connection_exit
   ]
+  @http_status_classes ["1xx", "2xx", "3xx", "4xx", "5xx"]
   @cdn_services [:fastly_hexrepo, :fastly_hexdocs, :fastly_hexdocs_private]
   @cdn_verify_results [:ok, :stale, :error]
 
@@ -127,6 +129,15 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
           tags: [:scheme, :result]
         )
       ]),
+      Event.build(:hexpm_http_event_metrics, [
+        sum("hexpm.http.response.total",
+          event_name: [:hexpm, :http, :response],
+          measurement: :count,
+          description:
+            "Responses Bandit sent for the endpoint by status class, the ones it sends itself when a plug raises or sends nothing included.",
+          tags: [:status_class]
+        )
+      ]),
       Event.build(:hexpm_registry_builder_event_metrics, [
         sum("hexpm.registry_builder.build.total",
           event_name: [:hexpm, :registry_builder, :build, :done],
@@ -170,7 +181,9 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
           event_name: [:hexpm, :cdn, :purge_request, :stop],
           measurement: :duration,
           description: "How long a purge request to Fastly took.",
-          reporter_options: [buckets: [50, 100, 250, 500, 1_000, 2_500, 5_000, 10_000]],
+          reporter_options: [
+            buckets: [5, 10, 25, 50, 100, 250, 500, 1_000, 2_500, 5_000, 10_000]
+          ],
           tags: [:service],
           unit: {:native, :millisecond}
         ),
@@ -199,8 +212,8 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
           unit: {:native, :millisecond}
         ),
         sum("hexpm.cdn.purge.absorbed.total",
-          event_name: [:hexpm, :cdn, :purge, :done],
-          measurement: :absorbed,
+          event_name: [:hexpm, :cdn, :purge, :absorb],
+          measurement: :count,
           description: "Queued purge jobs merged into a running one.",
           tags: [:service]
         ),
@@ -296,6 +309,10 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
       })
     end
 
+    for status_class <- @http_status_classes do
+      :telemetry.execute([:hexpm, :http, :response], %{count: 0}, %{status_class: status_class})
+    end
+
     for type <- @registry_build_types do
       for result <- @registry_build_results do
         :telemetry.execute([:hexpm, :registry_builder, :build, :done], %{count: 0}, %{
@@ -324,12 +341,14 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
 
     for service <- @cdn_services do
       for {result, rounds} <- purges do
-        :telemetry.execute([:hexpm, :cdn, :purge, :done], %{count: 0, absorbed: 0}, %{
+        :telemetry.execute([:hexpm, :cdn, :purge, :done], %{count: 0}, %{
           service: service,
           result: result,
           rounds: rounds
         })
       end
+
+      :telemetry.execute([:hexpm, :cdn, :purge, :absorb], %{count: 0}, %{service: service})
 
       :telemetry.execute([:hexpm, :cdn, :purge, :exception], %{count: 0}, %{service: service})
     end

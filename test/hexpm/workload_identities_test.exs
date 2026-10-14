@@ -315,9 +315,7 @@ defmodule Hexpm.WorkloadIdentitiesTest do
     end
 
     test "returns :disabled when feature flag is off", %{package: package} do
-      previous = Application.get_env(:hexpm, :features)
-      Application.put_env(:hexpm, :features, workload_identity: false)
-      on_exit(fn -> Application.put_env(:hexpm, :features, previous) end)
+      put_feature_flag(:workload_identity, mode: :off)
 
       token =
         WorkloadIdentityHelpers.sign_oidc_claims(WorkloadIdentityHelpers.github_claims())
@@ -327,6 +325,38 @@ defmodule Hexpm.WorkloadIdentitiesTest do
                  repository: "hexpm",
                  package: package.name
                )
+    end
+  end
+
+  describe "beta" do
+    setup do
+      put_feature_flag(:workload_identity, mode: :beta, beta_users: [], beta_organizations: [])
+    end
+
+    test "verify_and_mint/2 mints for a package with an owner on the user list", %{
+      user: user,
+      package: package
+    } do
+      put_feature_flag(:workload_identity, beta_users: ["someone-else"])
+      assert {:error, :disabled} = mint(repository: "hexpm", package: package.name)
+
+      put_feature_flag(:workload_identity, beta_users: [user.username])
+      assert {:ok, _token} = mint(repository: "hexpm", package: package.name)
+    end
+
+    test "verify_and_mint/2 mints for an organization on the organization list" do
+      repository = insert(:repository)
+
+      insert(:organization_workload_identity,
+        organization: repository.organization,
+        repository: "acme/widget"
+      )
+
+      put_feature_flag(:workload_identity, beta_organizations: ["someone-else"])
+      assert {:error, :disabled} = mint(repository: repository.name)
+
+      put_feature_flag(:workload_identity, beta_organizations: [repository.organization.name])
+      assert {:ok, _token} = mint(repository: repository.name)
     end
   end
 

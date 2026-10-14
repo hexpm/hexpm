@@ -25,4 +25,13 @@ defmodule HexpmWeb.EndpointLogTest do
     assert [{:info, line}] = capture_log_lines(fn -> get(build_conn(), "/api/no/such/route") end)
     assert %{event: "http.request", path: "/api/no/such/route", status: 404} = line
   end
+
+  test "logs the 500 for a request whose process exits" do
+    assert [{:info, line}] =
+             capture_log_lines(fn ->
+               assert_error_sent(500, fn -> get(build_conn(), "/_test/exit") end)
+             end)
+
+    assert %{event: "http.request", path: "/_test/exit", status: 500} = line
+  end
 end

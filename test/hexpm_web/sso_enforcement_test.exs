@@ -19,15 +19,7 @@ defmodule HexpmWeb.SSOEnforcementTest do
     insert(:organization_user, organization: organization, user: admin, role: "admin")
     insert(:organization_user, organization: organization, user: member, role: "write")
 
-    config = Application.fetch_env!(:hexpm, :organization_sso)
-
-    Application.put_env(
-      :hexpm,
-      :organization_sso,
-      Keyword.merge(config, mode: :beta, beta_organizations: [organization.name])
-    )
-
-    on_exit(fn -> Application.put_env(:hexpm, :organization_sso, config) end)
+    put_feature_flag(:organization_sso, mode: :beta, beta_organizations: [organization.name])
 
     connection =
       insert(:organization_sso_connection,
@@ -1891,12 +1883,8 @@ defmodule HexpmWeb.SSOEnforcementTest do
     insert(:organization_user, organization: organization, user: context.admin, role: "admin")
     insert(:organization_user, organization: organization, user: context.member, role: "write")
 
-    config = Application.fetch_env!(:hexpm, :organization_sso)
-
-    Application.put_env(
-      :hexpm,
-      :organization_sso,
-      Keyword.put(config, :beta_organizations, [context.organization.name, organization.name])
+    put_feature_flag(:organization_sso,
+      beta_organizations: [context.organization.name, organization.name]
     )
 
     connection =

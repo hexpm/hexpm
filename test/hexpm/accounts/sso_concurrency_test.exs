@@ -12,14 +12,12 @@ defmodule Hexpm.Accounts.SSOConcurrencyTest do
 
   setup do
     advisory_locks = Application.fetch_env!(:hexpm, :skip_advisory_locks)
-    organization_sso = Application.fetch_env!(:hexpm, :organization_sso)
     mailer = Application.fetch_env!(:hexpm, Emails.Mailer)
 
     Application.put_env(:hexpm, :skip_advisory_locks, false)
 
     on_exit(fn ->
       Application.put_env(:hexpm, :skip_advisory_locks, advisory_locks)
-      Application.put_env(:hexpm, :organization_sso, organization_sso)
       Application.put_env(:hexpm, Emails.Mailer, mailer)
     end)
 
@@ -426,13 +424,7 @@ defmodule Hexpm.Accounts.SSOConcurrencyTest do
     insert(:organization_user, organization: organization, user: member)
     insert(:organization_user, organization: organization, user: other_member)
 
-    config = Application.fetch_env!(:hexpm, :organization_sso)
-
-    Application.put_env(
-      :hexpm,
-      :organization_sso,
-      Keyword.merge(config, mode: :beta, beta_organizations: [organization.name])
-    )
+    put_feature_flag(:organization_sso, mode: :beta, beta_organizations: [organization.name])
 
     connection =
       insert(:organization_sso_connection,

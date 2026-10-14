@@ -805,13 +805,7 @@ defmodule HexpmWeb.SSOControllerTest do
 
   describe "route exposure and logging" do
     test "an empty beta allowlist hides every public SSO route", context do
-      config = Application.fetch_env!(:hexpm, :organization_sso)
-
-      app_env(
-        :hexpm,
-        :organization_sso,
-        Keyword.merge(config, mode: :beta, beta_organizations: [])
-      )
+      put_feature_flag(:organization_sso, mode: :beta, beta_organizations: [])
 
       build_conn() |> get("/sso/org/#{context.organization.name}") |> response(404)
 
@@ -1472,16 +1466,11 @@ defmodule HexpmWeb.SSOControllerTest do
   end
 
   defp enable_beta_for(organizations) do
-    config = Application.fetch_env!(:hexpm, :organization_sso)
     organizations = List.wrap(organizations)
 
-    app_env(
-      :hexpm,
-      :organization_sso,
-      Keyword.merge(config,
-        mode: :beta,
-        beta_organizations: Enum.map(organizations, & &1.name)
-      )
+    put_feature_flag(:organization_sso,
+      mode: :beta,
+      beta_organizations: Enum.map(organizations, & &1.name)
     )
   end
 

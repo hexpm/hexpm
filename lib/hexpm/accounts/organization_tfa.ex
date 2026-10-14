@@ -10,39 +10,27 @@ defmodule Hexpm.Accounts.OrganizationTFA do
   alias Hexpm.Accounts.{Organization, Organizations, Seats}
   alias Hexpm.Accounts.SSO
   alias Hexpm.Accounts.SSO.{Enforcement, Identity}
+  alias Hexpm.FeatureFlags
 
   @doc """
   Whether an organization may enable a new 2FA policy.
   """
-  def enabled?(%Organization{name: name}) do
-    case config()[:mode] do
-      :off -> false
-      :beta -> name in config()[:beta_organizations]
-      :enabled -> true
-    end
-  end
+  def enabled?(%Organization{} = organization),
+    do: FeatureFlags.enabled?(:organization_tfa, organization)
 
-  def available? do
-    case config()[:mode] do
-      :off -> false
-      :beta -> config()[:beta_organizations] != []
-      :enabled -> true
-    end
-  end
+  def available?, do: FeatureFlags.available?(:organization_tfa)
 
   @doc """
   Existing policies remain manageable independently of rollout availability.
   """
   def configurable?(organization), do: enabled?(organization) or scheduled?(organization)
 
-  defp config, do: Application.fetch_env!(:hexpm, :organization_tfa)
-
   @doc """
   Whether 2FA enforcement is switched on at all. `off` is the global stop:
   scheduled policies stay in place and remain manageable, but nothing is
   enforced until the mode is `beta` or `enabled` again.
   """
-  def enforcement_enabled?, do: config()[:mode] != :off
+  def enforcement_enabled?, do: FeatureFlags.mode(:organization_tfa) != :off
 
   @doc """
   A scheduled policy the global switch is not holding off. Every enforcement

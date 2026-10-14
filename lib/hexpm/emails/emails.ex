@@ -1,8 +1,20 @@
 defmodule Hexpm.Emails do
   use Phoenix.Swoosh, view: HexpmWeb.EmailView
 
-  alias HexpmWeb.EmailView.Common
+  alias HexpmWeb.EmailView.{Common, PackageSearchDisabled}
   alias Hexpm.Accounts.{Email, Organization, User}
+
+  @doc """
+  The types the builders tag their mail with. Each builder tags its mail with
+  its own name, and every public function here other than `render_body`,
+  which `Phoenix.Swoosh` defines, and this one is a builder.
+  """
+  def types() do
+    for {name, _arity} <- __MODULE__.__info__(:functions),
+        name not in [:render_body, :types],
+        uniq: true,
+        do: Atom.to_string(name)
+  end
 
   def owner_added(package, owners, owner) do
     base_email(:owner_added)
@@ -148,6 +160,15 @@ defmodule Hexpm.Emails do
     |> assign(:package, package)
     |> assign(:reason, reason)
     |> render_body(:package_removed)
+  end
+
+  def package_search_disabled(owners, package, removed?) do
+    base_email(:package_search_disabled)
+    |> email_to(owners)
+    |> subject("Hex.pm - #{PackageSearchDisabled.title(package, removed?)}")
+    |> assign(:package, package)
+    |> assign(:removed, removed?)
+    |> render_body(:package_search_disabled)
   end
 
   def release_removed(owners, package, version, remaining, reason) do

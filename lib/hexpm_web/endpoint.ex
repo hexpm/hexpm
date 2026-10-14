@@ -83,7 +83,20 @@ defmodule HexpmWeb.Endpoint do
 
   plug HexpmWeb.Plugs.CanonicalHost
 
-  plug HexpmWeb.Router
+  plug :router
 
   defp drop_request_id(conn, _opts), do: delete_req_header(conn, "x-request-id")
+
+  # Phoenix.Router hands a raised error to the endpoint's error rendering with
+  # the conn, so the 500 goes through the before_send callbacks above. An exit
+  # or a throw is rethrown without it and the 500 would be rendered from the
+  # conn the endpoint was called with, unseen by Plug.Telemetry and RequestLog.
+  defp router(conn, opts) do
+    HexpmWeb.Router.call(conn, opts)
+  catch
+    kind, reason when kind in [:exit, :throw] ->
+      stack = __STACKTRACE__
+      error = %Plug.Conn.WrapperError{conn: conn, kind: kind, reason: reason, stack: stack}
+      :erlang.raise(:error, error, stack)
+  end
 end

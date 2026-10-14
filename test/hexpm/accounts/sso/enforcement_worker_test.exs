@@ -13,15 +13,7 @@ defmodule Hexpm.Accounts.SSO.EnforcementWorkerTest do
     insert(:organization_user, organization: organization, user: admin, role: "admin")
     insert(:organization_user, organization: organization, user: member, role: "write")
 
-    config = Application.fetch_env!(:hexpm, :organization_sso)
-
-    Application.put_env(
-      :hexpm,
-      :organization_sso,
-      Keyword.merge(config, mode: :beta, beta_organizations: [organization.name])
-    )
-
-    on_exit(fn -> Application.put_env(:hexpm, :organization_sso, config) end)
+    put_feature_flag(:organization_sso, mode: :beta, beta_organizations: [organization.name])
 
     connection =
       insert(:organization_sso_connection,

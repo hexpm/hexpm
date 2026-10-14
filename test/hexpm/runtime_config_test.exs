@@ -171,7 +171,10 @@ defmodule Hexpm.RuntimeConfigTest do
     for env <- [:dev, :test, :prod] do
       config = read_runtime(@web_env, env)
 
-      assert config[:hexpm][:organization_tfa] == [mode: :off, beta_organizations: []]
+      assert config[:hexpm][:feature_flags][:organization_tfa] == [
+               mode: :off,
+               beta_organizations: []
+             ]
     end
   end
 
@@ -180,7 +183,10 @@ defmodule Hexpm.RuntimeConfigTest do
         {value, mode} <- [{"off", :off}, {"beta", :beta}, {"enabled", :enabled}] do
       config = read_runtime(Map.put(@web_env, "HEXPM_ORGANIZATION_TFA_MODE", value), env)
 
-      assert config[:hexpm][:organization_tfa] == [mode: mode, beta_organizations: []]
+      assert config[:hexpm][:feature_flags][:organization_tfa] == [
+               mode: mode,
+               beta_organizations: []
+             ]
     end
   end
 
@@ -193,7 +199,7 @@ defmodule Hexpm.RuntimeConfigTest do
         })
       )
 
-    assert config[:hexpm][:organization_tfa] == [
+    assert config[:hexpm][:feature_flags][:organization_tfa] == [
              mode: :beta,
              beta_organizations: ["acme", "other", "third"]
            ]
@@ -209,7 +215,10 @@ defmodule Hexpm.RuntimeConfigTest do
           })
         )
 
-      assert config[:hexpm][:organization_tfa] == [mode: :beta, beta_organizations: []]
+      assert config[:hexpm][:feature_flags][:organization_tfa] == [
+               mode: :beta,
+               beta_organizations: []
+             ]
     end
   end
 
@@ -234,15 +243,59 @@ defmodule Hexpm.RuntimeConfigTest do
           })
         )
 
-      assert config[:hexpm][:organization_tfa] == [
+      assert config[:hexpm][:feature_flags][:organization_tfa] == [
                mode: tfa_mode,
                beta_organizations: ["tfa_org"]
              ]
 
-      assert config[:hexpm][:organization_sso] == [
+      assert config[:hexpm][:feature_flags][:organization_sso] == [
                mode: sso_mode,
                beta_organizations: ["sso_org"]
              ]
+    end
+  end
+
+  test "workload identity defaults to enabled in every environment" do
+    for env <- [:dev, :test, :prod] do
+      assert read_runtime(@web_env, env)[:hexpm][:feature_flags][:workload_identity] == [
+               mode: :enabled,
+               beta_users: [],
+               beta_organizations: []
+             ]
+    end
+  end
+
+  test "workload identity accepts each mode in every environment" do
+    for env <- [:dev, :test, :prod],
+        {value, mode} <- [{"off", :off}, {"beta", :beta}, {"enabled", :enabled}] do
+      config = read_runtime(Map.put(@web_env, "HEXPM_WORKLOAD_IDENTITY_MODE", value), env)
+
+      assert config[:hexpm][:feature_flags][:workload_identity][:mode] == mode
+    end
+  end
+
+  test "workload identity normalizes the beta user and organization allowlists" do
+    config =
+      read_runtime(
+        Map.merge(@web_env, %{
+          "HEXPM_WORKLOAD_IDENTITY_MODE" => "beta",
+          "HEXPM_WORKLOAD_IDENTITY_BETA_USERS" => " alice, , bob,alice,\tcarol\n,, ",
+          "HEXPM_WORKLOAD_IDENTITY_BETA_ORGANIZATIONS" => "acme, ,other,acme"
+        })
+      )
+
+    assert config[:hexpm][:feature_flags][:workload_identity] == [
+             mode: :beta,
+             beta_users: ["alice", "bob", "carol"],
+             beta_organizations: ["acme", "other"]
+           ]
+  end
+
+  test "workload identity rejects invalid modes in every environment" do
+    for env <- [:dev, :test, :prod], mode <- ["invalid", "true", "Beta", "enabled ", ""] do
+      assert_raise RuntimeError, ~r/invalid HEXPM_WORKLOAD_IDENTITY_MODE/, fn ->
+        read_runtime(Map.put(@web_env, "HEXPM_WORKLOAD_IDENTITY_MODE", mode), env)
+      end
     end
   end
 
@@ -253,7 +306,10 @@ defmodule Hexpm.RuntimeConfigTest do
           "HEXPM_ORGANIZATION_TFA_MODE" => nil,
           "HEXPM_ORGANIZATION_TFA_BETA_ORGANIZATIONS" => nil,
           "HEXPM_SSO_MODE" => nil,
-          "HEXPM_SSO_BETA_ORGANIZATIONS" => nil
+          "HEXPM_SSO_BETA_ORGANIZATIONS" => nil,
+          "HEXPM_WORKLOAD_IDENTITY_MODE" => nil,
+          "HEXPM_WORKLOAD_IDENTITY_BETA_USERS" => nil,
+          "HEXPM_WORKLOAD_IDENTITY_BETA_ORGANIZATIONS" => nil
         },
         env
       )

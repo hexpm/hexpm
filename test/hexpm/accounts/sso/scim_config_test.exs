@@ -123,8 +123,7 @@ defmodule Hexpm.Accounts.SSO.SCIMConfigTest do
     {:ok, connection} =
       SSO.generate_scim_token(context.organization, @params, audit: audit_data(context.admin))
 
-    config = Application.fetch_env!(:hexpm, :organization_sso)
-    app_env(:hexpm, :organization_sso, Keyword.merge(config, beta_organizations: []))
+    put_feature_flag(:organization_sso, beta_organizations: [])
 
     assert :error = SSO.scim_auth(connection.scim_token)
   end
@@ -221,13 +220,7 @@ defmodule Hexpm.Accounts.SSO.SCIMConfigTest do
 
     Repo.update!(Ecto.Changeset.change(context.organization, billing_active: false))
 
-    config = Application.fetch_env!(:hexpm, :organization_sso)
-
-    app_env(
-      :hexpm,
-      :organization_sso,
-      Keyword.merge(config, mode: :enabled, all_organizations: false)
-    )
+    put_feature_flag(:organization_sso, mode: :enabled)
 
     assert {:ok, _connection} = SSO.scim_auth(connection.scim_token)
 
@@ -255,12 +248,6 @@ defmodule Hexpm.Accounts.SSO.SCIMConfigTest do
   end
 
   defp enable_beta_for(organization) do
-    config = Application.fetch_env!(:hexpm, :organization_sso)
-
-    app_env(
-      :hexpm,
-      :organization_sso,
-      Keyword.merge(config, mode: :beta, beta_organizations: [organization.name])
-    )
+    put_feature_flag(:organization_sso, mode: :beta, beta_organizations: [organization.name])
   end
 end

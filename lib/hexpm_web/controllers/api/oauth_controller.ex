@@ -289,7 +289,7 @@ defmodule HexpmWeb.API.OAuthController do
   end
 
   defp handle_jwt_bearer_grant(conn, params) do
-    if WorkloadIdentities.enabled?() do
+    if WorkloadIdentities.available?() do
       with {:ok, scope} <- parse_workload_identity_scope(params["scope"]),
            {:ok, assertion} <- fetch_assertion(params),
            {:ok, verified} <- verify_assertion(assertion),

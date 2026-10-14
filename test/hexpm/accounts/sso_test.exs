@@ -16,15 +16,7 @@ defmodule Hexpm.Accounts.SSOTest do
     admin = insert(:user)
     insert(:organization_user, organization: organization, user: admin, role: "admin")
 
-    config = Application.fetch_env!(:hexpm, :organization_sso)
-
-    Application.put_env(
-      :hexpm,
-      :organization_sso,
-      Keyword.merge(config, mode: :beta, beta_organizations: [organization.name])
-    )
-
-    on_exit(fn -> Application.put_env(:hexpm, :organization_sso, config) end)
+    put_feature_flag(:organization_sso, mode: :beta, beta_organizations: [organization.name])
 
     %{organization: organization, admin: admin}
   end
@@ -34,30 +26,19 @@ defmodule Hexpm.Accounts.SSOTest do
       assert Features.enabled?(organization)
       assert SSO.available?()
 
-      config = Application.fetch_env!(:hexpm, :organization_sso)
-
-      Application.put_env(
-        :hexpm,
-        :organization_sso,
-        Keyword.put(config, :beta_organizations, [])
-      )
+      put_feature_flag(:organization_sso, beta_organizations: [])
 
       refute Features.enabled?(organization)
       refute SSO.available?()
 
-      Application.put_env(
-        :hexpm,
-        :organization_sso,
-        Keyword.put(config, :mode, :off)
-      )
+      put_feature_flag(:organization_sso, mode: :off, beta_organizations: [organization.name])
 
       refute Features.enabled?(organization)
       refute SSO.available?()
     end
 
     test "enabled mode is limited to paid organizations", %{organization: organization} do
-      config = Application.fetch_env!(:hexpm, :organization_sso)
-      Application.put_env(:hexpm, :organization_sso, Keyword.put(config, :mode, :enabled))
+      put_feature_flag(:organization_sso, mode: :enabled)
 
       assert Features.enabled?(organization)
 
@@ -69,13 +50,9 @@ defmodule Hexpm.Accounts.SSOTest do
     end
 
     test "enabled mode can be available to all organizations", %{organization: organization} do
+      put_feature_flag(:organization_sso, mode: :enabled)
       config = Application.fetch_env!(:hexpm, :organization_sso)
-
-      Application.put_env(
-        :hexpm,
-        :organization_sso,
-        Keyword.merge(config, mode: :enabled, all_organizations: true)
-      )
+      app_env(:hexpm, :organization_sso, Keyword.put(config, :all_organizations, true))
 
       assert Features.enabled?(%{
                organization
@@ -836,8 +813,7 @@ defmodule Hexpm.Accounts.SSOTest do
       user_session = browser_session(context.member)
       transaction = start_transaction(context, context.member)
 
-      config = Application.fetch_env!(:hexpm, :organization_sso)
-      Application.put_env(:hexpm, :organization_sso, Keyword.put(config, :mode, :off))
+      put_feature_flag(:organization_sso, mode: :off)
 
       assert {:error, :feature_disabled} =
                complete(transaction, valid_claims(), context.member, user_session.id)
@@ -988,8 +964,7 @@ defmodule Hexpm.Accounts.SSOTest do
     test "turning the feature off mid-consent refuses the link", context do
       {transaction_id, link_token} = pending_link(context, context.member)
 
-      config = Application.fetch_env!(:hexpm, :organization_sso)
-      Application.put_env(:hexpm, :organization_sso, Keyword.put(config, :mode, :off))
+      put_feature_flag(:organization_sso, mode: :off)
 
       assert {:error, :feature_disabled} =
                complete_pending_link(context, transaction_id, link_token)
