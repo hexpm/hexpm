@@ -159,7 +159,7 @@ defmodule Hexpm.MixProject do
       {:lazy_html, "~> 0.1.12"},
       # ExAws signs empty-body GET requests that Req 0.7 rewrites as POST.
       # https://github.com/ex-aws/ex_aws/issues/1246
-      {:req, "0.7.4"}
+      {:req, "0.7.5"}
     ]
   end
 
