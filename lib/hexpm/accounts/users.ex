@@ -150,8 +150,13 @@ defmodule Hexpm.Accounts.Users do
     notify? = Keyword.get(opts, :notify, true)
     user = Repo.preload(user, :emails)
 
+    # The account row before its credentials, the order a password change and
+    # a password reset take them in.
     multi =
       Multi.new()
+      |> Multi.run(:lock, fn repo, _changes ->
+        {:ok, repo.one(from(u in User, where: u.id == ^user.id, lock: "FOR NO KEY UPDATE"))}
+      end)
       |> audit(audit_data, "user.delete", user)
       |> Multi.insert(:reserved_username, %ReservedUsername{name: user.username},
         on_conflict: :nothing

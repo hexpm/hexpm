@@ -4,6 +4,7 @@ defmodule Hexpm.Accounts.UsersConcurrencyTest do
 
   alias Hexpm.Accounts.{Users, User}
   alias Hexpm.Accounts.SSO.OrgSession
+  alias Hexpm.OAuth.{Client, Token, Tokens}
   alias Hexpm.{UserSession, UserSessions}
 
   # Each of these fails if Users.lock!/1 stops being taken before the one-time
@@ -94,28 +95,48 @@ defmodule Hexpm.Accounts.UsersConcurrencyTest do
     end)
   end
 
+  # A password change locks the account and then its tokens, so deleting the
+  # account has to take them in the same order.
+  test "an account deletion waits for a password change instead of deadlocking" do
+    committed(&token_context/0, fn context ->
+      user = context.user
+
+      password_change_steps = {
+        fn -> from(u in User, where: u.id == ^user.id) end,
+        fn -> from(token in Token, where: token.user_id == ^user.id) end
+      }
+
+      deletion = fn -> Users.delete(user, audit: audit_data(user)) end
+
+      assert {{:ok, _count}, :ok} = while_holding(password_change_steps, deletion)
+      refute Hexpm.RepoBase.get(User, user.id)
+    end)
+  end
+
   # Runs `fun` while a logout of `session` holds the session row and has yet to
   # revoke its organization access, then lets the logout finish.
   defp during_logout(session, fun) do
+    logout_steps = {
+      fn -> from(user_session in UserSession, where: user_session.id == ^session.id) end,
+      fn -> from(org_session in OrgSession, where: org_session.user_session_id == ^session.id) end
+    }
+
+    while_holding(logout_steps, fun)
+  end
+
+  # Runs `fun` while another transaction has updated the rows of the first query
+  # and has yet to update the rows of the second, then lets it finish.
+  defp while_holding({first, second}, fun) do
     parent = self()
 
-    logout =
+    holder =
       unboxed_task(fn ->
         Hexpm.RepoBase.transaction(fn ->
-          Hexpm.RepoBase.one!(
-            from(user_session in UserSession,
-              where: user_session.id == ^session.id,
-              lock: "FOR UPDATE"
-            )
-          )
-
+          Hexpm.RepoBase.update_all(first.(), set: [updated_at: DateTime.utc_now()])
           send(parent, :locked)
           assert_receive :continue, 15_000
-
-          Hexpm.RepoBase.update_all(
-            from(org_session in OrgSession, where: org_session.user_session_id == ^session.id),
-            set: [revoked_at: DateTime.utc_now()]
-          )
+          {count, _} = Hexpm.RepoBase.update_all(second.(), set: [updated_at: DateTime.utc_now()])
+          count
         end)
       end)
 
@@ -123,9 +144,33 @@ defmodule Hexpm.Accounts.UsersConcurrencyTest do
     task = unboxed_task(fun)
 
     assert await_lock_wait() == :waiting
-    send(logout.pid, :continue)
+    send(holder.pid, :continue)
 
-    {Task.await(logout, 15_000), Task.await(task, 15_000)}
+    {Task.await(holder, 15_000), Task.await(task, 15_000)}
+  end
+
+  defp token_context do
+    user = insert(:user)
+    client = insert(:oauth_client)
+    session = insert(:oauth_session, user: user, client_id: client.client_id)
+
+    on_exit(fn ->
+      Ecto.Adapters.SQL.Sandbox.unboxed_run(Hexpm.RepoBase, fn ->
+        Hexpm.RepoBase.delete_all(from(c in Client, where: c.client_id == ^client.client_id))
+      end)
+    end)
+
+    {:ok, _token} =
+      Tokens.create_and_insert_for_user(
+        user,
+        client.client_id,
+        ["api:read"],
+        "authorization_code",
+        "test",
+        user_session_id: session.id
+      )
+
+    %{user: user}
   end
 
   # A user at the session limit whose least recently used session carries
