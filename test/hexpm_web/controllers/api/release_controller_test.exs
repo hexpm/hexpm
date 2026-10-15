@@ -307,6 +307,41 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       end
     end
 
+    test "keeps the upload under its repository, name and version", %{user: user} do
+      meta = %{name: Fake.sequence(:package), version: "1.0.0", description: "description"}
+
+      build_conn()
+      |> put_req_header("content-type", "application/octet-stream")
+      |> put_req_header("authorization", key_for(user))
+      |> post("/api/publish", create_tar(meta))
+      |> json_response(201)
+
+      assert [key] = :repo_bucket |> Hexpm.Store.list("debug/tarballs/") |> Enum.to_list()
+      assert key =~ ~r"\Adebug/tarballs/hexpm-#{meta.name}-1\.0\.0-[0-9a-f]{16}\.tar\.gz\z"
+    end
+
+    test "keeps the upload of an invalid name without the name", %{user: user} do
+      metadata = %{
+        "name" => "x/../../../tarballs/evil",
+        "version" => "1.0.0",
+        "app" => "app",
+        "description" => "description",
+        "licenses" => ["Apache-2.0"],
+        "build_tools" => ["mix"],
+        "files" => ["mix.exs"],
+        "requirements" => %{}
+      }
+
+      build_conn()
+      |> put_req_header("content-type", "application/octet-stream")
+      |> put_req_header("authorization", key_for(user))
+      |> post("/api/publish", create_tar_with_raw_metadata(metadata))
+      |> json_response(422)
+
+      assert [key] = :repo_bucket |> Hexpm.Store.list("debug/") |> Enum.to_list()
+      assert key =~ ~r"\Adebug/tarballs/hexpm-[0-9a-f]{16}\.tar\.gz\z"
+    end
+
     test "rejects release with escaping symlink", %{user: user} do
       meta = %{name: Fake.sequence(:package), version: "1.0.0", description: "description"}
 
