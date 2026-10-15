@@ -107,6 +107,31 @@ defmodule Hexpm.ConcurrencyCase do
   end
 
   @doc """
+  Waits up to three seconds for a connection to this database to be waiting on
+  a lock, and returns `:waiting` or `:timeout`.
+  """
+  def await_lock_wait do
+    Enum.reduce_while(1..300, :timeout, fn _attempt, _acc ->
+      %{rows: [[waiting]]} =
+        Ecto.Adapters.SQL.query!(
+          Hexpm.RepoBase,
+          """
+          SELECT count(*) FROM pg_locks locks
+          JOIN pg_stat_activity backends ON backends.pid = locks.pid
+          WHERE NOT locks.granted AND backends.datname = current_database()
+          """
+        )
+
+      if waiting > 0 do
+        {:halt, :waiting}
+      else
+        Process.sleep(10)
+        {:cont, :timeout}
+      end
+    end)
+  end
+
+  @doc """
   Starts every task, waits for all of them to hold a connection, then releases
   them together.
   """

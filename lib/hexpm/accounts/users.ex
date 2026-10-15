@@ -361,13 +361,16 @@ defmodule Hexpm.Accounts.Users do
     {sessions_query, tokens_query, org_sessions_query} =
       Hexpm.UserSessions.revoke_all_except(user, session)
 
+    # Tokens, then sessions, then their organization access: the order revoking
+    # a single session locks them in, so the two wait for each other rather
+    # than deadlock.
     multi =
       Multi.new()
       |> Multi.update(:user, User.update_password(user, params))
       |> Multi.delete_all(:account_deletion_requests, assoc(user, :account_deletion_requests))
       |> Multi.update_all(:revoke_tokens, tokens_query, [])
-      |> Multi.update_all(:revoke_org_sessions, org_sessions_query, [])
       |> Multi.update_all(:revoke_sessions, sessions_query, [])
+      |> Multi.update_all(:revoke_org_sessions, org_sessions_query, [])
       |> audit(audit_data, "password.update", nil)
 
     case Repo.transaction(multi) do

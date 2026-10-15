@@ -236,27 +236,6 @@ defmodule Hexpm.Accounts.SSOConcurrencyTest do
 
   # Postgres is the only thing that knows the other transaction is blocked, so
   # ask it rather than sleeping for a while and hoping.
-  defp await_lock_wait do
-    Enum.reduce_while(1..300, :timeout, fn _attempt, _acc ->
-      %{rows: [[waiting]]} =
-        Ecto.Adapters.SQL.query!(
-          Hexpm.RepoBase,
-          """
-          SELECT count(*) FROM pg_locks locks
-          JOIN pg_stat_activity backends ON backends.pid = locks.pid
-          WHERE NOT locks.granted AND backends.datname = current_database()
-          """
-        )
-
-      if waiting > 0 do
-        {:halt, :waiting}
-      else
-        Process.sleep(10)
-        {:cont, :timeout}
-      end
-    end)
-  end
-
   test "concurrent scope cancellations over shared groups each delete their own rows" do
     committed(fn context ->
       groups = ["sso:#{context.connection.id}:b", "sso:#{context.connection.id}:a"]
