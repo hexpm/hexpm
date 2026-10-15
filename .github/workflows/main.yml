@@ -15,14 +15,18 @@ env:
 jobs:
   format:
     name: Format
+    # A pull request from a branch in this repository tests the same commit
+    # as the branch's push, so only pull requests from forks run here.
+    if: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository }}
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     env:
       otp: 29.1
       elixir: 1.20.4
 
     services:
       postgres:
-        image: postgres:14
+        image: postgres:18
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -42,19 +46,33 @@ jobs:
           otp-version: ${{ env.otp }}
           elixir-version: ${{ env.elixir }}
 
-      - name: Cache dependencies
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - name: Restore dependencies
+        id: deps-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             deps
             _build
-          key: ${{ runner.os }}-elixir-${{ env.elixir }}-otp-${{ env.otp }}-${{ hashFiles('mix.lock', 'config/config.exs') }}
+          key: ${{ runner.os }}-dev-elixir-${{ env.elixir }}-otp-${{ env.otp }}-${{ hashFiles('mix.lock', 'config/config.exs', 'config/dev.exs') }}
+          restore-keys: ${{ runner.os }}-dev-elixir-${{ env.elixir }}-otp-${{ env.otp }}-
 
       - name: Install dependencies
-        run: mix do deps.get + deps.compile
+        run: mix deps.get
 
       - name: Check compilation warnings
         run: mix compile --warnings-as-errors
+
+      # Only main writes the cache, which builds on every branch read. A
+      # branch's entries would only be read by that branch, and count toward
+      # the repository's 10 GB cache limit along with main's.
+      - name: Save dependencies
+        if: ${{ github.ref == 'refs/heads/main' && steps.deps-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ steps.deps-cache.outputs.cache-primary-key }}
 
       - name: Check formatting
         run: mix format --check-formatted
@@ -64,14 +82,17 @@ jobs:
 
   test-hexpm:
     name: Test Hexpm
+    if: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository }}
     runs-on: ubuntu-24.04
+    timeout-minutes: 20
     env:
       otp: 29.1
       elixir: 1.20.4
+      MIX_ENV: test
 
     services:
       postgres:
-        image: postgres:14
+        image: postgres:18
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -91,30 +112,43 @@ jobs:
           otp-version: ${{ env.otp }}
           elixir-version: ${{ env.elixir }}
 
-      - name: Cache dependencies
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - name: Restore dependencies
+        id: deps-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             deps
             _build
-          key: ${{ runner.os }}-elixir-${{ env.elixir }}-otp-${{ env.otp }}-${{ hashFiles('mix.lock', 'config/config.exs') }}
+          key: ${{ runner.os }}-test-elixir-${{ env.elixir }}-otp-${{ env.otp }}-${{ hashFiles('mix.lock', 'config/config.exs', 'config/test.exs') }}
+          restore-keys: ${{ runner.os }}-test-elixir-${{ env.elixir }}-otp-${{ env.otp }}-
 
       - name: Install dependencies
-        run: mix do deps.get + deps.compile
+        run: mix deps.get
 
       - name: Compile
-        run: MIX_ENV=test mix compile
+        run: mix compile
+
+      - name: Save dependencies
+        if: ${{ github.ref == 'refs/heads/main' && steps.deps-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ steps.deps-cache.outputs.cache-primary-key }}
 
       - name: Run tests
         run: mix test
 
   test-hex:
     name: Test Hex
+    if: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository }}
     runs-on: ubuntu-24.04
+    timeout-minutes: 20
 
     services:
       postgres:
-        image: postgres:14
+        image: postgres:18
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -151,25 +185,25 @@ jobs:
           otp-version: ${{ matrix.otp }}
           elixir-version: ${{ matrix.elixir }}
 
-      - name: Cache dependencies
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      # Hex's test suite fetches hexpm's dependencies and compiles hexpm with
+      # MIX_ENV=hex itself.
+      - name: Restore hexpm dependencies
+        id: hexpm-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             deps
             _build
-          key: ${{ runner.os }}-elixir-${{ matrix.elixir }}-otp-${{ matrix.otp }}-${{ hashFiles('mix.lock', 'config/config.exs') }}
-
-      - name: Install hexpm dependencies
-        run: |
-          mix deps.get
-          mix deps.compile
+          key: ${{ runner.os }}-hex-elixir-${{ matrix.elixir }}-otp-${{ matrix.otp }}-${{ hashFiles('mix.lock', 'config/config.exs', 'config/hex.exs') }}
+          restore-keys: ${{ runner.os }}-hex-elixir-${{ matrix.elixir }}-otp-${{ matrix.otp }}-
 
       - name: Clone hex
         run: |
           git clone https://github.com/hexpm/hex hex -b ${{ matrix.hex-version }} --depth 1
 
-      - name: Cache hex dependencies
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - name: Restore hex dependencies
+        id: hex-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             hex/deps
@@ -179,6 +213,15 @@ jobs:
       - name: Install dependencies
         run: |
           cd hex && mix deps.get && MIX_ENV=test mix deps.compile && cd ..
+
+      - name: Save hex dependencies
+        if: ${{ github.ref == 'refs/heads/main' && steps.hex-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            hex/deps
+            hex/_build
+          key: ${{ steps.hex-cache.outputs.cache-primary-key }}
 
       - name: Run tests
         # Mix's cross-process lock in Elixir 1.20 can deadlock when the second
@@ -190,12 +233,22 @@ jobs:
           MIX_OS_CONCURRENCY_LOCK: "0"
         run: cd hex && mix test --include integration && cd ..
 
+      - name: Save hexpm dependencies
+        if: ${{ github.ref == 'refs/heads/main' && steps.hexpm-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ steps.hexpm-cache.outputs.cache-primary-key }}
+
   docker:
     name: Docker
     # A pull request from a branch in this repository builds the same commit
     # as the branch's push, so only pull requests from forks build here.
     if: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository }}
     runs-on: ubuntu-24.04-arm
+    timeout-minutes: 20
     permissions:
       contents: "read"
       id-token: "write"
@@ -205,10 +258,9 @@ jobs:
       SERVICE_ACCOUNT: ${{ secrets.GCLOUD_SERVICE_ACCOUNT }}
       WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.GCLOUD_WORKFLOW_IDENTITY_POOL_PROVIDER }}
       SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+    # No checkout: without a context, build-push-action builds from the
+    # commit's Git URL, so BuildKit fetches the source itself.
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
       - name: Set short git commit SHA
         run: echo "COMMIT_SHORT_SHA=${GITHUB_SHA::7}" >> $GITHUB_ENV
       - name: Set up Docker Buildx

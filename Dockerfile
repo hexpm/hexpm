@@ -39,6 +39,10 @@ RUN <<EOF
   [ "$PARTITIONS" -gt 4 ] && PARTITIONS=4
   MIX_OS_DEPS_COMPILE_PARTITION_COUNT=$PARTITIONS mix deps.compile
 EOF
+# The esbuild and tailwind binaries go in _build at the versions config.exs
+# sets, so this layer is cached until one of them changes, and assets.deploy
+# doesn't download them on every build.
+RUN mix do esbuild.install --if-missing + tailwind.install --if-missing
 
 # build project and assets
 COPY priv priv

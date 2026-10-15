@@ -1,9 +1,14 @@
 name: Dependency Review
 
 # pull_request_target is needed to get write permission for posting PR
-# comments on fork PRs; no code from the PR is executed
+# comments on fork PRs; no code from the PR is executed. Only the Mix files
+# and the workflows (for the actions they use) declare dependencies.
 on:
-  pull_request_target: {} # zizmor: ignore[dangerous-triggers]
+  pull_request_target: # zizmor: ignore[dangerous-triggers]
+    paths:
+      - "mix.exs"
+      - "mix.lock"
+      - ".github/workflows/**"
 
 permissions:
   contents: read
@@ -12,6 +17,7 @@ jobs:
   review:
     name: Review Dependencies
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     permissions:
       pull-requests: write
     steps:
