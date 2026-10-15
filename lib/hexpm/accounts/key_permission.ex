@@ -17,6 +17,7 @@ defmodule Hexpm.Accounts.KeyPermission do
     |> normalize_resource()
     |> validate_length(:resource, count: :bytes, max: 512)
     |> validate_resource()
+    |> validate_package_resource()
     |> validate_permission(user_or_organization)
     |> validate_personal_key_reach(refusals)
   end
@@ -33,6 +34,14 @@ defmodule Hexpm.Accounts.KeyPermission do
         _ -> [resource: "invalid resource for given domain"]
       end
     end)
+  end
+
+  defp validate_package_resource(changeset) do
+    if get_change(changeset, :domain) == "package" do
+      validate_required(changeset, :resource)
+    else
+      changeset
+    end
   end
 
   defp validate_permission(changeset, user_or_organization) do
@@ -83,13 +92,16 @@ defmodule Hexpm.Accounts.KeyPermission do
   and the request that uses it is refused where it is authorized instead. A
   package resource is stored as `organization/package`, the organization having
   been put on when it was cast, so one without a slash names a package rather
-  than an organization.
+  than an organization. A package permission without a resource matches every
+  package, so it reaches every organization.
   """
   def organization_reach(%__MODULE__{domain: domain, resource: name})
       when domain in ["repository", "docs"] and is_binary(name),
       do: name
 
   def organization_reach(%__MODULE__{domain: "repositories"}), do: :every
+
+  def organization_reach(%__MODULE__{domain: "package", resource: nil}), do: :every
 
   def organization_reach(%__MODULE__{domain: "package", resource: resource})
       when is_binary(resource) do

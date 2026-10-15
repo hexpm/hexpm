@@ -36,7 +36,7 @@ defmodule Hexpm.Accounts.Keys do
 
   @doc """
   Whether a key reaches this organization, by naming it, by covering every
-  repository, or by carrying an `api` permission.
+  repository or package, or by carrying an `api` permission.
   """
   def reaches_organization?(%Key{} = key, %Organization{} = organization) do
     Enum.any?(key.permissions, fn permission ->
