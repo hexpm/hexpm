@@ -32,7 +32,7 @@ defmodule HexpmWeb.API.KeyController do
 
   def index(conn, _params) do
     user_or_organization = conn.assigns.organization || conn.assigns.current_user
-    authing_key = conn.assigns.auth_credential
+    authing_key = authing_key(conn)
     keys = Keys.all(user_or_organization)
 
     conn
@@ -42,7 +42,7 @@ defmodule HexpmWeb.API.KeyController do
 
   def show(conn, %{"name" => name}) do
     user_or_organization = conn.assigns.organization || conn.assigns.current_user
-    authing_key = conn.assigns.auth_credential
+    authing_key = authing_key(conn)
     key = Keys.get(user_or_organization, name)
 
     if key do
@@ -58,7 +58,7 @@ defmodule HexpmWeb.API.KeyController do
 
   def create(conn, params) do
     user_or_organization = conn.assigns.organization || conn.assigns.current_user
-    authing_key = conn.assigns.auth_credential
+    authing_key = authing_key(conn)
 
     case Keys.create(user_or_organization, params, audit: audit_data(conn)) do
       {:ok, %{key: key}} ->
@@ -77,7 +77,7 @@ defmodule HexpmWeb.API.KeyController do
 
   def delete(conn, %{"name" => name}) do
     user_or_organization = conn.assigns.organization || conn.assigns.current_user
-    authing_key = conn.assigns.auth_credential
+    authing_key = authing_key(conn)
 
     case Keys.revoke(user_or_organization, name, audit: audit_data(conn)) do
       {:ok, %{key: key}} ->
@@ -93,13 +93,16 @@ defmodule HexpmWeb.API.KeyController do
 
   def delete_all(conn, _params) do
     user_or_organization = conn.assigns.organization || conn.assigns.current_user
-    authing_key = conn.assigns.auth_credential
+    authing_key = authing_key(conn)
     {:ok, _} = Keys.revoke_all(user_or_organization, audit: audit_data(conn))
 
     conn
     |> put_status(200)
-    |> render(:delete, key: Keys.get(authing_key.id), authing_key: authing_key)
+    |> render(:delete, key: authing_key && Keys.get(authing_key.id), authing_key: authing_key)
   end
+
+  defp authing_key(%{assigns: %{auth_credential: %Key{} = key}}), do: key
+  defp authing_key(_conn), do: nil
 
   defp require_organization_path(conn, _opts) do
     if conn.assigns.current_organization && !conn.assigns.organization do
