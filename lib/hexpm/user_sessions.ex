@@ -475,14 +475,14 @@ defmodule Hexpm.UserSessions do
           set: [revoked_at: now, updated_at: now]
         )
 
-        Repo.update_all(Hexpm.Accounts.SSO.revoke_org_sessions_query(session_ids, now), [])
-
         Repo.update_all(
           from(s in UserSession,
             where: s.id in ^session_ids and is_nil(s.revoked_at)
           ),
           set: [revoked_at: now, updated_at: now]
         )
+
+        Repo.update_all(Hexpm.Accounts.SSO.revoke_org_sessions_query(session_ids, now), [])
       end
     end)
 

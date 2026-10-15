@@ -81,6 +81,19 @@ defmodule Hexpm.Accounts.UsersConcurrencyTest do
     end)
   end
 
+  test "a login evicting a session waits for a logout of it instead of deadlocking" do
+    committed(&eviction_context/0, fn context ->
+      login = fn ->
+        UserSessions.create_browser_session(context.user, audit: audit_data(context.user))
+      end
+
+      assert {{:ok, _count}, {:ok, _session, _token}} =
+               during_logout(context.oldest_session, login)
+
+      assert Hexpm.RepoBase.get!(UserSession, context.oldest_session.id).revoked_at
+    end)
+  end
+
   # Runs `fun` while a logout of `session` holds the session row and has yet to
   # revoke its organization access, then lets the logout finish.
   defp during_logout(session, fun) do
@@ -113,6 +126,23 @@ defmodule Hexpm.Accounts.UsersConcurrencyTest do
     send(logout.pid, :continue)
 
     {Task.await(logout, 15_000), Task.await(task, 15_000)}
+  end
+
+  # A user at the session limit whose least recently used session carries
+  # organization access, so the next login evicts it.
+  defp eviction_context do
+    %{user: user, current_session: oldest_session} = sessions_context()
+
+    Hexpm.RepoBase.update_all(
+      from(session in UserSession, where: session.id == ^oldest_session.id),
+      set: [inserted_at: DateTime.add(DateTime.utc_now(), -3600, :second)]
+    )
+
+    for _ <- 3..UserSessions.max_user_sessions() do
+      {:ok, _session, _token} = UserSessions.create_browser_session(user, audit: audit_data(user))
+    end
+
+    %{user: user, oldest_session: oldest_session}
   end
 
   defp sessions_context do
