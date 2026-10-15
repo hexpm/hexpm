@@ -14,6 +14,7 @@ jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
     runs-on: "ubuntu-latest"
+    timeout-minutes: 10
     permissions:
       security-events: write
     strategy:
@@ -40,6 +41,7 @@ jobs:
   zizmor:
     name: Zizmor
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       security-events: write
     steps:
