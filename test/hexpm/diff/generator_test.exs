@@ -275,6 +275,24 @@ defmodule Hexpm.Diff.GeneratorTest do
     assert diff =~ "new mode 100644"
   end
 
+  test "a .gitattributes in a release doesn't change the diff" do
+    package = insert(:package, name: "generator_gitattributes")
+    insert_tarball_release(package, "1.0.0", %{"lib.ex" => "old = 1\n"})
+
+    insert_tarball_release(package, "2.0.0", %{
+      "lib.ex" => "new = 2\n",
+      ".gitattributes" => "* -diff\n"
+    })
+
+    {:ok, request} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "2.0.0", [])
+    assert :ok = Generator.generate(request)
+    assert {:ok, _metadata, pieces} = Hexpm.Diff.fetch(request)
+
+    piece = Enum.find(pieces, &(Hexpm.Diff.piece_file(&1) == "lib.ex"))
+    assert {:ok, {:diff, diff, _, _}} = Hexpm.Diff.fetch_piece(piece)
+    assert diff =~ "+new = 2"
+  end
+
   describe "limits" do
     setup do
       package = insert(:package, name: "generator_limits")
