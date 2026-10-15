@@ -871,6 +871,7 @@ defmodule Hexpm.Accounts.UsersTest do
             "password" => "new_password_123",
             "password_confirmation" => "new_password_123"
           },
+          false,
           audit: audit_data(user)
         )
 
@@ -971,6 +972,7 @@ defmodule Hexpm.Accounts.UsersTest do
             "password" => "new_password_123",
             "password_confirmation" => "new_password_123"
           },
+          false,
           audit: audit_data(user)
         )
 
@@ -978,6 +980,31 @@ defmodule Hexpm.Accounts.UsersTest do
       assert Repo.get!(UserSession, other.id).revoked_at
       assert Repo.get!(UserSession, oauth_session.id).revoked_at
       assert Repo.get!(Token, token.id).revoked_at
+    end
+
+    test "revokes the keys only when asked to" do
+      for revoke_keys? <- [false, true] do
+        user = insert(:user)
+        key = insert(:key, user: user)
+
+        {:ok, session, _token} =
+          UserSessions.create_browser_session(user, audit: audit_data(user))
+
+        {:ok, _user} =
+          Users.update_password(
+            user,
+            session,
+            %{
+              "password_current" => "password",
+              "password" => "new_password_123",
+              "password_confirmation" => "new_password_123"
+            },
+            revoke_keys?,
+            audit: audit_data(user)
+          )
+
+        assert Hexpm.Accounts.Key.revoked?(Repo.get!(Hexpm.Accounts.Key, key.id)) == revoke_keys?
+      end
     end
 
     test "revokes nothing when the current password is wrong" do
@@ -994,6 +1021,7 @@ defmodule Hexpm.Accounts.UsersTest do
             "password" => "new_password_123",
             "password_confirmation" => "new_password_123"
           },
+          false,
           audit: audit_data(user)
         )
 

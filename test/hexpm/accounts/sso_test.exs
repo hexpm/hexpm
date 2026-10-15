@@ -1200,6 +1200,7 @@ defmodule Hexpm.Accounts.SSOTest do
             "password" => "new_password_123",
             "password_confirmation" => "new_password_123"
           },
+          false,
           audit: audit_data(context.member)
         )
 

@@ -55,6 +55,7 @@ defmodule Hexpm.Accounts.UsersConcurrencyTest do
             "password" => "new_password_123",
             "password_confirmation" => "new_password_123"
           },
+          false,
           audit: audit_data(context.user)
         )
       end

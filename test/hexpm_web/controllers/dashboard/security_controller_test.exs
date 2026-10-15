@@ -254,6 +254,7 @@ defmodule HexpmWeb.Dashboard.SecurityControllerTest do
 
       result = response(conn, 200)
       assert result =~ "Current Password"
+      assert result =~ "Revoke all API keys"
     end
 
     test "changes password and verifies in DB", _c do
@@ -276,6 +277,28 @@ defmodule HexpmWeb.Dashboard.SecurityControllerTest do
       assert {:error, :wrong_password} = Auth.password_auth(user.username, "password")
 
       assert_email_sent(Hexpm.Emails.password_changed(user))
+    end
+
+    test "changing the password revokes the API keys when asked to" do
+      for {revoke_keys, revoked?} <- [{"no", false}, {"yes", true}] do
+        user = insert(:user)
+        key = insert(:key, user: user)
+
+        build_conn()
+        |> test_login(user)
+        |> post("/dashboard/security/change-password", %{
+          "user" => %{
+            "password_current" => "password",
+            "password" => "newpassxx",
+            "password_confirmation" => "newpassxx",
+            "revoke_keys" => revoke_keys
+          }
+        })
+        |> redirected_to()
+
+        assert Hexpm.Accounts.Key.revoked?(Hexpm.Repo.get!(Hexpm.Accounts.Key, key.id)) ==
+                 revoked?
+      end
     end
 
     test "changing the password signs out the other browser sessions" do

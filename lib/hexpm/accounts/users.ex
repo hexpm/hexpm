@@ -357,12 +357,12 @@ defmodule Hexpm.Accounts.Users do
     end
   end
 
-  def update_password(%User{organization_id: id} = user, _session, _params, _opts)
+  def update_password(%User{organization_id: id} = user, _session, _params, _revoke_keys?, _opts)
       when not is_nil(id) do
     organization_error(user, "cannot change password of organizations")
   end
 
-  def update_password(user, session, params, audit: audit_data) do
+  def update_password(user, session, params, revoke_keys?, audit: audit_data) do
     {sessions_query, tokens_query, org_sessions_query} =
       Hexpm.UserSessions.revoke_all_except(user, session)
 
@@ -376,9 +376,13 @@ defmodule Hexpm.Accounts.Users do
       |> Multi.update_all(:revoke_tokens, tokens_query, [])
       |> Multi.update_all(:revoke_sessions, sessions_query, [])
       |> Multi.update_all(:revoke_org_sessions, org_sessions_query, [])
-      |> audit(audit_data, "password.update", nil)
 
-    case Repo.transaction(multi) do
+    multi =
+      if revoke_keys?,
+        do: Multi.update_all(multi, :keys, Key.revoke_all(user), []),
+        else: multi
+
+    case Repo.transaction(audit(multi, audit_data, "password.update", nil)) do
       {:ok, %{user: user}} ->
         user
         |> Emails.password_changed()
