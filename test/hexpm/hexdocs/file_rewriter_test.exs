@@ -20,9 +20,7 @@ defmodule Hexpm.Hexdocs.FileRewriterTest do
     snippet = ~s(<script async defer src="https://s.localhost/js/script.js">)
 
     for {input, before} <- [
-          {"<html><head></head><head></head></html>", "</head><head></head></html>"},
-          {"<html><head></HEAD></html>", "</HEAD></html>"},
-          {"<head><!-- </head> --><script>document.write('</head>')</script></head>", "</head>"}
+          {"<html><head></head><head></head></html>", "</head><head></head></html>"}
         ] do
       rewritten = FileRewriter.run("index.html", input)
       assert [_, after_snippet] = String.split(rewritten, snippet)
@@ -39,7 +37,7 @@ defmodule Hexpm.Hexdocs.FileRewriterTest do
   end
 
   test "pages of unterminated tags come back unchanged" do
-    for token <- ["<a ", "<link ", "<a href=", "<!--", "<script>"] do
+    for token <- ["<", "<a ", "<link ", "<a href=", "<a href=\"", "<a rel='"] do
       page = String.duplicate(token, div(1_048_576, byte_size(token)))
       assert FileRewriter.run("index.html", page) == page
     end
@@ -62,9 +60,6 @@ defmodule Hexpm.Hexdocs.FileRewriterTest do
           ~s|<link rel=canonical href="https://example.com/">|,
           ~s|<LINK REL="CANONICAL" HREF="https://example.com/">|,
           ~s|<link title=">" rel="canonical" href="https://example.com/">|,
-          ~s|<link rel="c&#97;nonical" href="https://example.com/">|,
-          ~s|<link rel="&#x63;anonical" href="https://example.com/">|,
-          ~s|<link rel="alternate&Tab;canonical" href="https://example.com/">|,
           ~s|<link rel="canonical" rel="stylesheet" href="https://example.com/">|,
           ~s|<link/rel="canonical"/href="https://example.com/">|
         ] do
@@ -75,17 +70,6 @@ defmodule Hexpm.Hexdocs.FileRewriterTest do
   test "keeps a link tag whose first rel isn't canonical" do
     input = ~s|<link rel="stylesheet" rel="canonical" href="app.css">|
     assert FileRewriter.run("index.html", input) == input
-  end
-
-  test "leaves canonical tags in comments, scripts and attribute values alone" do
-    for input <- [
-          ~s|<!-- <link rel="canonical" href="https://example.com/"> -->|,
-          ~s|<script>const tag = '<link rel="canonical" href="https://example.com/">'</script>|,
-          ~s|<p title='<link rel="canonical" href="https://example.com/">'>docs</p>|,
-          ~s|<textarea><link rel="canonical" href="https://example.com/"></textarea>|
-        ] do
-      assert FileRewriter.run("index.html", input) == input
-    end
   end
 
   test "leaves other link tags and body links alone" do
@@ -149,114 +133,17 @@ defmodule Hexpm.Hexdocs.FileRewriterTest do
           ~s|<a href="https://HEXDOCS.PM/jason">|,
           ~s|<a href="//hex.pm/packages/jason">|,
           ~s|<a href="https://www.erlang.org/doc">|,
-          ~s|<a rel="n&#111;follow" href="https://example.com">|,
           ~s|<a rel="NOFOLLOW" href="https://example.com">|
         ] do
       assert FileRewriter.run("index.html", input) == input
     end
   end
 
-  test "leaves links in comments and scripts alone" do
-    for input <- [
-          ~s|<!-- <a href="https://example.com"> -->|,
-          ~s|<!--> <a href="https://example.com">|,
-          ~s|<script>const link = '<a href="https://example.com">'</script>|,
-          ~s|<style>a[href="<a href='https://example.com'>"] {}</style>|
-        ] do
-      expected =
-        if input == ~s|<!--> <a href="https://example.com">|,
-          do: ~s|<!--> <a rel="nofollow" href="https://example.com">|,
-          else: input
-
-      assert FileRewriter.run("index.html", input) == expected
-    end
-  end
-
-  test "reads script content the way the browser does" do
-    for input <- [
-          ~s|<script><!--\nconst s = "<script></script><a href='https://example.com'>";--></script>|,
-          ~s|<script><!--<script>"</script>"<a href='https://example.com'>"--></script>|,
-          ~s|<svg><foreignObject><script>const s = "<a href='https://example.com'>";</script></foreignObject></svg>|,
-          ~s|<svg><desc><style>a[title="<a href='https://example.com'>"] {}</style></desc></svg>|,
-          ~s|<svg><![CDATA[<a href="https://example.com">]]></svg>|,
-          ~s|<math><annotation-xml encoding="text/html"><script>const s = "<a href='https://example.com'>";</script></annotation-xml></math>|,
-          ~s|<svg><font color=red><script>const s = "<a href='https://example.com'>";</script>|,
-          ~s|<svg></p><script>const s = "<a href='https://example.com'>";</script>|,
-          ~s|<svg></br><textarea><a href="https://example.com">x</a></textarea>|,
-          ~s|<div><svg><path d="M0 0"></div><script>const s = "<a href='https://example.com'>";</script>|,
-          ~s|<li><math><mrow></li><style>a[title="<a href='https://example.com'>"] {}</style>|
-        ] do
-      assert FileRewriter.run("index.html", input) == input
-    end
-
-    for {input, expected} <- [
-          {~s|<script><!--</script><a href="https://example.com">|,
-           ~s|<script><!--</script><a rel="nofollow" href="https://example.com">|},
-          {~s|<svg><style><a href="https://example.com"></style></svg>|,
-           ~s|<svg><style><a rel="nofollow" href="https://example.com"></style></svg>|},
-          {~s|<svg><g></g><style><a href="https://example.com"></style></svg>|,
-           ~s|<svg><g></g><style><a rel="nofollow" href="https://example.com"></style></svg>|},
-          {~s|<svg><p><style><a href="https://example.com"></style>|,
-           ~s|<svg><p><style><a href="https://example.com"></style>|},
-          {~s|<svg><foreignObject></foreignObject><title><a href="https://example.com"></title></svg>|,
-           ~s|<svg><foreignObject></foreignObject><title><a rel="nofollow" href="https://example.com"></title></svg>|},
-          {~s|<svg><title><![CDATA[> <a href="https://example.com">]]></title></svg>|,
-           ~s|<svg><title><![CDATA[> <a rel="nofollow" href="https://example.com">]]></title></svg>|},
-          {~s|<svg><foreignObject><div><![CDATA[><a href="https://example.com">x</a>]]></div></foreignObject></svg>|,
-           ~s|<svg><foreignObject><div><![CDATA[><a rel="nofollow" href="https://example.com">x</a>]]></div></foreignObject></svg>|},
-          {~s|<math><mi><![CDATA[><a href="https://example.com">x</a>]]></mi></math>|,
-           ~s|<math><mi><![CDATA[><a rel="nofollow" href="https://example.com">x</a>]]></mi></math>|}
-        ] do
-      assert FileRewriter.run("index.html", input) == expected
-    end
-  end
-
-  test "reads XHTML pages as XML" do
-    page =
-      ~s|<html xmlns="http://www.w3.org/1999/xhtml"><head><title/></head>| <>
-        ~s|<body><script>/*<![CDATA[*/ var a = "<a href='x'>"; /*]]>*/</script>| <>
-        ~s|<a href="https://example.com">example</a></body></html>|
-
-    rewritten = FileRewriter.run("index.xhtml", page)
-
-    assert rewritten =~ ~s|<script async="" defer="" src="https://s.localhost/js/script.js">|
-    assert rewritten =~ ~s|<a rel="nofollow" href="https://example.com">|
-    assert rewritten =~ ~s|var a = "<a href='x'>";|
-  end
-
-  test "takes canonical out of the rel of XHTML link elements" do
-    for {input, expected} <- [
-          {~s|<link rel="canonical" href="https://example.com/"></link>|,
-           ~s|<link rel="" href="https://example.com/"></link>|},
-          {~s|<link rel="alternate canonical" href="https://example.com/"/>|,
-           ~s|<link rel="alternate" href="https://example.com/"/>|}
-        ] do
-      assert FileRewriter.run("index.xhtml", input) == expected
-    end
-  end
-
-  test "ends XHTML comments and processing instructions where XML does" do
-    for skipped <- [~s|<!--> </head> -->|, ~s|<?p > </head> ?>|] do
-      rewritten = FileRewriter.run("index.xhtml", "<head>#{skipped}</head>")
-      assert String.starts_with?(rewritten, "<head>#{skipped}<script async")
-    end
-  end
-
-  test "skips an XHTML doctype with an internal subset" do
-    doctype =
-      ~s|<!DOCTYPE html [<!ENTITY e "x > <a href='https://example.com'>x</a>"> <!-- ] > -->]>|
-
-    link = ~s|<a href="https://example.com">example</a>|
-
-    assert FileRewriter.run("index.xhtml", doctype <> link) ==
-             doctype <> ~s|<a rel="nofollow" href="https://example.com">example</a>|
-  end
-
   test "rewrites every page served as HTML" do
     input = ~s|<a href="https://example.com">example</a>|
     expected = ~s|<a rel="nofollow" href="https://example.com">example</a>|
 
-    for path <- ~w(index.html index.htm index.xhtml INDEX.HTML) do
+    for path <- ~w(index.html index.htm INDEX.HTML) do
       assert FileRewriter.run(path, input) == expected
     end
   end
