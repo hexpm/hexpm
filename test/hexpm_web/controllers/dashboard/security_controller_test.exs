@@ -278,6 +278,26 @@ defmodule HexpmWeb.Dashboard.SecurityControllerTest do
       assert_email_sent(Hexpm.Emails.password_changed(user))
     end
 
+    test "changing the password signs out the other browser sessions" do
+      user = insert(:user)
+      other_browser = build_conn() |> test_login(user)
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("/dashboard/security/change-password", %{
+          "user" => %{
+            "password_current" => "password",
+            "password" => "newpassxx",
+            "password_confirmation" => "newpassxx"
+          }
+        })
+
+      assert redirected_to(conn) == "/dashboard/security"
+      assert html_response(get(recycle(conn), "/dashboard/security"), 200)
+      assert redirected_to(get(other_browser, "/dashboard/security")) =~ "/login"
+    end
+
     test "fails to change password with incorrect old password", _c do
       user = insert(:user)
 

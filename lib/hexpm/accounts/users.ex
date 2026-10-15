@@ -352,15 +352,22 @@ defmodule Hexpm.Accounts.Users do
     end
   end
 
-  def update_password(%User{organization_id: id} = user, _params, _opts) when not is_nil(id) do
+  def update_password(%User{organization_id: id} = user, _session, _params, _opts)
+      when not is_nil(id) do
     organization_error(user, "cannot change password of organizations")
   end
 
-  def update_password(user, params, audit: audit_data) do
+  def update_password(user, session, params, audit: audit_data) do
+    {sessions_query, tokens_query, org_sessions_query} =
+      Hexpm.UserSessions.revoke_all_except(user, session)
+
     multi =
       Multi.new()
       |> Multi.update(:user, User.update_password(user, params))
       |> Multi.delete_all(:account_deletion_requests, assoc(user, :account_deletion_requests))
+      |> Multi.update_all(:revoke_tokens, tokens_query, [])
+      |> Multi.update_all(:revoke_org_sessions, org_sessions_query, [])
+      |> Multi.update_all(:revoke_sessions, sessions_query, [])
       |> audit(audit_data, "password.update", nil)
 
     case Repo.transaction(multi) do

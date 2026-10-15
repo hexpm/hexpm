@@ -1179,6 +1179,34 @@ defmodule Hexpm.Accounts.SSOTest do
       refute SSO.current_org_session(user_session.id, context.organization.id)
     end
 
+    test "a password change takes the other sessions' organization access with it", context do
+      link_identity(context, context.member)
+      current_session = browser_session(context.member)
+      other_session = browser_session(context.member)
+
+      for user_session <- [current_session, other_session] do
+        assert {:ok, {:login, _user, _org_session, _return}} =
+                 context
+                 |> start_transaction(context.member)
+                 |> complete(valid_claims(), context.member, user_session.id)
+      end
+
+      {:ok, _user} =
+        Users.update_password(
+          context.member,
+          current_session,
+          %{
+            "password_current" => "password",
+            "password" => "new_password_123",
+            "password_confirmation" => "new_password_123"
+          },
+          audit: audit_data(context.member)
+        )
+
+      assert SSO.current_org_session(current_session.id, context.organization.id)
+      refute SSO.current_org_session(other_session.id, context.organization.id)
+    end
+
     test "evicting a session takes its organization access with it", context do
       link_identity(context, context.member)
       user_session = browser_session(context.member)
