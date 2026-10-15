@@ -109,6 +109,13 @@ defmodule Hexpm.Accounts.KeysTest do
                "you do not have access to this package"
     end
 
+    test "package permission without a resource", %{user: user} do
+      params = %{"name" => "keyname", "permissions" => [%{"domain" => "package"}]}
+
+      assert {:error, :key, changeset, _} = Keys.create(user, params, audit: audit_data(user))
+      assert errors_on(changeset)[:permissions][:resource] == "can't be blank"
+    end
+
     test "organization package permissions" do
       repository = insert(:repository)
       organization = repository.organization
@@ -173,6 +180,30 @@ defmodule Hexpm.Accounts.KeysTest do
 
       assert errors_on(changeset)[:permissions][:resource] ==
                "you do not have access to this package"
+    end
+  end
+
+  describe "personal_reaching_organization/1" do
+    test "lists a member's key with a package permission without a resource", %{
+      user: user,
+      organization: organization
+    } do
+      insert(:organization_user, organization: organization, user: user)
+
+      insert(:key,
+        user: user,
+        name: "every-package",
+        permissions: [build(:key_permission, domain: "package")]
+      )
+
+      insert(:key,
+        user: user,
+        name: "other-organization",
+        permissions: [build(:key_permission, domain: "repository", resource: "other")]
+      )
+
+      assert Enum.map(Keys.personal_reaching_organization(organization), & &1.name) ==
+               ["every-package"]
     end
   end
 end
