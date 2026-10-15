@@ -222,7 +222,9 @@ defmodule Hexpm.Diff.Generator do
         "--no-renames"
       ] ++ if(ignore_whitespace, do: ["-w"], else: []) ++ [from_dir, to_dir]
 
-    case System.cmd("git", args, stderr_to_stdout: true) do
+    # GIT_DIR names no repository, so git doesn't use one around the working
+    # directory and read the .gitattributes files of the trees it diffs.
+    case System.cmd("git", args, stderr_to_stdout: true, env: [{"GIT_DIR", "/nonexistent"}]) do
       {"", 0} -> ""
       {output, 1} -> output
       {output, status} -> raise "git diff exited with status #{status}: #{output}"
