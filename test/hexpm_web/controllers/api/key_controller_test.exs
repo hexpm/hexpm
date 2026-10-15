@@ -3,7 +3,8 @@ defmodule HexpmWeb.API.KeyControllerTest do
   import Swoosh.TestAssertions
 
   alias Hexpm.Repo
-  alias Hexpm.Accounts.{AuditLog, Key, KeyPermission}
+  alias Hexpm.Accounts.{AuditLog, Key, KeyPermission, TFA}
+  alias Hexpm.OAuth.Tokens
 
   setup do
     eric = insert(:user)
@@ -292,6 +293,22 @@ defmodule HexpmWeb.API.KeyControllerTest do
     end
   end
 
+  describe "GET /api/keys with an OAuth token" do
+    test "marks no key as the authing key" do
+      user = insert(:user)
+      token = oauth_token(user, ["api:read"])
+      insert(:key, id: token.id, user: user)
+
+      keys =
+        build_conn()
+        |> put_req_header("authorization", "Bearer #{token.access_token}")
+        |> get("/api/keys")
+        |> json_response(200)
+
+      assert [%{"authing_key" => false}] = keys
+    end
+  end
+
   describe "DELETE /api/keys" do
     test "delete all keys", c do
       key_a = Key.build(c.eric, %{name: "key_a"}) |> Repo.insert!()
@@ -338,6 +355,23 @@ defmodule HexpmWeb.API.KeyControllerTest do
       assert conn.status == 401
       body = JSON.decode!(conn.resp_body)
       assert %{"message" => "API key revoked", "status" => 401} == body
+    end
+
+    test "with an OAuth token renders no key", c do
+      user = insert(:user_with_tfa)
+      token = oauth_token(user, ["api:write"])
+      own_key = insert(:key, user: user)
+      other_key = insert(:key, id: token.id, user: c.other)
+
+      conn =
+        build_conn()
+        |> put_req_header("authorization", "Bearer #{token.access_token}")
+        |> put_req_header("x-hex-otp", TFA.time_based_token(user.tfa.secret))
+        |> delete("/api/keys")
+
+      assert json_response(conn, 200) == nil
+      assert Key.revoked?(Repo.get!(Key, own_key.id))
+      refute Key.revoked?(Repo.get!(Key, other_key.id))
     end
 
     test "revoking all keys sends a single consolidated notification", c do
@@ -443,5 +477,22 @@ defmodule HexpmWeb.API.KeyControllerTest do
       body = JSON.decode!(conn.resp_body)
       assert %{"message" => "API key revoked", "status" => 401} == body
     end
+  end
+
+  defp oauth_token(user, scopes) do
+    client = insert(:oauth_client)
+    session = insert(:oauth_session, user: user, client_id: client.client_id)
+
+    {:ok, token} =
+      Tokens.create_and_insert_for_user(
+        user,
+        client.client_id,
+        scopes,
+        "authorization_code",
+        "test",
+        user_session_id: session.id
+      )
+
+    token
   end
 end
