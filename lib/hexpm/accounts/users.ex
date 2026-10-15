@@ -537,8 +537,8 @@ defmodule Hexpm.Accounts.Users do
       |> Multi.delete_all(:reset, assoc(user, :password_resets))
       |> Multi.delete_all(:account_deletion_requests, assoc(user, :account_deletion_requests))
       |> Multi.update_all(:revoke_tokens, tokens_query, [])
-      |> Multi.update_all(:revoke_org_sessions, org_sessions_query, [])
       |> Multi.update_all(:revoke_sessions, sessions_query, [])
+      |> Multi.update_all(:revoke_org_sessions, org_sessions_query, [])
 
     if revoke_all_access,
       do: Multi.update_all(multi, :keys, Key.revoke_all(user), []),

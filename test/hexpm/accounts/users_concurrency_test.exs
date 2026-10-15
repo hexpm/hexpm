@@ -41,56 +41,78 @@ defmodule Hexpm.Accounts.UsersConcurrencyTest do
   end
 
   # Revoking a browser session locks it and then the organization access written
-  # against it. A password change has to take the rows in the same order, or the
-  # two deadlock and Postgres aborts one of them.
+  # against it. Anything else that revokes sessions has to take the rows in the
+  # same order, or the two deadlock and Postgres aborts one of them.
   test "a password change waits for a logout of another session instead of deadlocking" do
     committed(&sessions_context/0, fn context ->
-      parent = self()
+      change = fn ->
+        Users.update_password(
+          context.user,
+          context.current_session,
+          %{
+            "password_current" => "password",
+            "password" => "new_password_123",
+            "password_confirmation" => "new_password_123"
+          },
+          audit: audit_data(context.user)
+        )
+      end
 
-      logout =
-        unboxed_task(fn ->
-          Hexpm.RepoBase.transaction(fn ->
-            Hexpm.RepoBase.one!(
-              from(session in UserSession,
-                where: session.id == ^context.other_session.id,
-                lock: "FOR UPDATE"
-              )
+      assert {{:ok, _count}, {:ok, %User{}}} = during_logout(context.other_session, change)
+    end)
+  end
+
+  test "a password reset waits for a logout of another session instead of deadlocking" do
+    committed(&sessions_context/0, fn context ->
+      :ok = Users.password_reset_init(context.user.username, audit: audit_data(context.user))
+      reset_key = password_reset_key()
+
+      reset = fn ->
+        Users.password_reset_finish(
+          context.user.username,
+          reset_key,
+          %{"password" => "new_password_123", "password_confirmation" => "new_password_123"},
+          false,
+          audit: audit_data(context.user)
+        )
+      end
+
+      assert {{:ok, _count}, :ok} = during_logout(context.other_session, reset)
+    end)
+  end
+
+  # Runs `fun` while a logout of `session` holds the session row and has yet to
+  # revoke its organization access, then lets the logout finish.
+  defp during_logout(session, fun) do
+    parent = self()
+
+    logout =
+      unboxed_task(fn ->
+        Hexpm.RepoBase.transaction(fn ->
+          Hexpm.RepoBase.one!(
+            from(user_session in UserSession,
+              where: user_session.id == ^session.id,
+              lock: "FOR UPDATE"
             )
+          )
 
-            send(parent, :locked)
-            assert_receive :continue, 15_000
+          send(parent, :locked)
+          assert_receive :continue, 15_000
 
-            Hexpm.RepoBase.update_all(
-              from(session in OrgSession,
-                where: session.user_session_id == ^context.other_session.id
-              ),
-              set: [revoked_at: DateTime.utc_now()]
-            )
-          end)
-        end)
-
-      assert_receive :locked, 15_000
-
-      change =
-        unboxed_task(fn ->
-          Users.update_password(
-            context.user,
-            context.current_session,
-            %{
-              "password_current" => "password",
-              "password" => "new_password_123",
-              "password_confirmation" => "new_password_123"
-            },
-            audit: audit_data(context.user)
+          Hexpm.RepoBase.update_all(
+            from(org_session in OrgSession, where: org_session.user_session_id == ^session.id),
+            set: [revoked_at: DateTime.utc_now()]
           )
         end)
+      end)
 
-      assert await_lock_wait() == :waiting
-      send(logout.pid, :continue)
+    assert_receive :locked, 15_000
+    task = unboxed_task(fun)
 
-      assert {:ok, _count} = Task.await(logout, 15_000)
-      assert {:ok, %User{}} = Task.await(change, 15_000)
-    end)
+    assert await_lock_wait() == :waiting
+    send(logout.pid, :continue)
+
+    {Task.await(logout, 15_000), Task.await(task, 15_000)}
   end
 
   defp sessions_context do
