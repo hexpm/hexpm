@@ -2,11 +2,18 @@ defmodule HexpmWeb.Plugs.RequestLog do
   @moduledoc """
   Logs one `http.request` line per request when the response is sent, with the
   method, path, status, duration and, once routed, the controller, action and
-  format as fields.
+  format as fields. A request authenticated with an API key, an OAuth token or
+  a browser session also gets `credential`, `key:<id>`, `token:<jti>` or
+  `session:<id>`, the same identifiers repo.hex.pm's access log uses and never
+  the secret.
   """
 
   import Plug.Conn
   require Logger
+
+  alias Hexpm.Accounts.Key
+  alias Hexpm.OAuth.Token
+  alias Hexpm.UserSession
 
   def init(opts), do: opts
 
@@ -23,7 +30,7 @@ defmodule HexpmWeb.Plugs.RequestLog do
   end
 
   defp line(conn, duration_us) do
-    Enum.into(routed(conn.private), %{
+    Enum.into(routed(conn.private) ++ credential(conn.assigns), %{
       message: "HTTP request",
       event: "http.request",
       method: conn.method,
@@ -41,4 +48,9 @@ defmodule HexpmWeb.Plugs.RequestLog do
 
   defp format(%{phoenix_format: format}), do: [format: format]
   defp format(_private), do: []
+
+  defp credential(%{auth_credential: %Key{id: id}}), do: [credential: "key:#{id}"]
+  defp credential(%{auth_credential: %Token{jti: jti}}), do: [credential: "token:#{jti}"]
+  defp credential(%{current_session: %UserSession{id: id}}), do: [credential: "session:#{id}"]
+  defp credential(_assigns), do: []
 end
