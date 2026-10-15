@@ -34,7 +34,7 @@ The package repository at repo.hex.pm writes an access log for every request. Ea
 
 Entries for public packages and documentation keep the IP address and the key or token for three years, to investigate compromised releases, leaked credentials and manipulated download counts, which are often discovered long after the fact. After that we remove both and keep the rest indefinitely, because the download counts we publish for every past day are derived from them. Entries for an organization's private packages and documentation are kept in full until the organization's data is deleted, so that we can establish whether anyone accessed them without authorization, and are removed within 90 days of the deletion. hexorgs.pm entries written before we recorded which organization they were for are kept like public ones.
 
-Requests to the hex.pm website and API are logged with the client IP address, user agent and referrer. We keep these logs for ten years.
+Requests to the hex.pm website and API are logged with the client IP address, user agent and referrer, and for a request authenticated with an API key, token or login session, which key, token or session it used. We keep these logs for ten years.
 
 When an attempt to sign in to hex.pm, or to authenticate to its API, fails, we record the username or email address it was made with, the IP address, the user agent and why it was refused, so that we can detect attacks on accounts. We keep these records for ten years. A request to the package repository refused for its key or token is in the repository's access log described above, without the reason.
 
