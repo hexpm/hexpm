@@ -150,8 +150,13 @@ defmodule Hexpm.Accounts.Users do
     notify? = Keyword.get(opts, :notify, true)
     user = Repo.preload(user, :emails)
 
+    # The account row before its credentials, the order a password change and
+    # a password reset take them in.
     multi =
       Multi.new()
+      |> Multi.run(:lock, fn repo, _changes ->
+        {:ok, repo.one(from(u in User, where: u.id == ^user.id, lock: "FOR NO KEY UPDATE"))}
+      end)
       |> audit(audit_data, "user.delete", user)
       |> Multi.insert(:reserved_username, %ReservedUsername{name: user.username},
         on_conflict: :nothing
@@ -352,18 +357,32 @@ defmodule Hexpm.Accounts.Users do
     end
   end
 
-  def update_password(%User{organization_id: id} = user, _params, _opts) when not is_nil(id) do
+  def update_password(%User{organization_id: id} = user, _session, _params, _revoke_keys?, _opts)
+      when not is_nil(id) do
     organization_error(user, "cannot change password of organizations")
   end
 
-  def update_password(user, params, audit: audit_data) do
+  def update_password(user, session, params, revoke_keys?, audit: audit_data) do
+    {sessions_query, tokens_query, org_sessions_query} =
+      Hexpm.UserSessions.revoke_all_except(user, session)
+
+    # Tokens, then sessions, then their organization access: the order revoking
+    # a single session locks them in, so the two wait for each other rather
+    # than deadlock.
     multi =
       Multi.new()
       |> Multi.update(:user, User.update_password(user, params))
       |> Multi.delete_all(:account_deletion_requests, assoc(user, :account_deletion_requests))
-      |> audit(audit_data, "password.update", nil)
+      |> Multi.update_all(:revoke_tokens, tokens_query, [])
+      |> Multi.update_all(:revoke_sessions, sessions_query, [])
+      |> Multi.update_all(:revoke_org_sessions, org_sessions_query, [])
 
-    case Repo.transaction(multi) do
+    multi =
+      if revoke_keys?,
+        do: Multi.update_all(multi, :keys, Key.revoke_all(user), []),
+        else: multi
+
+    case Repo.transaction(audit(multi, audit_data, "password.update", nil)) do
       {:ok, %{user: user}} ->
         user
         |> Emails.password_changed()
@@ -527,8 +546,8 @@ defmodule Hexpm.Accounts.Users do
       |> Multi.delete_all(:reset, assoc(user, :password_resets))
       |> Multi.delete_all(:account_deletion_requests, assoc(user, :account_deletion_requests))
       |> Multi.update_all(:revoke_tokens, tokens_query, [])
-      |> Multi.update_all(:revoke_org_sessions, org_sessions_query, [])
       |> Multi.update_all(:revoke_sessions, sessions_query, [])
+      |> Multi.update_all(:revoke_org_sessions, org_sessions_query, [])
 
     if revoke_all_access,
       do: Multi.update_all(multi, :keys, Key.revoke_all(user), []),

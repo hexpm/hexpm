@@ -54,6 +54,24 @@ defmodule HexpmWeb.Templates.Dashboard.Security.Components.PasswordCard do
               match_password_id={Phoenix.HTML.Form.input_id(f, :password)}
             />
 
+            <div class="bg-grey-50 dark:bg-grey-900 border border-grey-200 dark:border-grey-700 rounded p-4">
+              <label class="flex items-start gap-3 cursor-pointer">
+                <input type="hidden" name="user[revoke_keys]" value="no" />
+                <input
+                  type="checkbox"
+                  name="user[revoke_keys]"
+                  value="yes"
+                  class="mt-0.5 w-4 h-4 text-purple-600 border-grey-300 dark:border-grey-600 rounded focus:ring-2 focus:ring-purple-500"
+                />
+                <span class="text-small text-grey-700 dark:text-grey-300">
+                  Revoke all API keys
+                </span>
+              </label>
+              <p class="mt-2 ml-7 text-xs text-grey-500 dark:text-grey-300">
+                Your other sessions and OAuth tokens are signed out either way
+              </p>
+            </div>
+
             <div class="flex items-center gap-3 pt-2">
               <.button type="submit" variant="primary">
                 Change Password

@@ -5,6 +5,8 @@ defmodule Hexpm.Accounts.UsersTest do
 
   alias Hexpm.Accounts.{AuditLog, OptionalEmails, User, Users, UserProviders}
   alias Hexpm.Emails.OutboxEntry
+  alias Hexpm.OAuth.{Token, Tokens}
+  alias Hexpm.{UserSession, UserSessions}
 
   describe "all_notifiable_emails/0" do
     test "returns the verified primary address of each individual account" do
@@ -857,14 +859,19 @@ defmodule Hexpm.Accounts.UsersTest do
       user = insert(:user)
       assert :ok = Users.delete_request(user, audit: audit_data(user))
 
+      {:ok, session, _token} =
+        UserSessions.create_browser_session(user, audit: audit_data(user))
+
       {:ok, _} =
         Users.update_password(
           user,
+          session,
           %{
             "password_current" => "password",
             "password" => "new_password_123",
             "password_confirmation" => "new_password_123"
           },
+          false,
           audit: audit_data(user)
         )
 
@@ -934,6 +941,91 @@ defmodule Hexpm.Accounts.UsersTest do
 
       assert {:error, :invalid_request} = Users.delete_confirm(user, nil, audit: audit_data(user))
       assert Repo.get(User, user.id)
+    end
+  end
+
+  describe "update_password/4" do
+    test "revokes the other sessions and the OAuth tokens" do
+      user = insert(:user)
+      {:ok, current, _token} = UserSessions.create_browser_session(user, audit: audit_data(user))
+      {:ok, other, _token} = UserSessions.create_browser_session(user, audit: audit_data(user))
+
+      client = insert(:oauth_client)
+      oauth_session = insert(:oauth_session, user: user, client_id: client.client_id)
+
+      {:ok, token} =
+        Tokens.create_and_insert_for_user(
+          user,
+          client.client_id,
+          ["api:read"],
+          "authorization_code",
+          "test",
+          user_session_id: oauth_session.id
+        )
+
+      {:ok, _user} =
+        Users.update_password(
+          user,
+          current,
+          %{
+            "password_current" => "password",
+            "password" => "new_password_123",
+            "password_confirmation" => "new_password_123"
+          },
+          false,
+          audit: audit_data(user)
+        )
+
+      refute Repo.get!(UserSession, current.id).revoked_at
+      assert Repo.get!(UserSession, other.id).revoked_at
+      assert Repo.get!(UserSession, oauth_session.id).revoked_at
+      assert Repo.get!(Token, token.id).revoked_at
+    end
+
+    test "revokes the keys only when asked to" do
+      for revoke_keys? <- [false, true] do
+        user = insert(:user)
+        key = insert(:key, user: user)
+
+        {:ok, session, _token} =
+          UserSessions.create_browser_session(user, audit: audit_data(user))
+
+        {:ok, _user} =
+          Users.update_password(
+            user,
+            session,
+            %{
+              "password_current" => "password",
+              "password" => "new_password_123",
+              "password_confirmation" => "new_password_123"
+            },
+            revoke_keys?,
+            audit: audit_data(user)
+          )
+
+        assert Hexpm.Accounts.Key.revoked?(Repo.get!(Hexpm.Accounts.Key, key.id)) == revoke_keys?
+      end
+    end
+
+    test "revokes nothing when the current password is wrong" do
+      user = insert(:user)
+      {:ok, current, _token} = UserSessions.create_browser_session(user, audit: audit_data(user))
+      {:ok, other, _token} = UserSessions.create_browser_session(user, audit: audit_data(user))
+
+      {:error, _changeset} =
+        Users.update_password(
+          user,
+          current,
+          %{
+            "password_current" => "wrong_password",
+            "password" => "new_password_123",
+            "password_confirmation" => "new_password_123"
+          },
+          false,
+          audit: audit_data(user)
+        )
+
+      refute Repo.get!(UserSession, other.id).revoked_at
     end
   end
 

@@ -386,6 +386,17 @@ defmodule Hexpm.UserSessions do
   end
 
   @doc """
+  Like `revoke_all/2`, but keeps one session and the organization access
+  written against it.
+  """
+  def revoke_all_except(user, %UserSession{id: id}, revoke_at \\ nil) do
+    {sessions_query, tokens_query, org_sessions_query} = revoke_all(user, revoke_at)
+
+    {from(s in sessions_query, where: s.id != ^id), tokens_query,
+     from(s in org_sessions_query, where: s.user_session_id != ^id)}
+  end
+
+  @doc """
   Updates the last use information for a session.
   """
   def update_last_use(%UserSession{} = session, usage_info) do
@@ -464,14 +475,14 @@ defmodule Hexpm.UserSessions do
           set: [revoked_at: now, updated_at: now]
         )
 
-        Repo.update_all(Hexpm.Accounts.SSO.revoke_org_sessions_query(session_ids, now), [])
-
         Repo.update_all(
           from(s in UserSession,
             where: s.id in ^session_ids and is_nil(s.revoked_at)
           ),
           set: [revoked_at: now, updated_at: now]
         )
+
+        Repo.update_all(Hexpm.Accounts.SSO.revoke_org_sessions_query(session_ids, now), [])
       end
     end)
 

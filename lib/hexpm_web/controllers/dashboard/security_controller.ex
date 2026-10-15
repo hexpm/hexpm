@@ -156,8 +156,11 @@ defmodule HexpmWeb.Dashboard.SecurityController do
 
   def change_password(conn, params) do
     user = conn.assigns.current_user
+    session = conn.assigns.current_session
+    revoke_keys? = get_in(params, ["user", "revoke_keys"]) == "yes"
+    audit = audit_data(conn)
 
-    case Users.update_password(user, params["user"], audit: audit_data(conn)) do
+    case Users.update_password(user, session, params["user"], revoke_keys?, audit: audit) do
       {:ok, _user} ->
         breached? = Hexpm.Pwned.password_breached?(params["user"]["password"])
 
