@@ -165,10 +165,11 @@ defmodule Hexpm.Hexdocs.FileRewriter do
     end
   end
 
-  # CDATA sections exist in XML and inside SVG and MathML elements, including
-  # the integration points, which are SVG and MathML elements themselves.
+  # CDATA sections exist in XML and directly inside SVG and MathML elements. In
+  # an integration point, and in the HTML inside one, a <![CDATA[ is a bogus
+  # comment.
   defp cdata?(%{mode: :xml}), do: true
-  defp cdata?(state), do: state.open != []
+  defp cdata?(state), do: match?({:foreign, _root}, context(state.open))
 
   defp cdata(%{content: content} = state, pos) do
     case :binary.match(content, "]]>", scope: {pos, byte_size(content) - pos}) do
@@ -335,13 +336,20 @@ defmodule Hexpm.Hexdocs.FileRewriter do
   defp close_element(%{mode: :xml} = state, _name), do: state
 
   # Closes the innermost open element with this name and everything inside it.
+  # A </p> or </br> inside SVG or MathML closes every open SVG and MathML
+  # element, as the breakout start tags do.
   defp close_element(state, name) do
-    if Map.get(state.open_names, name, 0) > 0 do
-      state
-      |> pop_open(fn {_kind, open_name} -> open_name != name end)
-      |> pop_open(1)
-    else
-      state
+    cond do
+      name in ["p", "br"] and match?({:foreign, _root}, context(state.open)) ->
+        pop_open(state, fn {kind, _name} -> kind == :foreign end)
+
+      Map.get(state.open_names, name, 0) > 0 ->
+        state
+        |> pop_open(fn {_kind, open_name} -> open_name != name end)
+        |> pop_open(1)
+
+      true ->
+        state
     end
   end
 

@@ -179,9 +179,10 @@ defmodule Hexpm.Hexdocs.FileRewriterTest do
           ~s|<svg><foreignObject><script>const s = "<a href='https://example.com'>";</script></foreignObject></svg>|,
           ~s|<svg><desc><style>a[title="<a href='https://example.com'>"] {}</style></desc></svg>|,
           ~s|<svg><![CDATA[<a href="https://example.com">]]></svg>|,
-          ~s|<svg><title><![CDATA[> <a href="https://example.com">]]></title></svg>|,
           ~s|<math><annotation-xml encoding="text/html"><script>const s = "<a href='https://example.com'>";</script></annotation-xml></math>|,
-          ~s|<svg><font color=red><script>const s = "<a href='https://example.com'>";</script>|
+          ~s|<svg><font color=red><script>const s = "<a href='https://example.com'>";</script>|,
+          ~s|<svg></p><script>const s = "<a href='https://example.com'>";</script>|,
+          ~s|<svg></br><textarea><a href="https://example.com">x</a></textarea>|
         ] do
       assert FileRewriter.run("index.html", input) == input
     end
@@ -194,7 +195,13 @@ defmodule Hexpm.Hexdocs.FileRewriterTest do
           {~s|<svg><p><style><a href="https://example.com"></style>|,
            ~s|<svg><p><style><a href="https://example.com"></style>|},
           {~s|<svg><foreignObject></foreignObject><title><a href="https://example.com"></title></svg>|,
-           ~s|<svg><foreignObject></foreignObject><title><a rel="nofollow" href="https://example.com"></title></svg>|}
+           ~s|<svg><foreignObject></foreignObject><title><a rel="nofollow" href="https://example.com"></title></svg>|},
+          {~s|<svg><title><![CDATA[> <a href="https://example.com">]]></title></svg>|,
+           ~s|<svg><title><![CDATA[> <a rel="nofollow" href="https://example.com">]]></title></svg>|},
+          {~s|<svg><foreignObject><div><![CDATA[><a href="https://example.com">x</a>]]></div></foreignObject></svg>|,
+           ~s|<svg><foreignObject><div><![CDATA[><a rel="nofollow" href="https://example.com">x</a>]]></div></foreignObject></svg>|},
+          {~s|<math><mi><![CDATA[><a href="https://example.com">x</a>]]></mi></math>|,
+           ~s|<math><mi><![CDATA[><a rel="nofollow" href="https://example.com">x</a>]]></mi></math>|}
         ] do
       assert FileRewriter.run("index.html", input) == expected
     end
