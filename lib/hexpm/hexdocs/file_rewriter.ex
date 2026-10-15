@@ -6,19 +6,27 @@ defmodule Hexpm.Hexdocs.FileRewriter do
   ]
   @analytics_addition "<script async defer src=\"https://s.${DOMAIN}/js/script.js\"></script><script>window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};plausible.init({endpoint:\"https://s.${DOMAIN}/api/event\"})</script>"
   @official_domains ~w(hex.pm hexdocs.pm hexorgs.pm elixir-lang.org erlang.org)
-  @html_types ~w(text/html application/xhtml+xml)
   # Elements whose content the browser reads as text up to their end tag.
-  @raw_text_elements ~w(script style textarea title xmp iframe noembed noframes)
+  @raw_text_elements ~w(style textarea title xmp iframe noembed noframes)
+  # Start tags that close every open SVG and MathML element.
+  @breakout_tags ~w(b big blockquote body br center code dd div dl dt em embed h1 h2 h3 h4 h5 h6
+                    head hr i img li listing menu meta nobr ol p pre ruby s small span strong
+                    strike sub sup table tt u ul var)
+  # SVG and MathML elements whose content is HTML.
+  @integration_points %{"svg" => ~w(foreignobject desc title), "math" => ~w(mi mo mn ms mtext)}
+  # Browsers stop nesting elements at about this depth, and it bounds the
+  # tracked elements on a page of nothing but nested ones.
+  @max_open 512
   @whitespace [?\t, ?\n, ?\f, ?\r, ?\s]
   # Rewritten pieces are handed to the sink in batches, so a page with millions
   # of links isn't held in memory as millions of pieces.
   @batch_size 1024
 
   def run(path, content) do
-    if html?(path) do
+    if mode = mode(path) do
       content
       |> add_elixir_org_link()
-      |> rewrite_tags([], &[&1 | &2])
+      |> rewrite_tags(mode, [], &[&1 | &2])
       |> IO.iodata_to_binary()
     else
       content
@@ -26,12 +34,12 @@ defmodule Hexpm.Hexdocs.FileRewriter do
   end
 
   def rewrite_files(dir, files) do
-    for path <- files, html?(path) do
+    for path <- files, mode = mode(path) do
       full_path = Path.join(dir, path)
       content = full_path |> File.read!() |> add_elixir_org_link()
 
       File.open!(full_path, [:write, :raw, :binary, :delayed_write], fn file ->
-        rewrite_tags(content, file, fn file, data ->
+        rewrite_tags(content, mode, file, fn file, data ->
           :ok = IO.binwrite(file, data)
           file
         end)
@@ -41,7 +49,13 @@ defmodule Hexpm.Hexdocs.FileRewriter do
     :ok
   end
 
-  defp html?(path), do: MIME.from_path(path) in @html_types
+  defp mode(path) do
+    case MIME.from_path(path) do
+      "text/html" -> :html
+      "application/xhtml+xml" -> :xml
+      _other -> nil
+    end
+  end
 
   defp add_elixir_org_link(content) do
     if String.contains?(content, @link_addition) do
@@ -52,9 +66,10 @@ defmodule Hexpm.Hexdocs.FileRewriter do
   end
 
   # One pass over the page that finds tags the way a browser's tokenizer does:
-  # it skips comments, doctypes and the content of raw text elements outside
-  # SVG and MathML, reads attributes quoted, single-quoted or unquoted with any
-  # case, and takes the first of a repeated attribute. On the tags it finds it
+  # it skips comments, doctypes, CDATA sections in SVG, MathML and XHTML, and
+  # the content of HTML's raw text elements, reads attributes quoted,
+  # single-quoted or unquoted with any case, and takes the first of a repeated
+  # attribute. On the tags it finds it
   #
   #   * adds the analytics snippet before the first `</head>`,
   #   * removes `<link>` tags with a canonical rel, because the docs CDN sets
@@ -64,14 +79,17 @@ defmodule Hexpm.Hexdocs.FileRewriter do
   #   * adds `rel="nofollow"` to links that leave the official domains.
   #
   # Every other byte is copied as it is.
-  defp rewrite_tags(content, sink, write) do
+  defp rewrite_tags(content, mode, sink, write) do
     state = %{
       content: content,
+      mode: mode,
       from: 0,
       pieces: [],
       count: 0,
       head?: false,
-      foreign: 0,
+      open: [],
+      open_depth: 0,
+      open_names: %{},
       sink: sink,
       write: write
     }
@@ -92,12 +110,26 @@ defmodule Hexpm.Hexdocs.FileRewriter do
 
   defp markup(%{content: content} = state, lt) do
     case binary_part(content, lt + 1, byte_size(content) - lt - 1) do
-      "!--" <> _ -> comment(state, lt + 4)
-      "/>" <> _ -> scan(state, lt + 3)
-      <<?/, c, _::binary>> when c in ?a..?z or c in ?A..?Z -> end_tag(state, lt)
-      <<c, _::binary>> when c in [?!, ?/, ??] -> bogus_comment(state, lt + 1)
-      <<c, _::binary>> when c in ?a..?z or c in ?A..?Z -> start_tag(state, lt)
-      _ -> scan(state, lt + 1)
+      "!--" <> _ ->
+        comment(state, lt + 4)
+
+      "![CDATA[" <> _ ->
+        if cdata?(state), do: cdata(state, lt + 9), else: bogus_comment(state, lt + 1)
+
+      "/>" <> _ ->
+        scan(state, lt + 3)
+
+      <<?/, c, _::binary>> when c in ?a..?z or c in ?A..?Z ->
+        end_tag(state, lt)
+
+      <<c, _::binary>> when c in [?!, ?/, ??] ->
+        bogus_comment(state, lt + 1)
+
+      <<c, _::binary>> when c in ?a..?z or c in ?A..?Z ->
+        start_tag(state, lt)
+
+      _ ->
+        scan(state, lt + 1)
     end
   end
 
@@ -117,6 +149,16 @@ defmodule Hexpm.Hexdocs.FileRewriter do
     end
   end
 
+  defp cdata?(%{mode: :xml}), do: true
+  defp cdata?(state), do: match?({:foreign, _}, context(state.open))
+
+  defp cdata(%{content: content} = state, pos) do
+    case :binary.match(content, "]]>", scope: {pos, byte_size(content) - pos}) do
+      {at, 3} -> scan(state, at + 3)
+      :nomatch -> state
+    end
+  end
+
   defp bogus_comment(%{content: content} = state, pos) do
     case :binary.match(content, ">", scope: {pos, byte_size(content) - pos}) do
       {at, 1} -> scan(state, at + 1)
@@ -130,19 +172,16 @@ defmodule Hexpm.Hexdocs.FileRewriter do
 
     case attributes(content, name_end, []) do
       {:ok, _attributes, tag_end, _self_closing?} ->
-        cond do
-          name == "head" and not state.head? ->
-            state
-            |> copy_until(lt)
-            |> put(analytics())
-            |> Map.put(:head?, true)
-            |> scan(tag_end)
+        state = close_element(state, name)
 
-          name in ["svg", "math"] and state.foreign > 0 ->
-            scan(%{state | foreign: state.foreign - 1}, tag_end)
-
-          true ->
-            scan(state, tag_end)
+        if name == "head" and not state.head? do
+          state
+          |> copy_until(lt)
+          |> put(analytics(state.mode))
+          |> Map.put(:head?, true)
+          |> scan(tag_end)
+        else
+          scan(state, tag_end)
         end
 
       :eof ->
@@ -156,20 +195,51 @@ defmodule Hexpm.Hexdocs.FileRewriter do
 
     case attributes(content, name_end, []) do
       {:ok, attributes, tag_end, self_closing?} ->
-        state = rewrite_tag(state, name, attributes, lt, name_end, tag_end)
+        state
+        |> rewrite_tag(name, attributes, lt, name_end, tag_end)
+        |> open_element(name, self_closing?, tag_end)
 
-        # Inside SVG and MathML, script, style, title and the other raw text
-        # names are ordinary elements holding markup, so raw text is only
-        # skipped while no <svg> or <math> is open.
+      :eof ->
+        state
+    end
+  end
+
+  # XHTML is XML, where no element holds raw text.
+  defp open_element(%{mode: :xml} = state, _name, _self_closing?, tag_end) do
+    scan(state, tag_end)
+  end
+
+  # Only SVG and MathML roots and the integration points inside them are
+  # tracked, since they decide whether the content of an element named like a
+  # raw text element is text or markup.
+  defp open_element(state, name, self_closing?, tag_end) do
+    case context(state.open) do
+      {:foreign, _root} when name in @breakout_tags ->
+        state
+        |> pop_open(fn {kind, _name} -> kind == :foreign end)
+        |> scan(tag_end)
+
+      {:foreign, root} ->
+        if not self_closing? and name in @integration_points[root] do
+          state
+          |> push_open({:integration, name})
+          |> scan(tag_end)
+        else
+          scan(state, tag_end)
+        end
+
+      :html ->
         cond do
           name in ["svg", "math"] and not self_closing? ->
-            scan(%{state | foreign: state.foreign + 1}, tag_end)
-
-          state.foreign > 0 ->
-            scan(state, tag_end)
+            state
+            |> push_open({:foreign, name})
+            |> scan(tag_end)
 
           name == "plaintext" ->
             state
+
+          name == "script" ->
+            skip_script(state, tag_end, :data)
 
           name in @raw_text_elements ->
             skip_raw_text(state, name, tag_end)
@@ -177,11 +247,57 @@ defmodule Hexpm.Hexdocs.FileRewriter do
           true ->
             scan(state, tag_end)
         end
-
-      :eof ->
-        state
     end
   end
+
+  defp close_element(%{mode: :xml} = state, _name), do: state
+
+  # Closes the innermost open element with this name and everything inside it.
+  defp close_element(state, name) do
+    if Map.get(state.open_names, name, 0) > 0 do
+      state
+      |> pop_open(fn {_kind, open_name} -> open_name != name end)
+      |> pop_open(1)
+    else
+      state
+    end
+  end
+
+  defp push_open(%{open_depth: depth} = state, _element) when depth >= @max_open, do: state
+
+  defp push_open(state, {_kind, name} = element) do
+    %{
+      state
+      | open: [element | state.open],
+        open_depth: state.open_depth + 1,
+        open_names: Map.update(state.open_names, name, 1, &(&1 + 1))
+    }
+  end
+
+  # Pops open elements while `fun` returns true for them, or a given count.
+  defp pop_open(%{open: [{_kind, name} = element | rest]} = state, fun)
+       when is_function(fun, 1) do
+    if fun.(element), do: state |> drop_open(name, rest) |> pop_open(fun), else: state
+  end
+
+  defp pop_open(%{open: [{_kind, name} | rest]} = state, count)
+       when is_integer(count) and count > 0 do
+    state |> drop_open(name, rest) |> pop_open(count - 1)
+  end
+
+  defp pop_open(state, _fun_or_count), do: state
+
+  defp drop_open(state, name, rest) do
+    %{
+      state
+      | open: rest,
+        open_depth: state.open_depth - 1,
+        open_names: Map.update!(state.open_names, name, &(&1 - 1))
+    }
+  end
+
+  defp context([{:foreign, root} | _]), do: {:foreign, root}
+  defp context(_open), do: :html
 
   defp rewrite_tag(%{content: content} = state, "link", attributes, lt, _name_end, tag_end) do
     if "canonical" in rel_tokens(content, attributes) do
@@ -311,6 +427,50 @@ defmodule Hexpm.Hexdocs.FileRewriter do
     end
   end
 
+  # Script content ends at the first `</script>` outside the escaped states
+  # that a `<!--` and then a `<script>` inside it put the tokenizer in.
+  defp skip_script(%{content: content} = state, pos, escape) do
+    case :binary.match(content, ["<!--", "-->", "<"], scope: {pos, byte_size(content) - pos}) do
+      {at, 4} ->
+        after_dashes = skip_dashes(content, at + 4)
+
+        cond do
+          byte_at(content, after_dashes) == ?> -> skip_script(state, after_dashes + 1, :data)
+          escape == :data -> skip_script(state, after_dashes, :escaped)
+          true -> skip_script(state, after_dashes, escape)
+        end
+
+      {at, 3} ->
+        skip_script(state, at + 3, :data)
+
+      {at, 1} ->
+        cond do
+          script_tag?(content, at + 2) and byte_at(content, at + 1) == ?/ ->
+            if escape == :double_escaped,
+              do: skip_script(state, at + 8, :escaped),
+              else: scan(state, at)
+
+          script_tag?(content, at + 1) and escape == :escaped ->
+            skip_script(state, at + 7, :double_escaped)
+
+          true ->
+            skip_script(state, at + 1, escape)
+        end
+
+      :nomatch ->
+        state
+    end
+  end
+
+  defp script_tag?(content, pos) do
+    pos + 6 <= byte_size(content) and tag_name(content, pos, pos + 6) == "script" and
+      byte_at(content, pos + 6) in [?/, ?> | @whitespace]
+  end
+
+  defp skip_dashes(content, pos) do
+    if byte_at(content, pos) == ?-, do: skip_dashes(content, pos + 1), else: pos
+  end
+
   defp skip_raw_text(%{content: content} = state, name, pos) do
     case :binary.match(content, "</", scope: {pos, byte_size(content) - pos}) do
       {at, 2} ->
@@ -423,9 +583,14 @@ defmodule Hexpm.Hexdocs.FileRewriter do
   defp byte_at(content, pos) when pos < byte_size(content), do: :binary.at(content, pos)
   defp byte_at(_content, _pos), do: nil
 
-  defp analytics() do
+  defp analytics(mode) do
     host = Application.fetch_env!(:hexpm, :docs_url) |> URI.parse() |> Map.fetch!(:host)
-    String.replace(@analytics_addition, "${DOMAIN}", host)
+    snippet = String.replace(@analytics_addition, "${DOMAIN}", host)
+
+    # XML has no attributes without a value.
+    if mode == :xml,
+      do: String.replace(snippet, "<script async defer ", ~s|<script async="" defer="" |),
+      else: snippet
   end
 
   defp copy_until(%{content: content, from: from} = state, pos) do

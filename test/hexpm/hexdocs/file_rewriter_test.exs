@@ -172,6 +172,44 @@ defmodule Hexpm.Hexdocs.FileRewriterTest do
     end
   end
 
+  test "reads script content the way the browser does" do
+    for input <- [
+          ~s|<script><!--\nconst s = "<script></script><a href='https://example.com'>";--></script>|,
+          ~s|<script><!--<script>"</script>"<a href='https://example.com'>"--></script>|,
+          ~s|<svg><foreignObject><script>const s = "<a href='https://example.com'>";</script></foreignObject></svg>|,
+          ~s|<svg><desc><style>a[title="<a href='https://example.com'>"] {}</style></desc></svg>|,
+          ~s|<svg><![CDATA[<a href="https://example.com">]]></svg>|
+        ] do
+      assert FileRewriter.run("index.html", input) == input
+    end
+
+    for {input, expected} <- [
+          {~s|<script><!--</script><a href="https://example.com">|,
+           ~s|<script><!--</script><a rel="nofollow" href="https://example.com">|},
+          {~s|<svg><style><a href="https://example.com"></style></svg>|,
+           ~s|<svg><style><a rel="nofollow" href="https://example.com"></style></svg>|},
+          {~s|<svg><p><style><a href="https://example.com"></style>|,
+           ~s|<svg><p><style><a href="https://example.com"></style>|},
+          {~s|<svg><foreignObject></foreignObject><title><a href="https://example.com"></title></svg>|,
+           ~s|<svg><foreignObject></foreignObject><title><a rel="nofollow" href="https://example.com"></title></svg>|}
+        ] do
+      assert FileRewriter.run("index.html", input) == expected
+    end
+  end
+
+  test "reads XHTML pages as XML" do
+    page =
+      ~s|<html xmlns="http://www.w3.org/1999/xhtml"><head><title/></head>| <>
+        ~s|<body><script>/*<![CDATA[*/ var a = "<a href='x'>"; /*]]>*/</script>| <>
+        ~s|<a href="https://example.com">example</a></body></html>|
+
+    rewritten = FileRewriter.run("index.xhtml", page)
+
+    assert rewritten =~ ~s|<script async="" defer="" src="https://s.localhost/js/script.js">|
+    assert rewritten =~ ~s|<a rel="nofollow" href="https://example.com">|
+    assert rewritten =~ ~s|var a = "<a href='x'>";|
+  end
+
   test "rewrites every page served as HTML" do
     input = ~s|<a href="https://example.com">example</a>|
     expected = ~s|<a rel="nofollow" href="https://example.com">example</a>|
