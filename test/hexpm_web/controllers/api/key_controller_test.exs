@@ -479,20 +479,21 @@ defmodule HexpmWeb.API.KeyControllerTest do
     end
   end
 
+  # The token's id is negative, which neither sequence hands out, so a test can
+  # insert a key with the same id without colliding with any other key.
   defp oauth_token(user, scopes) do
     client = insert(:oauth_client)
     session = insert(:oauth_session, user: user, client_id: client.client_id)
 
-    {:ok, token} =
-      Tokens.create_and_insert_for_user(
-        user,
-        client.client_id,
-        scopes,
-        "authorization_code",
-        "test",
-        user_session_id: session.id
-      )
-
-    token
+    user
+    |> Tokens.create_for_user(
+      client.client_id,
+      scopes,
+      "authorization_code",
+      "test",
+      user_session_id: session.id
+    )
+    |> Ecto.Changeset.put_change(:id, -System.unique_integer([:positive]))
+    |> Repo.insert!()
   end
 end
