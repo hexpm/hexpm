@@ -227,7 +227,16 @@ defmodule HexpmWeb.API.ReleaseController do
   defp log_tarball(repository, package, version, request_id, body_path) do
     # Use random ID instead of user-controlled request_id in key to prevent overwrites
     random_id = Base.encode16(:crypto.strong_rand_bytes(8), case: :lower)
-    filename = "#{repository}-#{package}-#{version}-#{random_id}.tar.gz"
+
+    # The name and version come from metadata that isn't validated yet, so they
+    # are only put in the key when they are a valid package name and version.
+    filename =
+      if package =~ ~r"\A[a-z][a-z0-9_]*\z" and match?({:ok, _}, Version.parse(version)) do
+        "#{repository}-#{package}-#{version}-#{random_id}.tar.gz"
+      else
+        "#{repository}-#{random_id}.tar.gz"
+      end
+
     key = Path.join(["debug", "tarballs", filename])
     # Store request_id in metadata for debugging (ignored by Store.Local)
     opts = [cache_control: "private", meta: %{"request-id" => request_id || "unknown"}]
