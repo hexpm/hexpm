@@ -182,7 +182,9 @@ defmodule Hexpm.Hexdocs.FileRewriterTest do
           ~s|<math><annotation-xml encoding="text/html"><script>const s = "<a href='https://example.com'>";</script></annotation-xml></math>|,
           ~s|<svg><font color=red><script>const s = "<a href='https://example.com'>";</script>|,
           ~s|<svg></p><script>const s = "<a href='https://example.com'>";</script>|,
-          ~s|<svg></br><textarea><a href="https://example.com">x</a></textarea>|
+          ~s|<svg></br><textarea><a href="https://example.com">x</a></textarea>|,
+          ~s|<div><svg><path d="M0 0"></div><script>const s = "<a href='https://example.com'>";</script>|,
+          ~s|<li><math><mrow></li><style>a[title="<a href='https://example.com'>"] {}</style>|
         ] do
       assert FileRewriter.run("index.html", input) == input
     end
@@ -192,6 +194,8 @@ defmodule Hexpm.Hexdocs.FileRewriterTest do
            ~s|<script><!--</script><a rel="nofollow" href="https://example.com">|},
           {~s|<svg><style><a href="https://example.com"></style></svg>|,
            ~s|<svg><style><a rel="nofollow" href="https://example.com"></style></svg>|},
+          {~s|<svg><g></g><style><a href="https://example.com"></style></svg>|,
+           ~s|<svg><g></g><style><a rel="nofollow" href="https://example.com"></style></svg>|},
           {~s|<svg><p><style><a href="https://example.com"></style>|,
            ~s|<svg><p><style><a href="https://example.com"></style>|},
           {~s|<svg><foreignObject></foreignObject><title><a href="https://example.com"></title></svg>|,

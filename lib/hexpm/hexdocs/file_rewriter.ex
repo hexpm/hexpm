@@ -14,6 +14,23 @@ defmodule Hexpm.Hexdocs.FileRewriter do
                     strike sub sup table tt u ul var)
   # SVG and MathML elements whose content is HTML.
   @integration_points %{"svg" => ~w(foreignobject desc title), "math" => ~w(mi mo mn ms mtext)}
+  # SVG and MathML element names, lowercased. An end tag with any other name
+  # inside SVG or MathML is taken as closing an HTML element around them.
+  @foreign_elements ~w(
+    a altglyph altglyphdef altglyphitem animate animatecolor animatemotion animatetransform
+    circle clippath color-profile cursor defs desc discard ellipse feblend fecolormatrix
+    fecomponenttransfer fecomposite feconvolvematrix fediffuselighting fedisplacementmap
+    fedistantlight fedropshadow feflood fefunca fefuncb fefuncg fefuncr fegaussianblur feimage
+    femerge femergenode femorphology feoffset fepointlight fespecularlighting fespotlight fetile
+    feturbulence filter font font-face font-face-format font-face-name font-face-src
+    font-face-uri foreignobject g glyph glyphref hkern image line lineargradient marker mask
+    metadata missing-glyph mpath path pattern polygon polyline radialgradient rect script set
+    stop style svg switch symbol text textpath title tref tspan use view vkern
+    math maction annotation annotation-xml menclose merror mfenced mfrac mglyph mi malignmark
+    mlabeledtr mlongdiv mmultiscripts mn mo mover mpadded mphantom mprescripts mroot mrow ms
+    mscarries mscarry msgroup msline mspace msqrt msrow mstack mstyle msub msubsup msup mtable
+    mtd mtext mtr munder munderover none semantics
+  )
   # Browsers stop nesting elements at about this depth, and it bounds the
   # tracked elements on a page of nothing but nested ones.
   @max_open 512
@@ -336,17 +353,20 @@ defmodule Hexpm.Hexdocs.FileRewriter do
   defp close_element(%{mode: :xml} = state, _name), do: state
 
   # Closes the innermost open element with this name and everything inside it.
-  # A </p> or </br> inside SVG or MathML closes every open SVG and MathML
-  # element, as the breakout start tags do.
+  # Inside SVG or MathML, an end tag that names no SVG or MathML element, such
+  # as a </div> around an <svg> that was never closed, closes every open SVG
+  # and MathML element. The browser does the same whenever that HTML element is
+  # open, and ignores the end tag when it isn't, a case where this only skips
+  # text the browser reads as markup.
   defp close_element(state, name) do
     cond do
-      name in ["p", "br"] and match?({:foreign, _root}, context(state.open)) ->
-        pop_open(state, fn {kind, _name} -> kind == :foreign end)
-
       Map.get(state.open_names, name, 0) > 0 ->
         state
         |> pop_open(fn {_kind, open_name} -> open_name != name end)
         |> pop_open(1)
+
+      name not in @foreign_elements and match?({:foreign, _root}, context(state.open)) ->
+        pop_open(state, fn {kind, _name} -> kind == :foreign end)
 
       true ->
         state
