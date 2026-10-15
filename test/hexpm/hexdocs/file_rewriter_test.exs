@@ -180,7 +180,8 @@ defmodule Hexpm.Hexdocs.FileRewriterTest do
           ~s|<svg><desc><style>a[title="<a href='https://example.com'>"] {}</style></desc></svg>|,
           ~s|<svg><![CDATA[<a href="https://example.com">]]></svg>|,
           ~s|<svg><title><![CDATA[> <a href="https://example.com">]]></title></svg>|,
-          ~s|<math><annotation-xml encoding="text/html"><script>const s = "<a href='https://example.com'>";</script></annotation-xml></math>|
+          ~s|<math><annotation-xml encoding="text/html"><script>const s = "<a href='https://example.com'>";</script></annotation-xml></math>|,
+          ~s|<svg><font color=red><script>const s = "<a href='https://example.com'>";</script>|
         ] do
       assert FileRewriter.run("index.html", input) == input
     end
@@ -220,6 +221,13 @@ defmodule Hexpm.Hexdocs.FileRewriterTest do
            ~s|<link rel="alternate" href="https://example.com/"/>|}
         ] do
       assert FileRewriter.run("index.xhtml", input) == expected
+    end
+  end
+
+  test "ends XHTML comments and processing instructions where XML does" do
+    for skipped <- [~s|<!--> </head> -->|, ~s|<?p > </head> ?>|] do
+      rewritten = FileRewriter.run("index.xhtml", "<head>#{skipped}</head>")
+      assert String.starts_with?(rewritten, "<head>#{skipped}<script async")
     end
   end
 

@@ -119,6 +119,9 @@ defmodule Hexpm.Hexdocs.FileRewriter do
       "!DOCTYPE" <> _ when state.mode == :xml ->
         xml_doctype(state, lt + 9)
 
+      "?" <> _ when state.mode == :xml ->
+        processing_instruction(state, lt + 2)
+
       "/>" <> _ ->
         scan(state, lt + 3)
 
@@ -136,19 +139,29 @@ defmodule Hexpm.Hexdocs.FileRewriter do
     end
   end
 
-  defp comment(%{content: content} = state, pos) do
+  # An XML comment ends only at `-->`.
+  defp comment(%{content: content, mode: mode} = state, pos) do
+    ends = if mode == :xml, do: ["-->"], else: ["-->", "--!>"]
+
     case binary_part(content, pos, byte_size(content) - pos) do
-      ">" <> _ ->
+      ">" <> _ when mode == :html ->
         scan(state, pos + 1)
 
-      "->" <> _ ->
+      "->" <> _ when mode == :html ->
         scan(state, pos + 2)
 
       _ ->
-        case :binary.match(content, ["-->", "--!>"], scope: {pos, byte_size(content) - pos}) do
+        case :binary.match(content, ends, scope: {pos, byte_size(content) - pos}) do
           {at, length} -> scan(state, at + length)
           :nomatch -> state
         end
+    end
+  end
+
+  defp processing_instruction(%{content: content} = state, pos) do
+    case :binary.match(content, "?>", scope: {pos, byte_size(content) - pos}) do
+      {at, 2} -> scan(state, at + 2)
+      :nomatch -> state
     end
   end
 
@@ -261,18 +274,20 @@ defmodule Hexpm.Hexdocs.FileRewriter do
   # raw text element is text or markup.
   defp open_element(state, name, attributes, self_closing?, tag_end) do
     case context(state.open) do
-      {:foreign, _root} when name in @breakout_tags ->
-        state
-        |> pop_open(fn {kind, _name} -> kind == :foreign end)
-        |> scan(tag_end)
-
       {:foreign, root} ->
-        if not self_closing? and integration_point?(state.content, root, name, attributes) do
-          state
-          |> push_open({:integration, name})
-          |> scan(tag_end)
-        else
-          scan(state, tag_end)
+        cond do
+          breakout?(name, attributes) ->
+            state
+            |> pop_open(fn {kind, _name} -> kind == :foreign end)
+            |> scan(tag_end)
+
+          not self_closing? and integration_point?(state.content, root, name, attributes) ->
+            state
+            |> push_open({:integration, name})
+            |> scan(tag_end)
+
+          true ->
+            scan(state, tag_end)
         end
 
       :html ->
@@ -305,6 +320,13 @@ defmodule Hexpm.Hexdocs.FileRewriter do
 
   defp integration_point?(_content, root, name, _attributes),
     do: name in @integration_points[root]
+
+  # A <font> breaks out only when it has one of these attributes.
+  defp breakout?("font", attributes) do
+    Enum.any?(attributes, fn {name, _name_end, _value} -> name in ["color", "face", "size"] end)
+  end
+
+  defp breakout?(name, _attributes), do: name in @breakout_tags
 
   defp escape_xml("&"), do: "&amp;"
   defp escape_xml("<"), do: "&lt;"
@@ -579,11 +601,12 @@ defmodule Hexpm.Hexdocs.FileRewriter do
     content |> binary_part(start, stop - start) |> String.downcase(:ascii)
   end
 
-  # The first `href`, `rel` and `encoding` attributes of a tag as `{name, name_end, value}`,
-  # where the value is nil for an attribute without one, or the value's bounds
-  # and the bounds of the value with its quotes. Returns the position after the
-  # tag's `>` and whether the tag ends in `/>`, or `:eof` for a tag the page
-  # ends inside, which the browser drops.
+  # The first of each attribute the rewriter reads (href, rel, encoding, and
+  # color, face and size for <font>) as `{name, name_end, value}`, where the
+  # value is nil for an attribute without one, or the value's bounds and the
+  # bounds of the value with its quotes. Returns the position after the tag's
+  # `>` and whether the tag ends in `/>`, or `:eof` for a tag the page ends
+  # inside, which the browser drops.
   defp attributes(content, pos, acc) do
     case byte_at(content, pos) do
       nil -> :eof
@@ -642,7 +665,8 @@ defmodule Hexpm.Hexdocs.FileRewriter do
     end
   end
 
-  defp keep_attribute(acc, name, name_end, value) when name in ["href", "rel", "encoding"] do
+  defp keep_attribute(acc, name, name_end, value)
+       when name in ["href", "rel", "encoding", "color", "face", "size"] do
     if List.keymember?(acc, name, 0), do: acc, else: [{name, name_end, value} | acc]
   end
 
