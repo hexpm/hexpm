@@ -178,7 +178,9 @@ defmodule Hexpm.Hexdocs.FileRewriterTest do
           ~s|<script><!--<script>"</script>"<a href='https://example.com'>"--></script>|,
           ~s|<svg><foreignObject><script>const s = "<a href='https://example.com'>";</script></foreignObject></svg>|,
           ~s|<svg><desc><style>a[title="<a href='https://example.com'>"] {}</style></desc></svg>|,
-          ~s|<svg><![CDATA[<a href="https://example.com">]]></svg>|
+          ~s|<svg><![CDATA[<a href="https://example.com">]]></svg>|,
+          ~s|<svg><title><![CDATA[> <a href="https://example.com">]]></title></svg>|,
+          ~s|<math><annotation-xml encoding="text/html"><script>const s = "<a href='https://example.com'>";</script></annotation-xml></math>|
         ] do
       assert FileRewriter.run("index.html", input) == input
     end
@@ -208,6 +210,27 @@ defmodule Hexpm.Hexdocs.FileRewriterTest do
     assert rewritten =~ ~s|<script async="" defer="" src="https://s.localhost/js/script.js">|
     assert rewritten =~ ~s|<a rel="nofollow" href="https://example.com">|
     assert rewritten =~ ~s|var a = "<a href='x'>";|
+  end
+
+  test "takes canonical out of the rel of XHTML link elements" do
+    for {input, expected} <- [
+          {~s|<link rel="canonical" href="https://example.com/"></link>|,
+           ~s|<link rel="" href="https://example.com/"></link>|},
+          {~s|<link rel="alternate canonical" href="https://example.com/"/>|,
+           ~s|<link rel="alternate" href="https://example.com/"/>|}
+        ] do
+      assert FileRewriter.run("index.xhtml", input) == expected
+    end
+  end
+
+  test "skips an XHTML doctype with an internal subset" do
+    doctype =
+      ~s|<!DOCTYPE html [<!ENTITY e "x > <a href='https://example.com'>x</a>"> <!-- ] > -->]>|
+
+    link = ~s|<a href="https://example.com">example</a>|
+
+    assert FileRewriter.run("index.xhtml", doctype <> link) ==
+             doctype <> ~s|<a rel="nofollow" href="https://example.com">example</a>|
   end
 
   test "rewrites every page served as HTML" do

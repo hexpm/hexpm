@@ -116,6 +116,9 @@ defmodule Hexpm.Hexdocs.FileRewriter do
       "![CDATA[" <> _ ->
         if cdata?(state), do: cdata(state, lt + 9), else: bogus_comment(state, lt + 1)
 
+      "!DOCTYPE" <> _ when state.mode == :xml ->
+        xml_doctype(state, lt + 9)
+
       "/>" <> _ ->
         scan(state, lt + 3)
 
@@ -149,12 +152,56 @@ defmodule Hexpm.Hexdocs.FileRewriter do
     end
   end
 
+  # CDATA sections exist in XML and inside SVG and MathML elements, including
+  # the integration points, which are SVG and MathML elements themselves.
   defp cdata?(%{mode: :xml}), do: true
-  defp cdata?(state), do: match?({:foreign, _}, context(state.open))
+  defp cdata?(state), do: state.open != []
 
   defp cdata(%{content: content} = state, pos) do
     case :binary.match(content, "]]>", scope: {pos, byte_size(content) - pos}) do
       {at, 3} -> scan(state, at + 3)
+      :nomatch -> state
+    end
+  end
+
+  # An XML doctype ends at the first `>` outside quotes and outside its internal
+  # subset, whose declarations can hold quoted `>` and comments.
+  defp xml_doctype(%{content: content} = state, pos) do
+    case :binary.match(content, [">", "[", "\"", "'"], scope: {pos, byte_size(content) - pos}) do
+      {at, 1} ->
+        case :binary.at(content, at) do
+          ?> -> scan(state, at + 1)
+          ?[ -> internal_subset(state, at + 1)
+          quote -> after_quote(state, at, quote, &xml_doctype/2)
+        end
+
+      :nomatch ->
+        state
+    end
+  end
+
+  defp internal_subset(%{content: content} = state, pos) do
+    case :binary.match(content, ["]", "\"", "'", "<!--"], scope: {pos, byte_size(content) - pos}) do
+      {at, 4} ->
+        case :binary.match(content, "-->", scope: {at + 4, byte_size(content) - at - 4}) do
+          {stop, 3} -> internal_subset(state, stop + 3)
+          :nomatch -> state
+        end
+
+      {at, 1} ->
+        case :binary.at(content, at) do
+          ?] -> xml_doctype(state, at + 1)
+          quote -> after_quote(state, at, quote, &internal_subset/2)
+        end
+
+      :nomatch ->
+        state
+    end
+  end
+
+  defp after_quote(%{content: content} = state, at, quote, continue) do
+    case :binary.match(content, <<quote>>, scope: {at + 1, byte_size(content) - at - 1}) do
+      {stop, 1} -> continue.(state, stop + 1)
       :nomatch -> state
     end
   end
@@ -197,7 +244,7 @@ defmodule Hexpm.Hexdocs.FileRewriter do
       {:ok, attributes, tag_end, self_closing?} ->
         state
         |> rewrite_tag(name, attributes, lt, name_end, tag_end)
-        |> open_element(name, self_closing?, tag_end)
+        |> open_element(name, attributes, self_closing?, tag_end)
 
       :eof ->
         state
@@ -205,14 +252,14 @@ defmodule Hexpm.Hexdocs.FileRewriter do
   end
 
   # XHTML is XML, where no element holds raw text.
-  defp open_element(%{mode: :xml} = state, _name, _self_closing?, tag_end) do
+  defp open_element(%{mode: :xml} = state, _name, _attributes, _self_closing?, tag_end) do
     scan(state, tag_end)
   end
 
   # Only SVG and MathML roots and the integration points inside them are
   # tracked, since they decide whether the content of an element named like a
   # raw text element is text or markup.
-  defp open_element(state, name, self_closing?, tag_end) do
+  defp open_element(state, name, attributes, self_closing?, tag_end) do
     case context(state.open) do
       {:foreign, _root} when name in @breakout_tags ->
         state
@@ -220,7 +267,7 @@ defmodule Hexpm.Hexdocs.FileRewriter do
         |> scan(tag_end)
 
       {:foreign, root} ->
-        if not self_closing? and name in @integration_points[root] do
+        if not self_closing? and integration_point?(state.content, root, name, attributes) do
           state
           |> push_open({:integration, name})
           |> scan(tag_end)
@@ -249,6 +296,19 @@ defmodule Hexpm.Hexdocs.FileRewriter do
         end
     end
   end
+
+  defp integration_point?(content, "math", "annotation-xml", attributes) do
+    encoding = attribute_value(content, attributes, "encoding") || ""
+    encoding = encoding |> decode_references() |> String.downcase(:ascii)
+    encoding in ["text/html", "application/xhtml+xml"]
+  end
+
+  defp integration_point?(_content, root, name, _attributes),
+    do: name in @integration_points[root]
+
+  defp escape_xml("&"), do: "&amp;"
+  defp escape_xml("<"), do: "&lt;"
+  defp escape_xml("\""), do: "&quot;"
 
   defp close_element(%{mode: :xml} = state, _name), do: state
 
@@ -300,12 +360,31 @@ defmodule Hexpm.Hexdocs.FileRewriter do
   defp context(_open), do: :html
 
   defp rewrite_tag(%{content: content} = state, "link", attributes, lt, _name_end, tag_end) do
-    if "canonical" in rel_tokens(content, attributes) do
-      state
-      |> copy_until(lt)
-      |> Map.put(:from, skip_whitespace(content, tag_end))
-    else
-      state
+    cond do
+      "canonical" not in rel_tokens(content, attributes) ->
+        state
+
+      # Removing an XML element would leave its end tag behind, so the
+      # canonical keyword is taken out of its rel instead.
+      state.mode == :xml ->
+        {"rel", _rel_name_end, {_start, _stop, region_start, region_end}} =
+          List.keyfind(attributes, "rel", 0)
+
+        rel =
+          rel_tokens(content, attributes)
+          |> Enum.reject(&(&1 == "canonical"))
+          |> Enum.join(" ")
+          |> String.replace(["&", "<", "\""], &escape_xml/1)
+
+        state
+        |> copy_until(region_start)
+        |> put([?", rel, ?"])
+        |> Map.put(:from, region_end)
+
+      true ->
+        state
+        |> copy_until(lt)
+        |> Map.put(:from, skip_whitespace(content, tag_end))
     end
   end
 
@@ -500,7 +579,7 @@ defmodule Hexpm.Hexdocs.FileRewriter do
     content |> binary_part(start, stop - start) |> String.downcase(:ascii)
   end
 
-  # The first `href` and `rel` attributes of a tag as `{name, name_end, value}`,
+  # The first `href`, `rel` and `encoding` attributes of a tag as `{name, name_end, value}`,
   # where the value is nil for an attribute without one, or the value's bounds
   # and the bounds of the value with its quotes. Returns the position after the
   # tag's `>` and whether the tag ends in `/>`, or `:eof` for a tag the page
@@ -563,7 +642,7 @@ defmodule Hexpm.Hexdocs.FileRewriter do
     end
   end
 
-  defp keep_attribute(acc, name, name_end, value) when name in ["href", "rel"] do
+  defp keep_attribute(acc, name, name_end, value) when name in ["href", "rel", "encoding"] do
     if List.keymember?(acc, name, 0), do: acc, else: [{name, name_end, value} | acc]
   end
 
