@@ -30,12 +30,23 @@ defmodule Hexpm.Repository.Requirement do
     |> validate_length(:requirement, count: :bytes, max: 255)
     |> put_assoc(:dependency, dependencies[{repository, params["name"]}])
     |> validate_required(~w(name app requirement optional)a)
-    |> validate_required(
-      :dependency,
-      message: "package does not exist in repository \"#{repository}\""
-    )
-    |> validate_requirement(:requirement)
     |> validate_repository(:repository, repository: package.repository)
+    |> validate_dependency(repository)
+    |> validate_requirement(:requirement)
+  end
+
+  # Dependencies are only looked up in the repositories validate_repository/3
+  # allows, so any other repository gets the repository error only
+  defp validate_dependency(changeset, repository) do
+    if Keyword.has_key?(changeset.errors, :repository) do
+      changeset
+    else
+      validate_required(
+        changeset,
+        :dependency,
+        message: "package does not exist in repository \"#{repository}\""
+      )
+    end
   end
 
   @max_requirements 500
@@ -45,7 +56,7 @@ defmodule Hexpm.Repository.Requirement do
 
     case validate_requirements_list(requirements) do
       :ok ->
-        dependencies = preload_dependencies(requirements)
+        dependencies = preload_dependencies(requirements, package.repository)
 
         cast_assoc(
           release_changeset,
@@ -80,8 +91,10 @@ defmodule Hexpm.Repository.Requirement do
 
   defp validate_requirements_list(_requirements), do: :ok
 
-  defp preload_dependencies(requirements) do
-    names = requirement_names(requirements)
+  # Releases can only depend on packages in hexpm and their own repository
+  # (validate_repository/3), so no other repository is searched
+  defp preload_dependencies(requirements, repository) do
+    names = requirement_names(requirements, ["hexpm", repository.name])
 
     from(
       p in Package,
@@ -105,13 +118,13 @@ defmodule Hexpm.Repository.Requirement do
     |> Map.new()
   end
 
-  defp requirement_names(requirements) when is_list(requirements) do
+  defp requirement_names(requirements, repositories) when is_list(requirements) do
     Enum.flat_map(requirements, fn
       req when is_map(req) ->
         name = req["name"]
         repository = req["repository"] || "hexpm"
 
-        if is_binary(name) and is_binary(repository) do
+        if is_binary(name) and repository in repositories do
           [{repository, name}]
         else
           []
@@ -122,5 +135,5 @@ defmodule Hexpm.Repository.Requirement do
     end)
   end
 
-  defp requirement_names(_requirements), do: []
+  defp requirement_names(_requirements, _repositories), do: []
 end

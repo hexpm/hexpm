@@ -1122,6 +1122,41 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
                "package does not exist in repository \"hexpm\""
     end
 
+    test "create releases with requirements in another repository", %{user: user} do
+      repository = insert(:repository)
+      package = insert(:package, repository_id: repository.id)
+
+      for name <- [package.name, "nonexistant_package"] do
+        reqs = [
+          %{
+            name: name,
+            repository: repository.name,
+            requirement: "~> 1.0",
+            app: "app",
+            optional: false
+          }
+        ]
+
+        meta = %{
+          name: Fake.sequence(:package),
+          version: "0.0.1",
+          requirements: reqs,
+          description: "description"
+        }
+
+        conn =
+          build_conn()
+          |> put_req_header("content-type", "application/octet-stream")
+          |> put_req_header("authorization", key_for(user))
+          |> post("/api/publish", create_tar(meta))
+
+        result = json_response(conn, 422)
+
+        assert result["errors"]["requirements"][name] ==
+                 ~s(dependencies can only belong to public repository "hexpm", got: "#{repository.name}")
+      end
+    end
+
     for app <- [
           "app\n",
           "app ",

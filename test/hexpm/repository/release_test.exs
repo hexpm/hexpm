@@ -337,7 +337,7 @@ defmodule Hexpm.Repository.ReleaseTest do
     packages: [_, package2, package3]
   } do
     repository = insert(:repository)
-    package1_repo = insert(:package, repository_id: repository.id)
+    package1_repo = insert(:package, repository_id: repository.id, repository: repository)
     package2_repo = insert(:package, repository_id: repository.id, repository: repository)
 
     Release.build(
@@ -402,8 +402,8 @@ defmodule Hexpm.Repository.ReleaseTest do
   } do
     repository1 = insert(:repository)
     repository2 = insert(:repository)
-    package1_repo = insert(:package, repository_id: repository1.id)
-    package2_repo = insert(:package, repository_id: repository2.id)
+    package1_repo = insert(:package, repository_id: repository1.id, repository: repository1)
+    package2_repo = insert(:package, repository_id: repository2.id, repository: repository2)
 
     package3_repo = insert(:package, repository_id: repository2.id, repository: repository2)
 
@@ -538,6 +538,38 @@ defmodule Hexpm.Repository.ReleaseTest do
 
     assert %{requirements: %{dependency: "package does not exist" <> _}} =
              Release.build(package3_repo, publisher, meta, "", "") |> errors_on()
+  end
+
+  test "create release gives deps from other repositories the same error whether they exist or not",
+       %{publisher: publisher} do
+    repository = insert(:repository)
+    other_repository = insert(:repository)
+    package = insert(:package, repository_id: repository.id, repository: repository)
+    other_package = insert(:package, repository_id: other_repository.id)
+
+    message =
+      "dependencies can only belong to public repository \"hexpm\" or current repository " <>
+        "#{inspect(repository.name)}, got: #{inspect(other_repository.name)}"
+
+    for name <- [other_package.name, "nonexistant_package"] do
+      meta =
+        rel_meta(%{
+          requirements: [
+            %{
+              name: name,
+              repository: other_repository.name,
+              app: name,
+              requirement: "~> 0.0.1",
+              optional: false
+            }
+          ],
+          app: package.name,
+          version: "0.0.1"
+        })
+
+      assert %{requirements: %{repository: message}} ==
+               Release.build(package, publisher, meta, "", "") |> errors_on()
+    end
   end
 
   test "validate release", %{publisher: publisher, packages: [_, package2, package3]} do
