@@ -46,15 +46,14 @@ end
 
 You can generate repository authentication keys manually with the `mix hex.organization key` task. This can then be used to fetch packages on your CI servers without requiring manual authentication with username and password.
 
-Run the following command on your local machine:
+Run the following command on your local machine after signing in with `mix hex.user auth`:
 
 ```nohighlight
 $ mix hex.organization key acme generate
-Passphrase: ...
 126d49fb3014bd26457471ebae97c625
 ```
 
-You can also generate organizations keys on your organization's [dashboard](/dashboard).
+You can also generate organizations keys on your organization's [dashboard](/dashboard). An API key, such as one in `HEX_API_KEY`, can't generate another key.
 
 Copy the returned hash and authenticate with it on your build server:
 

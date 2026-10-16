@@ -7,7 +7,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
   alias Hexpm.OAuth.Tokens
 
   setup do
-    eric = insert(:user)
+    eric = insert(:user_with_tfa)
     other = insert(:user)
     organization = insert(:organization)
     unowned_organization = insert(:organization)
@@ -125,7 +125,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
       conn =
         build_conn()
         |> put_req_header("content-type", "application/json")
-        |> put_req_header("authorization", key_for(c.eric))
+        |> test_oauth_login(c.eric)
         |> post("/api/keys", body)
 
       assert conn.status == 201
@@ -144,7 +144,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
       conn =
         build_conn()
         |> put_req_header("content-type", "application/json")
-        |> put_req_header("authorization", key_for(c.eric))
+        |> test_oauth_login(c.eric)
         |> post("/api/keys", %{name: codepoints_string(256)})
 
       assert json_response(conn, 422)["errors"]["name"] == "should be at most 255 character(s)"
@@ -153,7 +153,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
       conn =
         build_conn()
         |> put_req_header("content-type", "application/json")
-        |> put_req_header("authorization", key_for(c.eric))
+        |> test_oauth_login(c.eric)
         |> post("/api/keys", %{name: codepoints_string(255)})
 
       assert conn.status == 201
@@ -180,7 +180,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
 
       build_conn()
       |> put_req_header("content-type", "application/json")
-      |> put_req_header("authorization", key_for(c.eric))
+      |> test_oauth_login(c.eric)
       |> post("/api/keys", body)
       |> json_response(201)
 
@@ -189,23 +189,43 @@ defmodule HexpmWeb.API.KeyControllerTest do
       assert [%KeyPermission{domain: "repository", resource: ^repo_name}] = key.permissions
     end
 
-    test "create repository key with api key", c do
+    test "an API key cannot create a key", c do
       key = Key.build(c.eric, %{name: "computer"}) |> Repo.insert!()
 
-      body = %{
-        name: "macbook",
-        permissions: [%{domain: "repository", resource: c.organization.name}]
-      }
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/json")
+        |> put_req_header("authorization", key.user_secret)
+        |> post("/api/keys", %{name: "macbook"})
 
-      build_conn()
-      |> put_req_header("content-type", "application/json")
-      |> put_req_header("authorization", key.user_secret)
-      |> post("/api/keys", body)
-      |> json_response(201)
+      assert json_response(conn, 403)["message"] =~ "API keys cannot create API keys"
+      refute Repo.one(Key.get(c.eric, "macbook"))
+      refute Repo.exists?(from(a in AuditLog, where: a.action == "key.generate"))
+    end
 
-      key = Repo.one!(Key.get(c.eric, "macbook"))
-      repo_name = c.organization.name
-      assert [%KeyPermission{domain: "repository", resource: ^repo_name}] = key.permissions
+    test "a token exchanged for an API key cannot create a key", c do
+      key = Key.build(c.eric, %{name: "computer"}) |> Repo.insert!()
+      client = insert(:oauth_client)
+
+      %{"access_token" => access_token} =
+        build_conn()
+        |> post("/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => key.user_secret,
+          "scope" => "api"
+        })
+        |> json_response(200)
+
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/json")
+        |> put_req_header("authorization", "Bearer #{access_token}")
+        |> put_req_header("x-hex-otp", TFA.time_based_token(c.eric.tfa.secret))
+        |> post("/api/keys", %{name: "macbook"})
+
+      assert json_response(conn, 403)["message"] =~ "API keys cannot create API keys"
+      refute Repo.one(Key.get(c.eric, "macbook"))
     end
 
     test "create repository key for unknown repository is not allowed", c do
@@ -216,7 +236,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
 
       build_conn()
       |> put_req_header("content-type", "application/json")
-      |> put_req_header("authorization", key_for(c.eric))
+      |> test_oauth_login(c.eric)
       |> post("/api/keys", body)
       |> json_response(422)
 
@@ -235,7 +255,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
       conn =
         build_conn()
         |> put_req_header("content-type", "application/json")
-        |> put_req_header("authorization", key_for(c.eric))
+        |> test_oauth_login(c.eric)
         |> post("/api/keys", body)
 
       assert conn.status == 201
@@ -257,7 +277,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
 
       build_conn()
       |> put_req_header("content-type", "application/json")
-      |> put_req_header("authorization", key_for(c.eric))
+      |> test_oauth_login(c.eric)
       |> post("/api/keys", body)
       |> json_response(422)
 
@@ -269,7 +289,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
 
       build_conn()
       |> put_req_header("content-type", "application/json")
-      |> put_req_header("authorization", key_for(c.eric))
+      |> test_oauth_login(c.eric)
       |> post("/api/keys", body)
       |> json_response(201)
 
@@ -285,11 +305,40 @@ defmodule HexpmWeb.API.KeyControllerTest do
 
       build_conn()
       |> put_req_header("content-type", "application/json")
-      |> put_req_header("authorization", key_for(c.eric))
+      |> test_oauth_login(c.eric)
       |> post("/api/keys", body)
       |> json_response(422)
 
       refute Repo.one(Key.get(c.eric, "macbook"))
+    end
+  end
+
+  describe "POST /api/orgs/:organization/keys" do
+    test "create organization key", c do
+      admin = insert(:user_with_tfa)
+      insert(:organization_user, organization: c.organization, user: admin, role: "admin")
+
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/json")
+        |> test_oauth_login(admin)
+        |> post("/api/orgs/#{c.organization.name}/keys", %{name: "ci"})
+
+      assert json_response(conn, 201)["name"] == "ci"
+      assert Repo.one!(Key.get(c.organization, "ci"))
+    end
+
+    test "an organization key cannot create a key", c do
+      org_key = Key.build(c.organization, %{name: "computer"}) |> Repo.insert!()
+
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/json")
+        |> put_req_header("authorization", org_key.user_secret)
+        |> post("/api/orgs/#{c.organization.name}/keys", %{name: "ci"})
+
+      assert json_response(conn, 403)["message"] =~ "API keys cannot create API keys"
+      refute Repo.one(Key.get(c.organization, "ci"))
     end
   end
 
