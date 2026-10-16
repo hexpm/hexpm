@@ -572,6 +572,34 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     end
   end
 
+  describe "members tab visibility" do
+    test "marks listed members and has no switch for anyone's listing", %{
+      user: user,
+      organization: organization
+    } do
+      mock_customer(organization)
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+      shown = insert(:user)
+      insert(:organization_user, organization: organization, user: shown, public: true)
+
+      html =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/orgs/#{organization.name}/members")
+        |> html_response(200)
+
+      document = LazyHTML.from_document(html)
+
+      assert document
+             |> LazyHTML.query(~s(input[name="organization_user[public]"]))
+             |> Enum.to_list() ==
+               []
+
+      assert html =~ ~s(href="/dashboard/profile")
+      assert html =~ "Public"
+    end
+  end
+
   describe "POST /dashboard/orgs/:dashboard_org" do
     test "add member to organization", %{user: user, organization: organization} do
       stub(Hexpm.Billing.Mock, :get, fn token, _opts ->

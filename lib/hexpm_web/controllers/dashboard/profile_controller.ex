@@ -25,13 +25,43 @@ defmodule HexpmWeb.Dashboard.ProfileController do
     end
   end
 
+  def update_membership_visibility(conn, %{
+        "organization" => name,
+        "organization_user" => %{"public" => _} = params
+      }) do
+    user = conn.assigns.current_user
+
+    with %Organization{} = organization <- Organizations.get(name),
+         {:ok, organization_user} <-
+           Organizations.change_visibility(organization, user, params, audit: audit_data(conn)) do
+      message =
+        if organization_user.public,
+          do: "The #{name} organization's profile lists you as a member.",
+          else: "The #{name} organization's profile no longer lists you as a member."
+
+      conn
+      |> put_flash(:info, message)
+      |> redirect(to: ~p"/dashboard/profile")
+    else
+      {:error, %Ecto.Changeset{}} ->
+        conn
+        |> put_status(400)
+        |> put_flash(:error, "Could not change whether #{name} lists you as a member.")
+        |> render_index(User.update_profile(user, %{}))
+
+      _not_member ->
+        not_found(conn)
+    end
+  end
+
   defp render_index(conn, changeset) do
     render(
       conn,
       "index.html",
       title: "Dashboard - Public profile",
       container: "flex-1 flex flex-col",
-      changeset: changeset
+      changeset: changeset,
+      memberships: Organizations.memberships(conn.assigns.current_user)
     )
   end
 

@@ -240,6 +240,7 @@ defmodule HexpmWeb.Router do
     get "/users/:username/stats", UserController, :stats
 
     get "/orgs/:username", UserController, :show
+    get "/orgs/:username/members", UserController, :members
 
     get "/docs", DocsController, :index
     get "/docs/usage", DocsController, :usage
@@ -360,6 +361,8 @@ defmodule HexpmWeb.Router do
 
     get "/profile", ProfileController, :index
     post "/profile", ProfileController, :update
+
+    post "/profile/organizations/:organization", ProfileController, :update_membership_visibility
 
     get "/security", SecurityController, :index, as: :dashboard_security
 

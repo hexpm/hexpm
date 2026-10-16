@@ -22,6 +22,34 @@ defmodule Hexpm.Accounts.Organizations do
     |> Repo.preload(preload)
   end
 
+  @doc "The account's memberships with their organizations, ordered by organization name."
+  def memberships(user) do
+    from(organization_user in OrganizationUser,
+      join: organization in assoc(organization_user, :organization),
+      where: organization_user.user_id == ^user.id,
+      order_by: organization.name,
+      preload: [organization: organization]
+    )
+    |> Repo.all()
+  end
+
+  @doc """
+  The members who chose to be listed on the organization's public profile,
+  leaving out accounts whose own profile isn't public.
+  """
+  def public_members(organization) do
+    from(user in User,
+      join: organization_user in assoc(user, :organization_users),
+      where: organization_user.organization_id == ^organization.id,
+      where: organization_user.public,
+      where: is_nil(user.deactivated_at),
+      order_by: user.username,
+      preload: :emails
+    )
+    |> Repo.all()
+    |> Enum.filter(&User.public_profile?/1)
+  end
+
   def all_admin_notifiable_emails(opts \\ []) do
     Organization.all_admin_notifiable_emails(opts)
     |> Repo.all()
@@ -398,6 +426,33 @@ defmodule Hexpm.Accounts.Organizations do
 
       {:error, :organization_user, changeset, _} ->
         {:error, changeset}
+    end
+  end
+
+  @doc """
+  Lists or unlists `user`'s own membership on the organization's public
+  profile.
+  """
+  def change_visibility(organization, user, params, audit: audit_data) do
+    case Repo.get_by(OrganizationUser, organization_id: organization.id, user_id: user.id) do
+      nil ->
+        {:error, :not_member}
+
+      organization_user ->
+        changeset = OrganizationUser.visibility_changeset(organization_user, params)
+
+        Multi.new()
+        |> Multi.update(:organization_user, changeset)
+        |> audit(
+          audit_data,
+          "organization.member.visibility",
+          &{organization, user, &1.organization_user.public}
+        )
+        |> Repo.transaction()
+        |> case do
+          {:ok, %{organization_user: organization_user}} -> {:ok, organization_user}
+          {:error, :organization_user, changeset, _changes} -> {:error, changeset}
+        end
     end
   end
 

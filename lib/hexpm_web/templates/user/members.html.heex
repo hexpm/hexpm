@@ -1,0 +1,63 @@
+<div class="bg-grey-50 dark:bg-grey-950 min-h-screen py-8">
+  <div class="max-w-7xl mx-auto px-4">
+    <div class="flex flex-col gap-10 lg:flex-row">
+      <%!-- Left Sidebar --%>
+      <div class="w-full lg:w-[25%] flex-shrink-0">
+        <.user_sidebar
+          user={@user}
+          gravatar_email={@gravatar_email}
+          public_email={@public_email}
+          total_packages={@total_packages}
+          total_downloads={@total_downloads}
+        />
+      </div>
+
+      <%!-- Right Content --%>
+      <div class="w-full lg:w-[75%]">
+        <.profile_tabs user={@user} active={:members} />
+
+        <h1 class="text-grey-900 dark:text-white text-xl font-semibold mb-6">Members</h1>
+
+        <%= if @members == [] do %>
+          <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg py-32 flex flex-col items-center justify-center text-center px-4">
+            <h3 class="text-grey-900 dark:text-white text-xl font-semibold mb-2">
+              No Listed Members
+            </h3>
+            <p class="text-grey-500 dark:text-grey-300 text-base">
+              Members of {@user.username} choose whether this page lists them.
+            </p>
+          </div>
+        <% else %>
+          <ul
+            id="organization-members"
+            class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+          >
+            <li :for={member <- @members}>
+              <a
+                href={~p"/users/#{member}"}
+                class="flex items-center gap-3 bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-4 hover:border-primary-600 dark:hover:border-primary-300 transition-colors"
+              >
+                <img
+                  src={ViewHelpers.gravatar_url(User.email(member, :gravatar), :small)}
+                  alt={member.username}
+                  class="w-10 h-10 rounded-full flex-shrink-0"
+                />
+                <div class="min-w-0">
+                  <p class="text-sm font-medium text-grey-900 dark:text-white truncate">
+                    {member.username}
+                  </p>
+                  <p
+                    :if={member.full_name}
+                    class="text-xs text-grey-500 dark:text-grey-300 truncate"
+                  >
+                    {member.full_name}
+                  </p>
+                </div>
+              </a>
+            </li>
+          </ul>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

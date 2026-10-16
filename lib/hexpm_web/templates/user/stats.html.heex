@@ -14,22 +14,7 @@
 
       <%!-- Right Content --%>
       <div class="w-full lg:w-[75%]">
-        <%!-- Tab Nav --%>
-        <div class="flex gap-1 mb-6 border-b border-grey-200 dark:border-grey-800">
-          <a
-            href={~p"/users/#{@user.username}"}
-            class="px-4 py-2.5 text-sm font-medium text-grey-500 dark:text-grey-300 hover:text-grey-900 dark:hover:text-grey-100 transition-colors"
-          >
-            Packages
-          </a>
-          <a
-            href={~p"/users/#{@user.username}/stats"}
-            class="px-4 py-2.5 text-sm font-medium text-grey-900 dark:text-white border-b-2 border-primary-600 dark:border-primary-300 -mb-px"
-            aria-current="page"
-          >
-            Stats
-          </a>
-        </div>
+        <.profile_tabs user={@user} active={:stats} />
 
         <%!-- Header --%>
         <div class="flex items-center justify-between mb-6">

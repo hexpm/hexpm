@@ -1,7 +1,7 @@
 defmodule Hexpm.Accounts.OrganizationsTest do
   use Hexpm.DataCase, async: true
 
-  alias Hexpm.Accounts.Organizations
+  alias Hexpm.Accounts.{AuditLogs, Organizations}
   alias Hexpm.Repository.PackageOwner
 
   describe "all_admin_notifiable_emails/1" do
@@ -155,6 +155,90 @@ defmodule Hexpm.Accounts.OrganizationsTest do
                Organizations.add_member(organization, user, %{"role" => "read"},
                  audit: audit_data(admin)
                )
+    end
+  end
+
+  describe "change_visibility/4" do
+    test "lists and unlists the member on the public profile" do
+      organization = insert(:organization)
+      user = insert(:user)
+      insert(:organization_user, organization: organization, user: user)
+
+      assert Organizations.public_members(organization) == []
+
+      assert {:ok, %{public: true}} =
+               Organizations.change_visibility(organization, user, %{"public" => "true"},
+                 audit: audit_data(user)
+               )
+
+      assert [%{id: id}] = Organizations.public_members(organization)
+      assert id == user.id
+
+      assert {:ok, %{public: false}} =
+               Organizations.change_visibility(organization, user, %{"public" => "false"},
+                 audit: audit_data(user)
+               )
+
+      assert Organizations.public_members(organization) == []
+    end
+
+    test "audits the change" do
+      organization = insert(:organization)
+      user = insert(:user)
+      insert(:organization_user, organization: organization, user: user)
+
+      {:ok, _organization_user} =
+        Organizations.change_visibility(organization, user, %{"public" => "true"},
+          audit: audit_data(user)
+        )
+
+      assert [audit_log] = AuditLogs.all_by(user)
+      assert audit_log.action == "organization.member.visibility"
+      assert audit_log.params["public"] == true
+      assert audit_log.params["user"]["username"] == user.username
+      assert audit_log.params["organization"]["name"] == organization.name
+    end
+
+    test "refuses someone who isn't a member" do
+      organization = insert(:organization)
+      user = insert(:user)
+
+      assert {:error, :not_member} =
+               Organizations.change_visibility(organization, user, %{"public" => "true"},
+                 audit: audit_data(user)
+               )
+    end
+
+    test "refuses a value that isn't a boolean" do
+      organization = insert(:organization)
+      user = insert(:user)
+      insert(:organization_user, organization: organization, user: user)
+
+      assert {:error, changeset} =
+               Organizations.change_visibility(organization, user, %{"public" => "maybe"},
+                 audit: audit_data(user)
+               )
+
+      assert errors_on(changeset).public == "expected type boolean"
+    end
+  end
+
+  describe "public_members/1" do
+    test "orders the shown members by username and leaves the others out" do
+      organization = insert(:organization)
+      zulu = insert(:user, username: "zulu_shown")
+      alpha = insert(:user, username: "alpha_shown")
+      insert(:organization_user, organization: organization, user: zulu, public: true)
+      insert(:organization_user, organization: organization, user: alpha, public: true)
+      insert(:organization_user, organization: organization, user: insert(:user))
+
+      other = insert(:organization)
+      insert(:organization_user, organization: other, user: insert(:user), public: true)
+
+      assert Enum.map(Organizations.public_members(organization), & &1.username) == [
+               "alpha_shown",
+               "zulu_shown"
+             ]
     end
   end
 

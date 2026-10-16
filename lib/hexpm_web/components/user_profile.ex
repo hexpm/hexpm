@@ -6,6 +6,11 @@ defmodule HexpmWeb.Components.UserProfile do
   import HexpmWeb.ViewHelpers
   import HexpmWeb.Components.Icons
 
+  use Phoenix.VerifiedRoutes,
+    endpoint: HexpmWeb.Endpoint,
+    router: HexpmWeb.Router,
+    statics: HexpmWeb.static_paths()
+
   @doc """
   Renders the user profile sidebar with avatar, name, bio, and stats.
   """
@@ -117,6 +122,59 @@ defmodule HexpmWeb.Components.UserProfile do
         </div>
       <% end %>
     </div>
+    """
+  end
+
+  @doc """
+  Renders the tabs above a profile's content. Organizations get a Members tab.
+  """
+  attr :user, :map, required: true
+  attr :active, :atom, required: true, values: [:packages, :members, :stats]
+
+  def profile_tabs(assigns) do
+    ~H"""
+    <div id="profile-tabs" class="flex gap-1 mb-6 border-b border-grey-200 dark:border-grey-800">
+      <.profile_tab href={~p"/users/#{@user.username}"} active={@active == :packages}>
+        Packages
+      </.profile_tab>
+      <.profile_tab
+        :if={@user.organization_id}
+        href={~p"/orgs/#{@user.username}/members"}
+        active={@active == :members}
+      >
+        Members
+      </.profile_tab>
+      <.profile_tab href={~p"/users/#{@user.username}/stats"} active={@active == :stats}>
+        Stats
+      </.profile_tab>
+    </div>
+    """
+  end
+
+  attr :href, :string, required: true
+  attr :active, :boolean, required: true
+  slot :inner_block, required: true
+
+  defp profile_tab(%{active: true} = assigns) do
+    ~H"""
+    <a
+      href={@href}
+      class="px-4 py-2.5 text-sm font-medium text-grey-900 dark:text-white border-b-2 border-primary-600 dark:border-primary-300 -mb-px"
+      aria-current="page"
+    >
+      {render_slot(@inner_block)}
+    </a>
+    """
+  end
+
+  defp profile_tab(assigns) do
+    ~H"""
+    <a
+      href={@href}
+      class="px-4 py-2.5 text-sm font-medium text-grey-500 dark:text-grey-300 hover:text-grey-900 dark:hover:text-grey-100 transition-colors"
+    >
+      {render_slot(@inner_block)}
+    </a>
     """
   end
 

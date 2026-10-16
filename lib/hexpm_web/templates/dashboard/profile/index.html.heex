@@ -181,6 +181,55 @@
             </div>
           </.form>
         </div>
+
+        <%!-- Organization memberships the public profiles may list --%>
+        <div
+          :if={@memberships != []}
+          id="membership-visibility"
+          class="mt-6 bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-4 sm:p-8"
+        >
+          <h2 class="text-grey-900 dark:text-white text-xl font-semibold mb-2">
+            Organizations
+          </h2>
+          <p class="text-grey-500 dark:text-grey-300 text-sm mb-6">
+            Choose which organizations list you as a member on their public profile. Nobody else can change this for you.
+          </p>
+
+          <ul class="divide-y divide-grey-100 dark:divide-grey-700">
+            <li
+              :for={membership <- @memberships}
+              class="flex items-center justify-between gap-4 py-4"
+            >
+              <a
+                href={~p"/orgs/#{membership.organization.name}/members"}
+                class="text-sm font-medium text-grey-900 dark:text-white hover:text-primary-600"
+              >
+                {membership.organization.name}
+              </a>
+              <.form
+                for={%{}}
+                action={~p"/dashboard/profile/organizations/#{membership.organization.name}"}
+                id={"membership-visibility-#{membership.organization.name}"}
+                class="flex items-center gap-2"
+                phx-hook="AutoSubmit"
+              >
+                <label
+                  for={"membership-visibility-#{membership.organization.name}-toggle"}
+                  class="text-sm text-grey-600 dark:text-grey-300"
+                >
+                  Listed on profile
+                </label>
+                <.toggle_switch
+                  id={"membership-visibility-#{membership.organization.name}-toggle"}
+                  name="organization_user[public]"
+                  value="true"
+                  hidden_value="false"
+                  checked={membership.public}
+                />
+              </.form>
+            </li>
+          </ul>
+        </div>
       </div>
     </div>
   </div>

@@ -110,6 +110,17 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
                 {count} {member_label(count)}
               <% end %>
             </p>
+            <p class="text-grey-500 dark:text-grey-300 text-sm mt-1">
+              The organization's
+              <a
+                href={~p"/orgs/#{@organization}/members"}
+                class="underline hover:text-primary-600"
+              >public profile</a>
+              lists only the members who choose to in their own <a
+                href={~p"/dashboard/profile"}
+                class="underline hover:text-primary-600"
+              >profile settings</a>.
+            </p>
           </div>
           <%= if admin?(@current_user, @organization) do %>
             <div class="flex flex-wrap items-center gap-2">
@@ -180,6 +191,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
                     >
                       SSO exempt
                     </.badge>
+                    <.badge :if={org_user.public} variant="green">Public</.badge>
                   </p>
                   <p class="text-xs text-grey-500 dark:text-grey-300">{org_user.user.full_name}</p>
                   <p

@@ -357,6 +357,24 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCard do
   end
 
   defp humanize_action(%AuditLog{
+         action: "organization.member.visibility",
+         params: %{
+           "user" => %{"username" => username},
+           "public" => true,
+           "organization" => %{"name" => org}
+         }
+       }) do
+    "Listed #{username} on the public profile of #{org}"
+  end
+
+  defp humanize_action(%AuditLog{
+         action: "organization.member.visibility",
+         params: %{"user" => %{"username" => username}, "organization" => %{"name" => org}}
+       }) do
+    "Removed #{username} from the public profile of #{org}"
+  end
+
+  defp humanize_action(%AuditLog{
          action: "organization.invitation.create",
          params: %{"invitation" => %{"email" => email}, "organization" => %{"name" => org}}
        }) do

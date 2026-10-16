@@ -78,4 +78,28 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCardTest do
 
     assert any =~ "Added the workload identity for any repository owned by acme (read) to acme"
   end
+
+  test "describes membership visibility changes" do
+    stub(Hexpm.Geo.Mock, :lookup_country, fn _ -> nil end)
+
+    params = %{
+      "organization" => %{"name" => "acme"},
+      "user" => %{"username" => "jane"},
+      "public" => true
+    }
+
+    html =
+      render_component(&AuditLogCard.audit_log_card/1,
+        audit_logs: [
+          login_log(%{action: "organization.member.visibility", params: params}),
+          login_log(%{
+            action: "organization.member.visibility",
+            params: %{params | "public" => false}
+          })
+        ]
+      )
+
+    assert html =~ "Listed jane on the public profile of acme"
+    assert html =~ "Removed jane from the public profile of acme"
+  end
 end

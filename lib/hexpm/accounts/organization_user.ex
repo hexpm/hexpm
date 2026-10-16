@@ -6,11 +6,22 @@ defmodule Hexpm.Accounts.OrganizationUser do
   schema "organization_users" do
     field :role, :string
     field :sso_enforcement, :string
+    field :public, :boolean, default: false
 
     belongs_to :organization, Organization
     belongs_to :user, User
 
     timestamps()
+  end
+
+  @doc """
+  Sets whether the membership is listed on the organization's public profile.
+  Only the member changes it, and it starts hidden.
+  """
+  def visibility_changeset(organization_user, attrs) do
+    organization_user
+    |> cast(attrs, [:public])
+    |> validate_required([:public])
   end
 
   @doc """
