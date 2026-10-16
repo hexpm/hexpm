@@ -70,6 +70,7 @@ defmodule Hexpm.PurgeExpiredRecords do
       purge_organization_invitations(repo, batch_size, run)
       purge_keys(repo, batch_size, run)
       purge_email_outbox_entries(repo, batch_size, run)
+      purge_rate_limits(repo, batch_size)
     end)
   end
 
@@ -286,6 +287,28 @@ defmodule Hexpm.PurgeExpiredRecords do
       )
 
     Logger.info("[task] Purged #{count} delivered email outbox entries")
+  end
+
+  # Counters aren't archived: they hold an address or a user id for one window
+  # and record nothing anyone looks up afterwards.
+  defp purge_rate_limits(repo, batch_size, total \\ 0) do
+    keys =
+      repo.all(
+        from(r in Hexpm.RateLimit,
+          where: r.expires_at < fragment("NOW()"),
+          order_by: r.expires_at,
+          select: r.key,
+          limit: ^batch_size
+        )
+      )
+
+    {count, _} = repo.delete_all(from(r in Hexpm.RateLimit, where: r.key in ^keys))
+
+    if length(keys) < batch_size do
+      Logger.info("[task] Purged #{total + count} expired rate limit counters")
+    else
+      purge_rate_limits(repo, batch_size, total + count)
+    end
   end
 
   @doc """

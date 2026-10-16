@@ -17,7 +17,8 @@ defmodule HexpmWeb.Plugs.VarselAuth do
     keys = keys()
 
     with {:ok, token} <- bearer(conn),
-         {:ok, _claims} <- verify(token, keys) do
+         {:ok, claims} <- verify(token, keys),
+         :ok <- consume(claims) do
       conn
     else
       {:error, _reason} -> refuse(conn)
@@ -46,7 +47,7 @@ defmodule HexpmWeb.Plugs.VarselAuth do
          {:ok, claims} <- signature(token, jwk),
          :ok <- identity(claims),
          :ok <- validity(claims) do
-      consume(claims)
+      {:ok, claims}
     end
   rescue
     _error -> {:error, :malformed_token}
@@ -101,8 +102,10 @@ defmodule HexpmWeb.Plugs.VarselAuth do
     end
   end
 
-  defp consume(%{"jti" => jti} = claims) do
-    if Attack.varsel_jti(jti) == 1, do: {:ok, claims}, else: {:error, :replayed}
+  # Outside verify/2's rescue, so a database error isn't answered as an
+  # invalid token.
+  defp consume(%{"jti" => jti, "exp" => exp}) do
+    if Attack.varsel_jti(jti, exp) == 1, do: :ok, else: {:error, :replayed}
   end
 
   defp refuse(conn) do

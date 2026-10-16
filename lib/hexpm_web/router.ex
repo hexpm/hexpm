@@ -82,11 +82,11 @@ defmodule HexpmWeb.Router do
     plug :accepts, ["json"]
     plug :user_agent
     plug HexpmWeb.Plugs.Attack
-    plug HexpmWeb.Plugs.VarselAuth
 
-    # A contact lookup records the disclosure, so it writes even though it is
-    # a GET.
+    # A contact lookup records the disclosure, and VarselAuth records the token
+    # id, so it writes even though it is a GET.
     plug HexpmWeb.Plugs.ReadOnly, write_routes: [{"GET", "/api/users/:name/contact"}]
+    plug HexpmWeb.Plugs.VarselAuth
   end
 
   pipeline :browser_api do

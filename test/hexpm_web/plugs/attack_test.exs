@@ -38,16 +38,6 @@ defmodule HexpmWeb.Plugs.AttackTest do
       assert get_resp_header(conn, "x-ratelimit-remaining") == ["499"]
     end
 
-    test "broadcasts varsel token ids" do
-      time = System.system_time(:millisecond)
-      key = {:varsel_jti, "broadcast-jti"}
-      Phoenix.PubSub.broadcast!(Hexpm.PubSub, "ratelimit", {:throttle, key, time})
-      :sys.get_state(RateLimitPubSub)
-
-      assert Attack.varsel_jti("broadcast-jti", time: time) == 2
-      assert Attack.varsel_jti("fresh-jti", time: time) == 1
-    end
-
     test "broadcasts user rate limits", %{user: user} do
       align_to_throttle_bucket()
       time = System.system_time(:millisecond)
@@ -499,6 +489,87 @@ defmodule HexpmWeb.Plugs.AttackTest do
 
       result = HexpmWeb.Plugs.Attack.login_ip_throttle({2, 2, 2, 2}, time: time)
       assert {:block, _data} = result
+    end
+  end
+
+  describe "database storage" do
+    # Cleaning the table each pod keeps in memory stands in for the next attempt
+    # reaching another pod, or a pod started since.
+    for {throttle, subject, limit} <- [
+          {:login_ip_throttle, {40, 0, 0, 1}, 10},
+          {:tfa_ip_throttle, {40, 0, 0, 2}, 20},
+          {:tfa_user_throttle, 401, 5},
+          {:device_verification_ip_throttle, {40, 0, 0, 3}, 30},
+          {:device_verification_user_throttle, 402, 10},
+          {:account_delete_request_throttle, 403, 3},
+          {:sudo_password_throttle, 404, 5},
+          {:sudo_tfa_throttle, 405, 5}
+        ] do
+      test "#{throttle} keeps its count across pods" do
+        throttle = unquote(throttle)
+        subject = unquote(Macro.escape(subject))
+        time = System.system_time(:millisecond)
+
+        for _ <- 1..unquote(limit) do
+          assert {:allow, _data} = apply(Attack, throttle, [subject, [time: time]])
+        end
+
+        PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage)
+
+        assert {:block, _data} = apply(Attack, throttle, [subject, [time: time]])
+      end
+    end
+
+    test "reads a count without adding to it" do
+      time = System.system_time(:millisecond)
+      Attack.login_ip_throttle({40, 0, 0, 4}, time: time)
+
+      assert {:allow, {:throttle, data}} =
+               Attack.login_ip_throttle({40, 0, 0, 4}, time: time, increment: 0)
+
+      assert data[:remaining] == 9
+
+      assert {:allow, {:throttle, data}} =
+               Attack.login_ip_throttle({40, 0, 0, 5}, time: time, increment: 0)
+
+      assert data[:remaining] == 10
+      assert [%Hexpm.RateLimit{count: 1}] = Hexpm.Repo.all(Hexpm.RateLimit)
+    end
+
+    test "starts a new count in the next window" do
+      time = System.system_time(:millisecond)
+
+      for _ <- 1..10, do: Attack.login_ip_throttle({40, 0, 0, 6}, time: time)
+      assert {:block, _data} = Attack.login_ip_throttle({40, 0, 0, 6}, time: time)
+
+      assert {:allow, {:throttle, data}} =
+               Attack.login_ip_throttle({40, 0, 0, 6}, time: time + 15 * 60_000)
+
+      assert data[:remaining] == 9
+    end
+
+    test "keys a count by name, subject and window" do
+      time = System.system_time(:millisecond)
+      Attack.login_ip_throttle({0x2001, 0xDB8, 0, 0, 0, 0, 0, 1}, time: time)
+      Attack.tfa_user_throttle(406, time: time)
+
+      keys = Hexpm.Repo.all(Hexpm.RateLimit) |> Enum.map(& &1.key) |> Enum.sort()
+
+      assert keys == [
+               "login_ip:2001:db8::1:#{div(time, 15 * 60_000)}",
+               "tfa_user:406:#{div(time, 10 * 60_000)}"
+             ]
+    end
+
+    test "counts the uses of a Varsel token id until the token expires" do
+      expires_at = System.system_time(:second) + 60
+
+      assert Attack.varsel_jti("used-jti", expires_at) == 1
+      assert Attack.varsel_jti("used-jti", expires_at) == 2
+      assert Attack.varsel_jti("fresh-jti", expires_at) == 1
+
+      assert Hexpm.Repo.get(Hexpm.RateLimit, "varsel_jti:used-jti").expires_at ==
+               DateTime.from_unix!(expires_at * 1_000_000, :microsecond)
     end
   end
 
