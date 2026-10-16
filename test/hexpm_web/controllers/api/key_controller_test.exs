@@ -198,7 +198,9 @@ defmodule HexpmWeb.API.KeyControllerTest do
         |> put_req_header("authorization", key.user_secret)
         |> post("/api/keys", %{name: "macbook"})
 
-      assert json_response(conn, 403)["message"] =~ "API keys cannot create API keys"
+      message = json_response(conn, 403)["message"]
+      assert message =~ "API keys cannot create API keys"
+      assert message =~ "/dashboard/keys"
       refute Repo.one(Key.get(c.eric, "macbook"))
       refute Repo.exists?(from(a in AuditLog, where: a.action == "key.generate"))
     end
@@ -221,7 +223,6 @@ defmodule HexpmWeb.API.KeyControllerTest do
         build_conn()
         |> put_req_header("content-type", "application/json")
         |> put_req_header("authorization", "Bearer #{access_token}")
-        |> put_req_header("x-hex-otp", TFA.time_based_token(c.eric.tfa.secret))
         |> post("/api/keys", %{name: "macbook"})
 
       assert json_response(conn, 403)["message"] =~ "API keys cannot create API keys"
@@ -337,7 +338,10 @@ defmodule HexpmWeb.API.KeyControllerTest do
         |> put_req_header("authorization", org_key.user_secret)
         |> post("/api/orgs/#{c.organization.name}/keys", %{name: "ci"})
 
-      assert json_response(conn, 403)["message"] =~ "API keys cannot create API keys"
+      message = json_response(conn, 403)["message"]
+      assert message =~ "API keys cannot create API keys"
+      assert message =~ "/dashboard/orgs/#{c.organization.name}"
+      assert message =~ "mix hex.organization key #{c.organization.name} generate"
       refute Repo.one(Key.get(c.organization, "ci"))
     end
   end

@@ -5,6 +5,8 @@ defmodule HexpmWeb.API.KeyController do
 
   plug :fetch_organization
 
+  plug :refuse_key_credential when action == :create
+
   plug :authorize,
        [
          domains: [{"api", "write"}],
@@ -13,8 +15,6 @@ defmodule HexpmWeb.API.KeyController do
          authentication: :required
        ]
        when action == :create
-
-  plug :refuse_key_credential when action == :create
 
   plug :authorize,
        [
@@ -117,10 +117,19 @@ defmodule HexpmWeb.API.KeyController do
     end
   end
 
+  defp refuse_key_credential(%{assigns: %{organization: %Organization{} = organization}} = conn) do
+    forbidden(
+      conn,
+      "API keys cannot create API keys, create the key on " <>
+        url(~p"/dashboard/orgs/#{organization}") <>
+        " or with mix hex.organization key #{organization.name} generate after mix hex.user auth"
+    )
+  end
+
   defp refuse_key_credential(conn) do
     forbidden(
       conn,
-      "API keys cannot create API keys, sign in on hex.pm or with mix hex.user auth to create one"
+      "API keys cannot create API keys, create the key on " <> url(~p"/dashboard/keys")
     )
   end
 
