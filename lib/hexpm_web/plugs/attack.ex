@@ -284,6 +284,7 @@ defmodule HexpmWeb.Plugs.Attack do
     timed_throttle(
       {:login_ip, ip},
       time: time,
+      increment: Keyword.get(opts, :increment, 1),
       storage: @storage,
       limit: 10,
       period: 15 * 60_000
