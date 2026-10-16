@@ -142,6 +142,15 @@ defmodule HexpmWeb.SCIM.UserController do
         "The organization's seat count could not be read; no member was added"
       )
 
+  defp refuse(conn, :too_many_inactive),
+    do:
+      scim_error(
+        conn,
+        409,
+        "The connection holds #{SCIM.inactive_limit(connection(conn))} inactive users, " <>
+          "its limit; delete inactive users before creating more"
+      )
+
   defp refuse(conn, :last_member),
     do: scim_error(conn, 409, "Cannot remove the organization's last member")
 

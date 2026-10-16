@@ -49,6 +49,32 @@ defmodule HexpmWeb.SCIM.UserControllerTest do
     refute body["displayName"]
   end
 
+  test "an inactive create past the connection's limit is a 409", context do
+    connection = Repo.get_by!(SSO.Connection, organization_id: context.organization.id)
+    now = DateTime.utc_now()
+
+    rows =
+      for index <- 1..1_000 do
+        %{
+          connection_id: connection.id,
+          organization_id: context.organization.id,
+          scim_id: Ecto.UUID.generate(),
+          user_name: "inactive-#{index}@example.com",
+          inserted_at: now,
+          updated_at: now
+        }
+      end
+
+    Repo.insert_all(Hexpm.Accounts.SCIM.Resource, rows)
+
+    body =
+      scim_conn(context.token)
+      |> post("/scim/v2/Users", scim_body(%{"userName" => "over@example.com", "active" => false}))
+      |> scim_json_response(409)
+
+    assert body["detail"] =~ "1000 inactive users"
+  end
+
   test "a duplicate create is a 409 the provider recovers from by filtering", context do
     params = scim_body(%{"userName" => "dup@example.com"})
 
