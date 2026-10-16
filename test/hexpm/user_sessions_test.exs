@@ -278,6 +278,77 @@ defmodule Hexpm.UserSessionsTest do
       end)
     end
 
+    test "API key sessions don't revoke browser and OAuth sessions" do
+      user = insert(:user)
+      client = insert(:oauth_client)
+
+      {:ok, browser_session, _token} =
+        UserSessions.create_browser_session(user, audit: audit_data(user))
+
+      {:ok, oauth_session} =
+        UserSessions.create_oauth_session(user, client.client_id, audit: audit_data(user))
+
+      [first_token | tokens] =
+        for _ <- 1..6 do
+          {:ok, token} =
+            Hexpm.OAuth.Tokens.create_session_and_token_for_api_key(
+              user,
+              client.client_id,
+              ["api"],
+              "client_credentials",
+              "key:1"
+            )
+
+          token
+        end
+
+      assert Repo.get(Hexpm.UserSession, browser_session.id).revoked_at == nil
+      assert Repo.get(Hexpm.UserSession, oauth_session.id).revoked_at == nil
+      assert Repo.get(Hexpm.UserSession, first_token.user_session_id).revoked_at != nil
+
+      for token <- tokens do
+        assert Repo.get(Hexpm.UserSession, token.user_session_id).revoked_at == nil
+      end
+
+      assert UserSessions.count_for_user(user) == 7
+    end
+
+    test "browser and OAuth sessions don't revoke API key sessions" do
+      user = insert(:user)
+      client = insert(:oauth_client)
+
+      tokens =
+        for _ <- 1..5 do
+          {:ok, token} =
+            Hexpm.OAuth.Tokens.create_session_and_token_for_api_key(
+              user,
+              client.client_id,
+              ["api"],
+              "client_credentials",
+              "key:1"
+            )
+
+          token
+        end
+
+      {:ok, oauth_session} =
+        UserSessions.create_oauth_session(user, client.client_id, audit: audit_data(user))
+
+      for _ <- 1..5 do
+        {:ok, _session, _token} =
+          UserSessions.create_browser_session(user, audit: audit_data(user))
+      end
+
+      assert Repo.get(Hexpm.UserSession, oauth_session.id).revoked_at != nil
+
+      for token <- tokens do
+        assert Repo.get(Hexpm.UserSession, token.user_session_id).revoked_at == nil
+        assert Repo.get(Hexpm.OAuth.Token, token.id).revoked_at == nil
+      end
+
+      assert UserSessions.count_for_user(user) == 10
+    end
+
     test "organization with 4 seats gets minimum 5 sessions" do
       organization = insert(:organization, billing_seats: 4)
       client = insert(:oauth_client)

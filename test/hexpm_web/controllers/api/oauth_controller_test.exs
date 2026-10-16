@@ -1328,6 +1328,42 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert Hexpm.UserSessions.count_for_user(user) == 5
     end
 
+    test "doesn't revoke the user's browser and OAuth sessions", %{
+      client: client,
+      api_key: api_key,
+      user: user
+    } do
+      browser = test_login(build_conn(), user)
+
+      {:ok, session} =
+        Hexpm.UserSessions.create_oauth_session(user, client.client_id, audit: audit_data(user))
+
+      {:ok, token} =
+        Tokens.create_and_insert_for_user(
+          user,
+          client.client_id,
+          ["api"],
+          "urn:ietf:params:oauth:grant-type:device_code",
+          "device_code:1",
+          user_session_id: session.id
+        )
+
+      for _ <- 1..6 do
+        conn =
+          post(build_conn(), ~p"/api/oauth/token", %{
+            "grant_type" => "client_credentials",
+            "client_id" => client.client_id,
+            "client_secret" => api_key,
+            "scope" => "api"
+          })
+
+        assert json_response(conn, 200)
+      end
+
+      assert get(browser, ~p"/dashboard/keys").status == 200
+      assert {:ok, _token} = Tokens.lookup(token.access_token, :access)
+    end
+
     test "expands 'repositories' scope for API key with generic repositories permission", %{
       client: client,
       user: user

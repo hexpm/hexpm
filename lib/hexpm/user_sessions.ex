@@ -9,6 +9,10 @@ defmodule Hexpm.UserSessions do
   session is automatically revoked. This prevents session buildup while allowing
   users to be logged in on multiple devices and use several OAuth applications.
 
+  API key sessions, which the client credentials grant creates each time a key
+  is exchanged for a token, are limited separately to 5 per user, so exchanging
+  keys never revokes a browser or OAuth session.
+
   Organizations have a dynamic session limit of max(5, seat_count). For example,
   an organization with 4 seats gets 5 sessions (minimum), while an organization
   with 10 seats gets 10 sessions. This limit applies to API key sessions only,
@@ -136,16 +140,7 @@ defmodule Hexpm.UserSessions do
     `key.generate` and `key.remove`
   """
   def create_api_key_session(user, organization, client_id, expires_at, opts) do
-    # Calculate session limit: use dynamic limit for orgs, default for users
-    max_sessions =
-      if organization do
-        get_organization_session_limit(organization)
-      else
-        @max_user_sessions
-      end
-
-    owner = user || organization
-    enforce_session_limit(owner, max_sessions)
+    enforce_api_key_session_limit(user || organization)
 
     owner_attrs =
       if user do
@@ -424,13 +419,39 @@ defmodule Hexpm.UserSessions do
   end
 
   @doc """
-  Enforces the session limit by revoking least recently used sessions if needed.
-  Called before creating a new session to ensure the user stays within the limit.
-
-  The max_sessions parameter allows overriding the default limit (e.g., for organizations).
+  Enforces the limit on a user's browser and OAuth sessions by revoking least
+  recently used sessions if needed. Called before creating a new session to
+  ensure the user stays within the limit.
   """
-  def enforce_session_limit(user_or_org, max_sessions \\ @max_user_sessions) do
-    revoke_lru_sessions(owner_filter(user_or_org), max_sessions - 1)
+  def enforce_session_limit(%Hexpm.Accounts.User{} = user) do
+    filter = Ecto.Query.dynamic(^owner_filter(user) and not exists(api_key_tokens()))
+    revoke_lru_sessions(filter, @max_user_sessions - 1)
+  end
+
+  @doc """
+  Enforces the limit on API key sessions, 5 for a user and
+  `get_organization_session_limit/1` for an organization, by revoking least
+  recently used API key sessions if needed. Called before creating a new one.
+  """
+  def enforce_api_key_session_limit(%Hexpm.Accounts.User{} = user) do
+    filter = Ecto.Query.dynamic(^owner_filter(user) and exists(api_key_tokens()))
+    revoke_lru_sessions(filter, @max_user_sessions - 1)
+  end
+
+  # Organizations only have API key sessions
+  def enforce_api_key_session_limit(%Hexpm.Accounts.Organization{} = organization) do
+    revoke_lru_sessions(
+      owner_filter(organization),
+      get_organization_session_limit(organization) - 1
+    )
+  end
+
+  # The client credentials grant creates each API key session with one token
+  defp api_key_tokens do
+    from(t in Token,
+      where: t.user_session_id == parent_as(:session).id and t.grant_type == "client_credentials",
+      select: 1
+    )
   end
 
   @doc """
@@ -456,6 +477,7 @@ defmodule Hexpm.UserSessions do
     Repo.transaction(fn ->
       session_ids =
         from(s in UserSession,
+          as: :session,
           where: ^owner_filter,
           where: is_nil(s.revoked_at) and s.expires_at > ^now,
           order_by: [
