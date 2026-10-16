@@ -10,7 +10,10 @@ defmodule HexpmWeb.DocsControllerTest do
     assert html =~ "Hex v2.6 and later warn when a loaded policy contains override actions"
     assert html =~ "mix hex.policy show"
     assert html =~ "Advisory, Retirement, and Cooldown overrides require Hex v2.6 or later."
-    assert html =~ "Hex v2.5 applies Allow and Deny overrides but ignores the other override types"
+
+    assert html =~
+             "Hex v2.5 applies Allow and Deny overrides but ignores the other override types"
+
     assert html =~ "The policy flags require Hex v2.6 or later."
     assert html =~ "Dependency resolution"
     assert html =~ "Resolution warnings"
@@ -19,6 +22,28 @@ defmodule HexpmWeb.DocsControllerTest do
     assert html =~ "mix hex.audit --policy"
     assert html =~ "every advisory and retirement should remain actionable"
     assert html =~ "full advisory and retirement policy"
+    assert html =~ "requires Hex v2.6 or later. Earlier versions ignore it"
+  end
+
+  test "every in-page link in the dependency policies guide points at a heading on it" do
+    document =
+      build_conn()
+      |> get("/docs/dependency-policies")
+      |> html_response(200)
+      |> LazyHTML.from_document()
+
+    anchors =
+      LazyHTML.query(document, ~s(.docs-content a[href^="#"]))
+      |> LazyHTML.attribute("href")
+      |> Enum.uniq()
+
+    assert "#checking-the-lockfile" in anchors
+    assert "#choosing-an-audit-mode" in anchors
+
+    for "#" <> id <- anchors do
+      assert [_heading] = LazyHTML.query(document, ~s([id="#{id}"])) |> Enum.to_list(),
+             "no element with id #{id}"
+    end
   end
 
   test "renders the organization SSO setup guide in the docs navigation" do

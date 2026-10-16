@@ -12,9 +12,11 @@ Hex has three controls for dependency risk: project settings, dependency policie
 | Resolution warnings | Advisories and retirements for dependencies reported by the current resolution. On Hex v2.6 or later, matching Allow, Advisory, and Retirement overrides suppress their corresponding warnings. Policy severity and retirement settings don't suppress these warnings. |
 | Whole-lock audit | Every Hex dependency in `mix.lock`, including dependencies that didn't change in the last resolution. Use `mix hex.audit` in CI to check the complete lockfile against newly published advisories and retirement metadata. |
 
+To fail `mix deps.get` or CI when a locked release is rejected, see [Checking the lockfile](#checking-the-lockfile).
+
 ### Choosing an audit mode
 
-Every `mix hex.audit` mode checks the complete lockfile for advisories and retirements. The active policy changes the result only when a policy flag is passed. The policy flags require Hex v2.6 or later. Earlier versions ignore them and run a plain `mix hex.audit`.
+Every `mix hex.audit` mode checks the complete lockfile for advisories and retirements. The active policy changes the result only when a policy flag is passed. The policy flags require Hex v2.6 or later. Earlier versions ignore them and run a plain `mix hex.audit`. Run `mix hex.info` to see the installed version.
 
 | Command | Findings reported |
 | --- | --- |
@@ -24,7 +26,7 @@ Every `mix hex.audit` mode checks the complete lockfile for advisories and retir
 
 Use `--policy-overrides` when every advisory and retirement should remain actionable unless an organization administrator explicitly accepted it. Use `--policy` when the audit should check compliance with the organization's full advisory and retirement policy.
 
-Both policy flags require an active policy and can't be used together. Project `ignore_advisories` and `ignore_retirements` settings are applied after policy evaluation. Policy-accepted and project-ignored findings appear in separate output sections and don't affect the exit status. Audit modes don't check cooldown eligibility or general lockfile validity.
+Both policy flags require an active policy and can't be used together. Both fail when a locked package is matched by a Deny override. Project `ignore_advisories` and `ignore_retirements` settings are applied after policy evaluation and can't clear a Deny override. A denied package stays rejected until the policy changes. Policy-accepted and project-ignored findings appear in separate output sections and don't affect the exit status. Audit modes don't check cooldown eligibility or general lockfile validity.
 
 ### Project controls
 
@@ -65,9 +67,11 @@ $ HEX_COOLDOWN_EXCLUDE_REPOS=hexpm:myorg mix deps.get
 
 Cooldown filters candidate releases during resolution. Existing locked releases aren't filtered. Versions excluded by cooldown are reported in the resolution summary.
 
+If the version locked in `mix.lock` has a security advisory, the cooldown doesn't apply to that package or to the direct dependencies of the locked version. This lets `mix deps.update` move to the release that fixes the advisory, and to newer versions of the dependencies that release needs, while they're still inside the cooldown, so a project isn't held on a vulnerable version. A cooldown set by a dependency policy still applies.
+
 #### Ignoring findings in one project
 
-Use `ignore_advisories` and `ignore_retirements` when a finding has been reviewed for one project. These settings suppress matching warnings from `mix deps.get`, `mix deps.update`, and `mix hex.audit`. They are applied after policy evaluation, so they remain effective in both policy audit modes.
+Use `ignore_advisories` and `ignore_retirements` (Hex v2.5.1 or later) when a finding has been reviewed for one project. These settings suppress matching warnings from `mix deps.get`, `mix deps.update`, and `mix hex.audit`. They are applied after policy evaluation, so they remain effective in both policy audit modes. They don't change which new releases the policy accepts.
 
 ```elixir
 # mix.exs
@@ -186,6 +190,31 @@ $ mix hex.policy why PACKAGE
 
 `show`, which is the default, prints the policy visibility, restrictions, overrides, and effective cooldown. Hex v2.6 and later also print override comments. `why PACKAGE` or `why REPO/PACKAGE` evaluates every known version of the package and explains each policy decision.
 
+#### Checking the lockfile
+
+A release can become rejected after it was locked, when it gets a security advisory, is retired, or the policy adds a Deny override for it. Resolution keeps trusting the lockfile, so `mix deps.get` still installs it. `mix hex.audit --policy` reports it, see [Choosing an audit mode](#choosing-an-audit-mode).
+
+To make `mix deps.get` and `mix deps.update` fail instead, enable `policy_enforce_lock`. After resolving dependencies they run the same check as `mix hex.audit --policy`, and when it reports anything they fail before writing `mix.lock` or fetching packages. `policy_enforce_lock` requires Hex v2.6 or later. Earlier versions ignore it, so `mix deps.get` doesn't fail.
+
+```elixir
+# mix.exs
+defp project() do
+  [
+    hex: [
+      policy: [org: "myorg", name: "strict-prod"],
+      policy_enforce_lock: true
+    ]
+  ]
+end
+```
+
+```nohighlight
+$ HEX_POLICY_ENFORCE_LOCK=1 mix deps.get
+$ mix hex.config policy_enforce_lock true
+```
+
+An empty `HEX_POLICY_ENFORCE_LOCK` disables the check for one invocation. The setting has no effect without an active policy.
+
 #### Caching and failures
 
-Hex aborts resolution when an active policy is malformed or can't be loaded. If refreshing a policy fails and a previously fetched copy is cached, Hex reports the refresh failure and uses the cached copy. Without a cached copy, resolution aborts. Offline mode uses the cached copy.
+Hex fails the command when the `policy` or `policy_enforce_lock` configuration is malformed or the active policy can't be loaded. In Hex v2.6 and later, every error the policy causes ends with how to run a single command without it, by setting `HEX_POLICY` to an empty value. If refreshing a policy fails and a previously fetched copy is cached, Hex reports the refresh failure and uses the cached copy. Without a cached copy, resolution aborts. Offline mode uses the cached copy.
