@@ -191,6 +191,52 @@ defmodule HexpmWeb.Plugs.Attack do
     )
   end
 
+  @doc """
+  Checks an address before `HexpmWeb.Plugs.authenticate/2` looks at the
+  credential it sent. A blocked address, and one whose credentials were
+  refused more than `authentication_failure_ip_throttle/2` allows, are refused
+  without their credential being checked.
+  """
+  def check_authentication(ip) do
+    BlockAddress.try_reload()
+    address = ip_string(ip)
+
+    cond do
+      ip == {127, 0, 0, 1} or BlockAddress.allowed?(address) ->
+        :ok
+
+      BlockAddress.blocked?(address) ->
+        {:error, :blocked}
+
+      throttled?(authentication_failure_ip_throttle(ip, increment: 0)) ->
+        {:error, :authentication_rate_limited}
+
+      true ->
+        :ok
+    end
+  end
+
+  # Counts the API credentials refused from an address. Only a refusal is
+  # broadcast, since the other pods count every message they receive.
+  def authentication_failure_ip_throttle(ip, opts \\ []) do
+    key = {:authentication_failure_ip, ip}
+    time = opts[:time] || System.system_time(:millisecond)
+    increment = Keyword.get(opts, :increment, 1)
+    if !opts[:time] and increment > 0, do: RateLimitPubSub.broadcast(key, time)
+
+    timed_throttle(
+      key,
+      time: time,
+      increment: increment,
+      storage: @storage,
+      limit: 100,
+      period: 60_000
+    )
+  end
+
+  defp throttled?({:block, _data}), do: true
+  defp throttled?(_result), do: false
+
   # The same budget an authenticated organization gets on the API. A provider
   # sends two or three requests per person it touches and fans them out, so
   # a bulk unassignment or an initial import runs well past the address limit.

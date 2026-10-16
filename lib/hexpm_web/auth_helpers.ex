@@ -238,6 +238,14 @@ defmodule HexpmWeb.AuthHelpers do
       {:error, :key} ->
         unauthorized(conn, "invalid API key")
 
+      {:error, :blocked} ->
+        forbidden(conn, "Blocked")
+
+      {:error, :authentication_rate_limited} ->
+        render_error(conn, 429,
+          message: "Too many failed authentication attempts. Please try again later."
+        )
+
       {:error, :revoked_key} ->
         unauthorized(conn, "API key revoked")
 
