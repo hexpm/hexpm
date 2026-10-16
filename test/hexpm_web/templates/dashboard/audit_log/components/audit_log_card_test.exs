@@ -102,4 +102,47 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCardTest do
     assert html =~ "Listed jane on the public profile of acme"
     assert html =~ "Removed jane from the public profile of acme"
   end
+
+  test "describes invitations to accounts and to addresses" do
+    stub(Hexpm.Geo.Mock, :lookup_country, fn _ -> nil end)
+
+    organization = %{"name" => "acme"}
+
+    user_invitation = %{
+      "organization" => organization,
+      "invitation" => %{
+        "id" => 1,
+        "email" => nil,
+        "role" => "read",
+        "user" => %{"id" => 2, "username" => "jane"}
+      }
+    }
+
+    email_invitation = %{
+      "organization" => organization,
+      "invitation" => %{"id" => 3, "email" => "jane@example.com", "role" => "read"}
+    }
+
+    html =
+      render_component(&AuditLogCard.audit_log_card/1,
+        audit_logs: [
+          login_log(%{action: "organization.invitation.create", params: user_invitation}),
+          login_log(%{action: "organization.invitation.revoke", params: user_invitation}),
+          login_log(%{action: "organization.invitation.decline", params: user_invitation}),
+          login_log(%{
+            action: "organization.invitation.accept",
+            params: put_in(user_invitation, ["invitation", "user"], nil)
+          }),
+          login_log(%{action: "organization.invitation.create", params: email_invitation}),
+          login_log(%{action: "organization.invitation.accept", params: email_invitation})
+        ]
+      )
+
+    assert html =~ "Invited jane to acme"
+    assert html =~ "Revoked the invitation for jane to acme"
+    assert html =~ "Declined the invitation to acme"
+    assert html =~ "Accepted the invitation to acme"
+    assert html =~ "Invited jane@example.com to acme"
+    assert html =~ "Accepted the invitation for jane@example.com to acme"
+  end
 end

@@ -263,7 +263,260 @@ defmodule Hexpm.Accounts.OrganizationInvitationsTest do
     end
   end
 
+  describe "invite_user/5" do
+    test "invites the account and mails its primary address", %{
+      organization: organization,
+      admin: admin
+    } do
+      user = insert(:user)
+
+      assert {:ok, invitation} = invite_user(organization, admin, user, "write")
+
+      assert invitation.user_id == user.id
+      assert invitation.role == "write"
+      assert invitation.email == nil
+      assert invitation.token_hash == nil
+      refute Organizations.get_role(organization, user)
+
+      assert %OutboxEntry{category: "organization.invitation", email: email} =
+               Repo.get_by!(OutboxEntry, group_key: "organization-invitation:#{invitation.id}")
+
+      assert email["to"] == [%{"name" => user.username, "address" => user_email(user)}]
+      assert email["text_body"] =~ "/dashboard/invitations"
+    end
+
+    test "refuses a user whose primary email is unverified", %{
+      organization: organization,
+      admin: admin
+    } do
+      user = insert(:user, emails: [build(:email, verified: false)])
+
+      assert {:error, :unverified_primary_email} = invite_user(organization, admin, user)
+      assert OrganizationInvitations.all_pending(organization) == []
+    end
+
+    test "a verified secondary email does not stand in for the primary", %{
+      organization: organization,
+      admin: admin
+    } do
+      user =
+        insert(:user,
+          emails: [
+            build(:email, verified: false),
+            build(:email, primary: false, public: false, gravatar: false)
+          ]
+        )
+
+      assert {:error, :unverified_primary_email} = invite_user(organization, admin, user)
+    end
+
+    test "refuses an organization", %{organization: organization, admin: admin} do
+      other = insert(:organization)
+
+      assert {:error, :organization_user} = invite_user(organization, admin, other.user)
+    end
+
+    test "refuses a member", %{organization: organization, admin: admin} do
+      assert {:error, :already_member} = invite_user(organization, admin, admin)
+    end
+
+    test "refuses a second pending invitation for the same account", %{
+      organization: organization,
+      admin: admin
+    } do
+      user = insert(:user)
+
+      assert {:ok, _invitation} = invite_user(organization, admin, user)
+      assert {:error, changeset} = invite_user(organization, admin, user)
+      assert errors_on(changeset).username == "has already been invited"
+    end
+
+    test "stops mailing an account five invitations reached in the last day", %{admin: admin} do
+      user = insert(:user)
+
+      for _ <- 1..5 do
+        assert {:ok, _invitation} = invite_user(insert(:organization), admin, user)
+      end
+
+      assert {:error, :too_many_invitations} = invite_user(insert(:organization), admin, user)
+    end
+
+    test "counts invitations to accounts against the inviter", %{
+      organization: organization,
+      admin: admin
+    } do
+      for index <- 1..50 do
+        assert {:ok, _invitation} = invite(organization, admin, "person#{index}@example.com")
+      end
+
+      assert {:error, :too_many_invitations} = invite_user(organization, admin, insert(:user))
+    end
+
+    test "re-inviting an account whose invitation expired reissues it", %{
+      organization: organization,
+      admin: admin
+    } do
+      user = insert(:user)
+      {:ok, first} = invite_user(organization, admin, user)
+      expire(first)
+
+      assert OrganizationInvitations.all_pending_for_user(user) == []
+      assert {:ok, second} = invite_user(organization, admin, user, "admin")
+      assert second.id == first.id
+      assert second.role == "admin"
+      assert [%{id: id}] = OrganizationInvitations.all_pending_for_user(user)
+      assert id == first.id
+    end
+
+    test "does not mail an account that opted out but still shows it the invitation", %{
+      organization: organization,
+      admin: admin
+    } do
+      user = insert(:user, optional_emails: %{"organization_invite" => false})
+
+      assert {:ok, invitation} = invite_user(organization, admin, user)
+      assert Repo.all(OutboxEntry) == []
+      assert [%{id: id}] = OrganizationInvitations.all_pending_for_user(user)
+      assert id == invitation.id
+    end
+
+    test "audits the invited account", %{organization: organization, admin: admin} do
+      user = insert(:user)
+      {:ok, invitation} = invite_user(organization, admin, user)
+
+      assert audit_log =
+               Enum.find(
+                 AuditLogs.all_by(admin),
+                 &(&1.action == "organization.invitation.create")
+               )
+
+      assert audit_log.params["invitation"] == %{
+               "id" => invitation.id,
+               "email" => nil,
+               "role" => "read",
+               "user" => %{"id" => user.id, "username" => user.username}
+             }
+    end
+  end
+
+  describe "decline/3" do
+    test "keeps the organization from inviting the account again until the hold ends", %{
+      organization: organization,
+      admin: admin
+    } do
+      user = insert(:user)
+      {:ok, invitation} = invite_user(organization, admin, user)
+
+      assert {:ok, declined} = decline(invitation, user)
+      assert declined.declined_at
+      assert OrganizationInvitations.all_pending_for_user(user) == []
+      assert OrganizationInvitations.all_pending(organization) == []
+      assert {:error, :declined} = invite_user(organization, admin, user)
+
+      assert DateTime.diff(declined.expires_at, declined.declined_at) ==
+               Hexpm.Accounts.OrganizationInvitation.decline_hold_seconds()
+
+      expire(declined)
+
+      assert {:ok, reissued} = invite_user(organization, admin, user)
+      assert reissued.id == invitation.id
+      assert reissued.declined_at == nil
+      assert [_pending] = OrganizationInvitations.all_pending_for_user(user)
+    end
+
+    test "leaves other organizations free to invite the account", %{
+      organization: organization,
+      admin: admin
+    } do
+      user = insert(:user)
+      {:ok, invitation} = invite_user(organization, admin, user)
+      {:ok, _declined} = decline(invitation, user)
+
+      assert {:ok, _invitation} = invite_user(insert(:organization), admin, user)
+    end
+
+    test "takes the invitation mail that hasn't gone out with it", %{
+      organization: organization,
+      admin: admin
+    } do
+      user = insert(:user)
+      {:ok, invitation} = invite_user(organization, admin, user)
+      assert [_mail] = Repo.all(OutboxEntry.undelivered())
+
+      {:ok, _declined} = decline(invitation, user)
+
+      assert Repo.all(OutboxEntry) == []
+    end
+
+    test "only the invited account can decline", %{organization: organization, admin: admin} do
+      user = insert(:user)
+      {:ok, invitation} = invite_user(organization, admin, user)
+
+      assert {:error, :invitation_unavailable} = decline(invitation, insert(:user))
+      assert [_pending] = OrganizationInvitations.all_pending_for_user(user)
+    end
+
+    test "an invitation sent to an address can't be declined", %{
+      organization: organization,
+      admin: admin
+    } do
+      {:ok, invitation} = invite(organization, admin, "newcomer@example.com")
+
+      assert {:error, :invitation_unavailable} = decline(invitation, insert(:user))
+    end
+
+    test "audits the decline", %{organization: organization, admin: admin} do
+      user = insert(:user)
+      {:ok, invitation} = invite_user(organization, admin, user)
+      {:ok, _declined} = decline(invitation, user)
+
+      assert audit_log =
+               Enum.find(
+                 AuditLogs.all_by(user),
+                 &(&1.action == "organization.invitation.decline")
+               )
+
+      assert audit_log.params["invitation"]["user"]["username"] == user.username
+      assert audit_log.params["organization"]["name"] == organization.name
+    end
+  end
+
   describe "accept/3" do
+    test "joins the invited account", %{organization: organization, admin: admin} do
+      user = insert(:user)
+      {:ok, invitation} = invite_user(organization, admin, user, "write")
+
+      assert {:ok, organization_user} = accept(invitation, user)
+      assert organization_user.role == "write"
+      assert Organizations.get_role(organization, user) == "write"
+      assert OrganizationInvitations.all_pending_for_user(user) == []
+    end
+
+    test "refuses any account other than the invited one", %{
+      organization: organization,
+      admin: admin
+    } do
+      user = insert(:user)
+      other = insert(:user)
+      {:ok, invitation} = invite_user(organization, admin, user)
+
+      assert {:error, :invitation_unavailable} = accept(invitation, other)
+      refute Organizations.get_role(organization, other)
+      assert [_pending] = OrganizationInvitations.all_pending_for_user(user)
+    end
+
+    test "refuses an invitation the account declined", %{
+      organization: organization,
+      admin: admin
+    } do
+      user = insert(:user)
+      {:ok, invitation} = invite_user(organization, admin, user)
+      {:ok, _declined} = decline(invitation, user)
+
+      assert {:error, :invitation_unavailable} = accept(invitation, user)
+      refute Organizations.get_role(organization, user)
+    end
+
     test "joins the signed-in account with the invited role", %{
       organization: organization,
       admin: admin
@@ -400,6 +653,21 @@ defmodule Hexpm.Accounts.OrganizationInvitationsTest do
     OrganizationInvitations.invite(organization, %{"email" => email, "role" => role}, admin,
       audit: audit_data(admin)
     )
+  end
+
+  defp invite_user(organization, admin, user, role \\ "read") do
+    OrganizationInvitations.invite_user(organization, user, %{"role" => role}, admin,
+      audit: audit_data(admin)
+    )
+  end
+
+  defp decline(invitation, user) do
+    invitation = %{
+      invitation
+      | organization: Repo.preload(invitation, :organization, force: true).organization
+    }
+
+    OrganizationInvitations.decline(invitation, user, audit: audit_data(user))
   end
 
   defp provision(organization, admin, email) do

@@ -399,6 +399,10 @@ defmodule HexpmWeb.Router do
     post "/security/verify-tfa-code", SecurityController, :verify_tfa_code,
       as: :dashboard_security
 
+    get "/invitations", InvitationController, :index
+    post "/invitations/:id/accept", InvitationController, :accept
+    post "/invitations/:id/decline", InvitationController, :decline
+
     get "/email", EmailController, :index
     post "/email", EmailController, :create
     delete "/email", EmailController, :delete

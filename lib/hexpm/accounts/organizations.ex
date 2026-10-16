@@ -348,45 +348,6 @@ defmodule Hexpm.Accounts.Organizations do
     Repo.update(User.to_organization(user, organization))
   end
 
-  def add_member(_organization, %User{organization_id: id}, _params, _opts) when is_integer(id) do
-    {:error, :organization_user}
-  end
-
-  def add_member(organization, %User{organization_id: nil} = user, params, audit: audit_data) do
-    if User.verified_primary_email?(user) do
-      insert_member(organization, user, params, audit_data)
-    else
-      {:error, :unverified_primary_email}
-    end
-  end
-
-  defp insert_member(organization, user, params, audit_data) do
-    multi =
-      Multi.new()
-      |> Hexpm.Accounts.OrganizationTFA.admit(organization, user)
-      |> Seats.claim(:seats, organization)
-      |> Multi.insert(:organization_user, fn _changes ->
-        organization_user = %OrganizationUser{organization_id: organization.id, user_id: user.id}
-        Organization.add_member(organization_user, params)
-      end)
-      |> audit(audit_data, "organization.member.add", {organization, user})
-
-    case Repo.transaction(multi) do
-      {:ok, result} ->
-        send_invite_email(organization, user)
-        {:ok, result.organization_user}
-
-      {:error, :tfa_admission, reason, _} ->
-        {:error, reason}
-
-      {:error, :seats, reason, _} ->
-        {:error, reason}
-
-      {:error, :organization_user, changeset, _} ->
-        {:error, changeset}
-    end
-  end
-
   def remove_member(_organization, nil = _user, audit: _audit_data) do
     :ok
   end
@@ -523,15 +484,11 @@ defmodule Hexpm.Accounts.Organizations do
     end)
   end
 
-  defp send_invite_email(organization, user) do
-    send_member_added_email(organization, user)
-  end
-
   @doc """
-  Tells someone they were added to an organization. Every path that creates a
-  membership without the person asking for it sends this, including
-  provisioning. Queued rather than delivered, so a caller can send it inside
-  the transaction that creates the membership.
+  Tells someone they were added to an organization. Provisioning is the one
+  path that creates a membership without the person accepting an invitation,
+  and it sends this. Queued rather than delivered, so a caller can send it
+  inside the transaction that creates the membership.
   """
   def send_member_added_email(organization, user) do
     if OptionalEmails.allowed?(user, :organization_invite) do

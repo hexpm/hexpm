@@ -236,14 +236,21 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
     assert OrganizationAuth.check(org, c.admin) == {:error, :tfa_required}
   end
 
-  test "enrollment is required for direct addition and an invitation remains pending" do
+  test "enrollment is required to accept an invitation and the invitation remains pending" do
     c = context()
     user = insert(:user)
     {:ok, _} = configure(c, %{"enforcement" => "transition", "grace_days" => "14"})
 
+    {:ok, user_invitation} =
+      OrganizationInvitations.invite_user(c.organization, user, %{"role" => "read"}, c.admin,
+        audit: audit_data(c.admin)
+      )
+
     assert {:error, :tfa_enrollment_required} =
-             Organizations.add_member(c.organization, user, %{"role" => "read"},
-               audit: audit_data(c.admin)
+             OrganizationInvitations.accept(
+               Repo.preload(user_invitation, :organization),
+               user,
+               audit: audit_data(user)
              )
 
     {:ok, invitation} =
@@ -661,13 +668,16 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
       user = insert(:user)
       secret = Hexpm.Accounts.TFA.generate_secret()
 
+      {:ok, invitation} =
+        OrganizationInvitations.invite_user(c.organization, user, %{"role" => "read"}, c.admin,
+          audit: audit_data(c.admin)
+        )
+
+      invitation = Repo.preload(invitation, :organization)
+
       [admitted, enrolled] =
         race([
-          fn ->
-            Organizations.add_member(c.organization, user, %{"role" => "read"},
-              audit: audit_data(c.admin)
-            )
-          end,
+          fn -> OrganizationInvitations.accept(invitation, user, audit: audit_data(user)) end,
           fn ->
             Users.tfa_enable(user, secret, Hexpm.Accounts.TFA.time_based_token(secret),
               audit: audit_data(user)
@@ -736,10 +746,7 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
     assert {:error, :tfa_enrollment_required} =
              OrganizationInvitations.accept(invitation, user, audit: audit_data(user))
 
-    assert {:ok, _} =
-             Organizations.add_member(org, insert(:user_with_tfa), %{"role" => "read"},
-               audit: audit_data(c.admin)
-             )
+    insert(:organization_user, organization: org, user: insert(:user_with_tfa))
 
     user = enroll(user)
 

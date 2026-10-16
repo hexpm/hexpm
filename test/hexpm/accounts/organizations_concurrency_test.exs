@@ -2,21 +2,20 @@ defmodule Hexpm.Accounts.OrganizationsConcurrencyTest do
   use Hexpm.DataCase
   import Hexpm.ConcurrencyCase
 
-  alias Hexpm.Accounts.{Organizations, OrganizationUser, Seats}
+  alias Hexpm.Accounts.{OrganizationInvitations, Organizations, OrganizationUser, Seats}
 
   # Every assertion here fails if the seat lock in Hexpm.Accounts.Seats stops
   # being taken. Deleting `lock: "FOR NO KEY UPDATE"` from Seats.lock!/1 is the
   # check that these are contending on real connections and not quietly boxed.
 
-  test "two adds cannot spend the same last seat" do
+  test "two acceptances cannot spend the same last seat" do
     committed(&build_context/0, fn context ->
       newcomers = [insert(:user), insert(:user)]
+      invitations = Enum.map(newcomers, &invite(context, &1))
 
       results =
-        race(newcomers, fn user ->
-          Organizations.add_member(context.organization, user, %{"role" => "read"},
-            audit: audit_data(context.admin)
-          )
+        race(Enum.zip(invitations, newcomers), fn {invitation, user} ->
+          OrganizationInvitations.accept(invitation, user, audit: audit_data(user))
         end)
 
       assert Enum.count(results, &match?({:ok, %OrganizationUser{}}, &1)) == 1
@@ -55,16 +54,15 @@ defmodule Hexpm.Accounts.OrganizationsConcurrencyTest do
     end)
   end
 
-  test "an add and a reduction cannot both take the last seat" do
+  test "an acceptance and a reduction cannot both take the last seat" do
     committed(&build_context/0, fn context ->
       newcomer = insert(:user)
+      invitation = invite(context, newcomer)
 
       results =
         race([
           fn ->
-            Organizations.add_member(context.organization, newcomer, %{"role" => "read"},
-              audit: audit_data(context.admin)
-            )
+            OrganizationInvitations.accept(invitation, newcomer, audit: audit_data(newcomer))
           end,
           fn ->
             Seats.update_quantity(context.organization, 2, fn quantity ->
@@ -83,6 +81,19 @@ defmodule Hexpm.Accounts.OrganizationsConcurrencyTest do
       assert successes == 1
       assert Seats.used(context.organization) <= paid_seats(context.organization)
     end)
+  end
+
+  defp invite(context, user) do
+    {:ok, invitation} =
+      OrganizationInvitations.invite_user(
+        context.organization,
+        user,
+        %{"role" => "read"},
+        context.admin,
+        audit: audit_data(context.admin)
+      )
+
+    Repo.preload(invitation, :organization)
   end
 
   defp build_context do

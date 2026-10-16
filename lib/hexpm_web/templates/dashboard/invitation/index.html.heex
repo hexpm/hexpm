@@ -1,0 +1,56 @@
+<div class="bg-grey-50 dark:bg-grey-950 min-h-screen py-4 sm:py-8">
+  <div class="max-w-7xl mx-auto px-4">
+    <div class="flex flex-col gap-4 sm:gap-8 lg:flex-row">
+      <%!-- Left Sidebar --%>
+      <div class="w-full lg:w-64 flex-shrink-0">
+        {render(HexpmWeb.DashboardView, "_sidebar.html", assigns)}
+      </div>
+
+      <%!-- Right Content --%>
+      <div class="flex-1 min-w-0">
+        <div class="bg-white dark:bg-grey-800 rounded-lg shadow-sm border border-grey-200 dark:border-grey-700 overflow-hidden">
+          <div class="px-6 py-5 border-b border-grey-200 dark:border-grey-700">
+            <h2 class="text-xl font-semibold text-grey-900 dark:text-white mb-2">
+              Organization invitations
+            </h2>
+            <p class="text-sm text-grey-500 dark:text-grey-300">
+              You join an organization only if you accept its invitation. If you decline, the organization can't invite you again for {decline_hold_days()} days.
+            </p>
+          </div>
+
+          <%= if @invitations == [] do %>
+            <p class="px-6 py-8 text-center text-sm text-grey-500 dark:text-grey-300">
+              You have no pending invitations.
+            </p>
+          <% else %>
+            <ul class="divide-y divide-grey-100 dark:divide-grey-700">
+              <li
+                :for={invitation <- @invitations}
+                id={"invitation-#{invitation.id}"}
+                class="flex flex-col items-start gap-3 px-6 py-4 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div>
+                  <p class="text-sm font-medium text-grey-900 dark:text-white">
+                    {invitation.organization.name}
+                  </p>
+                  <p class="text-xs text-grey-500 dark:text-grey-300">
+                    {invitation_details(invitation)}
+                  </p>
+                </div>
+
+                <div class="flex shrink-0 items-center gap-2">
+                  <.form for={%{}} action={~p"/dashboard/invitations/#{invitation.id}/decline"}>
+                    <.button type="submit" variant="secondary" size="sm">Decline</.button>
+                  </.form>
+                  <.form for={%{}} action={~p"/dashboard/invitations/#{invitation.id}/accept"}>
+                    <.button type="submit" variant="primary" size="sm">Accept</.button>
+                  </.form>
+                </div>
+              </li>
+            </ul>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

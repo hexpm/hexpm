@@ -376,6 +376,16 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCard do
 
   defp humanize_action(%AuditLog{
          action: "organization.invitation.create",
+         params: %{
+           "invitation" => %{"user" => %{"username" => username}},
+           "organization" => %{"name" => org}
+         }
+       }) do
+    "Invited #{username} to #{org}"
+  end
+
+  defp humanize_action(%AuditLog{
+         action: "organization.invitation.create",
          params: %{"invitation" => %{"email" => email}, "organization" => %{"name" => org}}
        }) do
     "Invited #{email} to #{org}"
@@ -384,8 +394,33 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCard do
   defp humanize_action(%AuditLog{
          action: "organization.invitation.accept",
          params: %{"invitation" => %{"email" => email}, "organization" => %{"name" => org}}
-       }) do
+       })
+       when is_binary(email) do
     "Accepted the invitation for #{email} to #{org}"
+  end
+
+  defp humanize_action(%AuditLog{
+         action: "organization.invitation.accept",
+         params: %{"organization" => %{"name" => org}}
+       }) do
+    "Accepted the invitation to #{org}"
+  end
+
+  defp humanize_action(%AuditLog{
+         action: "organization.invitation.decline",
+         params: %{"organization" => %{"name" => org}}
+       }) do
+    "Declined the invitation to #{org}"
+  end
+
+  defp humanize_action(%AuditLog{
+         action: "organization.invitation.revoke",
+         params: %{
+           "invitation" => %{"user" => %{"username" => username}},
+           "organization" => %{"name" => org}
+         }
+       }) do
+    "Revoked the invitation for #{username} to #{org}"
   end
 
   defp humanize_action(%AuditLog{

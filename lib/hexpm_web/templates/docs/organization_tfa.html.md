@@ -18,7 +18,7 @@ API write operations continue to require a one-time code from members with 2FA e
 
 ### Invitations and admission
 
-Administrators can invite users who haven't enabled 2FA. Once a policy is scheduled, enrollment is required before accepting an invitation, adding a user directly, or creating membership through SSO. Invitation acceptance returns the user to enrollment without consuming the invitation or allocating a seat. Returning to acceptance rechecks the invitation, the current policy, and available seats.
+Administrators can invite users who haven't enabled 2FA. Once a policy is scheduled, enrollment is required before accepting an invitation or creating membership through SSO. Invitation acceptance returns the user to enrollment without consuming the invitation or allocating a seat. Returning to acceptance rechecks the invitation, the current policy, and available seats.
 
 ### Recovery and leaving
 

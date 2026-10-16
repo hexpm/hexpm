@@ -105,59 +105,6 @@ defmodule Hexpm.Accounts.OrganizationsTest do
     end
   end
 
-  describe "add_member/4" do
-    setup do
-      organization = insert(:organization)
-      admin = insert(:user)
-      insert(:organization_user, organization: organization, user: admin, role: "admin")
-      %{organization: organization, admin: admin}
-    end
-
-    test "adds a user with a verified primary email", %{organization: organization, admin: admin} do
-      user = insert(:user)
-
-      assert {:ok, organization_user} =
-               Organizations.add_member(organization, user, %{"role" => "write"},
-                 audit: audit_data(admin)
-               )
-
-      assert organization_user.role == "write"
-      assert Organizations.get_role(organization, user) == "write"
-    end
-
-    test "refuses a user whose primary email is unverified", %{
-      organization: organization,
-      admin: admin
-    } do
-      user = insert(:user, emails: [build(:email, verified: false)])
-
-      assert {:error, :unverified_primary_email} =
-               Organizations.add_member(organization, user, %{"role" => "write"},
-                 audit: audit_data(admin)
-               )
-
-      refute Organizations.get_role(organization, user)
-    end
-
-    test "a verified secondary email does not stand in for the primary", %{
-      organization: organization,
-      admin: admin
-    } do
-      user =
-        insert(:user,
-          emails: [
-            build(:email, verified: false),
-            build(:email, primary: false, public: false, gravatar: false)
-          ]
-        )
-
-      assert {:error, :unverified_primary_email} =
-               Organizations.add_member(organization, user, %{"role" => "read"},
-                 audit: audit_data(admin)
-               )
-    end
-  end
-
   describe "change_visibility/4" do
     test "lists and unlists the member on the public profile" do
       organization = insert(:organization)

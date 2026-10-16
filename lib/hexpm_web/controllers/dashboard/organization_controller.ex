@@ -157,41 +157,68 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
   def update(conn, %{
         "dashboard_org" => organization,
-        "action" => "add_member",
+        "action" => "invite_user",
         "organization_user" => params
       }) do
     username = params["username"]
 
     access_organization(conn, organization, "admin", fn organization ->
-      if user = Users.public_get(username, [:emails]) do
-        case Organizations.add_member(organization, user, params, audit: audit_data(conn)) do
-          {:ok, _} ->
+      if user = Users.public_get(username) do
+        case OrganizationInvitations.invite_user(
+               organization,
+               user,
+               params,
+               conn.assigns.current_user,
+               audit: audit_data(conn)
+             ) do
+          {:ok, _invitation} ->
             conn
-            |> put_flash(:info, "User #{username} has been added to the organization.")
+            |> put_flash(
+              :info,
+              "#{user.username} has been invited. They join the organization once they accept."
+            )
             |> redirect(to: ~p"/dashboard/orgs/#{organization}/members")
 
-          {:error, :tfa_enrollment_required} ->
+          {:error, :already_member} ->
             conn
             |> put_status(400)
-            |> put_flash(:error, "This user must enable 2FA before joining the organization.")
+            |> put_flash(:error, "#{user.username} is already a member of this organization.")
             |> render_index(organization, tab: :members)
 
-          {:error, :seats_exhausted} ->
+          {:error, :declined} ->
             conn
             |> put_status(400)
-            |> put_flash(:error, "Not enough seats in organization to add member.")
+            |> put_flash(
+              :error,
+              "#{user.username} declined an invitation to this organization recently. Try again later."
+            )
+            |> render_index(organization, tab: :members)
+
+          {:error, :too_many_invitations} ->
+            conn
+            |> put_status(429)
+            |> put_flash(
+              :error,
+              "Too many invitations have been sent to #{user.username} or by you recently. Try again later."
+            )
+            |> render_index(organization, tab: :members)
+
+          {:error, :organization_user} ->
+            conn
+            |> put_status(400)
+            |> put_flash(:error, "An organization can't be a member of an organization.")
             |> render_index(organization, tab: :members)
 
           {:error, :unverified_primary_email} ->
             conn
             |> put_status(400)
-            |> put_flash(:error, "User #{username} has not verified their primary email.")
+            |> put_flash(:error, "#{user.username} has not verified their primary email.")
             |> render_index(organization, tab: :members)
 
           {:error, changeset} ->
             conn
             |> put_status(400)
-            |> render_index(organization, tab: :members, add_member_changeset: changeset)
+            |> render_index(organization, tab: :members, invite_user_changeset: changeset)
         end
       else
         conn
@@ -1283,7 +1310,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         workload_identity_changeset:
           opts[:workload_identity_changeset] || workload_identity_changeset(organization),
         packages: packages,
-        add_member_changeset: opts[:add_member_changeset] || add_member_changeset(),
+        invite_user_changeset: opts[:invite_user_changeset] || invite_user_changeset(),
         new_organization_changeset: create_changeset(),
         policy_action: policy_action,
         policy: policy,
@@ -1511,8 +1538,8 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     end
   end
 
-  defp add_member_changeset() do
-    Organization.add_member(%OrganizationUser{}, %{"role" => "read"})
+  defp invite_user_changeset() do
+    OrganizationInvitation.user_changeset(%OrganizationInvitation{}, %{"role" => "read"})
   end
 
   defp invite_changeset() do

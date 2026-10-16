@@ -1,6 +1,6 @@
 defmodule HexpmWeb.API.OrganizationUserControllerTest do
   use HexpmWeb.ConnCase, async: true
-  alias Hexpm.Accounts.Organizations
+  alias Hexpm.Accounts.{OrganizationInvitations, Organizations}
 
   defp mock_customer(context) do
     stub(Hexpm.Billing.Mock, :get, fn token, _opts ->
@@ -125,30 +125,27 @@ defmodule HexpmWeb.API.OrganizationUserControllerTest do
       result = json_response(conn, 422)
 
       assert result["errors"] ==
-               "cannot add member until the user has verified their primary email"
+               "cannot invite a user who has not verified their primary email"
 
       refute Organizations.get_role(organization, unverified)
+      assert OrganizationInvitations.all_pending(organization) == []
     end
 
-    test "new organization member validates number of seats", %{
-      user1: user1,
+    test "new organization member is refused for an organization key", %{
       organization: organization
     } do
-      organization = seats(organization, 2)
       user2 = insert(:user)
-      user3 = insert(:user)
-      insert(:organization_user, organization: organization, user: user1, role: "admin")
-      insert(:organization_user, organization: organization, user: user2)
-      params = %{"name" => user3.username, "role" => "read"}
+      params = %{"name" => user2.username, "role" => "read"}
 
       conn =
         build_conn()
-        |> put_req_header("authorization", key_for(user1))
+        |> put_req_header("authorization", key_for(organization))
         |> post("/api/orgs/#{organization.name}/members", params)
 
-      result = json_response(conn, 422)
-      assert result["errors"] == "not enough seats to add member"
-      refute Organizations.get_role(organization, user3)
+      assert json_response(conn, 403)["message"] ==
+               "inviting a member requires a user's credentials, not an organization key"
+
+      assert OrganizationInvitations.all_pending(organization) == []
     end
 
     test "new organization member validates already member", %{
@@ -164,23 +161,55 @@ defmodule HexpmWeb.API.OrganizationUserControllerTest do
         |> post("/api/orgs/#{organization.name}/members", params)
 
       result = json_response(conn, 422)
-      assert result["errors"]["user_id"] == "is already member"
+      assert result["errors"] == "user is already a member of this organization"
     end
 
-    test "new organization member", %{user1: user1, organization: organization} do
+    test "new organization member validates already invited", %{
+      user1: user1,
+      organization: organization
+    } do
       user2 = insert(:user)
       insert(:organization_user, organization: organization, user: user1, role: "admin")
       params = %{"name" => user2.username, "role" => "read"}
 
-      user =
+      build_conn()
+      |> put_req_header("authorization", key_for(user1))
+      |> post("/api/orgs/#{organization.name}/members", params)
+      |> json_response(202)
+
+      conn =
         build_conn()
         |> put_req_header("authorization", key_for(user1))
         |> post("/api/orgs/#{organization.name}/members", params)
-        |> json_response(200)
 
-      assert user["username"] == user2.username
-      assert user["role"] == "read"
-      assert Organizations.get_role(organization, user2) == "read"
+      assert json_response(conn, 422)["errors"] == %{"username" => "has already been invited"}
+    end
+
+    test "new organization member is invited and joins only after accepting", %{
+      user1: user1,
+      organization: organization
+    } do
+      user2 = insert(:user)
+      insert(:organization_user, organization: organization, user: user1, role: "admin")
+      params = %{"name" => user2.username, "role" => "write"}
+
+      invitation =
+        build_conn()
+        |> put_req_header("authorization", key_for(user1))
+        |> post("/api/orgs/#{organization.name}/members", params)
+        |> json_response(202)
+
+      assert invitation["username"] == user2.username
+      assert invitation["role"] == "write"
+      assert invitation["expires_at"]
+      refute Organizations.get_role(organization, user2)
+
+      assert [pending] = OrganizationInvitations.all_pending_for_user(user2)
+
+      assert {:ok, _organization_user} =
+               OrganizationInvitations.accept(pending, user2, audit: audit_data(user2))
+
+      assert Organizations.get_role(organization, user2) == "write"
     end
   end
 

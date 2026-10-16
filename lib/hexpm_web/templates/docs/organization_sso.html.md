@@ -90,7 +90,7 @@ The first time a member uses the organization login URL:
 2. The member authenticates through the configured identity provider.
 3. Hexpm asks the member to confirm the link between the returned provider identity and the account they are signed in as. If the member hasn't re-authenticated to Hexpm in the last hour, this takes [step-up re-authentication](#mfa-and-step-up) first.
 
-Hexpm relies on the member being signed in, so there's no confirmation code and the provider's email isn't compared with the account's addresses. The Hexpm account has to be a member of the organization already, unless [just-in-time membership](#just-in-time-membership) admits it at this step. Otherwise an organization administrator adds it and the member retries.
+Hexpm relies on the member being signed in, so there's no confirmation code and the provider's email isn't compared with the account's addresses. The Hexpm account has to be a member of the organization already, unless [just-in-time membership](#just-in-time-membership) admits it at this step. Otherwise an organization administrator invites it, and the member accepts the invitation and retries.
 
 A provider email never establishes durable identity, selects an account, creates one, or changes a Hexpm email address. After linking, the connection, exact issuer, and stable provider subject are the identity key. The account's verified primary address is notified when the link is created; an account with no verified primary address is not notified at all.
 
@@ -108,7 +108,7 @@ Adding, verifying, and removing a domain take an organization administrator and 
 
 ### Just-in-time membership
 
-Just-in-time membership adds an existing Hexpm account to the organization the first time it authenticates through your provider, so you don't have to add each person before they link. It never creates a Hexpm account and never sends an invitation. Someone without a Hexpm account signs up before their first login, or you use [provisioning](#provisioning-scim), which can invite them.
+Just-in-time membership adds an existing Hexpm account to the organization the first time it authenticates through your provider, so you don't have to invite each person before they link. It never creates a Hexpm account and never sends an invitation. Someone without a Hexpm account signs up before their first login, or you use [provisioning](#provisioning-scim), which can invite them.
 
 It needs a saved SSO configuration and at least one [verified domain](#verified-domains). Turn it on under **Just-in-time membership** on the **SSO** dashboard by choosing what happens **When the seats run out**, and pick the **Role for new members**, **Read** or **Write**. Choosing **Off, do not add members automatically** turns it off again.
 

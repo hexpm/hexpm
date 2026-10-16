@@ -65,6 +65,10 @@ defmodule HexpmWeb.DashboardView do
     icon(:heroicon, "trash", class: "w-5 h-5 #{color}")
   end
 
+  defp pending_invitations(user) do
+    OrganizationInvitations.all_pending_for_user(user)
+  end
+
   defp selected_setting(conn, id) do
     url_id =
       id

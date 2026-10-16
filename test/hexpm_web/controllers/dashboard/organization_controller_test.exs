@@ -1,13 +1,7 @@
 defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
   use HexpmWeb.ConnCase, async: true
-  import Swoosh.TestAssertions
 
   alias Hexpm.Accounts.{AuditLogs, Organization, OrganizationInvitations, Organizations, Users}
-
-  defp add_email(user, email) do
-    {:ok, user} = Users.add_email(user, %{email: email}, audit: audit_data(user))
-    user
-  end
 
   defp mock_customer(organization) do
     stub(Hexpm.Billing.Mock, :get, fn token, _opts ->
@@ -620,71 +614,78 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
   end
 
   describe "POST /dashboard/orgs/:dashboard_org" do
-    test "add member to organization", %{user: user, organization: organization} do
-      stub(Hexpm.Billing.Mock, :get, fn token, _opts ->
-        assert organization.name == token
-
-        %{
-          "checkout_html" => "",
-          "invoices" => [],
-          "quantity" => 2
-        }
-      end)
-
+    test "inviting a user by username sends an invitation instead of adding them", %{
+      user: user,
+      organization: organization
+    } do
+      mock_customer(organization)
       insert(:organization_user, organization: organization, user: user, role: "admin")
       new_user = insert(:user)
-      add_email(new_user, "new@mail.com")
-      params = %{"username" => new_user.username, role: "write"}
 
       conn =
         build_conn()
         |> test_login(user)
         |> post("/dashboard/orgs/#{organization.name}", %{
-          "action" => "add_member",
-          "organization_user" => params
+          "action" => "invite_user",
+          "organization_user" => %{"username" => new_user.username, "role" => "write"}
         })
 
       assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}/members"
 
-      assert repo_user =
-               Repo.get_by(assoc(organization, :organization_users), user_id: new_user.id)
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) ==
+               "#{new_user.username} has been invited. They join the organization once they accept."
 
-      assert repo_user.role == "write"
+      refute Repo.get_by(assoc(organization, :organization_users), user_id: new_user.id)
 
-      assert %Hexpm.Emails.OutboxEntry{category: "organization.member_added"} =
+      assert [invitation] = OrganizationInvitations.all_pending(organization)
+      assert invitation.user_id == new_user.id
+      assert invitation.role == "write"
+      assert invitation.email == nil
+
+      primary_email = Repo.preload(new_user, :emails).emails |> hd() |> Map.fetch!(:email)
+
+      assert %Hexpm.Emails.OutboxEntry{category: "organization.invitation", email: email} =
                Repo.get_by!(Hexpm.Emails.OutboxEntry,
-                 group_key: "organization-member-added:#{organization.id}:#{new_user.id}"
+                 group_key: "organization-invitation:#{invitation.id}"
                )
+
+      assert email["to"] == [%{"name" => new_user.username, "address" => primary_email}]
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/orgs/#{organization.name}/members")
+
+      assert html_response(conn, 200) =~ new_user.username
+      refute html_response(conn, 200) =~ primary_email
     end
 
-    test "add member whose primary email is unverified", %{
+    test "inviting a user whose primary email is unverified is refused", %{
       user: user,
       organization: organization
     } do
       mock_customer(organization)
       insert(:organization_user, organization: organization, user: user, role: "admin")
       unverified = insert(:user, emails: [build(:email, verified: false)])
-      params = %{"username" => unverified.username, role: "write"}
 
       conn =
         build_conn()
         |> test_login(user)
         |> post("/dashboard/orgs/#{organization.name}", %{
-          "action" => "add_member",
-          "organization_user" => params
+          "action" => "invite_user",
+          "organization_user" => %{"username" => unverified.username, "role" => "write"}
         })
 
       html = html_response(conn, 400)
 
       assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
-               "User #{unverified.username} has not verified their primary email."
+               "#{unverified.username} has not verified their primary email."
 
       assert active_org_tab(html) == "Members"
-      refute Repo.get_by(assoc(organization, :organization_users), user_id: unverified.id)
-      assert_no_email_sent()
+      assert OrganizationInvitations.all_pending(organization) == []
     end
 
-    test "adding member does not send invite when user opts out", %{
+    test "inviting a user who opted out of invitation mail invites without mailing", %{
       user: user,
       organization: organization
     } do
@@ -703,67 +704,106 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
           audit: audit_data(new_user)
         )
 
-      params = %{"username" => new_user.username, role: "write"}
-
       mock_customer(organization)
 
       conn =
         build_conn()
         |> test_login(user)
         |> post("/dashboard/orgs/#{organization.name}", %{
-          "action" => "add_member",
-          "organization_user" => params
+          "action" => "invite_user",
+          "organization_user" => %{"username" => new_user.username, "role" => "write"}
         })
 
       assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}/members"
-
-      assert Repo.get_by(assoc(organization, :organization_users), user_id: new_user.id)
-
-      assert_no_email_sent()
+      assert [invitation] = OrganizationInvitations.all_pending_for_user(new_user)
+      assert invitation.organization_id == organization.id
+      assert Repo.all(Hexpm.Emails.OutboxEntry) == []
     end
 
-    test "add member to organization without enough seats", %{
+    test "inviting a user who is already invited shows the error on the form", %{
       user: user,
       organization: organization
     } do
-      stub(Hexpm.Billing.Mock, :get, fn token, _opts ->
-        assert organization.name == token
-
-        %{
-          "checkout_html" => "",
-          "invoices" => [],
-          "quantity" => 1,
-          "subscription" => %{
-            "current_period_end" => "2017-12-12T00:00:00Z",
-            "status" => "active",
-            "cancel_at_period_end" => false
-          },
-          "plan_id" => "organization-monthly",
-          "amount_with_tax" => 700,
-          "proration_amount" => 0
-        }
-      end)
-
-      organization = seats(organization, 1)
+      mock_customer(organization)
       insert(:organization_user, organization: organization, user: user, role: "admin")
       new_user = insert(:user)
-      add_email(new_user, "new@mail.com")
-      params = %{"username" => new_user.username, role: "write"}
+      params = %{"username" => new_user.username, "role" => "read"}
 
       conn =
         build_conn()
         |> test_login(user)
         |> post("/dashboard/orgs/#{organization.name}", %{
-          "action" => "add_member",
+          "action" => "invite_user",
           "organization_user" => params
         })
 
-      html = html_response(conn, 400)
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}/members"
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("/dashboard/orgs/#{organization.name}", %{
+          "action" => "invite_user",
+          "organization_user" => params
+        })
+
+      assert html_response(conn, 400) =~ "has already been invited"
+      assert [_invitation] = OrganizationInvitations.all_pending(organization)
+    end
+
+    test "inviting a user who declined recently is refused", %{
+      user: user,
+      organization: organization
+    } do
+      mock_customer(organization)
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+      new_user = insert(:user)
+
+      {:ok, invitation} =
+        OrganizationInvitations.invite_user(organization, new_user, %{"role" => "read"}, user,
+          audit: audit_data(user)
+        )
+
+      {:ok, _declined} =
+        OrganizationInvitations.decline(
+          Repo.preload(invitation, :organization),
+          new_user,
+          audit: audit_data(new_user)
+        )
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("/dashboard/orgs/#{organization.name}", %{
+          "action" => "invite_user",
+          "organization_user" => %{"username" => new_user.username, "role" => "read"}
+        })
+
+      assert html_response(conn, 400)
 
       assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
-               "Not enough seats in organization to add member."
+               "#{new_user.username} declined an invitation to this organization recently. Try again later."
 
-      assert active_org_tab(html) == "Members"
+      assert OrganizationInvitations.all_pending(organization) == []
+    end
+
+    test "inviting an organization is refused", %{user: user, organization: organization} do
+      mock_customer(organization)
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+      other = insert(:organization)
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("/dashboard/orgs/#{organization.name}", %{
+          "action" => "invite_user",
+          "organization_user" => %{"username" => other.user.username, "role" => "read"}
+        })
+
+      assert html_response(conn, 400)
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "An organization can't be a member of an organization."
     end
 
     test "invite by email", %{user: user, organization: organization} do
