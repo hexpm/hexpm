@@ -226,15 +226,8 @@ defmodule Hexpm.OAuth.Tokens do
         %Hexpm.Accounts.Organization{} = o -> {nil, o}
       end
 
-    max_sessions =
-      if organization do
-        UserSessions.get_organization_session_limit(organization)
-      else
-        UserSessions.max_user_sessions()
-      end
-
     # Enforce session limit outside transaction
-    UserSessions.enforce_session_limit(user_or_org, max_sessions)
+    UserSessions.enforce_api_key_session_limit(user_or_org)
 
     # Pre-compute JWT outside the transaction (CPU-intensive ES256 signing)
     token_opts =
