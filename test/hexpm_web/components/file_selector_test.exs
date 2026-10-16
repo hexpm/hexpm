@@ -11,6 +11,12 @@ defmodule HexpmWeb.Components.FileSelectorTest do
     assert ["lib/file_149.ex"] = FileSelector.filter(files, "149")
   end
 
+  test "filter matches on at most 255 bytes of the query" do
+    path = String.duplicate("a", 255)
+
+    assert FileSelector.filter([path], String.duplicate("a", 300)) == [path]
+  end
+
   test "filter_by preserves distinct entries with the same displayed path" do
     files = [%{id: 1, path: "?.ex"}, %{id: 2, path: "?.ex"}]
 
