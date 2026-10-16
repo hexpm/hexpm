@@ -44,6 +44,41 @@ defmodule HexpmWeb.MarkdownEngineTest do
     assert html =~ "How do I contact Hex?</h4>"
   end
 
+  test "renders inline markup in anchored headings" do
+    html = render_markdown("### Use `mix hex.publish` <em>now</em>\n")
+
+    assert html =~
+             ~s(<h3 id="use-mix-hexpublish-now" class="section-heading"><a href="#use-mix-hexpublish-now" class="hover-link">)
+
+    assert html =~ "</a> Use <code>mix hex.publish</code> <em>now</em></h3>"
+    refute html =~ "heading-anchor"
+  end
+
+  test "adds IAL classes to tables wherever they are" do
+    html =
+      render_markdown("""
+      | a |
+      |---|
+      | 1 |
+      {: .table .table-striped}
+
+      > | b |
+      > |---|
+      > | 2 |
+      > {: .quoted}
+
+      | c |
+      |---|
+      | 3 |
+      """)
+
+    assert html =~ ~s(<table class="table table-striped">)
+    assert html =~ ~s(<blockquote>\n<table class="quoted">)
+    assert html =~ ~s(<table>\n<thead>\n<tr>\n<th>c</th>)
+    refute html =~ "{:"
+    refute html =~ "table-classes"
+  end
+
   test "adds a copy control that copies only the fenced source" do
     html =
       render_markdown("""

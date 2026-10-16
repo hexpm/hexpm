@@ -80,7 +80,7 @@ Only Hex packages may be used as dependencies of the package. It is not possible
 
 <a id="example-app-src-file"></a>
 
-#### Example <myapp>.app.src file
+#### Example `<myapp>.app.src` file
 
 ```erlang
 {application, relx,

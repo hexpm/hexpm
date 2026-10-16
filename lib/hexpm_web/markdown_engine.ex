@@ -28,6 +28,8 @@ defmodule HexpmWeb.MarkdownEngine do
       |> maybe_add_copy_controls(path)
       |> MDEx.traverse_and_update(&transform_node/1)
       |> MDEx.to_html!()
+      |> InlineAttributeLists.apply_classes()
+      |> HeadingAnchors.anchor()
 
     # Generate code that replaces placeholder with actual nonce at runtime
     quote do
