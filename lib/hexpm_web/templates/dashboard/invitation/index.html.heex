@@ -14,7 +14,7 @@
               Organization invitations
             </h2>
             <p class="text-sm text-grey-500 dark:text-grey-300">
-              You join an organization only if you accept its invitation. If you decline, the organization can't invite you again for {decline_hold_days()} days.
+              You join an organization only if you accept its invitation. You can undo a decline before the invitation expires. Blocking an organization stops future invitations until you unblock it.
             </p>
           </div>
 
@@ -38,7 +38,10 @@
                   </p>
                 </div>
 
-                <div class="flex shrink-0 items-center gap-2">
+                <div class="flex flex-wrap shrink-0 items-center gap-2">
+                  <.form for={%{}} action={~p"/dashboard/invitations/#{invitation.id}/block"}>
+                    <.button type="submit" variant="danger-outline" size="sm">Block invitations</.button>
+                  </.form>
                   <.form for={%{}} action={~p"/dashboard/invitations/#{invitation.id}/decline"}>
                     <.button type="submit" variant="secondary" size="sm">Decline</.button>
                   </.form>
@@ -49,6 +52,87 @@
               </li>
             </ul>
           <% end %>
+        </div>
+
+        <div
+          :if={@declined_invitations != [] or @invitation_blocks != []}
+          id="declined-and-blocked-organizations"
+          class="mt-6 bg-white dark:bg-grey-800 rounded-lg shadow-sm border border-grey-200 dark:border-grey-700 overflow-hidden"
+        >
+          <div class="px-6 py-5 border-b border-grey-200 dark:border-grey-700">
+            <h2 class="text-xl font-semibold text-grey-900 dark:text-white">
+              Declined and blocked organizations
+            </h2>
+            <p class="mt-2 text-sm text-grey-500 dark:text-grey-300">
+              Unblocking an organization doesn't restore a declined invitation.
+            </p>
+          </div>
+          <table class="w-full text-left text-sm">
+            <thead class="sr-only sm:not-sr-only bg-grey-50 dark:bg-grey-900 text-grey-500 dark:text-grey-300">
+              <tr>
+                <th scope="col" class="px-6 py-3 font-medium">Organization</th>
+                <th scope="col" class="px-6 py-3 font-medium">Status</th>
+                <th scope="col" class="px-6 py-3 font-medium sm:text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-grey-100 dark:divide-grey-700">
+              <tr
+                :for={
+                  row <-
+                    declined_and_blocked_organizations(@declined_invitations, @invitation_blocks)
+                }
+                id={"organization-invitation-state-#{row.organization.id}"}
+                class="block sm:table-row"
+              >
+                <td class="block px-6 pt-4 pb-2 sm:table-cell sm:py-4">
+                  <p class="font-medium text-grey-900 dark:text-white">{row.organization.name}</p>
+                  <p :if={row.invitation} class="mt-1 text-xs text-grey-500 dark:text-grey-300">
+                    Invitation expires
+                    <span class="whitespace-nowrap">{Calendar.strftime(
+                      row.invitation.expires_at,
+                      "%Y-%m-%d"
+                    )}</span>
+                  </p>
+                </td>
+                <td class="block px-6 pb-3 sm:table-cell sm:py-4">
+                  <span class={[
+                    "inline-flex rounded px-2 py-1 text-xs font-medium",
+                    if(row.block,
+                      do: "bg-red-50 text-red-700 dark:bg-red-900 dark:text-red-200",
+                      else: "bg-grey-100 text-grey-700 dark:bg-grey-700 dark:text-grey-200"
+                    )
+                  ]}>
+                    {if row.block, do: "Blocked", else: "Declined"}
+                  </span>
+                </td>
+                <td class="block px-6 pb-4 sm:table-cell sm:py-4">
+                  <div class="flex flex-wrap items-center gap-2 sm:justify-end">
+                    <%= if row.block do %>
+                      <.form
+                        for={%{}}
+                        action={~p"/dashboard/invitations/blocks/#{row.block.id}/unblock"}
+                      >
+                        <.button type="submit" variant="secondary" size="sm">Unblock</.button>
+                      </.form>
+                    <% else %>
+                      <.form
+                        for={%{}}
+                        action={~p"/dashboard/invitations/#{row.invitation.id}/restore"}
+                      >
+                        <.button type="submit" variant="secondary" size="sm">Undo decline</.button>
+                      </.form>
+                      <.form
+                        for={%{}}
+                        action={~p"/dashboard/invitations/#{row.invitation.id}/block"}
+                      >
+                        <.button type="submit" variant="danger-outline" size="sm">Block invitations</.button>
+                      </.form>
+                    <% end %>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

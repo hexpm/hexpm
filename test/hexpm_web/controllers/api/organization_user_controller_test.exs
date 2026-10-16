@@ -91,6 +91,43 @@ defmodule HexpmWeb.API.OrganizationUserControllerTest do
       refute Organizations.get_role(organization, user2)
     end
 
+    test "declining uses the resend cooldown and blocking refuses future invitations", %{
+      user1: admin,
+      organization: organization
+    } do
+      insert(:organization_user, organization: organization, user: admin, role: "admin")
+      user = insert(:user)
+      params = %{"name" => user.username, "role" => "read"}
+
+      {:ok, invitation} =
+        OrganizationInvitations.invite_user(organization, user, params, admin,
+          audit: audit_data(admin)
+        )
+
+      {:ok, _declined} =
+        OrganizationInvitations.decline(invitation, user, audit: audit_data(user))
+
+      conn =
+        build_conn()
+        |> put_req_header("authorization", key_for(admin))
+        |> post("/api/orgs/#{organization.name}/members", params)
+
+      assert json_response(conn, 429)["message"] ==
+               "this organization can invite this user once every 24 hours"
+
+      {:ok, _blocked} = OrganizationInvitations.block(invitation, user, audit: audit_data(user))
+
+      conn =
+        build_conn()
+        |> put_req_header("authorization", key_for(admin))
+        |> post("/api/orgs/#{organization.name}/members", params)
+
+      assert json_response(conn, 422)["errors"] ==
+               "user has blocked invitations from this organization"
+
+      refute Organizations.get_role(organization, user)
+    end
+
     test "new organization member validates new member isn't also an organization", %{
       user1: user1,
       organization: organization
@@ -182,7 +219,8 @@ defmodule HexpmWeb.API.OrganizationUserControllerTest do
         |> put_req_header("authorization", key_for(user1))
         |> post("/api/orgs/#{organization.name}/members", params)
 
-      assert json_response(conn, 422)["errors"] == %{"username" => "has already been invited"}
+      assert json_response(conn, 429)["message"] ==
+               "this organization can invite this user once every 24 hours"
     end
 
     test "new organization member is invited and joins only after accepting", %{

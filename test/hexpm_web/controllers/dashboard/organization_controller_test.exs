@@ -747,11 +747,11 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
           "organization_user" => params
         })
 
-      assert html_response(conn, 400) =~ "has already been invited"
+      assert html_response(conn, 429) =~ "once every 24 hours"
       assert [_invitation] = OrganizationInvitations.all_pending(organization)
     end
 
-    test "inviting a user who declined recently is refused", %{
+    test "inviting a user who blocked the organization is refused", %{
       user: user,
       organization: organization
     } do
@@ -764,8 +764,8 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
           audit: audit_data(user)
         )
 
-      {:ok, _declined} =
-        OrganizationInvitations.decline(
+      {:ok, _blocked} =
+        OrganizationInvitations.block(
           Repo.preload(invitation, :organization),
           new_user,
           audit: audit_data(new_user)
@@ -782,9 +782,39 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       assert html_response(conn, 400)
 
       assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
-               "#{new_user.username} declined an invitation to this organization recently. Try again later."
+               "#{new_user.username} has blocked invitations from this organization."
 
       assert OrganizationInvitations.all_pending(organization) == []
+    end
+
+    test "inviting a blocked account by email is refused", %{
+      user: user,
+      organization: organization
+    } do
+      mock_customer(organization)
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+      invitee = insert(:user)
+
+      {:ok, invitation} =
+        OrganizationInvitations.invite_user(organization, invitee, %{"role" => "read"}, user,
+          audit: audit_data(user)
+        )
+
+      {:ok, _blocked} =
+        OrganizationInvitations.block(invitation, invitee, audit: audit_data(invitee))
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("/dashboard/orgs/#{organization.name}", %{
+          "action" => "invite_member",
+          "organization_invitation" => %{"email" => hd(invitee.emails).email, "role" => "read"}
+        })
+
+      assert html_response(conn, 400)
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "This account has blocked invitations from this organization."
     end
 
     test "inviting an organization is refused", %{user: user, organization: organization} do

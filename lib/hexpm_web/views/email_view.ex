@@ -929,8 +929,7 @@ defmodule HexpmWeb.EmailView do
     end
 
     def decline_notice() do
-      days = div(Hexpm.Accounts.OrganizationInvitation.decline_hold_seconds(), 24 * 60 * 60)
-      "If you decline, the organization can't invite you again for #{days} days."
+      "You can decline this invitation or block future invitations from this organization on your dashboard. You can undo a decline before the invitation expires and remove a block at any time."
     end
 
     defdelegate expiry(expires_at), to: OrganizationInvitation

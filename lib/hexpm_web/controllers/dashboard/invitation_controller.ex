@@ -38,6 +38,53 @@ defmodule HexpmWeb.Dashboard.InvitationController do
     end
   end
 
+  def restore(conn, %{"id" => id}) do
+    user = conn.assigns.current_user
+
+    with id when is_integer(id) <- safe_to_integer(id),
+         %OrganizationInvitation{} = invitation <- OrganizationInvitations.get_for_user(user, id),
+         {:ok, _invitation} <-
+           OrganizationInvitations.restore(invitation, user, audit: audit_data(conn)) do
+      conn
+      |> put_flash(:info, "You restored the invitation to #{invitation.organization.name}.")
+      |> redirect(to: ~p"/dashboard/invitations")
+    else
+      _unavailable -> unavailable(conn)
+    end
+  end
+
+  def block(conn, %{"id" => id}) do
+    user = conn.assigns.current_user
+
+    with id when is_integer(id) <- safe_to_integer(id),
+         %OrganizationInvitation{} = invitation <- OrganizationInvitations.get_for_user(user, id),
+         {:ok, _invitation} <-
+           OrganizationInvitations.block(invitation, user, audit: audit_data(conn)) do
+      conn
+      |> put_flash(
+        :info,
+        "You blocked invitations from #{invitation.organization.name}. You can unblock them below."
+      )
+      |> redirect(to: ~p"/dashboard/invitations")
+    else
+      _unavailable -> unavailable(conn)
+    end
+  end
+
+  def unblock(conn, %{"id" => id}) do
+    user = conn.assigns.current_user
+
+    with id when is_integer(id) <- safe_to_integer(id),
+         block when not is_nil(block) <- OrganizationInvitations.get_block_for_user(user, id),
+         {:ok, _block} <- OrganizationInvitations.unblock(block, user, audit: audit_data(conn)) do
+      conn
+      |> put_flash(:info, "You unblocked invitations from #{block.organization.name}.")
+      |> redirect(to: ~p"/dashboard/invitations")
+    else
+      _unavailable -> unavailable(conn)
+    end
+  end
+
   defp handle_accept({:ok, :already_member}, conn, invitation) do
     conn
     |> put_flash(:info, "You are already a member of #{invitation.organization.name}.")
@@ -98,7 +145,10 @@ defmodule HexpmWeb.Dashboard.InvitationController do
     render(conn, "index.html",
       title: "Dashboard - Invitations",
       container: "container page dashboard",
-      invitations: OrganizationInvitations.all_pending_for_user(conn.assigns.current_user)
+      invitations: OrganizationInvitations.all_pending_for_user(conn.assigns.current_user),
+      declined_invitations:
+        OrganizationInvitations.all_declined_for_user(conn.assigns.current_user),
+      invitation_blocks: OrganizationInvitations.all_blocks_for_user(conn.assigns.current_user)
     )
   end
 end

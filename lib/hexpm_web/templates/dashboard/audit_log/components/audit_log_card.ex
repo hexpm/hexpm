@@ -407,6 +407,27 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCard do
   end
 
   defp humanize_action(%AuditLog{
+         action: "organization.invitation.restore",
+         params: %{"organization" => %{"name" => org}}
+       }) do
+    "Restored the invitation to #{org}"
+  end
+
+  defp humanize_action(%AuditLog{
+         action: "organization.invitation.block",
+         params: %{"organization" => %{"name" => org}}
+       }) do
+    "Blocked invitations from #{org}"
+  end
+
+  defp humanize_action(%AuditLog{
+         action: "organization.invitation.unblock",
+         params: %{"organization" => %{"name" => org}}
+       }) do
+    "Unblocked invitations from #{org}"
+  end
+
+  defp humanize_action(%AuditLog{
          action: "organization.invitation.decline",
          params: %{"organization" => %{"name" => org}}
        }) do

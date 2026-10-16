@@ -236,41 +236,43 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
     assert OrganizationAuth.check(org, c.admin) == {:error, :tfa_required}
   end
 
-  test "enrollment is required to accept an invitation and the invitation remains pending" do
-    c = context()
-    user = insert(:user)
-    {:ok, _} = configure(c, %{"enforcement" => "transition", "grace_days" => "14"})
+  for recipient <- [:account, :email] do
+    test "enrollment is required to accept an #{recipient} invitation and it remains pending" do
+      c = context()
+      user = insert(:user)
+      {:ok, _} = configure(c, %{"enforcement" => "transition", "grace_days" => "14"})
 
-    {:ok, user_invitation} =
-      OrganizationInvitations.invite_user(c.organization, user, %{"role" => "read"}, c.admin,
-        audit: audit_data(c.admin)
-      )
+      {:ok, invitation} =
+        case unquote(recipient) do
+          :account ->
+            OrganizationInvitations.invite_user(
+              c.organization,
+              user,
+              %{"role" => "read"},
+              c.admin,
+              audit: audit_data(c.admin)
+            )
 
-    assert {:error, :tfa_enrollment_required} =
-             OrganizationInvitations.accept(
-               Repo.preload(user_invitation, :organization),
-               user,
-               audit: audit_data(user)
-             )
+          :email ->
+            OrganizationInvitations.invite(
+              c.organization,
+              %{"email" => hd(user.emails).email, "role" => "read"},
+              c.admin,
+              audit: audit_data(c.admin)
+            )
+        end
 
-    {:ok, invitation} =
-      OrganizationInvitations.invite(
-        c.organization,
-        %{"email" => hd(user.emails).email, "role" => "read"},
-        c.admin,
-        audit: audit_data(c.admin)
-      )
+      invitation = Repo.preload(invitation, :organization)
 
-    invitation = Repo.preload(invitation, :organization)
+      assert {:error, :tfa_enrollment_required} =
+               OrganizationInvitations.accept(invitation, user, audit: audit_data(user))
 
-    assert {:error, :tfa_enrollment_required} =
-             OrganizationInvitations.accept(invitation, user, audit: audit_data(user))
-
-    assert Repo.get!(Hexpm.Accounts.OrganizationInvitation, invitation.id).accepted_at == nil
-    assert Hexpm.Accounts.Seats.used(c.organization) == 2
-    user = enroll(user)
-    assert {:ok, _} = OrganizationInvitations.accept(invitation, user, audit: audit_data(user))
-    assert Hexpm.Accounts.Seats.used(c.organization) == 3
+      assert Repo.get!(Hexpm.Accounts.OrganizationInvitation, invitation.id).accepted_at == nil
+      assert Hexpm.Accounts.Seats.used(c.organization) == 2
+      user = enroll(user)
+      assert {:ok, _} = OrganizationInvitations.accept(invitation, user, audit: audit_data(user))
+      assert Hexpm.Accounts.Seats.used(c.organization) == 3
+    end
   end
 
   test "transition blocks disabling 2FA and removal of the last eligible administrator" do

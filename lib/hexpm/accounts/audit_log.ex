@@ -343,11 +343,17 @@ defmodule Hexpm.Accounts.AuditLog do
     %{organization: serialize(organization), domain: domain.domain}
   end
 
+  defp extract_params(action, {organization, %User{} = user})
+       when action in ["organization.invitation.block", "organization.invitation.unblock"] do
+    %{organization: serialize(organization), user: serialize(user)}
+  end
+
   defp extract_params(action, {organization, %OrganizationInvitation{} = invitation})
        when action in [
               "organization.invitation.create",
               "organization.invitation.accept",
               "organization.invitation.decline",
+              "organization.invitation.restore",
               "organization.invitation.revoke"
             ] do
     %{

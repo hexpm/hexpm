@@ -87,10 +87,15 @@ defmodule HexpmWeb.API.OrganizationUserController do
           {:error, :already_member} ->
             validation_failed(conn, "user is already a member of this organization")
 
-          {:error, :declined} ->
+          {:error, :blocked} ->
             validation_failed(
               conn,
-              "user declined an invitation to this organization recently"
+              "user has blocked invitations from this organization"
+            )
+
+          {:error, :invitation_cooldown} ->
+            render_error(conn, 429,
+              message: "this organization can invite this user once every 24 hours"
             )
 
           {:error, :too_many_invitations} ->

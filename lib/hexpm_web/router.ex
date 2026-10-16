@@ -402,6 +402,9 @@ defmodule HexpmWeb.Router do
     get "/invitations", InvitationController, :index
     post "/invitations/:id/accept", InvitationController, :accept
     post "/invitations/:id/decline", InvitationController, :decline
+    post "/invitations/:id/restore", InvitationController, :restore
+    post "/invitations/:id/block", InvitationController, :block
+    post "/invitations/blocks/:id/unblock", InvitationController, :unblock
 
     get "/email", EmailController, :index
     post "/email", EmailController, :create

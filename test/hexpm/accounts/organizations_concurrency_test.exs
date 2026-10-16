@@ -83,6 +83,76 @@ defmodule Hexpm.Accounts.OrganizationsConcurrencyTest do
     end)
   end
 
+  test "concurrent resends send one invitation per account and organization" do
+    committed(&build_context/0, fn context ->
+      user = insert(:user)
+      invitation = invite(context, user)
+
+      {:ok, _declined} =
+        OrganizationInvitations.decline(invitation, user, audit: audit_data(user))
+
+      invitation
+      |> Ecto.Changeset.change(sent_at: DateTime.add(DateTime.utc_now(), -25 * 60 * 60))
+      |> Repo.update!()
+
+      results =
+        race([user, user], fn user ->
+          OrganizationInvitations.invite_user(
+            context.organization,
+            user,
+            %{"role" => "read"},
+            context.admin,
+            audit: audit_data(context.admin)
+          )
+        end)
+
+      assert Enum.count(results, &match?({:ok, _}, &1)) == 1
+      assert Enum.count(results, &(&1 == {:error, :invitation_cooldown})) == 1
+      assert [_pending] = OrganizationInvitations.all_pending_for_user(user)
+    end)
+  end
+
+  test "blocking and resending can't leave a pending invitation" do
+    committed(&build_context/0, fn context ->
+      user = insert(:user)
+      invitation = invite(context, user)
+
+      {:ok, _declined} =
+        OrganizationInvitations.decline(invitation, user, audit: audit_data(user))
+
+      invitation
+      |> Ecto.Changeset.change(sent_at: DateTime.add(DateTime.utc_now(), -25 * 60 * 60))
+      |> Repo.update!()
+
+      results =
+        race([
+          fn ->
+            OrganizationInvitations.invite_user(
+              context.organization,
+              user,
+              %{"role" => "read"},
+              context.admin,
+              audit: audit_data(context.admin)
+            )
+          end,
+          fn -> OrganizationInvitations.block(invitation, user, audit: audit_data(user)) end
+        ])
+
+      assert Enum.any?(results, &match?({:ok, _}, &1))
+      assert [_block] = OrganizationInvitations.all_blocks_for_user(user)
+      assert OrganizationInvitations.all_pending_for_user(user) == []
+
+      assert {:error, :blocked} =
+               OrganizationInvitations.invite_user(
+                 context.organization,
+                 user,
+                 %{"role" => "read"},
+                 context.admin,
+                 audit: audit_data(context.admin)
+               )
+    end)
+  end
+
   defp invite(context, user) do
     {:ok, invitation} =
       OrganizationInvitations.invite_user(

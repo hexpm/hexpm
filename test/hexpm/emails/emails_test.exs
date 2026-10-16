@@ -172,6 +172,26 @@ defmodule Hexpm.EmailsTest do
     end
   end
 
+  test "account invitation emails describe reversible declines and organization blocks" do
+    user = insert(:user)
+    organization = insert(:organization)
+
+    invitation = %OrganizationInvitation{
+      user: user,
+      organization: organization,
+      role: "read",
+      expires_at: DateTime.add(DateTime.utc_now(), 7 * 24 * 60 * 60)
+    }
+
+    email = Emails.organization_user_invitation(invitation)
+
+    for body <- [email.text_body, email.html_body] do
+      assert body =~ "block future invitations"
+      assert body =~ "undo a decline before the invitation expires"
+      refute body =~ "30 days"
+    end
+  end
+
   # Recipient selection lives in Hexpm.Accounts.SSO, which passes an already
   # filtered list; these cover the rendering only.
   describe "organization 2FA notices" do

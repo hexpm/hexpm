@@ -23,6 +23,7 @@ defmodule HexpmWeb.DashboardView do
       profile: {"Profile", ~p"/dashboard/profile"},
       security: {"Security", ~p"/dashboard/security"},
       email: {"Emails", ~p"/dashboard/email"},
+      invitations: {"Invitations", ~p"/dashboard/invitations"},
       keys: {"Keys", ~p"/dashboard/keys"},
       sessions: {"Sessions", ~p"/dashboard/sessions"},
       audit_logs: {"Recent Activities", ~p"/dashboard/audit-logs"},
@@ -41,6 +42,11 @@ defmodule HexpmWeb.DashboardView do
   end
 
   defp icon_for_setting(:email, selected?) do
+    color = if selected?, do: "text-purple-600", else: "text-grey-600"
+    icon(:heroicon, "envelope", class: "w-5 h-5 #{color}")
+  end
+
+  defp icon_for_setting(:invitations, selected?) do
     color = if selected?, do: "text-purple-600", else: "text-grey-600"
     icon(:heroicon, "envelope", class: "w-5 h-5 #{color}")
   end

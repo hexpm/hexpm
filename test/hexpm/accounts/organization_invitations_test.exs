@@ -112,7 +112,10 @@ defmodule Hexpm.Accounts.OrganizationInvitationsTest do
       {:ok, first} = invite(organization, admin, "newcomer@example.com")
 
       first
-      |> Ecto.Changeset.change(expires_at: DateTime.add(DateTime.utc_now(), -1, :second))
+      |> Ecto.Changeset.change(
+        expires_at: DateTime.add(DateTime.utc_now(), -1, :second),
+        sent_at: DateTime.add(DateTime.utc_now(), -8 * 24 * 60 * 60, :second)
+      )
       |> Repo.update!()
 
       # The expired row still holds the one-per-address slot and no read path
@@ -174,7 +177,10 @@ defmodule Hexpm.Accounts.OrganizationInvitationsTest do
     test "counts only the invitations of the last day", %{admin: admin} do
       invite_from_other_organizations(admin, "target@example.com", 5)
       day_ago = DateTime.add(DateTime.utc_now(), -25 * 60 * 60)
-      Repo.update_all(Hexpm.Accounts.OrganizationInvitation, set: [updated_at: day_ago])
+
+      Repo.update_all(Hexpm.Accounts.OrganizationInvitation,
+        set: [updated_at: day_ago, sent_at: day_ago]
+      )
 
       assert {:ok, _invitation} = invite(insert(:organization), admin, "target@example.com")
     end
@@ -327,8 +333,7 @@ defmodule Hexpm.Accounts.OrganizationInvitationsTest do
       user = insert(:user)
 
       assert {:ok, _invitation} = invite_user(organization, admin, user)
-      assert {:error, changeset} = invite_user(organization, admin, user)
-      assert errors_on(changeset).username == "has already been invited"
+      assert {:error, :invitation_cooldown} = invite_user(organization, admin, user)
     end
 
     test "stops mailing an account five invitations reached in the last day", %{admin: admin} do
@@ -400,23 +405,21 @@ defmodule Hexpm.Accounts.OrganizationInvitationsTest do
   end
 
   describe "decline/3" do
-    test "keeps the organization from inviting the account again until the hold ends", %{
+    test "declining preserves the expiry and the cooldown starts when sent", %{
       organization: organization,
       admin: admin
     } do
       user = insert(:user)
       {:ok, invitation} = invite_user(organization, admin, user)
+      yesterday = DateTime.add(DateTime.utc_now(), -24 * 60 * 60 - 1)
+      invitation = invitation |> Ecto.Changeset.change(sent_at: yesterday) |> Repo.update!()
 
       assert {:ok, declined} = decline(invitation, user)
       assert declined.declined_at
       assert OrganizationInvitations.all_pending_for_user(user) == []
       assert OrganizationInvitations.all_pending(organization) == []
-      assert {:error, :declined} = invite_user(organization, admin, user)
-
-      assert DateTime.diff(declined.expires_at, declined.declined_at) ==
-               Hexpm.Accounts.OrganizationInvitation.decline_hold_seconds()
-
-      expire(declined)
+      assert declined.expires_at == invitation.expires_at
+      assert declined.sent_at == invitation.sent_at
 
       assert {:ok, reissued} = invite_user(organization, admin, user)
       assert reissued.id == invitation.id
@@ -479,6 +482,174 @@ defmodule Hexpm.Accounts.OrganizationInvitationsTest do
       assert audit_log.params["invitation"]["user"]["username"] == user.username
       assert audit_log.params["organization"]["name"] == organization.name
     end
+  end
+
+  describe "restoring declined invitations" do
+    test "restores without extending the expiry or sending mail", %{
+      organization: organization,
+      admin: admin
+    } do
+      user = insert(:user)
+      {:ok, invitation} = invite_user(organization, admin, user, "write")
+      {:ok, declined} = decline(invitation, user)
+
+      assert {:ok, restored} = restore(declined, user)
+      assert restored.declined_at == nil
+      assert restored.expires_at == invitation.expires_at
+      assert restored.sent_at == invitation.sent_at
+      assert [%{id: id}] = OrganizationInvitations.all_pending_for_user(user)
+      assert id == invitation.id
+      assert Repo.all(OutboxEntry) == []
+      assert {:error, :invitation_cooldown} = invite_user(organization, admin, user)
+      assert {:ok, membership} = accept(restored, user)
+      assert membership.role == "write"
+      assert Enum.any?(AuditLogs.all_by(user), &(&1.action == "organization.invitation.restore"))
+    end
+
+    test "refuses another account, an expired invitation, and a revoked invitation", %{
+      organization: organization,
+      admin: admin
+    } do
+      user = insert(:user)
+      {:ok, invitation} = invite_user(organization, admin, user)
+      {:ok, declined} = decline(invitation, user)
+      assert {:error, :invitation_unavailable} = restore(declined, admin)
+
+      {:ok, revoked} =
+        OrganizationInvitations.revoke(organization, declined, audit: audit_data(admin))
+
+      assert {:error, :invitation_unavailable} = restore(revoked, user)
+
+      other = insert(:user)
+      {:ok, invitation} = invite_user(organization, admin, other)
+      {:ok, declined} = decline(invitation, other)
+      expire(declined)
+      assert {:error, :invitation_unavailable} = restore(declined, other)
+    end
+
+    test "cannot restore an accepted invitation or an email invitation", %{
+      organization: organization,
+      admin: admin
+    } do
+      user = insert(:user)
+      {:ok, invitation} = invite_user(organization, admin, user)
+      assert {:error, :invitation_unavailable} = restore(invitation, user)
+      {:ok, _membership} = accept(invitation, user)
+      assert {:error, :invitation_unavailable} = restore(invitation, user)
+      {:ok, email_invitation} = invite(insert(:organization), admin, "new@example.com")
+      assert {:error, :invitation_unavailable} = restore(email_invitation, user)
+    end
+  end
+
+  describe "organization invitation blocks" do
+    test "blocks account and email invitations until the recipient unblocks", %{
+      organization: organization,
+      admin: admin
+    } do
+      user = insert(:user)
+      {:ok, invitation} = invite_user(organization, admin, user)
+      assert {:ok, _invitation} = block(invitation, user)
+      assert {:ok, _invitation} = block(invitation, user)
+      assert [blocked] = OrganizationInvitations.all_blocks_for_user(user)
+      assert blocked.organization_id == organization.id
+      assert OrganizationInvitations.all_pending_for_user(user) == []
+      assert Repo.all(OutboxEntry) == []
+      assert {:error, :blocked} = invite_user(organization, admin, user)
+      assert {:error, :blocked} = invite(organization, admin, user_email(user))
+      assert {:error, :invitation_unavailable} = restore(invitation, user)
+
+      assert {:error, :invitation_unavailable} =
+               OrganizationInvitations.unblock(blocked, admin, audit: audit_data(admin))
+
+      assert {:ok, _invitation} = invite_user(insert(:organization), admin, user)
+
+      assert {:ok, _block} =
+               OrganizationInvitations.unblock(blocked, user, audit: audit_data(user))
+
+      assert OrganizationInvitations.all_blocks_for_user(user) == []
+      assert {:ok, _restored} = restore(invitation, user)
+      assert Enum.any?(AuditLogs.all_by(user), &(&1.action == "organization.invitation.block"))
+      assert Enum.any?(AuditLogs.all_by(user), &(&1.action == "organization.invitation.unblock"))
+    end
+
+    test "a block survives invitation expiry and deletion", %{
+      organization: organization,
+      admin: admin
+    } do
+      user = insert(:user)
+      {:ok, invitation} = invite_user(organization, admin, user)
+      {:ok, _blocked} = block(invitation, user)
+      expire(invitation)
+      Repo.delete!(invitation)
+      assert {:error, :blocked} = invite_user(organization, admin, user)
+      assert [blocked] = OrganizationInvitations.all_blocks_for_user(user)
+
+      assert {:ok, _block} =
+               OrganizationInvitations.unblock(blocked, user, audit: audit_data(user))
+
+      assert {:ok, _invitation} = invite_user(organization, admin, user)
+    end
+
+    test "only the recipient can block and only while the invitation is available", %{
+      organization: organization,
+      admin: admin
+    } do
+      user = insert(:user)
+      {:ok, invitation} = invite_user(organization, admin, user)
+      assert {:error, :invitation_unavailable} = block(invitation, admin)
+      {:ok, declined} = decline(invitation, user)
+      assert {:ok, _invitation} = block(declined, user)
+
+      other = insert(:user)
+      {:ok, expired} = invite_user(organization, admin, other)
+      expire(expired)
+      assert {:error, :invitation_unavailable} = block(expired, other)
+      assert OrganizationInvitations.all_blocks_for_user(other) == []
+    end
+  end
+
+  describe "account resend cooldown" do
+    test "declining and revoking can't permit another invitation within 24 hours", %{
+      organization: organization,
+      admin: admin
+    } do
+      user = insert(:user)
+      {:ok, invitation} = invite_user(organization, admin, user)
+      {:ok, declined} = decline(invitation, user)
+      assert {:error, :invitation_cooldown} = invite_user(organization, admin, user)
+      assert {:error, :invitation_cooldown} = invite(organization, admin, user_email(user))
+
+      {:ok, _revoked} =
+        OrganizationInvitations.revoke(organization, declined, audit: audit_data(admin))
+
+      assert {:error, :invitation_cooldown} = invite_user(organization, admin, user)
+      assert Repo.all(OutboxEntry) == []
+    end
+
+    test "email invitations count toward the same account cooldown", %{
+      organization: organization,
+      admin: admin
+    } do
+      user = insert(:user)
+      {:ok, invitation} = invite(organization, admin, user_email(user))
+
+      {:ok, _invitation} =
+        OrganizationInvitations.revoke(organization, invitation, audit: audit_data(admin))
+
+      assert {:error, :invitation_cooldown} = invite_user(organization, admin, user)
+    end
+  end
+
+  defp restore(invitation, user) do
+    OrganizationInvitations.restore(Repo.preload(invitation, :organization), user,
+      audit: audit_data(user)
+    )
+  end
+
+  defp block(invitation, user) do
+    OrganizationInvitations.block(Repo.preload(invitation, :organization), user,
+      audit: audit_data(user)
+    )
   end
 
   describe "accept/3" do
@@ -622,7 +793,10 @@ defmodule Hexpm.Accounts.OrganizationInvitationsTest do
       {:ok, invitation} = invite(organization, admin, "newcomer@example.com")
 
       invitation
-      |> Ecto.Changeset.change(expires_at: DateTime.add(DateTime.utc_now(), -1, :second))
+      |> Ecto.Changeset.change(
+        expires_at: DateTime.add(DateTime.utc_now(), -1, :second),
+        sent_at: DateTime.add(DateTime.utc_now(), -8 * 24 * 60 * 60, :second)
+      )
       |> Repo.update!()
 
       refute OrganizationInvitations.get_pending_by_token(invitation.raw_token)
@@ -687,7 +861,8 @@ defmodule Hexpm.Accounts.OrganizationInvitationsTest do
           token_hash: :crypto.strong_rand_bytes(32),
           expires_at: DateTime.add(DateTime.utc_now(), 7 * 24 * 60 * 60),
           inserted_at: written_at,
-          updated_at: written_at
+          updated_at: written_at,
+          sent_at: written_at
         }
       end
 
@@ -696,7 +871,10 @@ defmodule Hexpm.Accounts.OrganizationInvitationsTest do
 
   defp expire(invitation) do
     invitation
-    |> Ecto.Changeset.change(expires_at: DateTime.add(DateTime.utc_now(), -1, :second))
+    |> Ecto.Changeset.change(
+      expires_at: DateTime.add(DateTime.utc_now(), -1, :second),
+      sent_at: DateTime.add(DateTime.utc_now(), -8 * 24 * 60 * 60, :second)
+    )
     |> Repo.update!()
   end
 

@@ -39,6 +39,38 @@ defmodule HexpmWeb.SCIM.UserControllerTest do
     assert Organizations.get_role(context.organization, user) == "read"
   end
 
+  test "an account block doesn't apply to an unverified address", context do
+    alias Hexpm.Accounts.OrganizationInvitations
+    user = insert(:user)
+
+    unverified =
+      insert(:email, user: user, verified: false, primary: false, public: false, gravatar: false)
+
+    {:ok, invitation} =
+      OrganizationInvitations.invite_user(
+        context.organization,
+        user,
+        %{"role" => "read"},
+        context.admin,
+        audit: audit_data(context.admin)
+      )
+
+    {:ok, _blocked} = OrganizationInvitations.block(invitation, user, audit: audit_data(user))
+
+    body =
+      scim_conn(context.token)
+      |> post("/scim/v2/Users", scim_body(%{"userName" => unverified.email}))
+      |> scim_json_response(201)
+
+    assert body["userName"] == unverified.email
+    assert body["active"]
+    refute Organizations.get_role(context.organization, user)
+    assert [email_invitation] = OrganizationInvitations.all_pending(context.organization)
+    assert email_invitation.user_id == nil
+    assert email_invitation.email == unverified.email
+    assert [_block] = OrganizationInvitations.all_blocks_for_user(user)
+  end
+
   test "provisioning an unknown address answers active with a pending invitation", context do
     body =
       scim_conn(context.token)

@@ -129,6 +129,9 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCardTest do
           login_log(%{action: "organization.invitation.create", params: user_invitation}),
           login_log(%{action: "organization.invitation.revoke", params: user_invitation}),
           login_log(%{action: "organization.invitation.decline", params: user_invitation}),
+          login_log(%{action: "organization.invitation.restore", params: user_invitation}),
+          login_log(%{action: "organization.invitation.block", params: user_invitation}),
+          login_log(%{action: "organization.invitation.unblock", params: user_invitation}),
           login_log(%{
             action: "organization.invitation.accept",
             params: put_in(user_invitation, ["invitation", "user"], nil)
@@ -141,6 +144,9 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCardTest do
     assert html =~ "Invited jane to acme"
     assert html =~ "Revoked the invitation for jane to acme"
     assert html =~ "Declined the invitation to acme"
+    assert html =~ "Restored the invitation to acme"
+    assert html =~ "Blocked invitations from acme"
+    assert html =~ "Unblocked invitations from acme"
     assert html =~ "Accepted the invitation to acme"
     assert html =~ "Invited jane@example.com to acme"
     assert html =~ "Accepted the invitation for jane@example.com to acme"

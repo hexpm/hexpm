@@ -4,7 +4,6 @@ defmodule Hexpm.Accounts.OrganizationInvitation do
   @type t :: %__MODULE__{}
 
   @lifetime_seconds 7 * 24 * 60 * 60
-  @decline_hold_seconds 30 * 24 * 60 * 60
   @roles ~w(admin write read)
 
   schema "organization_invitations" do
@@ -12,6 +11,7 @@ defmodule Hexpm.Accounts.OrganizationInvitation do
     field :role, :string
     field :token_hash, :binary, redact: true
     field :raw_token, :string, virtual: true, redact: true
+    field :sent_at, :utc_datetime_usec
     field :expires_at, :utc_datetime_usec
     field :accepted_at, :utc_datetime_usec
     field :revoked_at, :utc_datetime_usec
@@ -26,8 +26,6 @@ defmodule Hexpm.Accounts.OrganizationInvitation do
   end
 
   def lifetime_seconds, do: @lifetime_seconds
-
-  def decline_hold_seconds, do: @decline_hold_seconds
 
   def roles, do: @roles
 
@@ -45,6 +43,7 @@ defmodule Hexpm.Accounts.OrganizationInvitation do
     |> update_change(:email, &normalize_email/1)
     |> validate_length(:email, count: :bytes, max: 255)
     |> validate_format(:email, Email.format(), message: "is not a valid email")
+    |> put_change(:sent_at, DateTime.utc_now())
     |> validate_inclusion(:role, @roles)
     |> unique_constraint(:token_hash)
     |> unique_constraint(:email,
@@ -62,6 +61,7 @@ defmodule Hexpm.Accounts.OrganizationInvitation do
     invitation
     |> cast(attrs, [:organization_id, :invited_by_user_id, :user_id, :role, :expires_at])
     |> validate_required([:organization_id, :user_id, :role, :expires_at])
+    |> put_change(:sent_at, DateTime.utc_now())
     |> validate_inclusion(:role, @roles)
     |> unique_constraint(:user_id,
       name: :organization_invitations_pending_user_index,
@@ -77,6 +77,7 @@ defmodule Hexpm.Accounts.OrganizationInvitation do
     |> put_change(:token_hash, token_hash)
     |> put_change(:expires_at, expires_at)
     |> put_change(:declined_at, nil)
+    |> put_change(:sent_at, DateTime.utc_now())
     |> validate_inclusion(:role, @roles)
   end
 
@@ -88,15 +89,12 @@ defmodule Hexpm.Accounts.OrganizationInvitation do
     change(invitation, revoked_at: now)
   end
 
-  # A declined invitation keeps the organization's one slot for its recipient
-  # until the hold ends, so the organization can't invite them again before
-  # then. Moving the expiry is what keeps the row that long: the purge collects
-  # rows by expiry, and re-inviting after it reissues the row.
   def decline_changeset(invitation, now) do
-    change(invitation,
-      declined_at: now,
-      expires_at: DateTime.add(now, @decline_hold_seconds, :second)
-    )
+    change(invitation, declined_at: now)
+  end
+
+  def restore_changeset(invitation) do
+    change(invitation, declined_at: nil)
   end
 
   def normalize_email(email) when is_binary(email) do

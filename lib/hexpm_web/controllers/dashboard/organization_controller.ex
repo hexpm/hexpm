@@ -185,12 +185,21 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
             |> put_flash(:error, "#{user.username} is already a member of this organization.")
             |> render_index(organization, tab: :members)
 
-          {:error, :declined} ->
+          {:error, :blocked} ->
             conn
             |> put_status(400)
             |> put_flash(
               :error,
-              "#{user.username} declined an invitation to this organization recently. Try again later."
+              "#{user.username} has blocked invitations from this organization."
+            )
+            |> render_index(organization, tab: :members)
+
+          {:error, :invitation_cooldown} ->
+            conn
+            |> put_status(429)
+            |> put_flash(
+              :error,
+              "This organization can invite #{user.username} once every 24 hours. Try again later."
             )
             |> render_index(organization, tab: :members)
 
@@ -316,6 +325,21 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
           conn
           |> put_status(400)
           |> put_flash(:error, "That address already belongs to a member of this organization.")
+          |> render_index(organization, tab: :members)
+
+        {:error, :blocked} ->
+          conn
+          |> put_status(400)
+          |> put_flash(:error, "This account has blocked invitations from this organization.")
+          |> render_index(organization, tab: :members)
+
+        {:error, :invitation_cooldown} ->
+          conn
+          |> put_status(429)
+          |> put_flash(
+            :error,
+            "This organization can invite this account once every 24 hours. Try again later."
+          )
           |> render_index(organization, tab: :members)
 
         {:error, :too_many_invitations} ->
