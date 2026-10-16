@@ -24,6 +24,12 @@ defmodule HexpmWeb.PackageLive.IndexTest do
     assert html_response(conn, 200) =~ "ecto_test_pkg"
   end
 
+  test "a page number too long to parse shows the last page", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/packages")
+    html = render_patch(view, "/packages?page=" <> String.duplicate("7", 2_000_000))
+    assert html =~ "phoenix_test_pkg"
+  end
+
   test "filters by search param", %{conn: conn} do
     {:ok, _view, html} = live(conn, ~p"/packages?search=phoenix_test_pkg")
     assert html =~ "phoenix_test_pkg"

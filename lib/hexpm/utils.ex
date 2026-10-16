@@ -139,12 +139,26 @@ defmodule Hexpm.Utils do
     page |> max(1) |> min(max_page)
   end
 
+  @bigint_min -9_223_372_036_854_775_808
+  @bigint_max 9_223_372_036_854_775_807
+
   def safe_int(nil), do: nil
 
+  # Clamped to a Postgres bigint. Parsing takes time superlinear in the number
+  # of digits, so a number longer than any bigint is clamped unparsed.
   def safe_int(string) when is_binary(string) do
-    case Integer.parse(string) do
-      {int, ""} -> int
-      _ -> nil
+    cond do
+      not (string =~ ~r/\A[+-]?[0-9]++\z/) ->
+        nil
+
+      byte_size(string) <= 20 ->
+        string |> String.to_integer() |> max(@bigint_min) |> min(@bigint_max)
+
+      String.starts_with?(string, "-") ->
+        @bigint_min
+
+      true ->
+        @bigint_max
     end
   end
 
@@ -353,7 +367,8 @@ defmodule Hexpm.Utils do
   end
 
   def paginate(query, page, count) when is_integer(page) and page > 0 do
-    offset = (page - 1) * count
+    # Postgres takes no offset past a bigint, and no table has that many rows.
+    offset = min((page - 1) * count, @bigint_max)
 
     from(
       var in query,

@@ -164,6 +164,7 @@ defmodule HexpmWeb.DiffLiveTest do
 
     render_hook(view, "load-gap", %{"start" => "0", "last" => "6"})
     render_hook(view, "load-gap", %{"start" => "invalid", "last" => "6"})
+    render_hook(view, "load-gap", %{"start" => String.duplicate("7", 2_000_000), "last" => "6"})
     render_hook(view, "load-gap", %{})
 
     assert has_element?(view, "#diff-4-container")

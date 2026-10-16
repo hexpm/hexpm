@@ -59,6 +59,22 @@ defmodule Hexpm.UtilsTest do
       assert Utils.safe_int(%{"page" => "707"}) == nil
       assert Utils.safe_int(707) == nil
     end
+
+    test "clamps to a bigint" do
+      max = 9_223_372_036_854_775_807
+      min = -9_223_372_036_854_775_808
+
+      assert Utils.safe_int("+707") == 707
+      assert Utils.safe_int("-0707") == -707
+      assert Utils.safe_int("9223372036854775807") == max
+      assert Utils.safe_int("9223372036854775808") == max
+      assert Utils.safe_int("-9223372036854775809") == min
+      assert Utils.safe_int(String.duplicate("7", 1_000_000)) == max
+      assert Utils.safe_int("-" <> String.duplicate("7", 1_000_000)) == min
+      assert Utils.safe_int(String.duplicate("7", 1_000_000) <> "x") == nil
+      assert Utils.safe_int("-") == nil
+      assert Utils.safe_int("") == nil
+    end
   end
 
   describe "safe_date/1" do
