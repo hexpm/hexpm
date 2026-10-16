@@ -3,6 +3,8 @@ defmodule HexpmWeb.LoginControllerTest do
 
   setup do
     mock_pwned()
+    PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage)
+    on_exit(fn -> PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage) end)
     user = insert(:user)
     %{user: user}
   end
@@ -120,8 +122,6 @@ defmodule HexpmWeb.LoginControllerTest do
   end
 
   test "log in with wrong password", c do
-    PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage)
-
     conn = post(build_conn(), "/login", %{username: c.user.username, password: "WRONG"})
     assert response(conn, 400) =~ "Log in"
 
@@ -144,8 +144,6 @@ defmodule HexpmWeb.LoginControllerTest do
   end
 
   test "log in with unknown user" do
-    PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage)
-
     # Factory emails are <fake username>@example.com and the fake usernames include "nobody"
     conn = post(build_conn(), "/login", %{username: "nobody@example.org", password: "WRONG"})
     assert response(conn, 400) =~ "Log in"
@@ -158,8 +156,6 @@ defmodule HexpmWeb.LoginControllerTest do
   end
 
   test "log in with unconfirmed email", c do
-    PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage)
-
     Ecto.Changeset.change(hd(c.user.emails), verified: false) |> Hexpm.Repo.update!()
 
     conn = post(build_conn(), "/login", %{username: c.user.username, password: "password"})
@@ -191,7 +187,6 @@ defmodule HexpmWeb.LoginControllerTest do
   end
 
   test "rate limits failed login attempts from same IP", c do
-    PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage)
     align_to_throttle_bucket(15 * 60_000)
 
     # Exhaust IP limit (10 attempts)
@@ -209,5 +204,34 @@ defmodule HexpmWeb.LoginControllerTest do
 
     assert Phoenix.Flash.get(conn.assigns.flash, "error") ==
              "Too many login attempts from your IP. Please try again later."
+  end
+
+  test "refuses a correct password once the IP has used its failed attempts", c do
+    align_to_throttle_bucket(15 * 60_000)
+
+    for _ <- 1..10 do
+      conn = post(build_conn(), "/login", %{username: c.user.username, password: "WRONG"})
+      assert response(conn, 400)
+    end
+
+    conn = post(build_conn(), "/login", %{username: c.user.username, password: "password"})
+    assert response(conn, 429)
+    refute get_session(conn, "session_token")
+  end
+
+  test "doesn't check the password once the IP has used its failed attempts", c do
+    align_to_throttle_bucket(15 * 60_000)
+
+    for _ <- 1..10 do
+      post(build_conn(), "/login", %{username: c.user.username, password: "WRONG"})
+    end
+
+    lines =
+      capture_log_lines(fn ->
+        conn = post(build_conn(), "/login", %{username: c.user.username, password: "WRONG"})
+        assert response(conn, 429)
+      end)
+
+    refute Enum.any?(lines, fn {_level, fields} -> fields[:event] == "auth.failure" end)
   end
 end

@@ -14,28 +14,43 @@ defmodule HexpmWeb.LoginController do
   end
 
   def create(conn, %{"username" => username, "password" => password}) do
-    case password_auth(username, password) do
-      {:ok, user} ->
-        breached? = Hexpm.Pwned.password_breached?(password)
-        login(conn, user, password_breached: breached?)
+    if login_attempts_spent?(conn) do
+      rate_limited(conn)
+    else
+      case password_auth(username, password) do
+        {:ok, user} ->
+          breached? = Hexpm.Pwned.password_breached?(password)
+          login(conn, user, password_breached: breached?)
 
-      {:error, reason} ->
-        SecurityLog.auth_failure(conn, :password, reason, username: username)
+        {:error, reason} ->
+          SecurityLog.auth_failure(conn, :password, reason, username: username)
 
-        case Attack.login_ip_throttle(conn.remote_ip) do
-          {:block, _data} ->
-            conn
-            |> put_flash(:error, "Too many login attempts from your IP. Please try again later.")
-            |> put_status(429)
-            |> render_show()
+          case Attack.login_ip_throttle(conn.remote_ip) do
+            {:block, _data} ->
+              rate_limited(conn)
 
-          {:allow, _data} ->
-            conn
-            |> put_flash(:error, auth_error_message(reason))
-            |> put_status(400)
-            |> render_show()
-        end
+            {:allow, _data} ->
+              conn
+              |> put_flash(:error, auth_error_message(reason))
+              |> put_status(400)
+              |> render_show()
+          end
+      end
     end
+  end
+
+  # An address that has failed as many logins as the throttle allows is refused
+  # before its password is checked, whatever the password is
+  defp login_attempts_spent?(conn) do
+    {_result, {:throttle, data}} = Attack.login_ip_throttle(conn.remote_ip, increment: 0)
+    data[:remaining] == 0
+  end
+
+  defp rate_limited(conn) do
+    conn
+    |> put_flash(:error, "Too many login attempts from your IP. Please try again later.")
+    |> put_status(429)
+    |> render_show()
   end
 
   def delete(conn, _params) do
