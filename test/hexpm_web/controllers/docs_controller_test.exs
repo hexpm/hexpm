@@ -7,9 +7,11 @@ defmodule HexpmWeb.DocsControllerTest do
       |> get("/docs/dependency-policies")
       |> html_response(200)
 
-    assert html =~ "Hex warns when a loaded policy contains override actions"
+    assert html =~ "Hex v2.6 and later warn when a loaded policy contains override actions"
     assert html =~ "mix hex.policy show"
-    assert html =~ "newer advisory, retirement, and cooldown overrides remain fail-closed"
+    assert html =~ "Advisory, Retirement, and Cooldown overrides require Hex v2.6 or later."
+    assert html =~ "Hex v2.5 applies Allow and Deny overrides but ignores the other override types"
+    assert html =~ "The policy flags require Hex v2.6 or later."
     assert html =~ "Dependency resolution"
     assert html =~ "Resolution warnings"
     assert html =~ "Whole-lock audit"

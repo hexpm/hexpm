@@ -9,12 +9,12 @@ Hex has three controls for dependency risk: project settings, dependency policie
 | Operation | What it checks |
 | --- | --- |
 | Dependency resolution | Candidate releases needed by the current operation. The active policy and project cooldown filter those candidates. Existing locked releases that remain unchanged aren't re-evaluated as candidates. |
-| Resolution warnings | Advisories and retirements for dependencies reported by the current resolution. Matching Allow, Advisory, and Retirement overrides suppress their corresponding warnings. Policy severity and retirement settings don't suppress these warnings. |
+| Resolution warnings | Advisories and retirements for dependencies reported by the current resolution. On Hex v2.6 or later, matching Allow, Advisory, and Retirement overrides suppress their corresponding warnings. Policy severity and retirement settings don't suppress these warnings. |
 | Whole-lock audit | Every Hex dependency in `mix.lock`, including dependencies that didn't change in the last resolution. Use `mix hex.audit` in CI to check the complete lockfile against newly published advisories and retirement metadata. |
 
 ### Choosing an audit mode
 
-Every `mix hex.audit` mode checks the complete lockfile for advisories and retirements. The active policy changes the result only when a policy flag is passed.
+Every `mix hex.audit` mode checks the complete lockfile for advisories and retirements. The active policy changes the result only when a policy flag is passed. The policy flags require Hex v2.6 or later. Earlier versions ignore them and run a plain `mix hex.audit`.
 
 | Command | Findings reported |
 | --- | --- |
@@ -116,6 +116,8 @@ Overrides are package-scoped policy decisions. Allow, Deny, Retirement, and Cool
   * **Retirement** accepts one retirement reason for matching releases.
   * **Cooldown** bypasses the policy cooldown for matching releases. It doesn't bypass a project cooldown.
 
+Advisory, Retirement, and Cooldown overrides require Hex v2.6 or later. Hex v2.5 applies Allow and Deny overrides but ignores the other override types without a warning, so the restriction they would bypass still applies.
+
 Advisory version scopes use Hex version-requirement syntax. A range uses `and` between its bounds, separate ranges use `or`, and `and` binds before `or`. Parentheses aren't supported.
 
 Allow and Deny are evaluated first. When several matching Allow or Deny overrides exist, one with a version requirement is preferred over one without a requirement. When neither decides the release, advisory, retirement, and cooldown overrides remove only the restriction they name. Every other restriction still applies.
@@ -124,7 +126,7 @@ For example, an advisory override for `CVE-2026-4242` and package `decimal` acce
 
 A retirement override also matches the retirement reason. If a release changes from `deprecated` to `security`, an override for `deprecated` no longer accepts it. Editing the retirement message without changing its reason doesn't invalidate the override.
 
-Malformed or unknown overrides are ignored. They can't accept a release. Hex warns when a loaded policy contains override actions the installed client doesn't support. `mix hex.policy show` lists the affected package, version scope, and numeric action. Older Hex clients keep applying field 3 Allow and Deny rules, but ignore unknown actions and selector fields, so newer advisory, retirement, and cooldown overrides remain fail-closed.
+Malformed or unknown overrides are ignored. They can't accept a release. Hex v2.6 and later warn when a loaded policy contains override actions the installed client doesn't support, and `mix hex.policy show` lists the affected package, version scope, and numeric action.
 
 #### Creating a policy
 
@@ -182,7 +184,7 @@ $ mix hex.policy show
 $ mix hex.policy why PACKAGE
 ```
 
-`show`, which is the default, prints the policy visibility, restrictions, overrides, comments, and effective cooldown. `why PACKAGE` or `why REPO/PACKAGE` evaluates every known version of the package and explains each policy decision.
+`show`, which is the default, prints the policy visibility, restrictions, overrides, and effective cooldown. Hex v2.6 and later also print override comments. `why PACKAGE` or `why REPO/PACKAGE` evaluates every known version of the package and explains each policy decision.
 
 #### Caching and failures
 

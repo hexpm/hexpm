@@ -590,7 +590,8 @@ defmodule HexpmWeb.Dashboard.OrganizationController.PolicyTest do
                "CVE and retirement overrides bypass only the selected CVE or retirement reason."
 
       assert response =~ "Overrides"
-      assert response =~ "CVE, retirement, and cooldown overrides require Hex 2.6.0 or newer."
+      assert response =~ "CVE, retirement, and cooldown overrides require Hex v2.6 or later."
+      assert response =~ "Hex v2.5 ignores them and keeps applying the restrictions."
       assert response =~ "hexpm"
       assert response =~ org.name
       assert response =~ "New releases are allowed immediately"

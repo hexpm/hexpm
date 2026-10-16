@@ -734,7 +734,7 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyEdit do
               height: 16
             )}
             <span>
-              CVE, retirement, and cooldown overrides require Hex 2.6.0 or newer.
+              CVE, retirement, and cooldown overrides require Hex v2.6 or later. Hex v2.5 ignores them and keeps applying the restrictions.
             </span>
           </p>
         </div>
