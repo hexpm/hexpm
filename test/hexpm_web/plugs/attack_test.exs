@@ -315,6 +315,30 @@ defmodule HexpmWeb.Plugs.AttackTest do
       assert get_resp_header(conn, "x-ratelimit-remaining") == []
     end
 
+    test "classifies a path as the router matches it, decoded and without empty segments",
+         %{user: user} do
+      mint = %{"grant_type" => "urn:ietf:params:oauth:grant-type:jwt-bearer"}
+
+      for {{method, path, params, assigns, limit}, i} <-
+            Enum.with_index([
+              {:get, "/%61pi/users/me", nil, [], ["100"]},
+              {:get, "http://www.example.com//api/users/me", nil, [], ["100"]},
+              {:get, "/%61pi/users/me", nil, [current_user: user], ["500"]},
+              {:post, "/%61pi/oauth/%74oken", mint, [], ["1000"]},
+              {:get, "/api/oidc/%61udience", nil, [], []},
+              {:get, "/%73cim/v2/Users", nil, [scim_connection: %{id: 1}], ["500"]}
+            ]) do
+        conn =
+          conn(method, path, params)
+          |> Map.put(:remote_ip, {11, 0, 0, i})
+          |> merge_assigns([current_user: nil, current_organization: nil] ++ assigns)
+          |> Hello.call(:index)
+
+        assert conn.status == 200
+        assert get_resp_header(conn, "x-ratelimit-limit") == limit, "#{method} #{path}"
+      end
+    end
+
     test "allows requests again when limit expired" do
       conn = request_ip({2, 2, 2, 2})
       assert get_resp_header(conn, "x-ratelimit-remaining") == ["99"]

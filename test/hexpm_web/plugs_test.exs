@@ -19,6 +19,15 @@ defmodule HexpmWeb.PlugsTest do
     end
   end
 
+  describe "default_repository/2" do
+    test "defaults the repository on the paths the router matches decoded" do
+      for path <- ["/%61pi/publish", "/api/%70ackages/ecto", "/%70ackages/ecto"] do
+        conn = Plugs.default_repository(Plug.Test.conn(:get, path, %{}), [])
+        assert conn.params["repository"] == "hexpm", path
+      end
+    end
+  end
+
   describe "authenticate/2" do
     setup do
       align_to_throttle_bucket()

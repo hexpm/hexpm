@@ -30,7 +30,7 @@ defmodule HexpmWeb.SentryScrubber do
   @card_number ~r/^(?:\d[ -]*?){13,16}$/
 
   def scrub_body(conn) do
-    if path?(conn.request_path, @secret_paths) do
+    if secret_path?(conn) do
       %{}
     else
       scrub_params(conn.params)
@@ -41,7 +41,7 @@ defmodule HexpmWeb.SentryScrubber do
     uri = URI.parse(Plug.Conn.request_url(conn))
 
     query =
-      if path?(conn.request_path, @secret_paths) do
+      if secret_path?(conn) do
         nil
       else
         scrub_query(uri.query)
@@ -102,8 +102,16 @@ defmodule HexpmWeb.SentryScrubber do
 
   defp sensitive?(_key), do: false
 
-  defp path?(path, segments) do
-    path_segments = String.split(path, "/", trim: true)
-    Enum.any?(segments, &(&1 in path_segments))
+  # Matched decoded, as the router matches segments, so /%6fauth/token is the
+  # oauth path. This runs before the router, so a segment may not decode, and
+  # is then matched as it is.
+  defp secret_path?(conn) do
+    Enum.any?(conn.path_info, &(decode(&1) in @secret_paths))
+  end
+
+  defp decode(segment) do
+    URI.decode(segment)
+  rescue
+    ArgumentError -> segment
   end
 end

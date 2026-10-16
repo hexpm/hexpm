@@ -59,6 +59,20 @@ defmodule HexpmWeb.SentryScrubberTest do
     end
   end
 
+  test "removes a secret path's parameters however its segments are encoded" do
+    for path <- [
+          "/%73so/callback?state=raw-state&code=raw-code",
+          "/api/%6fauth/token?refresh_token=raw-refresh-token",
+          "/%65mail/verify?username=someone&key=raw-verification-key",
+          "/%zz/sso/callback?code=raw-code"
+        ] do
+      conn = conn(:get, path)
+
+      assert URI.parse(SentryScrubber.scrub_url(conn)).query == nil
+      assert SentryScrubber.scrub_body(conn) == %{}
+    end
+  end
+
   test "removes reset and verification keys from the query" do
     for path <- [
           "/password/new?username=someone&key=raw-reset-key",
