@@ -354,12 +354,19 @@ defmodule Hexpm.Accounts.SCIM do
 
   # Derives the state and performs the two lazy repairs: an accepted
   # invitation hands its account over, and a userName newly verified by a
-  # current member adopts the membership.
+  # current member adopts the membership. A listing repairs its handles before
+  # it reads the page, so the page's rows are resolved as they are.
   defp resolve(resource, members \\ nil)
 
-  defp resolve(%Resource{} = resource, members) do
-    resource = resource |> Repo.preload([:user, :invitation]) |> repair()
+  defp resolve(%Resource{} = resource, %MapSet{} = members) do
+    resource |> Repo.preload([:user, :invitation]) |> state(members)
+  end
 
+  defp resolve(%Resource{} = resource, nil) do
+    resource |> Repo.preload([:user, :invitation]) |> repair() |> state(nil)
+  end
+
+  defp state(resource, members) do
     cond do
       resource.user_id && member?(resource.organization_id, resource.user_id, members) ->
         %{resource: resource, state: :member, user: resource.user}
@@ -768,7 +775,8 @@ defmodule Hexpm.Accounts.SCIM do
   # person. Membership is compared by account, not by count: a handle whose
   # account was removed by hand still carries the account.
   defp materialize_members(connection, audit_data) do
-    from(resource in resources_query(connection), where: is_nil(resource.user_id))
+    connection
+    |> repairable_query()
     |> Repo.all()
     |> Repo.preload([:user, :invitation])
     |> Enum.each(&repair/1)
@@ -800,6 +808,43 @@ defmodule Hexpm.Accounts.SCIM do
     end
 
     :ok
+  end
+
+  # The unbound handles repair/1 can bind: one whose invitation was accepted,
+  # and one whose userName is a member's address through this connection or a
+  # member's verified email. Repairing any other handle finds no member, so a
+  # listing doesn't pay for handles that name nobody in the organization.
+  defp repairable_query(connection) do
+    organization_id = connection.organization_id
+
+    provider_emails =
+      from(identity in Identity,
+        join: organization_user in OrganizationUser,
+        on:
+          organization_user.user_id == identity.user_id and
+            organization_user.organization_id == ^organization_id,
+        where: identity.connection_id == ^connection.id,
+        select: fragment("lower(?)", identity.provider_email)
+      )
+
+    verified_emails =
+      from(email in Email,
+        join: organization_user in OrganizationUser,
+        on:
+          organization_user.user_id == email.user_id and
+            organization_user.organization_id == ^organization_id,
+        where: email.verified,
+        select: email.email
+      )
+
+    from(resource in resources_query(connection),
+      left_join: invitation in assoc(resource, :invitation),
+      where: is_nil(resource.user_id),
+      where:
+        not is_nil(invitation.accepted_by_user_id) or
+          resource.user_name in subquery(provider_emails) or
+          resource.user_name in subquery(verified_emails)
+    )
   end
 
   # An account holds at most one handle per connection, so a member the

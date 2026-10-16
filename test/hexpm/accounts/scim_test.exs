@@ -523,6 +523,69 @@ defmodule Hexpm.Accounts.SCIMTest do
       assert "work@corp.example.com" in user_names
     end
 
+    test "the listing binds an inactive handle to a member's other verified address", context do
+      {:ok, %{resource: resource, state: :inactive}} =
+        create_user(context.connection, %{"userName" => "alias@example.com", "active" => false})
+
+      user =
+        insert(:user,
+          emails: [
+            build(:email, email: "primary@example.com"),
+            build(:email, email: "alias@example.com", primary: false, public: false)
+          ]
+        )
+
+      insert(:organization_user, organization: context.organization, user: user)
+
+      listing = list_users(context.connection, 1, 100)
+
+      assert %{state: :member, user: %{id: user_id}} =
+               Enum.find(listing.resources, &(&1.resource.id == resource.id))
+
+      assert user_id == user.id
+      assert listing.total == 2
+    end
+
+    test "the listing binds a handle whose accepted invitation left it unbound", context do
+      {:ok, %{resource: resource}} =
+        create_user(context.connection, %{"userName" => "joiner@example.com"})
+
+      invitation =
+        Repo.get!(OrganizationInvitation, resource.invitation_id)
+        |> Repo.preload(:organization)
+
+      joiner = insert(:user)
+
+      {:ok, _organization_user} =
+        OrganizationInvitations.accept(invitation, joiner, audit: audit_data(joiner))
+
+      Repo.update_all(from(r in Resource, where: r.id == ^resource.id), set: [user_id: nil])
+
+      listing = list_users(context.connection, 1, 100)
+
+      assert %{state: :member, user: %{id: joiner_id}} =
+               Enum.find(listing.resources, &(&1.resource.id == resource.id))
+
+      assert joiner_id == joiner.id
+    end
+
+    test "a listing's queries don't grow with handles that name nobody", context do
+      create_user(context.connection, %{"userName" => "ghost-0@example.com", "active" => false})
+      list_users(context.connection, 1, 1)
+
+      before = count_queries(fn -> list_users(context.connection, 1, 1) end)
+
+      for index <- 1..20 do
+        {:ok, _resolved} =
+          create_user(context.connection, %{
+            "userName" => "ghost-#{index}@example.com",
+            "active" => false
+          })
+      end
+
+      assert count_queries(fn -> list_users(context.connection, 1, 1) end) == before
+    end
+
     test "filtering by userName materializes a current member exactly once", context do
       user = insert(:user)
       insert(:organization_user, organization: context.organization, user: user)
@@ -1247,6 +1310,29 @@ defmodule Hexpm.Accounts.SCIMTest do
 
   defp delete_user(connection, scim_id),
     do: SCIM.delete_user(connection, scim_id, audit: audit(connection))
+
+  defp count_queries(fun) do
+    counter = :counters.new(1, [])
+    handler = {__MODULE__, make_ref()}
+    test_pid = self()
+
+    :telemetry.attach(
+      handler,
+      [:hexpm, :repo_base, :query],
+      fn _event, _measurements, _metadata, counter ->
+        if self() == test_pid, do: :counters.add(counter, 1, 1)
+      end,
+      counter
+    )
+
+    try do
+      fun.()
+    after
+      :telemetry.detach(handler)
+    end
+
+    :counters.get(counter, 1)
+  end
 
   defp materialized_admin(context) do
     find_by_user_name(context.connection, hd(context.admin.emails).email)
