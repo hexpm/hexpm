@@ -11,6 +11,15 @@ defmodule HexpmWeb.Readme.RendererTest do
     Renderer.render("hexpm", "README.md", content, "my_package", "1.0.0", budget)
   end
 
+  # Trace messages can't go to the traced process, so a separate process counts
+  # them and reports the count when told to stop.
+  defp count_calls(test_pid, count) do
+    receive do
+      {:trace, ^test_pid, :call, _mfa} -> count_calls(test_pid, count + 1)
+      :stop -> send(test_pid, {:calls, count})
+    end
+  end
+
   test "author fragment links resolve to the anchored heading id" do
     content = """
     [Go to install](#installation)
@@ -22,6 +31,50 @@ defmodule HexpmWeb.Readme.RendererTest do
 
     assert result =~ ~s[<h2 id="user-content-installation">]
     assert result =~ ~s[href="#user-content-installation"]
+  end
+
+  test "renders a README once however many headings and attributed tables it has" do
+    headings = Enum.map_join(1..1_000, "\n", &"## Section #{&1}\n")
+    tables = String.duplicate("| a |\n|---|\n| 1 |\n{: .wide}\n\n", 100)
+
+    test_pid = self()
+    counter = spawn_link(fn -> count_calls(test_pid, 0) end)
+    Code.ensure_loaded!(MDExNative.Comrak)
+    session = :trace.session_create(:readme_renders, counter, [])
+
+    document =
+      try do
+        :trace.process(session, self(), true, [:call])
+        1 = :trace.function(session, {MDExNative.Comrak, :document_to_html, 2}, true, [])
+        html = render(headings <> "\n" <> tables)
+        ref = :trace.delivered(session, self())
+        assert_receive {:trace_delivered, ^test_pid, ^ref}
+        LazyHTML.from_fragment(html)
+      after
+        :trace.session_destroy(session)
+      end
+
+    send(counter, :stop)
+    assert_receive {:calls, 1}
+    assert Enum.count(LazyHTML.query(document, "h2[id]")) == 1_000
+    assert Enum.count(LazyHTML.query(document, "table")) == 100
+  end
+
+  test "keeps inline HTML in headings and attributed tables" do
+    content = """
+    ## Install <em>now</em>
+
+    | a |
+    |---|
+    | <strong>1</strong> |
+    {: .wide}
+    """
+
+    result = render(content)
+
+    assert result =~ ~s[<h2 id="user-content-install-now">Install <em>now</em></h2>]
+    assert result =~ ~s[<td><strong>1</strong></td>]
+    refute result =~ "wide"
   end
 
   test "numeric footnote links resolve to their target id" do

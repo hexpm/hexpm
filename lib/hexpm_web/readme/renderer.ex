@@ -45,6 +45,8 @@ defmodule HexpmWeb.Readme.Renderer do
             HeadingAnchors.transform(levels: @header_tags, hover_link: false)
           )
           |> MDEx.to_html!()
+          |> InlineAttributeLists.apply_classes()
+          |> HeadingAnchors.anchor()
           |> LazyHTML.from_fragment()
           |> LazyHTML.to_tree()
 
