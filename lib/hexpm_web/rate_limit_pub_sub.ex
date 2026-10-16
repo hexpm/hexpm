@@ -36,6 +36,11 @@ defmodule HexpmWeb.RateLimitPubSub do
     {:noreply, []}
   end
 
+  def handle_info({:throttle, {:authentication_failure_ip, ip}, time}, []) do
+    Attack.authentication_failure_ip_throttle(ip, time: time)
+    {:noreply, []}
+  end
+
   def handle_info({:throttle, {:scim_connection, connection_id}, time}, []) do
     Attack.scim_connection_throttle(connection_id, time: time)
     {:noreply, []}

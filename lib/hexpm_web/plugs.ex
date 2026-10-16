@@ -135,7 +135,7 @@ defmodule HexpmWeb.Plugs do
   end
 
   def authenticate(conn, _opts) do
-    case HexpmWeb.AuthHelpers.authenticate(conn) do
+    case check_and_authenticate(conn) do
       {:ok,
        %{
          auth_credential: auth_credential,
@@ -159,8 +159,27 @@ defmodule HexpmWeb.Plugs do
         |> assign(:email, nil)
         |> assign(:workload_identity, nil)
 
-      {:error, _} = error ->
+      {:error, reason} = error when reason in [:blocked, :authentication_rate_limited] ->
         HexpmWeb.AuthHelpers.error(conn, error)
+
+      {:error, _} = error ->
+        case HexpmWeb.Plugs.Attack.authentication_failure_ip_throttle(conn.remote_ip) do
+          {:block, _data} ->
+            HexpmWeb.AuthHelpers.error(conn, {:error, :authentication_rate_limited})
+
+          _ ->
+            HexpmWeb.AuthHelpers.error(conn, error)
+        end
+    end
+  end
+
+  defp check_and_authenticate(conn) do
+    if get_req_header(conn, "authorization") == [] do
+      {:error, :missing}
+    else
+      with :ok <- HexpmWeb.Plugs.Attack.check_authentication(conn.remote_ip) do
+        HexpmWeb.AuthHelpers.authenticate(conn)
+      end
     end
   end
 end

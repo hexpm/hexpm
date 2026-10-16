@@ -423,6 +423,66 @@ defmodule HexpmWeb.Plugs.AttackTest do
     end
   end
 
+  describe "check_authentication/1" do
+    test "refuses an address after 100 refused credentials a minute" do
+      align_to_throttle_bucket()
+      ip = {30, 3, 3, 3}
+
+      for _ <- 1..100 do
+        assert :ok = Attack.check_authentication(ip)
+        Attack.authentication_failure_ip_throttle(ip)
+      end
+
+      assert :ok = Attack.check_authentication(ip)
+      assert {:block, _data} = Attack.authentication_failure_ip_throttle(ip)
+      assert {:error, :authentication_rate_limited} = Attack.check_authentication(ip)
+    end
+
+    test "refuses blocked addresses" do
+      insert(:block_address, ip: "30.4.4.4")
+      Hexpm.BlockAddress.reload()
+
+      assert {:error, :blocked} = Attack.check_authentication({30, 4, 4, 4})
+    end
+
+    test "doesn't refuse the CDN or 127.0.0.1" do
+      Hexpm.BlockAddress.reload()
+
+      for ip <- [{127, 0, 0, 255}, {127, 0, 0, 1}] do
+        for _ <- 1..101, do: Attack.authentication_failure_ip_throttle(ip)
+        assert :ok = Attack.check_authentication(ip)
+      end
+    end
+
+    test "broadcasts refused credentials and not checks" do
+      Phoenix.PubSub.subscribe(Hexpm.PubSub, "ratelimit")
+
+      Attack.check_authentication({30, 6, 6, 6})
+      refute_receive {:throttle, {:authentication_failure_ip, _ip}, _time}
+
+      Attack.authentication_failure_ip_throttle({30, 6, 6, 6})
+      assert_receive {:throttle, {:authentication_failure_ip, {30, 6, 6, 6}}, _time}
+    end
+
+    test "counts broadcast refusals" do
+      align_to_throttle_bucket()
+      time = System.system_time(:millisecond)
+
+      Phoenix.PubSub.broadcast!(
+        Hexpm.PubSub,
+        "ratelimit",
+        {:throttle, {:authentication_failure_ip, {30, 7, 7, 7}}, time}
+      )
+
+      :sys.get_state(RateLimitPubSub)
+
+      assert {:allow, {:throttle, data}} =
+               Attack.authentication_failure_ip_throttle({30, 7, 7, 7}, time: time, increment: 0)
+
+      assert data[:remaining] == 99
+    end
+  end
+
   describe "login ip throttle" do
     test "allows login requests when limit is not exceeded" do
       result = HexpmWeb.Plugs.Attack.login_ip_throttle({1, 1, 1, 1})
