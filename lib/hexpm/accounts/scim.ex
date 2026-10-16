@@ -29,6 +29,8 @@ defmodule Hexpm.Accounts.SCIM do
   # mistake or a mail amplifier.
   @max_operations 20
 
+  @min_inactive_limit 1_000
+
   def max_operations, do: @max_operations
 
   @type resolved :: %{
@@ -153,6 +155,9 @@ defmodule Hexpm.Accounts.SCIM do
           get_resource_by_user_name(connection, user_name) ->
             {:error, :uniqueness}
 
+          active == false and inactive_count(connection) >= inactive_limit(connection) ->
+            {:error, :too_many_inactive}
+
           active == false ->
             insert_resource(
               connection,
@@ -165,6 +170,36 @@ defmodule Hexpm.Accounts.SCIM do
         end
       end)
     end
+  end
+
+  @doc """
+  How many inactive handles a connection can hold before `create_user/3`
+  refuses one that arrives inactive: 1,000, or ten per seat if that is more.
+  Those claim no seat and send no invitation, so nothing else bounds them.
+  Deactivating a handle creates none and is never refused.
+  """
+  def inactive_limit(%Connection{organization: organization}) do
+    max(@min_inactive_limit, 10 * (organization.billing_seats || 0))
+  end
+
+  # Neither bound to a current member nor holding a pending invitation, the
+  # handles resolve/2 reports as inactive.
+  defp inactive_count(connection) do
+    organization_id = connection.organization_id
+    now = DateTime.utc_now()
+
+    from(resource in resources_query(connection),
+      left_join: organization_user in OrganizationUser,
+      on:
+        organization_user.user_id == resource.user_id and
+          organization_user.organization_id == ^organization_id,
+      left_join: invitation in assoc(resource, :invitation),
+      where: is_nil(organization_user.user_id),
+      where:
+        is_nil(invitation.id) or not is_nil(invitation.accepted_at) or
+          not is_nil(invitation.revoked_at) or invitation.expires_at <= ^now
+    )
+    |> Repo.aggregate(:count)
   end
 
   @doc """

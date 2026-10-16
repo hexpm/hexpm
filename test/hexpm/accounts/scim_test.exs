@@ -586,6 +586,49 @@ defmodule Hexpm.Accounts.SCIMTest do
       assert count_queries(fn -> list_users(context.connection, 1, 1) end) == before
     end
 
+    test "an inactive create is refused once the connection holds its limit", context do
+      insert_inactive_handles(context.connection, 999)
+
+      assert {:ok, %{state: :inactive}} =
+               create_user(context.connection, %{
+                 "userName" => "last@example.com",
+                 "active" => false
+               })
+
+      assert {:error, :too_many_inactive} =
+               create_user(context.connection, %{
+                 "userName" => "over@example.com",
+                 "active" => false
+               })
+
+      assert {:ok, %{state: :invited}} =
+               create_user(context.connection, %{"userName" => "active@example.com"})
+    end
+
+    test "members and pending invitations don't count against the inactive limit", context do
+      insert_inactive_handles(context.connection, 999)
+      assert %{state: :member} = materialized_admin(context)
+
+      assert {:ok, %{state: :invited}} =
+               create_user(context.connection, %{"userName" => "invited@example.com"})
+
+      assert {:ok, %{state: :inactive}} =
+               create_user(context.connection, %{
+                 "userName" => "inactive@example.com",
+                 "active" => false
+               })
+    end
+
+    test "the inactive limit is 1,000 or ten per seat", context do
+      assert SCIM.inactive_limit(context.connection) == 1_000
+
+      organization = %{context.organization | billing_seats: 250}
+      assert SCIM.inactive_limit(%{context.connection | organization: organization}) == 2_500
+
+      organization = %{context.organization | billing_seats: nil}
+      assert SCIM.inactive_limit(%{context.connection | organization: organization}) == 1_000
+    end
+
     test "filtering by userName materializes a current member exactly once", context do
       user = insert(:user)
       insert(:organization_user, organization: context.organization, user: user)
@@ -1310,6 +1353,24 @@ defmodule Hexpm.Accounts.SCIMTest do
 
   defp delete_user(connection, scim_id),
     do: SCIM.delete_user(connection, scim_id, audit: audit(connection))
+
+  defp insert_inactive_handles(connection, count) do
+    now = DateTime.utc_now()
+
+    rows =
+      for index <- 1..count do
+        %{
+          connection_id: connection.id,
+          organization_id: connection.organization_id,
+          scim_id: Ecto.UUID.generate(),
+          user_name: "inactive-#{index}@example.com",
+          inserted_at: now,
+          updated_at: now
+        }
+      end
+
+    Repo.insert_all(Resource, rows)
+  end
 
   defp count_queries(fun) do
     counter = :counters.new(1, [])
