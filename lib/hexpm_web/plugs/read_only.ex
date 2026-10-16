@@ -78,9 +78,13 @@ defmodule HexpmWeb.Plugs.ReadOnly do
     route_matches?(conn, opts.allowed_routes)
   end
 
+  # The router matches each segment decoded, so /%65mail/verify is the
+  # /email/verify route.
   defp route_matches?(conn, routes) do
+    path_info = Enum.map(conn.path_info, &URI.decode/1)
+
     Enum.any?(routes, fn {method, path} ->
-      method == conn.method and path_matches?(String.split(path, "/", trim: true), conn.path_info)
+      method == conn.method and path_matches?(String.split(path, "/", trim: true), path_info)
     end)
   end
 

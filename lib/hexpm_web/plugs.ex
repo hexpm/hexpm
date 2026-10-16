@@ -71,7 +71,7 @@ defmodule HexpmWeb.Plugs do
   def default_repository(conn, _opts) do
     param_set? = Map.has_key?(conn.params, "repository")
 
-    case conn.path_info do
+    case Enum.map(conn.path_info, &URI.decode/1) do
       ["api", "packages"] -> conn
       ["api", "publish"] when not param_set? -> put_in(conn.params["repository"], "hexpm")
       ["api", "packages" | _] when not param_set? -> put_in(conn.params["repository"], "hexpm")

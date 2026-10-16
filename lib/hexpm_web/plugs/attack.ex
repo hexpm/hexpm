@@ -539,22 +539,25 @@ defmodule HexpmWeb.Plugs.Attack do
     )
   end
 
-  defp api?(%Plug.Conn{request_path: "/api/" <> _}), do: true
-  defp api?(%Plug.Conn{}), do: false
+  defp api?(conn), do: match?(["api" | _], routed_path(conn))
 
   # Verified failed mints have their own limit, keyed on the repository that
   # signed the token, in HexpmWeb.API.OAuthController.
-  defp workload_identity_mint?(%Plug.Conn{
-         request_path: "/api/oauth/token",
-         params: %{"grant_type" => "urn:ietf:params:oauth:grant-type:jwt-bearer"}
-       }),
-       do: true
+  defp workload_identity_mint?(%Plug.Conn{params: %{"grant_type" => grant_type}} = conn) do
+    grant_type == "urn:ietf:params:oauth:grant-type:jwt-bearer" and
+      routed_path(conn) == ["api", "oauth", "token"]
+  end
 
   defp workload_identity_mint?(%Plug.Conn{}), do: false
 
-  defp oidc_audience?(%Plug.Conn{method: "GET", request_path: "/api/oidc/audience"}), do: true
+  defp oidc_audience?(%Plug.Conn{method: "GET"} = conn),
+    do: routed_path(conn) == ["api", "oidc", "audience"]
+
   defp oidc_audience?(%Plug.Conn{}), do: false
 
-  defp scim?(%Plug.Conn{request_path: "/scim/" <> _}), do: true
-  defp scim?(%Plug.Conn{}), do: false
+  defp scim?(conn), do: match?(["scim" | _], routed_path(conn))
+
+  # path_info has no empty segments and the router matches each one decoded,
+  # so /%61pi/users/me and //api/users/me are API routes too.
+  defp routed_path(conn), do: Enum.map(conn.path_info, &URI.decode/1)
 end

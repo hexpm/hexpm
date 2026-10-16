@@ -125,6 +125,31 @@ defmodule HexpmWeb.ReadOnlyModeTest do
     assert conn.status == 503
   end
 
+  test "a declared write route is refused however its path is encoded" do
+    key = Hexpm.Accounts.Auth.gen_key()
+
+    email =
+      build(:email,
+        verified: false,
+        verification_key: key,
+        verification_key_hash: :crypto.hash(:sha256, key),
+        verification_expiry: DateTime.utc_now()
+      )
+
+    user = insert(:user, emails: [email])
+    WriteMode.configure!(true)
+
+    conn =
+      get(build_conn(), "/%65mail/verify", %{
+        username: user.username,
+        email: email.email,
+        key: key
+      })
+
+    assert response(conn, 503) =~ "temporarily read-only for maintenance"
+    refute hd(Hexpm.Accounts.Users.get(user.username, [:emails]).emails).verified
+  end
+
   test "Hexpm.Repo.insert_all is gated by read-only mode" do
     WriteMode.configure!(true)
 
