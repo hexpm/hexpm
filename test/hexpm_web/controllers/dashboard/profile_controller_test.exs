@@ -53,10 +53,15 @@ defmodule HexpmWeb.Dashboard.ProfileControllerTest do
       assert redirected_to(conn) == "/dashboard/profile"
 
       assert Phoenix.Flash.get(conn.assigns.flash, :info) ==
-               "The #{organization.name} organization's profile lists you as a member."
+               "Your membership in #{organization.name} is public."
 
       assert [%{id: id}] = Organizations.public_members(organization)
       assert id == c.user.id
+
+      for path <- ["/users/#{c.user.username}", "/users/#{c.user.username}/stats"] do
+        html = build_conn() |> get(path) |> html_response(200)
+        assert html =~ ~s(href="/orgs/#{organization.name}")
+      end
 
       conn =
         build_conn()
@@ -67,6 +72,15 @@ defmodule HexpmWeb.Dashboard.ProfileControllerTest do
 
       assert redirected_to(conn) == "/dashboard/profile"
       assert Organizations.public_members(organization) == []
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) ==
+               "Your membership in #{organization.name} is hidden."
+
+      for path <- ["/users/#{c.user.username}", "/users/#{c.user.username}/stats"] do
+        html = build_conn() |> get(path) |> html_response(200)
+        refute html =~ ~s(id="user-organizations")
+        refute html =~ ~s(href="/orgs/#{organization.name}")
+      end
     end
 
     test "can't change another member's listing", c do

@@ -13,6 +13,18 @@ defmodule Hexpm.Accounts.Organizations do
     |> Repo.preload(preload)
   end
 
+  @doc "The organizations the user chose to list publicly, ordered by name."
+  def public_by_user(user) do
+    from(organization in Organization,
+      join: organization_user in assoc(organization, :organization_users),
+      where: organization_user.user_id == ^user.id,
+      where: organization_user.public,
+      order_by: organization.name,
+      preload: [user: :emails]
+    )
+    |> Repo.all()
+  end
+
   def all_members(organization, preload \\ []) do
     from(organization_user in assoc(organization, :organization_users),
       join: user in assoc(organization_user, :user),
@@ -430,8 +442,8 @@ defmodule Hexpm.Accounts.Organizations do
   end
 
   @doc """
-  Lists or unlists `user`'s own membership on the organization's public
-  profile.
+  Lists or unlists `user`'s own membership on the user's and organization's
+  public profiles.
   """
   def change_visibility(organization, user, params, audit: audit_data) do
     case Repo.get_by(OrganizationUser, organization_id: organization.id, user_id: user.id) do

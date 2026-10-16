@@ -15,7 +15,7 @@ defmodule Hexpm.Accounts.OrganizationUser do
   end
 
   @doc """
-  Sets whether the membership is listed on the organization's public profile.
+  Sets whether the membership is listed on the user's and organization's public profiles.
   Only the member changes it, and it starts hidden.
   """
   def visibility_changeset(organization_user, attrs) do

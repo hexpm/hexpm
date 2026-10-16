@@ -36,8 +36,8 @@ defmodule HexpmWeb.Dashboard.ProfileController do
            Organizations.change_visibility(organization, user, params, audit: audit_data(conn)) do
       message =
         if organization_user.public,
-          do: "The #{name} organization's profile lists you as a member.",
-          else: "The #{name} organization's profile no longer lists you as a member."
+          do: "Your membership in #{name} is public.",
+          else: "Your membership in #{name} is hidden."
 
       conn
       |> put_flash(:info, message)
@@ -46,7 +46,7 @@ defmodule HexpmWeb.Dashboard.ProfileController do
       {:error, %Ecto.Changeset{}} ->
         conn
         |> put_status(400)
-        |> put_flash(:error, "Could not change whether #{name} lists you as a member.")
+        |> put_flash(:error, "Could not change the visibility of your membership in #{name}.")
         |> render_index(User.update_profile(user, %{}))
 
       _not_member ->

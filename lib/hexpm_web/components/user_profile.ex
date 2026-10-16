@@ -19,6 +19,7 @@ defmodule HexpmWeb.Components.UserProfile do
   attr :public_email, :string, default: nil
   attr :total_packages, :integer, required: true
   attr :total_downloads, :integer, required: true
+  attr :organizations, :list, default: []
 
   def user_sidebar(assigns) do
     ~H"""
@@ -60,6 +61,36 @@ defmodule HexpmWeb.Components.UserProfile do
             {human_number_space(@total_downloads)}+
           </p>
         </div>
+      </div>
+
+      <div
+        :if={@organizations != []}
+        id="user-organizations"
+        class="border-t border-grey-200 dark:border-grey-800 pt-6 mb-6"
+      >
+        <h3 class="text-grey-900 dark:text-white text-sm font-semibold mb-3">
+          Organizations
+        </h3>
+        <ul class="space-y-2">
+          <li :for={organization <- @organizations}>
+            <a
+              href={~p"/orgs/#{organization.name}"}
+              class="flex items-center gap-3 text-sm font-medium text-grey-700 dark:text-grey-200 hover:text-primary-600 dark:hover:text-primary-300 transition-colors"
+            >
+              <img
+                src={
+                  gravatar_url(
+                    organization.user && Hexpm.Accounts.User.email(organization.user, :gravatar),
+                    :small
+                  )
+                }
+                alt={"#{organization.name} avatar"}
+                class="w-8 h-8 rounded-full flex-shrink-0"
+              />
+              <span class="break-all">{organization.name}</span>
+            </a>
+          </li>
+        </ul>
       </div>
 
       <%!-- Contact Info --%>

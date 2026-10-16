@@ -165,6 +165,7 @@ defmodule Hexpm.Accounts.OrganizationsTest do
       insert(:organization_user, organization: organization, user: user)
 
       assert Organizations.public_members(organization) == []
+      assert Organizations.public_by_user(user) == []
 
       assert {:ok, %{public: true}} =
                Organizations.change_visibility(organization, user, %{"public" => "true"},
@@ -173,6 +174,8 @@ defmodule Hexpm.Accounts.OrganizationsTest do
 
       assert [%{id: id}] = Organizations.public_members(organization)
       assert id == user.id
+      assert [%{id: organization_id}] = Organizations.public_by_user(user)
+      assert organization_id == organization.id
 
       assert {:ok, %{public: false}} =
                Organizations.change_visibility(organization, user, %{"public" => "false"},
@@ -180,6 +183,7 @@ defmodule Hexpm.Accounts.OrganizationsTest do
                )
 
       assert Organizations.public_members(organization) == []
+      assert Organizations.public_by_user(user) == []
     end
 
     test "audits the change" do
@@ -239,6 +243,32 @@ defmodule Hexpm.Accounts.OrganizationsTest do
                "alpha_shown",
                "zulu_shown"
              ]
+    end
+  end
+
+  describe "public_by_user/1" do
+    test "orders public memberships by organization name and leaves other memberships out" do
+      user = insert(:user)
+      zulu = insert(:organization, name: "zulu_listed")
+      alpha = insert(:organization, name: "alpha_listed")
+      insert(:organization_user, organization: zulu, user: user, public: true)
+      insert(:organization_user, organization: alpha, user: user, public: true)
+      insert(:organization_user, organization: insert(:organization), user: user)
+
+      insert(:organization_user,
+        organization: insert(:organization),
+        user: insert(:user),
+        public: true
+      )
+
+      assert Enum.map(Organizations.public_by_user(user), & &1.name) == [
+               "alpha_listed",
+               "zulu_listed"
+             ]
+    end
+
+    test "returns no organizations for a user without memberships" do
+      assert Organizations.public_by_user(insert(:user)) == []
     end
   end
 
