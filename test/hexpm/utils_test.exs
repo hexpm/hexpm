@@ -61,6 +61,20 @@ defmodule Hexpm.UtilsTest do
     end
   end
 
+  describe "parse_search/1" do
+    test "trims the search" do
+      assert Utils.parse_search("  phoenix ") == "phoenix"
+      assert Utils.parse_search("") == nil
+      assert Utils.parse_search(nil) == nil
+    end
+
+    test "caps the search at 1,000 bytes" do
+      assert Utils.parse_search(String.duplicate("a", 1_500)) == String.duplicate("a", 1_000)
+      assert Utils.parse_search(String.duplicate("a", 999) <> "é") == String.duplicate("a", 999)
+      assert Utils.parse_search(String.duplicate("a ", 600)) == String.duplicate("a ", 499) <> "a"
+    end
+  end
+
   describe "safe_date/1" do
     test "handles various input types" do
       assert Utils.safe_date("2024-01-15") == ~D[2024-01-15]

@@ -74,6 +74,32 @@ defmodule Hexpm.Repository.Package.SearchQueryTest do
       assert q.depends == "ecto"
       assert q.name == "phoenix"
     end
+
+    test "a key with non-ASCII characters ends at the colon" do
+      {:ok, q} = SearchQuery.parse("café:crème build_tool:mix")
+      assert q.unknown == [{"café", "crème"}]
+      assert q.build_tool == "mix"
+    end
+
+    test "parsing takes work linear in the number of tokens" do
+      # Reductions count the work a process does, independent of machine speed.
+      reductions = fn search ->
+        task =
+          Task.async(fn ->
+            {:ok, _} = SearchQuery.parse(search)
+            Process.info(self(), :reductions)
+          end)
+
+        {:reductions, reductions} = Task.await(task)
+        reductions
+      end
+
+      for token <- ["a ", "a:b "] do
+        single = reductions.(String.duplicate(token, 1_000))
+        double = reductions.(String.duplicate(token, 2_000))
+        assert double < 3 * single, "#{inspect(token)}: #{single} then #{double} reductions"
+      end
+    end
   end
 
   describe "serialize/1" do

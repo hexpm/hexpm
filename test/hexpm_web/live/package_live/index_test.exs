@@ -30,6 +30,16 @@ defmodule HexpmWeb.PackageLive.IndexTest do
     refute html =~ "ecto_test_pkg"
   end
 
+  test "search_submit caps the search at 1,000 bytes", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/packages")
+    render_hook(view, "search_submit", %{"search" => String.duplicate("a", 1_500)})
+
+    assert_patch(
+      view,
+      ~p"/packages?#{[sort: "recent_downloads", search: String.duplicate("a", 1_000)]}"
+    )
+  end
+
   test "renders without crashing on malformed extra: query", %{conn: conn} do
     # SearchQuery.parse returns {:error, ...} for this input; LiveView must not crash.
     {:ok, _view, html} = live(conn, ~p"/packages?search=extra:no_comma")

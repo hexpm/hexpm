@@ -80,6 +80,10 @@ defmodule Hexpm.Repository.Package.SearchQuery do
 
   # --- tokenizer ---
 
+  # Each step only scans the token it reads, so tokenizing is linear in the
+  # length of the search.
+  @whitespace [" ", "\t", "\n", "\v", "\f", "\r"]
+
   defp tokenize(string) do
     string
     |> String.trim()
@@ -87,58 +91,38 @@ defmodule Hexpm.Repository.Package.SearchQuery do
     |> Enum.reverse()
   end
 
-  defp do_tokenize("", acc), do: acc
-
   defp do_tokenize(string, acc) do
-    string = String.trim_leading(string)
-
-    cond do
-      string == "" ->
+    case String.trim_leading(string) do
+      "" ->
         acc
 
-      (colon_index = colon_before_space(string)) != nil ->
-        {key, rest} = String.split_at(string, colon_index)
-        {:ok, value, rest_after} = read_value(String.slice(rest, 1..-1//1))
-        do_tokenize(rest_after, [{:pair, key, value} | acc])
-
-      true ->
+      string ->
         {word, rest} = read_word(string)
-        do_tokenize(rest, [{:word, word} | acc])
-    end
-  end
 
-  defp colon_before_space(string) do
-    case :binary.match(string, ":") do
-      {0, _} ->
-        nil
+        case :binary.split(word, ":") do
+          [key, _] when key != "" ->
+            {value, rest} = read_value(binary_slice(string, (byte_size(key) + 1)..-1//1))
+            do_tokenize(rest, [{:pair, key, value} | acc])
 
-      {colon, _} ->
-        case Regex.run(~r/\s/, string, return: :index) do
-          [{space, _}] when space < colon -> nil
-          _ -> colon
+          _ ->
+            do_tokenize(rest, [{:word, word} | acc])
         end
-
-      :nomatch ->
-        nil
     end
   end
 
   defp read_value(<<?", rest::binary>>) do
-    case String.split(rest, "\"", parts: 2) do
-      [value, tail] -> {:ok, value, String.trim_leading(tail)}
-      [value] -> {:ok, value, ""}
+    case :binary.split(rest, "\"") do
+      [value, tail] -> {value, tail}
+      [value] -> {value, ""}
     end
   end
 
-  defp read_value(string) do
-    {word, rest} = read_word(string)
-    {:ok, word, rest}
-  end
+  defp read_value(string), do: read_word(string)
 
   defp read_word(string) do
-    case String.split(string, ~r/\s+/, parts: 2) do
+    case :binary.split(string, @whitespace) do
+      [word, rest] -> {word, rest}
       [word] -> {word, ""}
-      [word, tail] -> {word, String.trim_leading(tail)}
     end
   end
 

@@ -382,7 +382,7 @@ defmodule HexpmWeb.PackageLive.Index do
 
   @impl true
   def handle_event("search_submit", %{"search" => search}, socket) do
-    search = nil_if_empty(search)
+    search = search |> Hexpm.Utils.parse_search() |> nil_if_empty()
 
     url_params =
       %{sort: socket.assigns.sort, search: search}
