@@ -369,11 +369,13 @@ defmodule HexpmWeb.PackageLive.Index do
 
   @impl true
   def handle_event("sort_change", %{"sort" => sort_param}, socket) do
-    if sort(sort_param) == socket.assigns.sort do
+    sort = sort(sort_param)
+
+    if sort in [nil, socket.assigns.sort] do
       {:noreply, socket}
     else
       url_params =
-        %{sort: sort_param, search: socket.assigns.search}
+        %{sort: sort, search: socket.assigns.search}
         |> Enum.reject(fn {_k, v} -> is_nil(v) end)
 
       {:noreply, push_patch(socket, to: ~p"/packages?#{url_params}")}
@@ -397,7 +399,7 @@ defmodule HexpmWeb.PackageLive.Index do
   end
 
   defp push_query(socket, %SearchQuery{} = query) do
-    new_search = nil_if_empty(SearchQuery.serialize(query))
+    new_search = query |> SearchQuery.serialize() |> Hexpm.Utils.parse_search() |> nil_if_empty()
 
     url_params =
       %{sort: socket.assigns.sort, search: new_search}

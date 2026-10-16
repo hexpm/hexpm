@@ -40,6 +40,22 @@ defmodule HexpmWeb.PackageLive.IndexTest do
     )
   end
 
+  test "a filter change caps the search at 1,000 bytes", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/packages")
+    render_hook(view, "filter_change", %{"depends" => String.duplicate("a", 1_500)})
+
+    assert_patch(
+      view,
+      ~p"/packages?#{[sort: "recent_downloads", search: "depends:" <> String.duplicate("a", 992)]}"
+    )
+  end
+
+  test "a sort the page doesn't offer leaves the URL alone", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/packages")
+    render_hook(view, "sort_change", %{"sort" => String.duplicate("a", 1_500)})
+    refute_patched(view)
+  end
+
   test "renders without crashing on malformed extra: query", %{conn: conn} do
     # SearchQuery.parse returns {:error, ...} for this input; LiveView must not crash.
     {:ok, _view, html} = live(conn, ~p"/packages?search=extra:no_comma")
