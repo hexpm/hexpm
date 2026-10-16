@@ -331,9 +331,9 @@ defmodule HexpmWeb.Dashboard.OrganizationController.PolicyTest do
       response = html_response(conn, 400)
       refute response =~ "removedpkg"
 
-      {:ok, document} = Floki.parse_document(response)
-      [empty | _] = Floki.find(document, "[data-override-empty]")
-      refute Floki.attribute([empty], "class") |> List.first() =~ "hidden"
+      document = LazyHTML.from_document(response)
+      [empty | _] = LazyHTML.query(document, "[data-override-empty]") |> Enum.to_list()
+      refute LazyHTML.attribute(empty, "class") |> List.first() =~ "hidden"
     end
 
     test "renders the errors of a rejected save", %{user: user, organization: org} do
@@ -378,8 +378,8 @@ defmodule HexpmWeb.Dashboard.OrganizationController.PolicyTest do
         response = html_response(conn, 400)
         assert response =~ message
 
-        {:ok, document} = Floki.parse_document(response)
-        assert [_ | _] = Floki.find(document, "p.text-small.text-red-600")
+        document = LazyHTML.from_document(response)
+        assert [_ | _] = LazyHTML.query(document, "p.text-small.text-red-600") |> Enum.to_list()
       end
     end
 
@@ -536,27 +536,45 @@ defmodule HexpmWeb.Dashboard.OrganizationController.PolicyTest do
       assert response =~ "CVE-2026-5001"
       assert response =~ "recovery_vulnerable"
 
-      {:ok, document} = Floki.parse_document(response)
+      document = LazyHTML.from_document(response)
 
       assert [_row] =
-               Floki.find(
-                 document,
+               document
+               |> LazyHTML.query(
                  ~s([data-exception-rows] > [data-exception-row][data-exception-type="advisory"])
                )
+               |> Enum.to_list()
 
       assert ["bad requirement"] =
                document
-               |> Floki.find(
+               |> LazyHTML.query(
                  ~s([data-exception-rows] > [data-exception-row][data-exception-type="advisory"] input[name$="[requirement]"])
                )
-               |> Floki.attribute("value")
+               |> LazyHTML.attribute("value")
     end
   end
 
+  # LazyHTML leaves `<template>` contents out of the document tree.
+  defp with_template_contents(node) do
+    templates =
+      node
+      |> LazyHTML.query("template")
+      |> LazyHTML.to_tree()
+      |> Enum.map(fn {"template", _attrs, children} -> LazyHTML.from_tree(children) end)
+
+    [node | templates]
+  end
+
+  defp query_all(fragments, selector) do
+    Enum.flat_map(fragments, &Enum.to_list(LazyHTML.query(&1, selector)))
+  end
+
+  defp to_tree(nodes), do: Enum.flat_map(nodes, &LazyHTML.to_tree/1)
+
   defp override_id_inputs(document, selector) do
     document
-    |> Floki.find(selector)
-    |> Floki.attribute("name")
+    |> LazyHTML.query(selector)
+    |> LazyHTML.attribute("name")
     |> Enum.filter(&String.match?(&1, ~r/\[overrides\]\[\d+\]\[id\]$/))
   end
 
@@ -599,10 +617,10 @@ defmodule HexpmWeb.Dashboard.OrganizationController.PolicyTest do
       refute response =~ "Allowed packages"
       refute response =~ "Allow all"
 
-      {:ok, document} = Floki.parse_document(response)
-      assert Floki.attribute(Floki.find(document, "#repo-tabs"), "hidden") == []
+      document = LazyHTML.from_document(response)
+      assert document |> LazyHTML.query("#repo-tabs") |> LazyHTML.attribute("hidden") == []
 
-      assert length(Floki.find(document, "[data-policy-override-compatibility]")) == 2
+      assert Enum.count(LazyHTML.query(document, "[data-policy-override-compatibility]")) == 2
     end
 
     test "admin sees the save and delete affordances", %{user: user, organization: org} do
@@ -661,7 +679,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController.PolicyTest do
       conn = build_conn() |> test_login(user)
       conn = get(conn, "/dashboard/orgs/#{org.name}/policies/#{policy.name}")
 
-      {:ok, document} = Floki.parse_document(html_response(conn, 200))
+      document = LazyHTML.from_document(html_response(conn, 200))
 
       # An input rendered outside the row survives the row being removed and
       # keeps the override alive on the next save.
@@ -674,8 +692,8 @@ defmodule HexpmWeb.Dashboard.OrganizationController.PolicyTest do
       # to the stored one.
       tab_ids =
         document
-        |> Floki.find("input")
-        |> Floki.attribute("name")
+        |> LazyHTML.query("input")
+        |> LazyHTML.attribute("name")
         |> Enum.filter(&String.match?(&1, ~r/^policy\[repositories\]\[\d+\]\[id\]$/))
 
       assert length(tab_ids) == 2
@@ -702,25 +720,44 @@ defmodule HexpmWeb.Dashboard.OrganizationController.PolicyTest do
       conn = build_conn() |> test_login(user)
       conn = get(conn, "/dashboard/orgs/#{org.name}/policies/#{policy.name}")
 
-      {:ok, document} = Floki.parse_document(html_response(conn, 200))
+      document = LazyHTML.from_document(html_response(conn, 200))
+
+      template_contents =
+        document
+        |> LazyHTML.query("template[data-override-template]")
+        |> LazyHTML.to_tree()
+        |> Enum.map(fn {"template", _attrs, children} -> LazyHTML.from_tree(children) end)
+
+      assert length(template_contents) == 2
 
       for {input_selector, menu_selector} <- [
             {"input[data-override-package]", ~s([data-override-suggestions="package"])},
             {"input[data-override-requirement]", ~s([data-override-suggestions="version"])}
           ] do
         controls =
-          document
-          |> Floki.find("[data-override-row] " <> input_selector)
-          |> Floki.attribute("aria-controls")
+          Enum.flat_map([document | template_contents], fn content ->
+            content
+            |> LazyHTML.query("[data-override-row] " <> input_selector)
+            |> LazyHTML.attribute("aria-controls")
+          end)
 
-        menus = document |> Floki.find("[data-override-row] " <> menu_selector)
-        ids = Floki.attribute(menus, "id")
+        menus =
+          for content <- [document | template_contents],
+              menu <- LazyHTML.query(content, "[data-override-row] " <> menu_selector),
+              do: menu
+
+        ids = Enum.flat_map(menus, &LazyHTML.attribute(&1, "id"))
 
         # One rendered row plus the blank row each tab keeps in its template.
         assert length(ids) == 3
         assert controls == ids
         assert ids == Enum.uniq(ids)
-        assert Floki.attribute(menus, "role") == ["listbox", "listbox", "listbox"]
+
+        assert Enum.flat_map(menus, &LazyHTML.attribute(&1, "role")) == [
+                 "listbox",
+                 "listbox",
+                 "listbox"
+               ]
       end
     end
 
@@ -751,16 +788,27 @@ defmodule HexpmWeb.Dashboard.OrganizationController.PolicyTest do
       assert response =~ "14d"
       assert response =~ "badlib"
 
-      {:ok, document} = Floki.parse_document(response)
+      document = LazyHTML.from_document(response)
 
-      assert [_ | _] = Floki.find(document, ~s(input[data-override-package]))
-      assert [_ | _] = Floki.find(document, ~s(input[data-override-requirement]))
-      assert [_ | _] = Floki.find(document, ~s([data-override-suggestions="package"]))
-      assert [_ | _] = Floki.find(document, ~s([data-override-suggestions="version"]))
+      assert [_ | _] =
+               LazyHTML.query(document, ~s(input[data-override-package])) |> Enum.to_list()
 
-      assert [card | _] = Floki.find(document, ~s([phx-hook="OverrideList"]))
-      assert [package_url] = Floki.attribute(card, "data-package-suggestions-url")
-      assert [version_url] = Floki.attribute(card, "data-version-suggestions-url")
+      assert [_ | _] =
+               LazyHTML.query(document, ~s(input[data-override-requirement])) |> Enum.to_list()
+
+      assert [_ | _] =
+               LazyHTML.query(document, ~s([data-override-suggestions="package"]))
+               |> Enum.to_list()
+
+      assert [_ | _] =
+               LazyHTML.query(document, ~s([data-override-suggestions="version"]))
+               |> Enum.to_list()
+
+      assert [card | _] =
+               LazyHTML.query(document, ~s([phx-hook="OverrideList"])) |> Enum.to_list()
+
+      assert [package_url] = LazyHTML.attribute(card, "data-package-suggestions-url")
+      assert [version_url] = LazyHTML.attribute(card, "data-version-suggestions-url")
       assert package_url =~ "/policies/package-suggestions"
       assert package_url =~ "repository=hexpm"
       assert version_url =~ "/policies/version-suggestions"
@@ -816,25 +864,29 @@ defmodule HexpmWeb.Dashboard.OrganizationController.PolicyTest do
       refute response =~ "A cooldown configured in the project can still exclude the release."
       refute response =~ "Add package rule"
 
-      {:ok, document} = Floki.parse_document(response)
-      assert [scoped | _] = Floki.find(document, ~s([phx-hook="PolicyExceptionList"]))
-      assert [url] = Floki.attribute(scoped, "data-advisory-suggestions-url")
-      assert url =~ "/policies/advisory-suggestions"
-      assert [_ | _] = Floki.find(document, "[data-exception-row]")
+      document = LazyHTML.from_document(response)
 
-      [repo_panel | _] = Floki.find(document, ~s([data-panel="hexpm"]))
-      assert length(Floki.find(repo_panel, ~s([phx-hook="OverrideList"]))) == 1
+      assert [scoped | _] =
+               LazyHTML.query(document, ~s([phx-hook="PolicyExceptionList"])) |> Enum.to_list()
+
+      assert [url] = LazyHTML.attribute(scoped, "data-advisory-suggestions-url")
+      assert url =~ "/policies/advisory-suggestions"
+      assert [_ | _] = query_all(with_template_contents(document), "[data-exception-row]")
+
+      [repo_panel | _] = LazyHTML.query(document, ~s([data-panel="hexpm"])) |> Enum.to_list()
+      repo_panel = with_template_contents(repo_panel)
+      assert length(query_all(repo_panel, ~s([phx-hook="OverrideList"]))) == 1
 
       assert [_ | _] =
-               Floki.find(repo_panel, "[data-override-row].border-l-4.border-l-primary-500")
+               query_all(repo_panel, "[data-override-row].border-l-4.border-l-primary-500")
 
       add_buttons =
-        Floki.find(repo_panel, "[data-override-add]") ++
-          Floki.find(repo_panel, "[data-exception-add]")
+        query_all(repo_panel, "[data-override-add]") ++
+          query_all(repo_panel, "[data-exception-add]")
 
       assert length(add_buttons) == 4
 
-      assert Enum.all?(add_buttons, fn {"button", attributes, _children} ->
+      assert Enum.all?(to_tree(add_buttons), fn {"button", attributes, _children} ->
                {"class", class} = List.keyfind(attributes, "class", 0)
                classes = String.split(class)
                "w-full" in classes and "sm:w-auto" in classes
@@ -842,7 +894,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController.PolicyTest do
 
       for type <- ["advisory", "retirement", "cooldown"] do
         assert [_ | _] =
-                 Floki.find(
+                 query_all(
                    repo_panel,
                    ~s([data-exception-type="#{type}"].border-l-primary-500)
                  )
@@ -853,42 +905,42 @@ defmodule HexpmWeb.Dashboard.OrganizationController.PolicyTest do
       end
 
       assert [_ | _] =
-               Floki.find(
+               query_all(
                  repo_panel,
                  "[data-exception-control] > [data-exception-selected]"
                )
 
       assert [_ | _] =
-               Floki.find(
+               query_all(
                  repo_panel,
                  ~s([data-exception-type="advisory"] > input[data-exception-requirement][type="hidden"])
                )
 
-      refute Floki.find(
+      refute query_all(
                repo_panel,
                ~s([data-exception-type="advisory"] input[data-exception-requirement][type="text"])
              ) != []
 
       assert [_ | _] =
-               Floki.find(
+               query_all(
                  repo_panel,
                  ~s(button[data-exception-selected][data-exception-reselect][aria-label="Change selected advisory"])
                )
 
       assert [_ | _] =
-               Floki.find(
+               query_all(
                  repo_panel,
                  ~s([data-exception-status][role="status"][hidden])
                )
 
       assert [retirement_reason] =
-               Floki.find(
+               query_all(
                  repo_panel,
                  ~s([data-exception-rows] > [data-exception-type="retirement"] select[aria-label="Retirement reason"])
                )
 
       retirement_reason_classes =
-        Floki.attribute(retirement_reason, "class") |> hd() |> String.split()
+        LazyHTML.attribute(retirement_reason, "class") |> hd() |> String.split()
 
       assert "border-grey-200" in retirement_reason_classes
       refute "border-grey-300" in retirement_reason_classes
@@ -897,37 +949,36 @@ defmodule HexpmWeb.Dashboard.OrganizationController.PolicyTest do
                "with no version skips every policy restriction for every release of the package"
 
       override_rows =
-        Floki.find(repo_panel, "[data-override-row], [data-exception-row]")
+        query_all(repo_panel, "[data-override-row], [data-exception-row]")
 
       assert Enum.all?(override_rows, fn row ->
                row
-               |> Floki.find(".grid")
-               |> Enum.any?(fn {_, attributes, _} ->
-                 {"class", class} = List.keyfind(attributes, "class", 0)
-                 "lg:grid-cols-12" in String.split(class)
-               end)
+               |> LazyHTML.query(".grid")
+               |> LazyHTML.attribute("class")
+               |> Enum.any?(&("lg:grid-cols-12" in String.split(&1)))
              end)
 
-      refute Floki.find(repo_panel, "[data-exception-selected].md\\:col-span-2") != []
+      refute query_all(repo_panel, "[data-exception-selected].md\\:col-span-2") != []
 
       remove_buttons =
-        Floki.find(repo_panel, "[data-override-remove]") ++
-          Floki.find(repo_panel, "[data-exception-remove]")
+        query_all(repo_panel, "[data-override-remove]") ++
+          query_all(repo_panel, "[data-exception-remove]")
 
-      assert Enum.all?(remove_buttons, fn {"button", attributes, _children} ->
+      assert Enum.all?(to_tree(remove_buttons), fn {"button", attributes, _children} ->
                {"class", class} = List.keyfind(attributes, "class", 0)
                "absolute" not in String.split(class)
              end)
 
       assert [_] =
-               Floki.find(
+               query_all(
                  repo_panel,
                  ~s([phx-hook="OverrideList"] [phx-hook="PolicyExceptionList"].contents)
                )
 
       assert [_] =
                repo_panel
-               |> Floki.find(~s([data-exception-type="retirement"] select.appearance-none))
+               |> query_all(~s([data-exception-type="retirement"] select.appearance-none))
+               |> to_tree()
                |> Enum.reject(fn {"select", attributes, _children} ->
                  case List.keyfind(attributes, "id", 0) do
                    {"id", id} -> String.contains?(id, "__INDEX__")
@@ -935,8 +986,8 @@ defmodule HexpmWeb.Dashboard.OrganizationController.PolicyTest do
                  end
                end)
 
-      refute Floki.find(repo_panel, ".pr-12") != []
-      refute Floki.find(repo_panel, ".sm\\:pr-10") != []
+      refute query_all(repo_panel, ".pr-12") != []
+      refute query_all(repo_panel, ".sm\\:pr-10") != []
     end
 
     test "suggests override packages with the existing bounded package search", %{
@@ -1123,21 +1174,29 @@ defmodule HexpmWeb.Dashboard.OrganizationController.PolicyTest do
       conn = build_conn() |> test_login(user)
       conn = get(conn, "/dashboard/orgs/#{org.name}/policies/#{policy.name}")
 
-      {:ok, document} = Floki.parse_document(html_response(conn, 200))
+      document = LazyHTML.from_document(html_response(conn, 200))
 
-      assert [tablist] = Floki.find(document, "#repo-tabs")
-      assert Floki.attribute(tablist, "data-panel-container") == ["#repo-config"]
-      refute Floki.attribute(tablist, "hidden") == []
+      assert [tablist] = LazyHTML.query(document, "#repo-tabs") |> Enum.to_list()
+      assert LazyHTML.attribute(tablist, "data-panel-container") == ["#repo-config"]
+      refute LazyHTML.attribute(tablist, "hidden") == []
 
-      assert [intro | _] = Floki.find(document, ~s([data-private-policy-context]))
-      refute Floki.attribute(intro, "hidden") == []
+      assert [intro | _] =
+               LazyHTML.query(document, ~s([data-private-policy-context])) |> Enum.to_list()
 
-      assert [tab] = Floki.find(document, ~s(#repo-tabs [data-value="#{org.name}"]))
-      assert Floki.attribute(tab, "data-private-only") == ["true"]
-      refute Floki.attribute(tab, "hidden") == []
+      refute LazyHTML.attribute(intro, "hidden") == []
 
-      assert [panel] = Floki.find(document, ~s(#repo-config [data-panel="#{org.name}"]))
-      refute Floki.attribute(panel, "hidden") == []
+      assert [tab] =
+               LazyHTML.query(document, ~s(#repo-tabs [data-value="#{org.name}"]))
+               |> Enum.to_list()
+
+      assert LazyHTML.attribute(tab, "data-private-only") == ["true"]
+      refute LazyHTML.attribute(tab, "hidden") == []
+
+      assert [panel] =
+               LazyHTML.query(document, ~s(#repo-config [data-panel="#{org.name}"]))
+               |> Enum.to_list()
+
+      refute LazyHTML.attribute(panel, "hidden") == []
     end
   end
 
