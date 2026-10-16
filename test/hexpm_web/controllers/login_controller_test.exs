@@ -3,8 +3,6 @@ defmodule HexpmWeb.LoginControllerTest do
 
   setup do
     mock_pwned()
-    PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage)
-    on_exit(fn -> PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage) end)
     user = insert(:user)
     %{user: user}
   end

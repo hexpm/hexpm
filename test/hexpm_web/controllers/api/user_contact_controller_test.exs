@@ -32,6 +32,19 @@ defmodule HexpmWeb.API.UserContactControllerTest do
       refute Repo.get_by(Hexpm.PackageReports.Disclosure, user_id: user.id)
     end
 
+    test "doesn't use up a token it refuses in read-only mode" do
+      user = insert(:user)
+      token = sign(claims())
+      Application.put_env(:hexpm, :read_only_mode, true)
+      on_exit(fn -> Application.put_env(:hexpm, :read_only_mode, false) end)
+
+      assert lookup(user.username, token).status == 503
+
+      Application.put_env(:hexpm, :read_only_mode, false)
+
+      assert json_response(lookup(user.username, token), 200)
+    end
+
     test "falls back to the username when the full name is blank" do
       user = insert(:user, full_name: " ")
 
@@ -181,6 +194,17 @@ defmodule HexpmWeb.API.UserContactControllerTest do
       token = sign(claims())
 
       assert json_response(lookup(user.username, token), 200)
+      assert_refused(lookup(user.username, token))
+    end
+
+    test "refuses a token replayed to another pod", %{user: user} do
+      token = sign(claims())
+
+      assert json_response(lookup(user.username, token), 200)
+
+      # Cleaning the table each pod keeps in memory stands in for another pod.
+      PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage)
+
       assert_refused(lookup(user.username, token))
     end
   end

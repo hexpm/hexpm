@@ -8,11 +8,13 @@ defmodule HexpmWeb.Plugs.Attack do
   alias HexpmWeb.RateLimitPubSub
 
   @storage {PlugAttack.Storage.Ets, HexpmWeb.Plugs.Attack.Storage}
+  # Limits with few requests that have to hold across pods and deploys count in
+  # the database, where every pod shares the count and a deploy doesn't reset it.
+  @database_storage {Hexpm.RateLimits, []}
   @diff_limit 20
   @diff_period 60_000
   @sso_period 10 * 60_000
   @short_url_period 10 * 60_000
-  @varsel_jti_period 300_000
 
   rule "allow local", conn do
     allow(conn.remote_ip == {127, 0, 0, 1})
@@ -254,13 +256,11 @@ defmodule HexpmWeb.Plugs.Attack do
     )
   end
 
-  def varsel_jti(jti, opts \\ []) do
-    key = {:varsel_jti, jti}
-    time = opts[:time] || System.system_time(:millisecond)
-    unless opts[:time], do: RateLimitPubSub.broadcast(key, time)
-
-    {storage, name} = @storage
-    storage.increment(name, key, 1, time + @varsel_jti_period)
+  # Counts the uses of a Varsel token id until the token expires at
+  # `expires_at`, in unix seconds, after which the token is refused anyway.
+  def varsel_jti(jti, expires_at) do
+    {storage, opts} = @database_storage
+    storage.increment(opts, {:varsel_jti, jti}, 1, expires_at * 1_000)
   end
 
   def diff_throttle(identity, opts \\ []) do
@@ -331,7 +331,7 @@ defmodule HexpmWeb.Plugs.Attack do
       {:login_ip, ip},
       time: time,
       increment: Keyword.get(opts, :increment, 1),
-      storage: @storage,
+      storage: @database_storage,
       limit: 10,
       period: 15 * 60_000
     )
@@ -440,7 +440,7 @@ defmodule HexpmWeb.Plugs.Attack do
       {:tfa_ip, ip},
       time: time,
       increment: Keyword.get(opts, :increment, 1),
-      storage: @storage,
+      storage: @database_storage,
       limit: 20,
       period: 15 * 60_000
     )
@@ -453,7 +453,7 @@ defmodule HexpmWeb.Plugs.Attack do
       {:tfa_user, user_id},
       time: time,
       increment: Keyword.get(opts, :increment, 1),
-      storage: @storage,
+      storage: @database_storage,
       limit: 5,
       period: 10 * 60_000
     )
@@ -465,7 +465,7 @@ defmodule HexpmWeb.Plugs.Attack do
     timed_throttle(
       {:device_verification_user, user_id},
       time: time,
-      storage: @storage,
+      storage: @database_storage,
       limit: 10,
       period: 15 * 60_000
     )
@@ -477,7 +477,7 @@ defmodule HexpmWeb.Plugs.Attack do
     timed_throttle(
       {:device_verification_ip, ip},
       time: time,
-      storage: @storage,
+      storage: @database_storage,
       limit: 30,
       period: 15 * 60_000
     )
@@ -507,7 +507,7 @@ defmodule HexpmWeb.Plugs.Attack do
     timed_throttle(
       {:account_delete_request, user_id},
       time: time,
-      storage: @storage,
+      storage: @database_storage,
       limit: 3,
       period: 60 * 60_000
     )
@@ -520,7 +520,7 @@ defmodule HexpmWeb.Plugs.Attack do
     timed_throttle(
       {:sudo_password, user_id},
       time: time,
-      storage: @storage,
+      storage: @database_storage,
       limit: 5,
       period: 15 * 60_000
     )
@@ -533,7 +533,7 @@ defmodule HexpmWeb.Plugs.Attack do
     timed_throttle(
       {:sudo_tfa, user_id},
       time: time,
-      storage: @storage,
+      storage: @database_storage,
       limit: 5,
       period: 15 * 60_000
     )

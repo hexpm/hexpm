@@ -453,6 +453,41 @@ defmodule Hexpm.PurgeExpiredRecordsTest do
     end
   end
 
+  describe "purge rate limits" do
+    test "deletes expired counters without archiving them" do
+      Repo.insert!(%Hexpm.RateLimit{
+        key: "login_ip:203.0.113.1:1",
+        count: 3,
+        expires_at: seconds_ago(60)
+      })
+
+      Repo.insert!(%Hexpm.RateLimit{
+        key: "login_ip:203.0.113.1:2",
+        count: 1,
+        expires_at: seconds_from_now(60)
+      })
+
+      PurgeExpiredRecords.run()
+
+      assert [%Hexpm.RateLimit{key: "login_ip:203.0.113.1:2"}] = Repo.all(Hexpm.RateLimit)
+      assert Enum.to_list(Hexpm.Store.list(:audit_bucket, "")) == []
+    end
+
+    test "deletes in batches" do
+      for user_id <- 1..5 do
+        Repo.insert!(%Hexpm.RateLimit{
+          key: "tfa_user:#{user_id}:1",
+          count: 1,
+          expires_at: seconds_ago(60)
+        })
+      end
+
+      PurgeExpiredRecords.run(batch_size: 2)
+
+      assert Repo.all(Hexpm.RateLimit) == []
+    end
+  end
+
   describe "purge organization SSO transactions" do
     test "deletes expired transactions and retains active ones" do
       connection =
