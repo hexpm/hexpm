@@ -915,6 +915,29 @@ defmodule HexpmWeb.EmailView do
     defp article(_role), do: "a"
   end
 
+  defmodule OrganizationUserInvitation do
+    def intro(organization, username, role) do
+      "Your Hex.pm account #{username} has been invited to join the #{organization} organization as #{article(role)} #{role} member."
+    end
+
+    def review(url, :html) do
+      "You join the organization only if you accept. You can accept or decline the invitation on #{Common.link(url, "your dashboard", :html)}."
+    end
+
+    def review(url, :text) do
+      "You join the organization only if you accept. You can accept or decline the invitation on your dashboard:\n\n#{url}"
+    end
+
+    def decline_notice() do
+      "You can decline this invitation or block future invitations from this organization on your dashboard. You can undo a decline before the invitation expires and remove a block at any time."
+    end
+
+    defdelegate expiry(expires_at), to: OrganizationInvitation
+
+    defp article("admin"), do: "an"
+    defp article(_role), do: "a"
+  end
+
   defmodule OrganizationInvite do
     def access_organization() do
       "You can access organization packages after authenticating in your shell:"

@@ -60,46 +60,64 @@ defmodule HexpmWeb.API.OrganizationUserController do
     end
   end
 
+  # The member joins once they accept, so this answers 202 with the invitation.
+  # An organization key has no person to count the invitation against.
   def create(conn, %{"organization" => name, "name" => username} = params) do
     organization = Organizations.get(name)
+    inviter = conn.assigns.current_user
 
-    if user = Users.public_get(username, [:emails]) do
-      params = %{"role" => params["role"]}
+    cond do
+      is_nil(inviter) ->
+        render_error(conn, 403,
+          message: "inviting a member requires a user's credentials, not an organization key"
+        )
 
-      case Organizations.add_member(organization, user, params, audit: audit_data(conn)) do
-        {:ok, organization_user} ->
-          location = ~p"/api/orgs/#{organization}/members/#{user}"
+      user = Users.public_get(username, [:emails]) ->
+        params = %{"role" => params["role"]}
 
-          conn
-          |> api_cache(:private)
-          |> put_resp_header("location", location)
-          |> render(:show,
-            user: user,
-            role: organization_user.role,
-            organization: organization,
-            tfa_visible?: conn.assigns.tfa_visible?
-          )
+        case OrganizationInvitations.invite_user(organization, user, params, inviter,
+               audit: audit_data(conn)
+             ) do
+          {:ok, invitation} ->
+            conn
+            |> api_cache(:private)
+            |> put_status(202)
+            |> render(:invitation, user: user, invitation: invitation)
 
-        {:error, :tfa_enrollment_required} ->
-          validation_failed(conn, "user must enable 2FA before joining this organization")
+          {:error, :already_member} ->
+            validation_failed(conn, "user is already a member of this organization")
 
-        {:error, :seats_exhausted} ->
-          validation_failed(conn, "not enough seats to add member")
+          {:error, :blocked} ->
+            validation_failed(
+              conn,
+              "user has blocked invitations from this organization"
+            )
 
-        {:error, :organization_user} ->
-          validation_failed(conn, "cannot add an organization as member to an organization")
+          {:error, :invitation_cooldown} ->
+            render_error(conn, 429,
+              message: "this organization can invite this user once every 24 hours"
+            )
 
-        {:error, :unverified_primary_email} ->
-          validation_failed(
-            conn,
-            "cannot add member until the user has verified their primary email"
-          )
+          {:error, :too_many_invitations} ->
+            render_error(conn, 429,
+              message: "too many invitations have been sent to this user or by you recently"
+            )
 
-        {:error, changeset} ->
-          validation_failed(conn, changeset)
-      end
-    else
-      validation_failed(conn, %{"name" => "unknown user"})
+          {:error, :organization_user} ->
+            validation_failed(conn, "cannot add an organization as member to an organization")
+
+          {:error, :unverified_primary_email} ->
+            validation_failed(
+              conn,
+              "cannot invite a user who has not verified their primary email"
+            )
+
+          {:error, changeset} ->
+            validation_failed(conn, changeset)
+        end
+
+      true ->
+        validation_failed(conn, %{"name" => "unknown user"})
     end
   end
 

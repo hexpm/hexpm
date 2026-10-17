@@ -1,7 +1,7 @@
 defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
   @moduledoc """
   Members tab content for the organization dashboard.
-  Handles member listing, role changes, and adding new members.
+  Handles member listing, role changes, and inviting new members.
   """
   use Phoenix.Component
   use PhoenixHTMLHelpers
@@ -18,10 +18,10 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
   import HexpmWeb.Components.Input, only: [text_input: 1, select_input: 1, toggle_switch: 1]
   import HexpmWeb.Components.Modal, only: [modal: 1, show_modal: 1, hide_modal: 1]
 
-  attr :add_member_changeset, :any, required: true
   attr :current_user, :map, required: true
   attr :invitations, :list, default: []
   attr :invite_changeset, :any, default: nil
+  attr :invite_user_changeset, :any, required: true
   attr :organization, :map, required: true
   attr :quantity, :integer, default: nil
   attr :sso_mode, :atom, default: :optional
@@ -125,9 +125,9 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
                 variant="outline"
                 size="sm"
                 class="border-dashed"
-                phx-click={show_modal(add_member_modal_id())}
+                phx-click={show_modal(invite_user_modal_id())}
               >
-                {HexpmWeb.ViewIcons.icon(:heroicon, "plus", class: "w-4 h-4")} Add member
+                {HexpmWeb.ViewIcons.icon(:heroicon, "plus", class: "w-4 h-4")} Invite member
               </.button>
             </div>
           <% end %>
@@ -369,7 +369,10 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
         <ul class="divide-y divide-grey-100 dark:divide-grey-700">
           <li :for={invitation <- @invitations} class="flex items-center justify-between px-6 py-4">
             <div>
-              <p class="text-sm font-medium text-grey-900 dark:text-white">{invitation.email}</p>
+              <p class="flex flex-wrap items-center gap-2 text-sm font-medium text-grey-900 dark:text-white">
+                {if invitation.user, do: invitation.user.username, else: invitation.email}
+                <.badge :if={invitation.declined_at} variant="yellow">Declined</.badge>
+              </p>
               <p class="text-xs text-grey-500 dark:text-grey-300">
                 Invited as {invitation.role}, expires {Calendar.strftime(
                   invitation.expires_at,
@@ -452,26 +455,27 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
         <% end %>
       <% end %>
 
-      <%!-- Add Member modal (admin only) --%>
+      <%!-- Invite member modal (admin only) --%>
       <%= if admin?(@current_user, @organization) do %>
-        <.modal id={add_member_modal_id()} title="Add member" max_width="sm">
+        <.modal id={invite_user_modal_id()} title="Invite member" max_width="sm">
           <div class="px-1">
             <p class="text-sm text-grey-500 dark:text-grey-300 mb-6">
-              Add an existing Hex user to your organization.
+              Invite an existing Hex user to your organization. They join once they accept, and the seat is taken then.
             </p>
 
             <.sudo_form
               :let={f}
               current_user={@current_user}
-              for={@add_member_changeset}
+              for={@invite_user_changeset}
+              as={:organization_user}
               action={~p"/dashboard/orgs/#{@organization}"}
             >
-              <input type="hidden" name="action" value="add_member" />
+              <input type="hidden" name="action" value="invite_user" />
               <div class="space-y-4">
                 <.text_input
                   field={f[:username]}
                   label="Username"
-                  placeholder="hex username or email address"
+                  placeholder="hex username or public email address"
                   required
                 />
                 <.select_input
@@ -485,12 +489,12 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
                 <.button
                   type="button"
                   variant="secondary"
-                  phx-click={hide_modal(add_member_modal_id())}
+                  phx-click={hide_modal(invite_user_modal_id())}
                 >
                   Cancel
                 </.button>
                 <.button type="submit" variant="primary">
-                  Add member
+                  Send invitation
                 </.button>
               </div>
             </.sudo_form>
@@ -562,7 +566,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
       tfa_enforcement_options(:disabled) ++ [{"Disable enforcement", "disabled"}]
   end
 
-  defp add_member_modal_id, do: "add-member-modal"
+  defp invite_user_modal_id, do: "invite-user-modal"
 
   defp invite_modal_id, do: "invite-member-modal"
 

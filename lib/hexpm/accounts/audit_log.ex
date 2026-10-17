@@ -343,15 +343,24 @@ defmodule Hexpm.Accounts.AuditLog do
     %{organization: serialize(organization), domain: domain.domain}
   end
 
+  defp extract_params(action, {organization, %User{} = user})
+       when action in ["organization.invitation.block", "organization.invitation.unblock"] do
+    %{organization: serialize(organization), user: serialize(user)}
+  end
+
   defp extract_params(action, {organization, %OrganizationInvitation{} = invitation})
        when action in [
               "organization.invitation.create",
               "organization.invitation.accept",
+              "organization.invitation.decline",
+              "organization.invitation.restore",
               "organization.invitation.revoke"
             ] do
     %{
       organization: serialize(organization),
-      invitation: %{id: invitation.id, email: invitation.email, role: invitation.role}
+      invitation:
+        %{id: invitation.id, email: invitation.email, role: invitation.role}
+        |> put_invitee(invitation)
     }
   end
 
@@ -536,6 +545,11 @@ defmodule Hexpm.Accounts.AuditLog do
 
   defp serialize_if_loaded(%Ecto.Association.NotLoaded{}), do: nil
   defp serialize_if_loaded(assoc), do: serialize(assoc)
+
+  defp put_invitee(params, %OrganizationInvitation{user: %User{} = user}),
+    do: Map.put(params, :user, %{id: user.id, username: user.username})
+
+  defp put_invitee(params, %OrganizationInvitation{}), do: params
 
   defp do_serialize(schema), do: Map.take(schema, fields(schema))
 

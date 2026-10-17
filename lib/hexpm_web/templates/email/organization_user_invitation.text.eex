@@ -1,0 +1,7 @@
+<%= OrganizationUserInvitation.intro(@organization, @username, @role) %>
+
+<%= OrganizationUserInvitation.review(url(email_uri(), ~p"/dashboard/invitations"), :text) %>
+
+<%= OrganizationUserInvitation.expiry(@expires_at) %>
+
+<%= OrganizationUserInvitation.decline_notice() %>

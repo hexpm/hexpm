@@ -327,6 +327,19 @@ defmodule Hexpm.Emails do
     |> render_body(:organization_invitation)
   end
 
+  def organization_user_invitation(invitation) do
+    base_email(:organization_user_invitation)
+    |> email_to(invitation.user)
+    |> subject(
+      "Hex.pm - You have been invited to the #{invitation.organization.name} organization"
+    )
+    |> assign(:organization, invitation.organization.name)
+    |> assign(:role, invitation.role)
+    |> assign(:username, invitation.user.username)
+    |> assign(:expires_at, invitation.expires_at)
+    |> render_body(:organization_user_invitation)
+  end
+
   def sso_identity_linked(organization, username, recipients) do
     base_email(:sso_identity_linked)
     |> email_to(recipients)

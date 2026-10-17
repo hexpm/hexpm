@@ -123,6 +123,7 @@ defmodule Hexpm.Factory do
       email: Fake.sequence(:email),
       role: "read",
       token_hash: :crypto.hash(:sha256, Fake.sequence(:username)),
+      sent_at: DateTime.utc_now(),
       expires_at:
         DateTime.add(
           DateTime.utc_now(),

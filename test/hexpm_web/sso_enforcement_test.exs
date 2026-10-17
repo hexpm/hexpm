@@ -387,7 +387,7 @@ defmodule HexpmWeb.SSOEnforcementTest do
         conn
         |> put_req_header("referer", "http://localhost:5000" <> members_path)
         |> post("/dashboard/orgs/#{context.organization.name}", %{
-          "action" => "add_member",
+          "action" => "invite_user",
           "organization_user" => %{"username" => context.member.username, "role" => "read"}
         })
 
@@ -403,7 +403,7 @@ defmodule HexpmWeb.SSOEnforcementTest do
 
       conn =
         post(conn, "/dashboard/orgs/#{context.organization.name}", %{
-          "action" => "add_member",
+          "action" => "invite_user",
           "organization_user" => %{"username" => context.member.username, "role" => "read"}
         })
 

@@ -15,6 +15,11 @@ defmodule HexpmWeb.API.OrganizationUserView do
     |> put_tfa(user, assigns)
   end
 
+  def render("invitation." <> _, %{user: user, invitation: invitation}) do
+    render_one(user, UserView, "minimal")
+    |> Map.merge(%{role: invitation.role, expires_at: invitation.expires_at})
+  end
+
   def render("show", %{organization_user: organization_user}) do
     render("show", %{user: organization_user.user, role: organization_user.role})
   end

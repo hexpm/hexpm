@@ -71,7 +71,8 @@
     </div>
 
     <%!-- Organization Settings Section --%>
-    <%= if @current_user.organizations != [] do %>
+    <% invitations = pending_invitations(@current_user) %>
+    <%= if @current_user.organizations != [] or invitations != [] do %>
       <div class="border-t border-grey-200 dark:border-grey-700 pt-6">
         <h3 class="text-grey-600 dark:text-grey-300 text-xs font-semibold uppercase tracking-wider mb-3">
           Organization
@@ -96,6 +97,26 @@
               </a>
             </li>
           <% end %>
+          <li :for={invitation <- invitations}>
+            <a
+              href={~p"/dashboard/invitations"}
+              class={[
+                "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors",
+                if(selected_setting(@conn, :invitations),
+                  do:
+                    "bg-purple-50 dark:bg-primary-900/40 text-purple-600 dark:text-primary-200 font-medium",
+                  else:
+                    "text-grey-600 dark:text-grey-300 hover:text-grey-900 dark:hover:text-white"
+                )
+              ]}
+            >
+              {HexpmWeb.ViewIcons.icon(:heroicon, "envelope", class: "w-5 h-5")}
+              {invitation.organization.name}
+              <span class="ml-auto text-xs font-medium text-purple-600 dark:text-primary-200">
+                Invited
+              </span>
+            </a>
+          </li>
         </ul>
         <button
           type="button"

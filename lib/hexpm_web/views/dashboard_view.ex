@@ -23,6 +23,7 @@ defmodule HexpmWeb.DashboardView do
       profile: {"Profile", ~p"/dashboard/profile"},
       security: {"Security", ~p"/dashboard/security"},
       email: {"Emails", ~p"/dashboard/email"},
+      invitations: {"Invitations", ~p"/dashboard/invitations"},
       keys: {"Keys", ~p"/dashboard/keys"},
       sessions: {"Sessions", ~p"/dashboard/sessions"},
       audit_logs: {"Recent Activities", ~p"/dashboard/audit-logs"},
@@ -45,6 +46,11 @@ defmodule HexpmWeb.DashboardView do
     icon(:heroicon, "envelope", class: "w-5 h-5 #{color}")
   end
 
+  defp icon_for_setting(:invitations, selected?) do
+    color = if selected?, do: "text-purple-600", else: "text-grey-600"
+    icon(:heroicon, "envelope", class: "w-5 h-5 #{color}")
+  end
+
   defp icon_for_setting(:keys, selected?) do
     color = if selected?, do: "text-purple-600", else: "text-grey-600"
     icon(:heroicon, "key", class: "w-5 h-5 #{color}")
@@ -63,6 +69,10 @@ defmodule HexpmWeb.DashboardView do
   defp icon_for_setting(:delete_account, selected?) do
     color = if selected?, do: "text-purple-600", else: "text-grey-600"
     icon(:heroicon, "trash", class: "w-5 h-5 #{color}")
+  end
+
+  defp pending_invitations(user) do
+    OrganizationInvitations.all_pending_for_user(user)
   end
 
   defp selected_setting(conn, id) do
