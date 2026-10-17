@@ -191,7 +191,12 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
                     >
                       SSO exempt
                     </.badge>
-                    <.badge :if={org_user.public} variant="green">Public</.badge>
+                    <.badge
+                      :if={Hexpm.Accounts.Organizations.listed_on_profile?(org_user)}
+                      variant="green"
+                    >
+                      Public
+                    </.badge>
                   </p>
                   <p class="text-xs text-grey-500 dark:text-grey-300">{org_user.user.full_name}</p>
                   <p

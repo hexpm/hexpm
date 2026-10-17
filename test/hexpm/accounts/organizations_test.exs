@@ -203,6 +203,19 @@ defmodule Hexpm.Accounts.OrganizationsTest do
       assert audit_log.params["organization"]["name"] == organization.name
     end
 
+    test "records nothing when the setting doesn't change" do
+      organization = insert(:organization)
+      user = insert(:user)
+      insert(:organization_user, organization: organization, user: user, public: true)
+
+      assert {:ok, %{public: true}} =
+               Organizations.change_visibility(organization, user, %{"public" => "true"},
+                 audit: audit_data(user)
+               )
+
+      assert AuditLogs.all_by(user) == []
+    end
+
     test "refuses someone who isn't a member" do
       organization = insert(:organization)
       user = insert(:user)
@@ -247,6 +260,19 @@ defmodule Hexpm.Accounts.OrganizationsTest do
   end
 
   describe "public_by_user/1" do
+    test "lists the organizations the user chose, and none for a deactivated account" do
+      organization = insert(:organization)
+      user = insert(:user)
+      insert(:organization_user, organization: organization, user: user, public: true)
+      insert(:organization_user, organization: insert(:organization), user: user)
+
+      assert [%{id: id}] = Organizations.public_by_user(user)
+      assert id == organization.id
+
+      user |> Ecto.Changeset.change(deactivated_at: DateTime.utc_now()) |> Repo.update!()
+      assert Organizations.public_by_user(user) == []
+    end
+
     test "orders public memberships by organization name and leaves other memberships out" do
       user = insert(:user)
       zulu = insert(:organization, name: "zulu_listed")

@@ -596,7 +596,26 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
                []
 
       assert html =~ ~s(href="/dashboard/profile")
-      assert html =~ "Public"
+      assert html =~ ~r{>\s*Public\s*<}
+    end
+
+    test "doesn't mark a deactivated member the profile leaves out", %{
+      user: user,
+      organization: organization
+    } do
+      mock_customer(organization)
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+      deactivated = insert(:user, deactivated_at: DateTime.utc_now())
+      insert(:organization_user, organization: organization, user: deactivated, public: true)
+
+      html =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/orgs/#{organization.name}/members")
+        |> html_response(200)
+
+      assert html =~ deactivated.username
+      refute html =~ ~r{>\s*Public\s*<}
     end
   end
 

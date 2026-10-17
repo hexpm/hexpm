@@ -1777,6 +1777,23 @@ defmodule HexpmWeb.SSOEnforcementTest do
       refute context.repository.name in names.()
       assert "hexpm" in names.()
     end
+
+    test "send a governed member at their provider to list themselves, not to unlist", context do
+      require_sso(context)
+      {conn, _session} = login(context.member)
+      path = "/dashboard/profile/organizations/#{context.organization.name}"
+
+      listed = post(conn, path, %{"organization_user" => %{"public" => "true"}})
+
+      assert redirected_to(listed) =~
+               "/organizations/#{context.organization.name}/authenticate"
+
+      assert Hexpm.Accounts.Organizations.public_members(context.organization) == []
+
+      unlisted = post(conn, path, %{"organization_user" => %{"public" => "false"}})
+
+      assert redirected_to(unlisted) == "/dashboard/profile"
+    end
   end
 
   describe "a token exchanged from a personal key" do

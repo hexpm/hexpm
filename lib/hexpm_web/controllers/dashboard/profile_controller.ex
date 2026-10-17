@@ -1,6 +1,8 @@
 defmodule HexpmWeb.Dashboard.ProfileController do
   use HexpmWeb, :controller
 
+  alias HexpmWeb.SSOEnforcement
+
   plug :requires_login
   plug :requires_verified_primary_email
 
@@ -32,6 +34,7 @@ defmodule HexpmWeb.Dashboard.ProfileController do
     user = conn.assigns.current_user
 
     with %Organization{} = organization <- Organizations.get(name),
+         :ok <- listing_allowed(conn, organization, user, params),
          {:ok, organization_user} <-
            Organizations.change_visibility(organization, user, params, audit: audit_data(conn)) do
       message =
@@ -43,6 +46,9 @@ defmodule HexpmWeb.Dashboard.ProfileController do
       |> put_flash(:info, message)
       |> redirect(to: ~p"/dashboard/profile")
     else
+      {:refused, refusal, organization} ->
+        SSOEnforcement.refuse(conn, refusal, organization)
+
       {:error, %Ecto.Changeset{}} ->
         conn
         |> put_status(400)
@@ -53,6 +59,17 @@ defmodule HexpmWeb.Dashboard.ProfileController do
         not_found(conn)
     end
   end
+
+  # Listing yourself is a write the organization's SSO and 2FA requirements
+  # govern, like its other pages. Unlisting stays open, as leaving does.
+  defp listing_allowed(conn, organization, user, %{"public" => "true"}) do
+    case SSOEnforcement.check(conn, organization, user) do
+      :ok -> :ok
+      {:error, refusal} -> {:refused, refusal, organization}
+    end
+  end
+
+  defp listing_allowed(_conn, _organization, _user, _params), do: :ok
 
   defp render_index(conn, changeset) do
     render(
