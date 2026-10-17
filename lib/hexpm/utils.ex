@@ -145,24 +145,30 @@ defmodule Hexpm.Utils do
   def safe_int(nil), do: nil
 
   # Clamped to a Postgres bigint. Parsing takes time superlinear in the number
-  # of digits, so a number longer than any bigint is clamped unparsed.
+  # of digits, so a number with more significant digits than any bigint is
+  # clamped unparsed. The quantifiers are possessive, so matching is linear.
   def safe_int(string) when is_binary(string) do
-    cond do
-      not (string =~ ~r/\A[+-]?[0-9]++\z/) ->
+    case Regex.run(~r/\A([+-]?)(?=[0-9])0*+([0-9]*+)\z/, string, capture: :all_but_first) do
+      nil ->
         nil
 
-      byte_size(string) <= 20 ->
-        string |> String.to_integer() |> max(@bigint_min) |> min(@bigint_max)
+      [_sign, ""] ->
+        0
 
-      String.starts_with?(string, "-") ->
+      [sign, digits] when byte_size(digits) <= 19 ->
+        clamp_bigint(String.to_integer(sign <> digits))
+
+      ["-", _digits] ->
         @bigint_min
 
-      true ->
+      [_sign, _digits] ->
         @bigint_max
     end
   end
 
   def safe_int(_), do: nil
+
+  defp clamp_bigint(int), do: int |> max(@bigint_min) |> min(@bigint_max)
 
   @doc """
   Cuts a string down to at most `max` bytes without leaving a partial UTF-8

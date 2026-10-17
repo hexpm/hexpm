@@ -72,6 +72,12 @@ defmodule Hexpm.UtilsTest do
       assert Utils.safe_int(String.duplicate("7", 1_000_000)) == max
       assert Utils.safe_int("-" <> String.duplicate("7", 1_000_000)) == min
       assert Utils.safe_int(String.duplicate("7", 1_000_000) <> "x") == nil
+      assert Utils.safe_int("000000000000000000002") == 2
+      assert Utils.safe_int("-000000000000000000005") == -5
+      assert Utils.safe_int(String.duplicate("0", 1_000_000) <> "7") == 7
+      assert Utils.safe_int(String.duplicate("0", 1_000_000)) == 0
+      assert Utils.safe_int("0") == 0
+      assert Utils.safe_int("-0") == 0
       assert Utils.safe_int("-") == nil
       assert Utils.safe_int("") == nil
     end
