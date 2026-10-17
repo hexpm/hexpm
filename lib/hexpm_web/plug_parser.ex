@@ -2,14 +2,21 @@ defmodule HexpmWeb.PlugParser do
   alias Plug.Conn
 
   @behaviour Plug.Parsers
-  @formats ~w(elixir erlang json)
+  @formats ~w(erlang json)
 
   @impl true
   def init(opts) do
     opts
   end
 
+  # Hex has sent Erlang terms since 0.11.0. An Elixir body has to be parsed as
+  # code, which takes hundreds of times its size in memory, so it's refused
+  # unread.
   @impl true
+  def parse(%Conn{}, "application", "vnd.hex+elixir", _headers, _opts) do
+    raise Plug.Parsers.UnsupportedMediaTypeError, media_type: "application/vnd.hex+elixir"
+  end
+
   def parse(%Conn{} = conn, "application", "vnd.hex+" <> format, _headers, opts)
       when format in @formats do
     decoder = get_decoder(format, opts)
@@ -65,7 +72,6 @@ defmodule HexpmWeb.PlugParser do
 
   defp get_decoder(format, opts) do
     case format do
-      "elixir" -> HexpmWeb.ElixirFormat
       "erlang" -> HexpmWeb.ErlangFormat
       "json" -> Keyword.fetch!(opts, :json_decoder)
     end
