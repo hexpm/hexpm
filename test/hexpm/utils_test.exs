@@ -72,6 +72,7 @@ defmodule Hexpm.UtilsTest do
       assert Utils.parse_search(String.duplicate("a", 1_500)) == String.duplicate("a", 1_000)
       assert Utils.parse_search(String.duplicate("a", 999) <> "é") == String.duplicate("a", 999)
       assert Utils.parse_search(String.duplicate("a ", 600)) == String.duplicate("a ", 499) <> "a"
+      assert Utils.parse_search(String.duplicate(" ", 1_000) <> "phoenix") == "phoenix"
     end
   end
 

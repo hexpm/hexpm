@@ -97,14 +97,14 @@ defmodule Hexpm.Repository.Package.SearchQuery do
         acc
 
       string ->
-        {word, rest} = read_word(string)
-
-        case :binary.split(word, ":") do
-          [key, _] when key != "" ->
-            {value, rest} = read_value(binary_slice(string, (byte_size(key) + 1)..-1//1))
+        case :binary.match(string, [":" | @whitespace]) do
+          {colon, 1} when colon > 0 and binary_part(string, colon, 1) == ":" ->
+            key = binary_part(string, 0, colon)
+            {value, rest} = read_value(binary_slice(string, (colon + 1)..-1//1))
             do_tokenize(rest, [{:pair, key, value} | acc])
 
           _ ->
+            {word, rest} = read_word(string)
             do_tokenize(rest, [{:word, word} | acc])
         end
     end

@@ -94,7 +94,7 @@ defmodule Hexpm.Repository.Package.SearchQueryTest do
         reductions
       end
 
-      for token <- ["a ", "a:b "] do
+      for token <- ["a ", "a:b ", ~s(k:"x")] do
         single = reductions.(String.duplicate(token, 1_000))
         double = reductions.(String.duplicate(token, 2_000))
         assert double < 3 * single, "#{inspect(token)}: #{single} then #{double} reductions"

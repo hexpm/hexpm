@@ -181,8 +181,12 @@ defmodule Hexpm.Utils do
   def parse_search(nil), do: nil
   def parse_search(""), do: nil
 
-  def parse_search(search) when is_binary(search),
-    do: search |> truncate_bytes(@max_search_size) |> String.trim()
+  def parse_search(search) when is_binary(search) do
+    search
+    |> String.trim_leading()
+    |> truncate_bytes(@max_search_size)
+    |> String.trim_trailing()
+  end
 
   def parse_search(_), do: nil
 
