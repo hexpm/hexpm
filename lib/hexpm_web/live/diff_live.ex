@@ -310,9 +310,9 @@ defmodule HexpmWeb.DiffLive do
   defp parse_index(index) when is_integer(index), do: {:ok, index}
 
   defp parse_index(index) when is_binary(index) do
-    case Integer.parse(index) do
-      {index, ""} -> {:ok, index}
-      _ -> :error
+    case Hexpm.Utils.safe_int(index) do
+      nil -> :error
+      index -> {:ok, index}
     end
   end
 

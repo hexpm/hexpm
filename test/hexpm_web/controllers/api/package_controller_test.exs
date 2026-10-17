@@ -137,6 +137,13 @@ defmodule HexpmWeb.API.PackageControllerTest do
       assert length(result) == 1
     end
 
+    test "a page past what an offset holds is empty" do
+      for page <- ["1000000000000000000", "99999999999999999999"] do
+        conn = get(build_conn(), "/api/packages?page=#{page}")
+        assert json_response(conn, 200) == []
+      end
+    end
+
     test "filter by last_updated", %{package2: package2} do
       conn = get(build_conn(), "/api/packages?page=1&search=updated_after:2029-01-01T00:00:00Z")
       assert [result] = json_response(conn, 200)
