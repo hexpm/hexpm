@@ -1032,6 +1032,18 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       refute response["refresh_token"]
     end
 
+    test "refuses a hex_ key with a wrong checksum as an invalid client", %{client: client} do
+      conn =
+        post(build_conn(), ~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => "hex_" <> String.duplicate("a", 40),
+          "scope" => "api"
+        })
+
+      assert json_response(conn, 401)["error"] == "invalid_client"
+    end
+
     test "revoking the API key refuses the token it minted", %{
       client: client,
       api_key: api_key,

@@ -2,7 +2,10 @@ defmodule Hexpm.Accounts.Keys do
   use Hexpm.Context
 
   alias Hexpm.Accounts.{Organization, OrganizationUser}
+  alias Hexpm.Emails.Outbox
   alias Hexpm.UserSessions
+
+  require Logger
 
   def all(user_or_organization) do
     Key.all(user_or_organization)
@@ -124,6 +127,61 @@ defmodule Hexpm.Accounts.Keys do
       {:error, :not_found}
     end
   end
+
+  @doc """
+  Revokes the key GitHub secret scanning found in public, looked up by the
+  first half of its secret's hash, together with the OAuth tokens exchanged for
+  it, and queues the notice to its owner in the same transaction.
+
+  Returns `{:ok, :revoked}`, `{:ok, :already_revoked}` for a key that had
+  already stopped working, or `{:ok, :not_found}`.
+  """
+  def revoke_leaked(secret_first, url) do
+    query =
+      from(k in Key,
+        where: k.secret_first == ^secret_first,
+        preload: [user: :emails, organization: [organization_users: [user: :emails]]],
+        lock: "FOR UPDATE"
+      )
+
+    Repo.transaction(fn ->
+      case Repo.one(query) do
+        nil ->
+          :not_found
+
+        key ->
+          if Key.revoked?(key) do
+            :already_revoked
+          else
+            revoke_leaked_key(key, url)
+          end
+      end
+    end)
+  end
+
+  defp revoke_leaked_key(key, url) do
+    Repo.update!(Key.revoke(key))
+
+    {tokens_query, sessions_query} = UserSessions.revoke_for_api_keys([key])
+    Repo.update_all(tokens_query, [])
+    Repo.update_all(sessions_query, [])
+
+    owner = key.user || key.organization
+
+    owner
+    |> Emails.key_leaked(key, url)
+    |> Outbox.enqueue!(
+      category: "key.leaked",
+      group_key: "key-leaked:#{key.id}",
+      scope_key: owner_scope_key(owner)
+    )
+
+    Logger.info("Automated key revocation: key_id=#{key.id}")
+    :revoked
+  end
+
+  defp owner_scope_key(%User{id: id}), do: "user:#{id}"
+  defp owner_scope_key(%Organization{id: id}), do: "organization:#{id}"
 
   def revoke_all(user_or_organization, audit: audit_data) do
     keys = all(user_or_organization)

@@ -218,7 +218,7 @@ defmodule Hexpm.Accounts.SSO.Connection do
   screen that shows it; only the split hash is stored.
   """
   def scim_generate_changeset(connection, attrs, generated_by) do
-    {token, first, second} = Hexpm.Accounts.Key.gen_key()
+    {token, first, second} = gen_scim_token()
 
     connection
     |> scim_changeset(attrs)
@@ -241,6 +241,17 @@ defmodule Hexpm.Accounts.SSO.Connection do
       scim_token_used_at: nil,
       scim_token_used_ip: nil
     )
+  end
+
+  defp gen_scim_token() do
+    token = :crypto.strong_rand_bytes(16) |> Base.encode16(case: :lower)
+    app_secret = Application.get_env(:hexpm, :secret)
+
+    <<first::binary-size(32), second::binary-size(32)>> =
+      :crypto.mac(:hmac, :sha256, app_secret, token)
+      |> Base.encode16(case: :lower)
+
+    {token, first, second}
   end
 
   def scim_enabled?(%__MODULE__{scim_token_first: first}), do: not is_nil(first)

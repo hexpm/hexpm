@@ -10,6 +10,9 @@ defmodule HexpmWeb.EmailView do
     Phoenix.VerifiedRoutes.unverified_url(email_uri(), path)
   end
 
+  def keys_url(%User{}), do: email_url(~p"/dashboard/keys")
+  def keys_url(%Organization{} = organization), do: email_url(~p"/dashboard/orgs/#{organization}")
+
   defmodule Common do
     import Phoenix.HTML, only: [html_escape: 1, safe_to_string: 1]
 
