@@ -92,6 +92,7 @@ defmodule HexpmWeb.DiffLive do
 
   def handle_event("filter_files", %{"query" => query}, socket) do
     files = socket.assigns.files
+    query = FileSelector.truncate_query(query)
 
     {:noreply,
      assign(socket,
@@ -135,20 +136,26 @@ defmodule HexpmWeb.DiffLive do
   end
 
   def handle_event("view-diff", %{"versions" => %{"from" => from, "to" => to}}, socket) do
-    if from == to do
-      {:noreply, assign(socket, selector_error: "Choose two different versions")}
-    else
-      {:noreply,
-       push_navigate(socket,
-         to:
-           diff_path(
-             socket.assigns.repository,
-             socket.assigns.package,
-             from,
-             to,
-             socket.assigns.ignore_whitespace
-           )
-       )}
+    cond do
+      from == to ->
+        {:noreply, assign(socket, selector_error: "Choose two different versions")}
+
+      # The selector offers only the package's versions.
+      from not in socket.assigns.versions or to not in socket.assigns.versions ->
+        {:noreply, socket}
+
+      true ->
+        {:noreply,
+         push_navigate(socket,
+           to:
+             diff_path(
+               socket.assigns.repository,
+               socket.assigns.package,
+               from,
+               to,
+               socket.assigns.ignore_whitespace
+             )
+         )}
     end
   end
 

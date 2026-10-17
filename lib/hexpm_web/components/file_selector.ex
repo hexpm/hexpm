@@ -5,16 +5,26 @@ defmodule HexpmWeb.Components.FileSelector do
   import HexpmWeb.ViewIcons
 
   @finder_limit 100
+  # A path in a package tarball is at most 255 bytes, so a query is cut to
+  # that length after its leading whitespace.
+  @max_query_size 255
 
   def filter(files, query) do
     filter_by(files, & &1, query)
   end
 
+  def truncate_query(query) when byte_size(query) <= @max_query_size, do: query
+
+  def truncate_query(query),
+    do: query |> String.trim_leading() |> Hexpm.Utils.truncate_bytes(@max_query_size)
+
   def filter_by(items, path, query) when is_function(path, 1) do
-    query = query |> String.trim() |> String.downcase()
+    query = query |> truncate_query() |> String.trim() |> String.downcase()
+
+    query_graphemes = String.graphemes(query)
 
     items
-    |> Enum.filter(&fuzzy_match?(String.downcase(path.(&1)), query))
+    |> Enum.filter(&fuzzy_match?(String.downcase(path.(&1)), query, query_graphemes))
     |> Enum.sort_by(&file_score(String.downcase(path.(&1)), query))
     |> Enum.take(@finder_limit)
   end
@@ -241,10 +251,10 @@ defmodule HexpmWeb.Components.FileSelector do
   defp file_count_label(1, _total), do: "1 file"
   defp file_count_label(count, _total), do: "#{count} files"
 
-  defp fuzzy_match?(_file, ""), do: true
+  defp fuzzy_match?(_file, "", _query_graphemes), do: true
 
-  defp fuzzy_match?(file, query) do
-    String.contains?(file, query) || subsequence?(String.graphemes(file), String.graphemes(query))
+  defp fuzzy_match?(file, query, query_graphemes) do
+    String.contains?(file, query) || subsequence?(String.graphemes(file), query_graphemes)
   end
 
   defp subsequence?(_file, []), do: true
