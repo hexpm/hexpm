@@ -101,7 +101,28 @@ defmodule Hexpm.Repository.PoliciesTest do
       assert tab(updated, "hexpm").cooldown == "14d"
     end
 
-    test "clears the overrides of a submitted tab that has none",
+    test "sorts submitted numeric override indexes numerically",
+         %{organization: org, audit_data: audit_data} do
+      overrides =
+        Map.new(0..10, fn index ->
+          {to_string(index), %{"action" => "allow", "package" => "package_#{index}"}}
+        end)
+
+      params = %{
+        "name" => "pol1",
+        "visibility" => "public",
+        "repositories" => %{
+          "0" => %{"repository" => "hexpm", "overrides" => overrides}
+        }
+      }
+
+      assert {:ok, %{policy: policy}} = Policies.create(org, params, audit: audit_data)
+
+      assert Enum.map(tab(policy, "hexpm").overrides, & &1.package) ==
+               Enum.map(0..10, &"package_#{&1}")
+    end
+
+    test "clears omitted embedded rows from submitted tabs",
          %{organization: org, audit_data: audit_data} do
       {:ok, %{policy: policy}} =
         Policies.create(
@@ -112,11 +133,26 @@ defmodule Hexpm.Repository.PoliciesTest do
             "repositories" => [
               %{
                 "repository" => "hexpm",
-                "overrides" => [%{"action" => "deny", "package" => "badlib"}]
+                "overrides" => [
+                  %{"action" => "deny", "package" => "badlib"},
+                  %{
+                    "action" => "retirement",
+                    "package" => "retired_public",
+                    "retirement_reason" => 2,
+                    "comment" => "known"
+                  }
+                ]
               },
               %{
                 "repository" => org.name,
-                "overrides" => [%{"action" => "allow", "package" => "internal"}]
+                "overrides" => [
+                  %{"action" => "allow", "package" => "internal"},
+                  %{
+                    "action" => "retirement",
+                    "package" => "retired_internal",
+                    "retirement_reason" => 3
+                  }
+                ]
               }
             ]
           },
@@ -155,11 +191,25 @@ defmodule Hexpm.Repository.PoliciesTest do
             "repositories" => [
               %{
                 "repository" => "hexpm",
-                "overrides" => [%{"action" => "deny", "package" => "badlib"}]
+                "overrides" => [
+                  %{"action" => "deny", "package" => "badlib"},
+                  %{
+                    "action" => "retirement",
+                    "package" => "retired_public",
+                    "retirement_reason" => 2
+                  }
+                ]
               },
               %{
                 "repository" => org.name,
-                "overrides" => [%{"action" => "allow", "package" => "internal"}]
+                "overrides" => [
+                  %{"action" => "allow", "package" => "internal"},
+                  %{
+                    "action" => "retirement",
+                    "package" => "retired_internal",
+                    "retirement_reason" => 3
+                  }
+                ]
               }
             ]
           },

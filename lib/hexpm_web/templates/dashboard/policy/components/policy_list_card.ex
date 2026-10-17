@@ -193,7 +193,10 @@ defmodule HexpmWeb.Dashboard.Policy.Components.PolicyListCard do
       <span class="inline-flex items-center gap-1 font-medium text-grey-700 dark:text-grey-200">
         {icon(:heroicon, repo_icon(@repo.repository), class: "w-3.5 h-3.5", width: 13, height: 13)} {@repo.repository}
       </span>
-      <span :if={@chips == [] and @overrides == 0} class="text-grey-400 dark:text-grey-500 italic">
+      <span
+        :if={@chips == [] and @overrides == 0}
+        class="text-grey-400 dark:text-grey-500 italic"
+      >
         no restrictions
       </span>
       <.status_pill :for={{dot, label} <- @chips} dot={dot}>{label}</.status_pill>
