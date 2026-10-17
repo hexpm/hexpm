@@ -6,14 +6,17 @@ defmodule HexpmWeb.Components.FileSelector do
 
   @finder_limit 100
   # A path in a package tarball is at most 255 bytes, so a query is cut to
-  # that length.
+  # that length after its leading whitespace.
   @max_query_size 255
 
   def filter(files, query) do
     filter_by(files, & &1, query)
   end
 
-  def truncate_query(query), do: Hexpm.Utils.truncate_bytes(query, @max_query_size)
+  def truncate_query(query) when byte_size(query) <= @max_query_size, do: query
+
+  def truncate_query(query),
+    do: query |> String.trim_leading() |> Hexpm.Utils.truncate_bytes(@max_query_size)
 
   def filter_by(items, path, query) when is_function(path, 1) do
     query = query |> truncate_query() |> String.trim() |> String.downcase()

@@ -15,6 +15,10 @@ defmodule HexpmWeb.Components.FileSelectorTest do
     path = String.duplicate("a", 255)
 
     assert FileSelector.filter([path], String.duplicate("a", 300)) == [path]
+
+    assert FileSelector.filter([path, "lib/b.ex"], String.duplicate(" ", 300) <> "b.ex") == [
+             "lib/b.ex"
+           ]
   end
 
   test "filter_by preserves distinct entries with the same displayed path" do
