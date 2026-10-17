@@ -110,17 +110,6 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
                 {count} {member_label(count)}
               <% end %>
             </p>
-            <p class="text-grey-500 dark:text-grey-300 text-sm mt-1">
-              The organization's
-              <a
-                href={~p"/orgs/#{@organization}/members"}
-                class="underline hover:text-primary-600"
-              >public profile</a>
-              lists only the members who choose to in their own <a
-                href={~p"/dashboard/profile"}
-                class="underline hover:text-primary-600"
-              >profile settings</a>.
-            </p>
           </div>
           <%= if admin?(@current_user, @organization) do %>
             <div class="flex flex-wrap items-center gap-2">
@@ -143,6 +132,18 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
             </div>
           <% end %>
         </div>
+
+        <p
+          id="profile-listing-note"
+          class="px-6 py-3 border-b border-grey-200 dark:border-grey-700 bg-grey-50 dark:bg-grey-900 text-sm text-grey-600 dark:text-grey-300"
+        >
+          The organization's
+          <a href={~p"/orgs/#{@organization}/members"} class="underline hover:text-primary-600">public profile</a>
+          lists only the members who choose to in their own <a
+            href={~p"/dashboard/profile"}
+            class="underline hover:text-primary-600"
+          >profile settings</a>.
+        </p>
 
         <p
           :if={
