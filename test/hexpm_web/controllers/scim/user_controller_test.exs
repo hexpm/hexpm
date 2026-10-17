@@ -65,7 +65,12 @@ defmodule HexpmWeb.SCIM.UserControllerTest do
     assert body["userName"] == unverified.email
     assert body["active"]
     refute Organizations.get_role(context.organization, user)
-    assert [email_invitation] = OrganizationInvitations.all_pending(context.organization)
+
+    assert [email_invitation] =
+             context.organization
+             |> OrganizationInvitations.all_pending()
+             |> Enum.filter(& &1.email)
+
     assert email_invitation.user_id == nil
     assert email_invitation.email == unverified.email
     assert [_block] = OrganizationInvitations.all_blocks_for_user(user)

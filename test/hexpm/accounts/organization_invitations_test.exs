@@ -346,6 +346,33 @@ defmodule Hexpm.Accounts.OrganizationInvitationsTest do
       assert {:error, :too_many_invitations} = invite_user(insert(:organization), admin, user)
     end
 
+    test "withholds mail to an account its invitations by address already reached", %{
+      admin: admin
+    } do
+      user = insert(:user)
+
+      for _ <- 1..5 do
+        assert {:ok, invitation} = invite(insert(:organization), admin, user_email(user))
+        assert mailed?(invitation)
+      end
+
+      assert {:ok, by_username} = invite_user(insert(:organization), admin, user)
+      refute mailed?(by_username)
+    end
+
+    test "withholds mail to an address whose account invitations by username reached", %{
+      admin: admin
+    } do
+      user = insert(:user)
+
+      for _ <- 1..5 do
+        assert {:ok, _invitation} = invite_user(insert(:organization), admin, user)
+      end
+
+      assert {:ok, by_address} = invite(insert(:organization), admin, user_email(user))
+      refute mailed?(by_address)
+    end
+
     test "counts invitations to accounts against the inviter", %{
       organization: organization,
       admin: admin
@@ -417,7 +444,11 @@ defmodule Hexpm.Accounts.OrganizationInvitationsTest do
       assert {:ok, declined} = decline(invitation, user)
       assert declined.declined_at
       assert OrganizationInvitations.all_pending_for_user(user) == []
-      assert OrganizationInvitations.all_pending(organization) == []
+
+      assert [%{id: id, declined_at: %DateTime{}}] =
+               OrganizationInvitations.all_pending(organization)
+
+      assert id == invitation.id
       assert declined.expires_at == invitation.expires_at
       assert declined.sent_at == invitation.sent_at
 
@@ -425,6 +456,24 @@ defmodule Hexpm.Accounts.OrganizationInvitationsTest do
       assert reissued.id == invitation.id
       assert reissued.declined_at == nil
       assert [_pending] = OrganizationInvitations.all_pending_for_user(user)
+    end
+
+    test "an administrator can still revoke a declined invitation", %{
+      organization: organization,
+      admin: admin
+    } do
+      user = insert(:user)
+      {:ok, invitation} = invite_user(organization, admin, user, "admin")
+      {:ok, _declined} = decline(invitation, user)
+
+      assert declined = OrganizationInvitations.get_pending(organization, invitation.id)
+
+      {:ok, _revoked} =
+        OrganizationInvitations.revoke(organization, declined, audit: audit_data(admin))
+
+      assert {:error, :invitation_unavailable} = restore(invitation, user)
+      assert {:error, :invitation_unavailable} = accept(invitation, user)
+      refute Organizations.get_role(organization, user)
     end
 
     test "leaves other organizations free to invite the account", %{
@@ -555,7 +604,8 @@ defmodule Hexpm.Accounts.OrganizationInvitationsTest do
       assert OrganizationInvitations.all_pending_for_user(user) == []
       assert Repo.all(OutboxEntry) == []
       assert {:error, :blocked} = invite_user(organization, admin, user)
-      assert {:error, :blocked} = invite(organization, admin, user_email(user))
+      assert {:ok, emailed} = invite(organization, admin, user_email(user))
+      refute mailed?(emailed)
       assert {:error, :invitation_unavailable} = restore(invitation, user)
 
       assert {:error, :invitation_unavailable} =
@@ -590,6 +640,25 @@ defmodule Hexpm.Accounts.OrganizationInvitationsTest do
       assert {:ok, _invitation} = invite_user(organization, admin, user)
     end
 
+    test "a second unblock of the same block is refused", %{
+      organization: organization,
+      admin: admin
+    } do
+      user = insert(:user)
+      {:ok, invitation} = invite_user(organization, admin, user)
+      {:ok, _blocked} = block(invitation, user)
+      [blocked] = OrganizationInvitations.all_blocks_for_user(user)
+
+      assert {:ok, _block} =
+               OrganizationInvitations.unblock(blocked, user, audit: audit_data(user))
+
+      assert {:error, :invitation_unavailable} =
+               OrganizationInvitations.unblock(blocked, user, audit: audit_data(user))
+
+      assert Enum.count(AuditLogs.all_by(user), &(&1.action == "organization.invitation.unblock")) ==
+               1
+    end
+
     test "only the recipient can block and only while the invitation is available", %{
       organization: organization,
       admin: admin
@@ -617,7 +686,8 @@ defmodule Hexpm.Accounts.OrganizationInvitationsTest do
       {:ok, invitation} = invite_user(organization, admin, user)
       {:ok, declined} = decline(invitation, user)
       assert {:error, :invitation_cooldown} = invite_user(organization, admin, user)
-      assert {:error, :invitation_cooldown} = invite(organization, admin, user_email(user))
+      assert {:ok, emailed} = invite(organization, admin, user_email(user))
+      refute mailed?(emailed)
 
       {:ok, _revoked} =
         OrganizationInvitations.revoke(organization, declined, audit: audit_data(admin))
@@ -626,18 +696,50 @@ defmodule Hexpm.Accounts.OrganizationInvitationsTest do
       assert Repo.all(OutboxEntry) == []
     end
 
-    test "email invitations count toward the same account cooldown", %{
+    # Refusing would tell the inviter that the address they used belongs to
+    # the account they named.
+    test "an invitation to the account's address withholds the mail of one by username", %{
       organization: organization,
       admin: admin
     } do
       user = insert(:user)
       {:ok, invitation} = invite(organization, admin, user_email(user))
+      assert mailed?(invitation)
 
       {:ok, _invitation} =
         OrganizationInvitations.revoke(organization, invitation, audit: audit_data(admin))
 
-      assert {:error, :invitation_cooldown} = invite_user(organization, admin, user)
+      assert {:ok, by_username} = invite_user(organization, admin, user)
+      refute mailed?(by_username)
+      assert [%{id: id}] = OrganizationInvitations.all_pending_for_user(user)
+      assert id == by_username.id
     end
+
+    test "an address answers the same whether or not an account owns it", %{
+      organization: organization,
+      admin: admin
+    } do
+      user = insert(:user)
+      {:ok, invitation} = invite_user(organization, admin, user)
+      {:ok, _blocked} = block(invitation, user)
+
+      assert {:ok, owned} = invite(organization, admin, user_email(user))
+      assert {:ok, unowned} = invite(organization, admin, "nobody@example.com")
+
+      assert [owned.id, unowned.id] --
+               Enum.map(OrganizationInvitations.all_pending(organization), & &1.id) == []
+
+      refute mailed?(owned)
+      assert mailed?(unowned)
+    end
+  end
+
+  defp mailed?(invitation) do
+    Repo.exists?(
+      from(entry in OutboxEntry,
+        where: entry.group_key == ^"organization-invitation:#{invitation.id}"
+      )
+    )
   end
 
   defp restore(invitation, user) do

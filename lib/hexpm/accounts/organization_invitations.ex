@@ -127,18 +127,20 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
     Repo.one(from(invitation in pending_query(organization), where: invitation.email == ^email))
   end
 
+  @doc """
+  Invites an address. When the address belongs to an account that blocked the
+  organization, was invited by it in the last day, or has received its daily
+  share of invitation mail, the invitation is created without mailing it, so
+  the answer never tells the inviter which account owns the address.
+  """
   def invite(organization, params, invited_by, audit: audit_data) do
     email = OrganizationInvitation.normalize_email(params["email"] || "")
+    recipient = {:email, email}
+    account = Users.get(email)
 
-    case Users.get(email) do
-      nil ->
-        issue(organization, {:email, email}, invited_by, params["role"], audit_data)
-
-      user ->
-        with_user_lock(user, fn ->
-          issue(organization, {:email, email}, invited_by, params["role"], audit_data)
-        end)
-    end
+    with_invite_locks(organization, recipient, account, invited_by, fn ->
+      issue(organization, recipient, account, invited_by, params["role"], audit_data)
+    end)
   end
 
   @doc """
@@ -158,39 +160,78 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
     user = Repo.preload(user, :emails)
 
     if User.verified_primary_email?(user) do
-      with_user_lock(user, fn ->
-        issue(organization, {:user, user}, invited_by, params["role"], audit_data)
+      recipient = {:user, user}
+
+      with_invite_locks(organization, recipient, user, invited_by, fn ->
+        issue(organization, recipient, user, invited_by, params["role"], audit_data)
       end)
     else
       {:error, :unverified_primary_email}
     end
   end
 
-  defp issue(organization, recipient, invited_by, role, audit_data) do
+  # Refusals the inviter sees only depend on what they named: the account for
+  # an invitation by username, the address for one by email. Anything learned
+  # by resolving an address to its account only withholds the mail.
+  defp issue(organization, recipient, account, invited_by, role, audit_data) do
     cond do
-      member?(organization, recipient) ->
+      account && member?(organization, account) ->
         {:error, :already_member}
 
-      blocked?(organization, recipient) ->
-        {:error, :blocked}
-
-      recently_invited?(organization, recipient) ->
-        {:error, :invitation_cooldown}
+      refusal = refusal(organization, recipient) ->
+        {:error, refusal}
 
       too_many_invitations?(organization, recipient, invited_by) ->
         {:error, :too_many_invitations}
 
-      lapsed = lapsed_invitation(organization, recipient) ->
-        # Expired and declined invitations still occupy the unique recipient
-        # slot. Reissuing updates that row and makes the invitation pending.
-        reissue(organization, recipient, lapsed, invited_by, role || lapsed.role, audit_data)
-
       true ->
-        insert(organization, recipient, invited_by, role, audit_data)
+        mail? = not withhold_mail?(organization, recipient, account)
+
+        case lapsed_invitation(organization, recipient) do
+          # Expired and declined invitations still occupy the unique recipient
+          # slot. Reissuing updates that row and makes the invitation pending.
+          %OrganizationInvitation{} = lapsed ->
+            reissue(
+              organization,
+              recipient,
+              lapsed,
+              invited_by,
+              role || lapsed.role,
+              mail?,
+              audit_data
+            )
+
+          nil ->
+            insert(organization, recipient, invited_by, role, mail?, audit_data)
+        end
     end
   end
 
-  defp insert(organization, {:user, user} = recipient, invited_by, role, audit_data) do
+  defp refusal(organization, {:user, user}) do
+    cond do
+      blocked?(organization, user) -> :blocked
+      invited_by_username_recently?(organization, user) -> :invitation_cooldown
+      true -> nil
+    end
+  end
+
+  defp refusal(_organization, {:email, _email}), do: nil
+
+  defp withhold_mail?(_organization, {:email, _email}, nil), do: false
+
+  defp withhold_mail?(organization, {:email, _email}, account) do
+    blocked?(organization, account) or invited_recently?(organization, account) or
+      account_mail_exhausted?(account)
+  end
+
+  # A username invitation already passed the cooldown on earlier invitations
+  # by username, so only the organization's invitations to the account's
+  # addresses are left to count.
+  defp withhold_mail?(organization, {:user, user}, user) do
+    invited_recently?(organization, user) or account_mail_exhausted?(user)
+  end
+
+  defp insert(organization, {:user, user} = recipient, invited_by, role, mail?, audit_data) do
     changeset =
       OrganizationInvitation.user_changeset(%OrganizationInvitation{}, %{
         "organization_id" => organization.id,
@@ -207,12 +248,12 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
       "organization.invitation.create",
       &{organization, with_recipient(&1.invitation, recipient)}
     )
-    |> deliver(organization, recipient, nil)
+    |> deliver(organization, recipient, nil, mail?)
     |> Repo.transaction()
     |> result()
   end
 
-  defp insert(organization, {:email, email} = recipient, invited_by, role, audit_data) do
+  defp insert(organization, {:email, email} = recipient, invited_by, role, mail?, audit_data) do
     raw_token = random_token()
 
     changeset =
@@ -229,7 +270,7 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
     Multi.new()
     |> Multi.insert(:invitation, changeset)
     |> audit(audit_data, "organization.invitation.create", &{organization, &1.invitation})
-    |> deliver(organization, recipient, raw_token)
+    |> deliver(organization, recipient, raw_token, mail?)
     |> Repo.transaction()
     |> result()
   end
@@ -273,58 +314,98 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
     count >= @inviter_limit
   end
 
-  defp blocked?(organization, {:email, email}) do
-    case Users.get(email) do
-      nil -> false
-      user -> blocked?(organization, {:user, user})
-    end
-  end
-
-  defp blocked?(organization, {:user, user}) do
+  defp blocked?(organization, %User{id: user_id}) do
     Repo.exists?(
       from(block in OrganizationInvitationBlock,
-        where: block.organization_id == ^organization.id and block.user_id == ^user.id
+        where: block.organization_id == ^organization.id and block.user_id == ^user_id
       )
     )
   end
 
-  defp recently_invited?(organization, {:email, email}) do
-    case Users.get(email) do
-      nil -> false
-      user -> recently_invited?(organization, {:user, user})
-    end
-  end
-
-  defp recently_invited?(organization, {:user, user}) do
-    emails =
-      Repo.all(
-        from(email in Email,
-          where: email.user_id == ^user.id and email.verified,
-          select: email.email
-        )
-      )
-
+  defp invited_by_username_recently?(organization, %User{id: user_id}) do
     Repo.exists?(
       from(invitation in OrganizationInvitation,
         where: invitation.organization_id == ^organization.id,
-        where: invitation.user_id == ^user.id or invitation.email in ^emails,
+        where: invitation.user_id == ^user_id,
         where: invitation.sent_at > ago(@recipient_period_seconds, "second")
       )
     )
   end
 
-  # Serializes invitation changes for an account, including the check before a
-  # new invitation is sent and changes to the account's organization blocks.
-  defp with_user_lock(user, fun) do
-    Repo.transaction(fn ->
-      Repo.one!(from(row in User, where: row.id == ^user.id, lock: "FOR NO KEY UPDATE"))
+  defp invited_recently?(organization, account) do
+    Repo.exists?(
+      from(invitation in account_query(account),
+        where: invitation.organization_id == ^organization.id,
+        where: invitation.sent_at > ago(@recipient_period_seconds, "second")
+      )
+    )
+  end
 
-      case fun.() do
-        {:ok, result} -> result
+  # The same cap as an address gets, over the account's invitations by
+  # username and by each of its verified addresses together.
+  defp account_mail_exhausted?(account) do
+    count =
+      Repo.aggregate(
+        from(invitation in account_query(account),
+          where: invitation.sent_at > ago(@recipient_period_seconds, "second")
+        ),
+        :count
+      )
+
+    count >= @recipient_limit
+  end
+
+  defp account_query(%User{id: user_id}) do
+    emails =
+      from(email in Email,
+        where: email.user_id == ^user_id and email.verified,
+        select: email.email
+      )
+
+    from(invitation in OrganizationInvitation,
+      where: invitation.user_id == ^user_id or invitation.email in subquery(emails)
+    )
+  end
+
+  # Every path that changes an invitation takes the invitation row before the
+  # account row, as acceptance does, so they can't deadlock each other. An
+  # invitation also locks the inviter, so concurrent invitations from one
+  # person can't all pass the inviter's limit. Both accounts are locked in one
+  # statement in id order, so two people inviting each other can't deadlock.
+  defp with_invite_locks(organization, recipient, account, invited_by, fun) do
+    Repo.transaction(fn ->
+      Repo.all(from(invitation in slot_query(organization, recipient), lock: "FOR UPDATE"))
+      lock_users!(Enum.reject([account, invited_by], &is_nil/1))
+      rollback_on_error(fun.())
+    end)
+  end
+
+  defp with_invitation_lock(invitation, user, fun) do
+    Repo.transaction(fn ->
+      with {:ok, locked} <- locked_available(invitation) do
+        lock_users!([user])
+        rollback_on_error(fun.(locked))
+      else
         {:error, reason} -> Repo.rollback(reason)
       end
     end)
   end
+
+  defp lock_users!(users) do
+    ids = users |> Enum.map(& &1.id) |> Enum.uniq()
+
+    Repo.all(
+      from(user in User,
+        where: user.id in ^ids,
+        order_by: user.id,
+        lock: "FOR NO KEY UPDATE",
+        select: user.id
+      )
+    )
+  end
+
+  defp rollback_on_error({:ok, result}), do: result
+  defp rollback_on_error({:error, reason}), do: Repo.rollback(reason)
 
   defp lapsed_invitation(organization, recipient) do
     Repo.one(
@@ -352,7 +433,7 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
 
   # Reissuing an expired or declined invitation keeps its recipient slot and
   # counts the new mail against the person sending it.
-  defp reissue(organization, recipient, invitation, invited_by, role, audit_data) do
+  defp reissue(organization, recipient, invitation, invited_by, role, mail?, audit_data) do
     raw_token = recipient_token(recipient)
 
     Multi.new()
@@ -371,7 +452,7 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
       "organization.invitation.create",
       &{organization, with_recipient(&1.invitation, recipient)}
     )
-    |> deliver(organization, recipient, raw_token)
+    |> deliver(organization, recipient, raw_token, mail?)
     |> Repo.transaction()
     |> result()
   end
@@ -462,45 +543,46 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
         audit: audit_data
       )
       when is_integer(user_id) do
-    with_user_lock(user, fn -> do_decline(invitation, user, audit_data) end)
+    organization = invitation.organization
+
+    with_invitation_lock(invitation, user, fn locked ->
+      if OrganizationInvitation.pending?(locked, DateTime.utc_now()) do
+        Multi.new()
+        |> Multi.update(
+          :declined_invitation,
+          OrganizationInvitation.decline_changeset(locked, DateTime.utc_now())
+        )
+        |> Outbox.cancel(:email,
+          group_key: mail_group_key(invitation),
+          categories: [@mail_category]
+        )
+        |> audit(
+          audit_data,
+          "organization.invitation.decline",
+          {organization, %{invitation | user: user}}
+        )
+        |> Repo.transaction()
+        |> case do
+          {:ok, %{declined_invitation: invitation}} -> {:ok, invitation}
+        end
+      else
+        {:error, :invitation_unavailable}
+      end
+    end)
   end
 
   def decline(%OrganizationInvitation{}, %User{}, audit: _audit_data) do
     {:error, :invitation_unavailable}
   end
 
-  defp do_decline(invitation, user, audit_data) do
-    organization = invitation.organization
-
-    Multi.new()
-    |> Multi.run(:invitation, fn _repo, _changes -> locked_pending(invitation) end)
-    |> Multi.update(
-      :declined_invitation,
-      &OrganizationInvitation.decline_changeset(&1.invitation, DateTime.utc_now())
-    )
-    |> Outbox.cancel(:email,
-      group_key: mail_group_key(invitation),
-      categories: [@mail_category]
-    )
-    |> audit(
-      audit_data,
-      "organization.invitation.decline",
-      {organization, %{invitation | user: user}}
-    )
-    |> Repo.transaction()
-    |> case do
-      {:ok, %{declined_invitation: invitation}} -> {:ok, invitation}
-      {:error, :invitation, reason, _changes} -> {:error, reason}
-    end
-  end
-
   def restore(%OrganizationInvitation{user_id: user_id} = invitation, %User{id: user_id} = user,
         audit: audit_data
       )
       when is_integer(user_id) do
-    with_user_lock(user, fn ->
-      with {:ok, locked} <- locked_available(invitation),
-           false <- is_nil(locked.declined_at) or blocked?(invitation.organization, {:user, user}) do
+    with_invitation_lock(invitation, user, fn locked ->
+      if is_nil(locked.declined_at) or blocked?(invitation.organization, user) do
+        {:error, :invitation_unavailable}
+      else
         Multi.new()
         |> Multi.update(:invitation, OrganizationInvitation.restore_changeset(locked))
         |> audit(
@@ -512,8 +594,6 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
         |> case do
           {:ok, %{invitation: invitation}} -> {:ok, invitation}
         end
-      else
-        _unavailable -> {:error, :invitation_unavailable}
       end
     end)
   end
@@ -526,25 +606,23 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
         audit: audit_data
       )
       when is_integer(user_id) do
-    with_user_lock(user, fn ->
-      with {:ok, locked} <- locked_available(invitation) do
-        Multi.new()
-        |> Multi.update(
-          :invitation,
-          OrganizationInvitation.decline_changeset(locked, DateTime.utc_now())
-        )
-        |> Multi.insert(
-          :block,
-          %OrganizationInvitationBlock{organization_id: locked.organization_id, user_id: user.id},
-          on_conflict: :nothing,
-          conflict_target: [:user_id, :organization_id]
-        )
-        |> Outbox.cancel(:email, group_key: mail_group_key(locked), categories: [@mail_category])
-        |> audit(audit_data, "organization.invitation.block", {invitation.organization, user})
-        |> Repo.transaction()
-        |> case do
-          {:ok, %{invitation: invitation}} -> {:ok, invitation}
-        end
+    with_invitation_lock(invitation, user, fn locked ->
+      Multi.new()
+      |> Multi.update(
+        :invitation,
+        OrganizationInvitation.decline_changeset(locked, DateTime.utc_now())
+      )
+      |> Multi.insert(
+        :block,
+        %OrganizationInvitationBlock{organization_id: locked.organization_id, user_id: user.id},
+        on_conflict: :nothing,
+        conflict_target: [:user_id, :organization_id]
+      )
+      |> Outbox.cancel(:email, group_key: mail_group_key(locked), categories: [@mail_category])
+      |> audit(audit_data, "organization.invitation.block", {invitation.organization, user})
+      |> Repo.transaction()
+      |> case do
+        {:ok, %{invitation: invitation}} -> {:ok, invitation}
       end
     end)
   end
@@ -553,16 +631,27 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
     {:error, :invitation_unavailable}
   end
 
+  # A second unblock of the same block finds nothing to delete and answers as
+  # an unavailable block, the same as one that never existed.
   def unblock(%OrganizationInvitationBlock{user_id: user_id} = block, %User{id: user_id} = user,
         audit: audit_data
       ) do
-    with_user_lock(user, fn ->
+    Repo.transaction(fn ->
+      lock_users!([user])
+
       Multi.new()
-      |> Multi.delete(:block, block)
+      |> Multi.delete_all(
+        :block,
+        from(row in OrganizationInvitationBlock, where: row.id == ^block.id)
+      )
+      |> Multi.run(:deleted, fn _repo, %{block: {count, _}} ->
+        if count == 1, do: {:ok, block}, else: {:error, :invitation_unavailable}
+      end)
       |> audit(audit_data, "organization.invitation.unblock", {block.organization, user})
       |> Repo.transaction()
       |> case do
-        {:ok, %{block: block}} -> {:ok, block}
+        {:ok, %{deleted: block}} -> block
+        {:error, :deleted, reason, _changes} -> Repo.rollback(reason)
       end
     end)
   end
@@ -603,13 +692,15 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
   # Queued in the same transaction as the invitation. Delivering afterwards
   # meant a mail failure answered the caller with the invitation already
   # committed, and the retry adopted that invitation without mailing anyone.
-  defp deliver(multi, organization, {:email, _email}, raw_token) do
+  defp deliver(multi, organization, {:email, _email}, raw_token, mail?) do
     Multi.run(multi, :email, fn _repo, %{invitation: invitation} ->
       invitation = %{invitation | raw_token: raw_token, organization: organization}
 
-      invitation
-      |> Emails.organization_invitation()
-      |> enqueue(invitation)
+      if mail? do
+        invitation
+        |> Emails.organization_invitation()
+        |> enqueue(invitation)
+      end
 
       {:ok, invitation}
     end)
@@ -617,11 +708,11 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
 
   # An account that opted out of invitation mail still finds the invitation
   # on its dashboard.
-  defp deliver(multi, organization, {:user, user}, nil) do
+  defp deliver(multi, organization, {:user, user}, nil, mail?) do
     Multi.run(multi, :email, fn _repo, %{invitation: invitation} ->
       invitation = %{invitation | organization: organization, user: user}
 
-      if OptionalEmails.allowed?(user, :organization_invite) do
+      if mail? and OptionalEmails.allowed?(user, :organization_invite) do
         invitation
         |> Emails.organization_user_invitation()
         |> enqueue(invitation)
@@ -667,25 +758,19 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
     end
   end
 
+  # Declined invitations stay listed, so an administrator can still revoke
+  # one the recipient could restore and accept.
   defp pending_query(organization) do
     from(invitation in OrganizationInvitation,
       where: invitation.organization_id == ^organization.id,
       where: is_nil(invitation.accepted_at),
       where: is_nil(invitation.revoked_at),
-      where: is_nil(invitation.declined_at),
       where: invitation.expires_at > ^DateTime.utc_now()
     )
   end
 
-  defp member?(organization, {:user, user}) do
+  defp member?(organization, user) do
     not is_nil(Organizations.get_role(organization, user))
-  end
-
-  defp member?(organization, {:email, email}) do
-    case Users.get(email) do
-      nil -> false
-      user -> member?(organization, {:user, user})
-    end
   end
 
   defp expires_at do

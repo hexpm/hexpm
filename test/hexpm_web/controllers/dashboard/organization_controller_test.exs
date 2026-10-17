@@ -784,10 +784,10 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
                "#{new_user.username} has blocked invitations from this organization."
 
-      assert OrganizationInvitations.all_pending(organization) == []
+      assert [%{declined_at: %DateTime{}}] = OrganizationInvitations.all_pending(organization)
     end
 
-    test "inviting a blocked account by email is refused", %{
+    test "inviting a blocked account's address answers like any address", %{
       user: user,
       organization: organization
     } do
@@ -811,10 +811,17 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
           "organization_invitation" => %{"email" => hd(invitee.emails).email, "role" => "read"}
         })
 
-      assert html_response(conn, 400)
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}/members"
 
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
-               "This account has blocked invitations from this organization."
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) ==
+               "An invitation has been sent to #{hd(invitee.emails).email}."
+
+      assert [emailed] =
+               Enum.filter(OrganizationInvitations.all_pending(organization), & &1.email)
+
+      refute Repo.get_by(Hexpm.Emails.OutboxEntry,
+               group_key: "organization-invitation:#{emailed.id}"
+             )
     end
 
     test "inviting an organization is refused", %{user: user, organization: organization} do
@@ -940,6 +947,50 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}/members"
       assert OrganizationInvitations.all_pending(organization) == []
       refute OrganizationInvitations.get_pending_by_token(invitation.raw_token)
+    end
+
+    test "revoking an invitation by username names the account", %{
+      user: user,
+      organization: organization
+    } do
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+      mock_customer(organization)
+      invitee = insert(:user)
+
+      {:ok, invitation} =
+        OrganizationInvitations.invite_user(organization, invitee, %{"role" => "read"}, user,
+          audit: audit_data(user)
+        )
+
+      {:ok, _declined} =
+        OrganizationInvitations.decline(
+          Repo.preload(invitation, :organization),
+          invitee,
+          audit: audit_data(invitee)
+        )
+
+      html =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/orgs/#{organization.name}/members")
+        |> html_response(200)
+
+      assert html =~ "Declined"
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("/dashboard/orgs/#{organization.name}", %{
+          "action" => "revoke_invitation",
+          "organization_invitation" => %{"id" => to_string(invitation.id)}
+        })
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}/members"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) ==
+               "The invitation for #{invitee.username} has been revoked."
+
+      assert OrganizationInvitations.all_pending(organization) == []
     end
 
     test "cannot touch an invitation belonging to another organization", %{

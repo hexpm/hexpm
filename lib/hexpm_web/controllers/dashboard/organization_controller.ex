@@ -327,21 +327,6 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
           |> put_flash(:error, "That address already belongs to a member of this organization.")
           |> render_index(organization, tab: :members)
 
-        {:error, :blocked} ->
-          conn
-          |> put_status(400)
-          |> put_flash(:error, "This account has blocked invitations from this organization.")
-          |> render_index(organization, tab: :members)
-
-        {:error, :invitation_cooldown} ->
-          conn
-          |> put_status(429)
-          |> put_flash(
-            :error,
-            "This organization can invite this account once every 24 hours. Try again later."
-          )
-          |> render_index(organization, tab: :members)
-
         {:error, :too_many_invitations} ->
           conn
           |> put_status(429)
@@ -377,7 +362,10 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
             OrganizationInvitations.revoke(organization, invitation, audit: audit_data(conn))
 
           conn
-          |> put_flash(:info, "The invitation for #{invitation.email} has been revoked.")
+          |> put_flash(
+            :info,
+            "The invitation for #{invitation_recipient(invitation)} has been revoked."
+          )
           |> redirect(to: ~p"/dashboard/orgs/#{organization}/members")
       end
     end)
@@ -1561,6 +1549,11 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       not_found(conn)
     end
   end
+
+  defp invitation_recipient(%OrganizationInvitation{user: %User{username: username}}),
+    do: username
+
+  defp invitation_recipient(%OrganizationInvitation{email: email}), do: email
 
   defp invite_user_changeset() do
     OrganizationInvitation.user_changeset(%OrganizationInvitation{}, %{"role" => "read"})

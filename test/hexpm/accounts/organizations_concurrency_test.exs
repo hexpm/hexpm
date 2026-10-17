@@ -153,6 +153,64 @@ defmodule Hexpm.Accounts.OrganizationsConcurrencyTest do
     end)
   end
 
+  test "concurrent invitations can't take an inviter past the hourly limit" do
+    committed(&build_context/0, fn context ->
+      hour_of_invitations(context.admin, 49)
+      recipients = [insert(:user), insert(:user), insert(:user)]
+
+      results =
+        race(recipients, fn user ->
+          OrganizationInvitations.invite_user(
+            context.organization,
+            user,
+            %{"role" => "read"},
+            context.admin,
+            audit: audit_data(context.admin)
+          )
+        end)
+
+      assert Enum.count(results, &match?({:ok, _}, &1)) == 1
+      assert Enum.count(results, &(&1 == {:error, :too_many_invitations})) == 2
+    end)
+  end
+
+  test "accepting and declining the same invitation at once doesn't deadlock" do
+    committed(&build_context/0, fn context ->
+      user = insert(:user)
+      invitation = invite(context, user)
+
+      results =
+        race([
+          fn -> OrganizationInvitations.accept(invitation, user, audit: audit_data(user)) end,
+          fn -> OrganizationInvitations.decline(invitation, user, audit: audit_data(user)) end
+        ])
+
+      assert Enum.count(results, &match?({:ok, _}, &1)) == 1
+      assert Enum.count(results, &(&1 == {:error, :invitation_unavailable})) == 1
+    end)
+  end
+
+  defp hour_of_invitations(inviter, count) do
+    organization = insert(:organization)
+
+    rows =
+      for index <- 1..count do
+        %{
+          organization_id: organization.id,
+          invited_by_user_id: inviter.id,
+          email: "earlier#{index}-#{organization.id}@example.com",
+          role: "read",
+          token_hash: :crypto.strong_rand_bytes(32),
+          sent_at: DateTime.utc_now(),
+          expires_at: DateTime.add(DateTime.utc_now(), 7 * 24 * 60 * 60),
+          inserted_at: DateTime.utc_now(),
+          updated_at: DateTime.utc_now()
+        }
+      end
+
+    Repo.insert_all(Hexpm.Accounts.OrganizationInvitation, rows)
+  end
+
   defp invite(context, user) do
     {:ok, invitation} =
       OrganizationInvitations.invite_user(

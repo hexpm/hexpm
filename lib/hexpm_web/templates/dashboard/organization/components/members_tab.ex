@@ -369,8 +369,9 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
         <ul class="divide-y divide-grey-100 dark:divide-grey-700">
           <li :for={invitation <- @invitations} class="flex items-center justify-between px-6 py-4">
             <div>
-              <p class="text-sm font-medium text-grey-900 dark:text-white">
+              <p class="flex flex-wrap items-center gap-2 text-sm font-medium text-grey-900 dark:text-white">
                 {if invitation.user, do: invitation.user.username, else: invitation.email}
+                <.badge :if={invitation.declined_at} variant="yellow">Declined</.badge>
               </p>
               <p class="text-xs text-grey-500 dark:text-grey-300">
                 Invited as {invitation.role}, expires {Calendar.strftime(
