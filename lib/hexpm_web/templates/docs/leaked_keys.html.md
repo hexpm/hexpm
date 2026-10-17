@@ -6,19 +6,19 @@ Hex.pm API keys carry a `hex_` prefix followed by 40 hexadecimal characters (for
 
 ### What Hex.pm did automatically
 
-* Verified the leaked token's checksum to confirm it was a real Hex.pm key.
-* Revoked the key immediately. Subsequent requests using it return `401 Unauthorized`.
-* Sent an email to the key's owner with the GitHub URL where it was found.
+* Matched the token against Hex.pm's keys to confirm it was a real key.
+* Revoked the key immediately, together with any OAuth tokens it was exchanged for. Subsequent requests using them return `401 Unauthorized`.
+* Emailed the key's owner, or the organization's administrators for an organization key, with the GitHub URL where it was found.
 
 No further action is required from Hex.pm. The steps below are for you, the key owner.
 
 ### Step 1. Confirm the revocation
 
-Open the [API keys page](/dashboard/keys) on your dashboard. The leaked key will appear with a revocation timestamp. If you do not see it as revoked, contact [support@hex.pm](mailto:support@hex.pm) — do not continue using the key.
+Open the [API keys page](/dashboard/keys) on your dashboard, or the organization's page for an organization key. The leaked key is no longer listed there. If it still is, stop using it and contact [support@hex.pm](mailto:support@hex.pm).
 
 ### Step 2. Generate a replacement key
 
-Create a new key on the [API keys page](/dashboard/keys). Scope it to the smallest permission set that the consumer actually needs — see [Permissions](/docs/permissions) for the available scopes. If you only need the key for publishing or for read access to a single repository, do not issue a full-access key.
+Create a new key on the [API keys page](/dashboard/keys), or on the organization's page for an organization key. Scope it to the smallest permission set that the consumer actually needs — see [Permissions](/docs/permissions) for the available scopes. If you only need the key for publishing or for read access to a single repository, do not issue a full-access key.
 
 For locally-stored credentials used by the Mix client, the simplest path is:
 
@@ -26,7 +26,7 @@ For locally-stored credentials used by the Mix client, the simplest path is:
 mix hex.user auth
 ```
 
-This generates and stores a new client-scoped key without you needing to copy a token by hand.
+This signs the Mix client in, so that machine doesn't need an API key at all.
 
 ### Step 3. Update everywhere the leaked key was used
 
@@ -41,7 +41,7 @@ If you are unsure where the key was used, search your codebase, secret stores, a
 
 ### Step 4. Review the audit log for unauthorized activity
 
-Open the [audit log](/users/me/audit-logs) for your account and review the period between when the key was created and when it was revoked. Look for actions you did not perform yourself — new package releases, ownership changes, or key creation. For organization-owned keys, the relevant log is on the organization page.
+Open the [audit log](/dashboard/audit-logs) for your account and review the period between when the key was created and when it was revoked. Look for actions you did not perform yourself — new package releases, ownership changes, or key creation. For organization-owned keys, the relevant log is on the organization's page on your dashboard.
 
 If you find activity you did not authorize, contact [security@hex.pm](mailto:security@hex.pm) right away.
 

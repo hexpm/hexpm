@@ -12,6 +12,7 @@ defmodule Hexpm.GitHub.SecretScanning do
   alias Hexpm.Accounts.{Auth, Keys}
 
   @public_keys_url "https://api.github.com/meta/public_keys/secret_scanning"
+  @refetch_interval 60
   # prime256v1 / P-256 OID
   @p256_oid {1, 2, 840, 10045, 3, 1, 7}
 
@@ -27,13 +28,9 @@ defmodule Hexpm.GitHub.SecretScanning do
         valid
 
       {:error, :key_not_found} ->
-        Logger.info(
-          "GitHub secret scanning: refreshing public keys after unknown key_id #{inspect(key_id)}"
-        )
+        Logger.info("GitHub secret scanning: unknown key_id #{inspect(key_id)}")
 
-        Hexpm.Cache.invalidate(:github_secret_scanning_keys)
-
-        case attempt_verify(raw_body, key_id, signature_b64, fetch_public_keys()) do
+        case attempt_verify(raw_body, key_id, signature_b64, refetch_public_keys()) do
           {:ok, valid} ->
             valid
 
@@ -91,23 +88,20 @@ defmodule Hexpm.GitHub.SecretScanning do
   def process_alerts(alerts) do
     Enum.map(alerts, fn alert ->
       token = Map.get(alert, "token", "")
-      url = Map.get(alert, "url")
-
-      case revoke_token(token) do
-        {:ok, key, user} ->
-          if user do
-            Hexpm.Emails.key_leaked(user, key, url) |> Hexpm.Emails.Mailer.deliver!()
-          end
-
-          %{"token_raw" => token, "token_type" => "hexpm_api_token", "label" => "true_positive"}
-
-        :not_found ->
-          %{"token_raw" => token, "token_type" => "hexpm_api_token", "label" => "false_positive"}
-      end
+      %{"token_raw" => token, "token_type" => "hexpm_api_token", "label" => label(alert, token)}
     end)
   end
 
-  defp revoke_token(token) do
+  # A key that was revoked before the alert is still a real secret, so only a
+  # token that matches no key at all is a false positive.
+  defp label(alert, token) do
+    case Keys.revoke_leaked(secret_first(token), Map.get(alert, "url")) do
+      {:ok, :not_found} -> "false_positive"
+      {:ok, _revoked} -> "true_positive"
+    end
+  end
+
+  defp secret_first(token) do
     raw = Auth.strip_token_prefix(token)
     app_secret = Application.get_env(:hexpm, :secret)
 
@@ -115,7 +109,7 @@ defmodule Hexpm.GitHub.SecretScanning do
       :crypto.mac(:hmac, :sha256, app_secret, raw)
       |> Base.encode16(case: :lower)
 
-    Keys.revoke_by_secret_first(first)
+    first
   end
 
   defp find_key(keys, key_id) do
@@ -141,6 +135,12 @@ defmodule Hexpm.GitHub.SecretScanning do
   defp fetch_public_keys_cached() do
     ttl = Application.get_env(:hexpm, :github_key_cache_ttl, 300)
     Hexpm.Cache.fetch(:github_secret_scanning_keys, &fetch_public_keys/0, ttl)
+  end
+
+  # GitHub signs with a key we haven't fetched yet when it rotates them, but
+  # anyone can send an unknown key id, so it refetches at most once a minute.
+  defp refetch_public_keys() do
+    Hexpm.Cache.refresh(:github_secret_scanning_keys, &fetch_public_keys/0, @refetch_interval)
   end
 
   @doc false

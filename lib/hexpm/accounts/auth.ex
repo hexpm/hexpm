@@ -13,7 +13,7 @@ defmodule Hexpm.Accounts.Auth do
     raw_secret = strip_token_prefix(user_secret)
 
     if String.starts_with?(user_secret, @token_prefix) and not valid_checksum?(raw_secret) do
-      :error
+      {:error, :invalid}
     else
       key_auth_validated(raw_secret, usage_info, opts)
     end

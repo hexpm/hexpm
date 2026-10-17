@@ -8,6 +8,7 @@ defmodule HexpmWeb.Router do
   pipeline :accepts_json do
     plug :accepts, ["json"]
     plug HexpmWeb.Plugs.Attack
+    plug HexpmWeb.Plugs.ReadOnly
   end
 
   pipeline :browser do

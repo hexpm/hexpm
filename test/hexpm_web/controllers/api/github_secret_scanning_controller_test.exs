@@ -1,13 +1,16 @@
 defmodule HexpmWeb.API.GitHubSecretScanningControllerTest do
   use HexpmWeb.ConnCase, async: false
+  use Oban.Testing, repo: Hexpm.RepoBase
 
   import Ecto.Query
   import Mox
   import Swoosh.TestAssertions
 
-  alias Hexpm.Accounts.{Key, Keys}
+  alias Hexpm.Accounts.{Key, Keys, User}
+  alias Hexpm.Emails.{OutboxEntry, OutboxWorker}
   alias Hexpm.GitHub.SecretScanning
   alias Hexpm.Repo
+  alias Hexpm.WriteMode
 
   setup :verify_on_exit!
 
@@ -42,6 +45,21 @@ defmodule HexpmWeb.API.GitHubSecretScanningControllerTest do
       ec_priv: ec_priv,
       stub_github_keys: stub_github_keys
     }
+  end
+
+  defp alert(key) do
+    %{
+      "token" => key.user_secret,
+      "type" => "hexpm_api_token",
+      "url" => "https://github.com/example/repo",
+      "source" => "commit"
+    }
+  end
+
+  defp deliver_leak_notice(key) do
+    entry = Repo.get_by!(OutboxEntry, group_key: "key-leaked:#{key.id}")
+    assert :ok = perform_job(OutboxWorker, %{outbox_entry_id: entry.id})
+    entry
   end
 
   defp post_alert(conn, body, ec_priv, key_id \\ @key_id) do
@@ -112,6 +130,9 @@ defmodule HexpmWeb.API.GitHubSecretScanningControllerTest do
         ],
         ec_priv
       )
+
+      assert_no_email_sent()
+      deliver_leak_notice(key)
 
       assert_email_sent(
         subject: ~r/ci-key.*revoked/i,
@@ -307,13 +328,16 @@ defmodule HexpmWeb.API.GitHubSecretScanningControllerTest do
       assert Repo.get!(Key, key.id).revoke_at == nil
     end
 
-    test "revokes an organization-owned key without sending email", %{
+    test "emails the administrators about a leaked organization key", %{
       conn: conn,
       ec_priv: ec_priv,
       stub_github_keys: stub
     } do
       stub.()
       organization = insert(:organization)
+      admin = insert(:user)
+      insert(:organization_user, organization: organization, user: admin, role: "admin")
+      insert(:organization_user, organization: organization, user: insert(:user), role: "read")
 
       {:ok, %{key: key}} =
         Keys.create(organization, %{"name" => "org-key"}, audit: audit_data(organization))
@@ -322,23 +346,95 @@ defmodule HexpmWeb.API.GitHubSecretScanningControllerTest do
       # so the assertion below only covers the revocation flow.
       assert_email_sent(subject: ~r/new API key.*created/i)
 
-      conn =
-        post_alert(
-          conn,
-          [
-            %{
-              "token" => key.user_secret,
-              "type" => "hexpm_api_token",
-              "url" => "https://github.com/example/repo",
-              "source" => "commit"
-            }
-          ],
-          ec_priv
-        )
+      conn = post_alert(conn, [alert(key)], ec_priv)
 
       assert [%{"label" => "true_positive"}] = json_response(conn, 200)
       assert Repo.get!(Key, key.id).revoke_at != nil
+
+      assert deliver_leak_notice(key).recipients == [User.email(admin, :primary)]
+
+      assert_email_sent(
+        subject: ~r/org-key.*revoked/i,
+        text_body: ~r|/dashboard/orgs/#{organization.name}|
+      )
+    end
+
+    test "revokes the OAuth tokens the leaked key was exchanged for", %{
+      conn: conn,
+      user: user,
+      ec_priv: ec_priv,
+      stub_github_keys: stub
+    } do
+      stub.()
+      {:ok, %{key: key}} = Keys.create(user, %{"name" => "exchanged"}, audit: audit_data(user))
+      client = insert(:oauth_client)
+
+      %{"access_token" => access_token} =
+        build_conn()
+        |> post(~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => key.user_secret,
+          "scope" => "api:read"
+        })
+        |> json_response(200)
+
+      build_conn()
+      |> put_req_header("authorization", "Bearer #{access_token}")
+      |> get(~p"/api/users/me")
+      |> json_response(200)
+
+      assert [%{"label" => "true_positive"}] =
+               conn |> post_alert([alert(key)], ec_priv) |> json_response(200)
+
+      build_conn()
+      |> put_req_header("authorization", "Bearer #{access_token}")
+      |> get(~p"/api/users/me")
+      |> json_response(401)
+    end
+
+    test "queues the notices so delivery can't fail the batch, one per key", %{
+      conn: conn,
+      user: user,
+      ec_priv: ec_priv,
+      stub_github_keys: stub
+    } do
+      stub.()
+      {:ok, %{key: key1}} = Keys.create(user, %{"name" => "key1"}, audit: audit_data(user))
+      {:ok, %{key: key2}} = Keys.create(user, %{"name" => "key2"}, audit: audit_data(user))
+      assert_email_sent(subject: ~r/new API key.*created/i)
+      assert_email_sent(subject: ~r/new API key.*created/i)
+
+      conn = post_alert(conn, [alert(key1), alert(key2), alert(key1)], ec_priv)
+
+      assert [
+               %{"label" => "true_positive"},
+               %{"label" => "true_positive"},
+               %{"label" => "true_positive"}
+             ] = json_response(conn, 200)
+
       assert_no_email_sent()
+
+      assert Repo.aggregate(from(e in OutboxEntry, where: e.category == "key.leaked"), :count) ==
+               2
+
+      deliver_leak_notice(key1)
+      deliver_leak_notice(key2)
+    end
+
+    test "refuses alerts while the site is read-only", %{
+      conn: conn,
+      user: user,
+      ec_priv: ec_priv
+    } do
+      {:ok, %{key: key}} = Keys.create(user, %{"name" => "held"}, audit: audit_data(user))
+      WriteMode.configure!(true)
+      on_exit(fn -> WriteMode.configure!(false) end)
+
+      conn = post_alert(conn, [alert(key)], ec_priv)
+
+      assert conn.status == 503
+      assert Repo.get!(Key, key.id).revoke_at == nil
     end
 
     test "refreshes public keys when an unknown key_identifier is received", %{
@@ -426,7 +522,7 @@ defmodule HexpmWeb.API.GitHubSecretScanningControllerTest do
       assert Repo.get!(Key, key.id).revoke_at == nil
     end
 
-    test "does not send email when an already-revoked key is reported", %{
+    test "labels a key revoked before the alert true_positive without a new notice", %{
       conn: conn,
       user: user,
       ec_priv: ec_priv,
@@ -461,8 +557,110 @@ defmodule HexpmWeb.API.GitHubSecretScanningControllerTest do
           ec_priv
         )
 
-      assert [%{"label" => "false_positive"}] = json_response(conn, 200)
+      assert [%{"label" => "true_positive"}] = json_response(conn, 200)
+      refute Repo.exists?(from(e in OutboxEntry, where: e.category == "key.leaked"))
       assert_no_email_sent()
+    end
+  end
+
+  describe "POST /api/github/secret-scanning with the public key cache" do
+    # The cache fetches the keys from a process of its own.
+    setup :set_mox_global
+
+    setup do
+      Hexpm.Cache.start()
+      ttl = Application.get_env(:hexpm, :github_key_cache_ttl)
+      Application.put_env(:hexpm, :github_key_cache_ttl, 300)
+
+      on_exit(fn ->
+        Application.put_env(:hexpm, :github_key_cache_ttl, ttl)
+        :ets.whereis(Hexpm.Cache) != :undefined && :ets.delete(Hexpm.Cache)
+      end)
+    end
+
+    test "does not cache a failed key fetch", %{
+      conn: conn,
+      user: user,
+      ec_priv: ec_priv,
+      stub_github_keys: stub
+    } do
+      {:ok, %{key: key}} = Keys.create(user, %{"name" => "leaked"}, audit: audit_data(user))
+
+      Mox.expect(Hexpm.HTTP.Mock, :get, fn _url, _headers ->
+        {:error, %Mint.TransportError{reason: :timeout}}
+      end)
+
+      assert post_alert(conn, [alert(key)], ec_priv).status == 403
+
+      stub.()
+
+      assert [%{"label" => "true_positive"}] =
+               build_conn() |> post_alert([alert(key)], ec_priv) |> json_response(200)
+    end
+
+    test "refetches for an unknown key id at most once a minute", %{
+      conn: conn,
+      user: user,
+      pem_pub: pem_pub,
+      ec_priv: ec_priv,
+      stub_github_keys: stub
+    } do
+      {:ok, %{key: key1}} = Keys.create(user, %{"name" => "key1"}, audit: audit_data(user))
+      {:ok, %{key: key2}} = Keys.create(user, %{"name" => "key2"}, audit: audit_data(user))
+      stub.()
+
+      assert [%{"label" => "true_positive"}] =
+               conn |> post_alert([alert(key1)], ec_priv) |> json_response(200)
+
+      for n <- 1..3 do
+        assert build_conn()
+               |> post_alert([alert(key2)], ec_priv, "unknown-#{n}")
+               |> Map.get(:status) ==
+                 403
+      end
+
+      assert Repo.get!(Key, key2.id).revoke_at == nil
+
+      :ets.update_element(
+        Hexpm.Cache,
+        :github_secret_scanning_keys,
+        {4, System.monotonic_time(:second) - 61}
+      )
+
+      Mox.expect(Hexpm.HTTP.Mock, :get, fn _url, _headers ->
+        {:ok, 200, [], %{"public_keys" => [%{"key_identifier" => "rotated", "key" => pem_pub}]}}
+      end)
+
+      assert [%{"label" => "true_positive"}] =
+               build_conn() |> post_alert([alert(key2)], ec_priv, "rotated") |> json_response(200)
+    end
+
+    test "keeps the cached keys when a refetch fails", %{
+      conn: conn,
+      user: user,
+      ec_priv: ec_priv,
+      stub_github_keys: stub
+    } do
+      {:ok, %{key: key1}} = Keys.create(user, %{"name" => "key1"}, audit: audit_data(user))
+      {:ok, %{key: key2}} = Keys.create(user, %{"name" => "key2"}, audit: audit_data(user))
+      stub.()
+
+      assert [%{"label" => "true_positive"}] =
+               conn |> post_alert([alert(key1)], ec_priv) |> json_response(200)
+
+      :ets.update_element(
+        Hexpm.Cache,
+        :github_secret_scanning_keys,
+        {4, System.monotonic_time(:second) - 61}
+      )
+
+      Mox.expect(Hexpm.HTTP.Mock, :get, fn _url, _headers -> {:ok, 503, [], %{}} end)
+
+      assert build_conn() |> post_alert([alert(key2)], ec_priv, "unknown") |> Map.get(:status) ==
+               403
+
+      assert [%{"label" => "true_positive"}] =
+               build_conn() |> post_alert([alert(key2)], ec_priv) |> json_response(200)
     end
   end
 end

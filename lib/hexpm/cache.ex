@@ -15,15 +15,25 @@ defmodule Hexpm.Cache do
     end
   end
 
-  def invalidate(table \\ @table, key)
+  @doc """
+  Computes `key` again now, unless its value is younger than `min_age`
+  seconds. An error result is returned without replacing the cached value.
+  """
+  def refresh(table \\ @table, key, fun, min_age)
 
-  def invalidate(table, key) do
+  def refresh(table, key, fun, min_age) do
     case :ets.whereis(table) do
-      :undefined -> :ok
-      _ -> :ets.delete(table, key)
-    end
+      :undefined ->
+        fun.()
 
-    :ok
+      _ ->
+        now = System.monotonic_time(:second)
+
+        case :ets.lookup(table, key) do
+          [{^key, value, _fun, inserted_at}] when now - inserted_at < min_age -> value
+          _ -> compute(table, key, fun)
+        end
+    end
   end
 
   defp do_fetch(table, key, fun, ttl) do
@@ -38,7 +48,7 @@ defmodule Hexpm.Cache do
         value
 
       [] ->
-        compute_cold(table, key, fun)
+        compute(table, key, fun)
     end
   end
 
@@ -46,8 +56,7 @@ defmodule Hexpm.Cache do
     if :ets.insert_new(table, {{:refreshing, key}}) do
       Task.start(fn ->
         try do
-          value = fun.()
-          :ets.insert(table, {key, value, fun, System.monotonic_time(:second)})
+          store(table, key, fun.(), fun)
         after
           :ets.delete(table, {:refreshing, key})
         end
@@ -57,7 +66,7 @@ defmodule Hexpm.Cache do
     :ok
   end
 
-  defp compute_cold(table, key, fun) do
+  defp compute(table, key, fun) do
     case :ets.lookup(table, {:populating, key}) do
       [{_, leader}] ->
         wait_for(leader, table, key, fun)
@@ -67,12 +76,18 @@ defmodule Hexpm.Cache do
           spawn(fn ->
             receive do
               :proceed ->
-                try do
-                  value = fun.()
-                  :ets.insert(table, {key, value, fun, System.monotonic_time(:second)})
-                after
-                  :ets.delete(table, {:populating, key})
-                end
+                result =
+                  try do
+                    value = fun.()
+                    store(table, key, value, fun)
+                    {:value, value}
+                  catch
+                    kind, reason -> {:raise, kind, reason, __STACKTRACE__}
+                  after
+                    :ets.delete(table, {:populating, key})
+                  end
+
+                exit({:shutdown, result})
 
               :abort ->
                 :ok
@@ -93,11 +108,30 @@ defmodule Hexpm.Cache do
     end
   end
 
+  # The worker hands its result to every caller waiting on it through its exit
+  # reason, so an error that isn't cached and an exception reach them all
+  # without anyone computing again. A leader that was gone before we looked at
+  # it has stored its value, or left nothing and this caller computes it.
   defp wait_for(pid, table, key, fun) do
     ref = Process.monitor(pid)
 
     receive do
-      {:DOWN, ^ref, _, _, _} -> fetch(table, key, fun, :infinity)
+      {:DOWN, ^ref, _, _, {:shutdown, {:value, value}}} ->
+        value
+
+      {:DOWN, ^ref, _, _, {:shutdown, {:raise, kind, reason, stacktrace}}} ->
+        :erlang.raise(kind, reason, stacktrace)
+
+      {:DOWN, ^ref, _, _, _reason} ->
+        fetch(table, key, fun, :infinity)
     end
   end
+
+  # An error goes back to the callers that asked for it but is never cached, so
+  # the next fetch tries again instead of serving the failure, or replacing a
+  # good value with it, for the whole TTL.
+  defp store(_table, _key, {:error, _reason}, _fun), do: true
+
+  defp store(table, key, value, fun),
+    do: :ets.insert(table, {key, value, fun, System.monotonic_time(:second)})
 end

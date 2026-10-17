@@ -2,6 +2,7 @@ defmodule Hexpm.Accounts.Keys do
   use Hexpm.Context
 
   alias Hexpm.Accounts.{Organization, OrganizationUser}
+  alias Hexpm.Emails.Outbox
   alias Hexpm.UserSessions
 
   require Logger
@@ -128,35 +129,59 @@ defmodule Hexpm.Accounts.Keys do
   end
 
   @doc """
-  Atomically revokes the active key matching `secret_first` and returns it
-  with the owning user (and their emails) preloaded. Used by the GitHub
-  secret scanning revocation flow where we only have the raw token, not the
-  owner identity.
+  Revokes the key GitHub secret scanning found in public, looked up by the
+  first half of its secret's hash, together with the OAuth tokens exchanged for
+  it, and queues the notice to its owner in the same transaction.
 
-  Returns `{:ok, key, user}` (where `user` is `nil` for organization-owned
-  keys), or `:not_found` when no active key matches.
+  Returns `{:ok, :revoked}`, `{:ok, :already_revoked}` for a key that had
+  already stopped working, or `{:ok, :not_found}`.
   """
-  def revoke_by_secret_first(secret_first) do
-    revoke_at = DateTime.add(DateTime.utc_now(), -1, :second)
-
+  def revoke_leaked(secret_first, url) do
     query =
       from(k in Key,
         where: k.secret_first == ^secret_first,
-        where: is_nil(k.revoke_at) or k.revoke_at > fragment("NOW()"),
-        select: k,
-        update: [set: [revoke_at: ^revoke_at, updated_at: ^DateTime.utc_now()]]
+        preload: [user: :emails, organization: [organization_users: [user: :emails]]],
+        lock: "FOR UPDATE"
       )
 
-    case Repo.update_all(query, []) do
-      {1, [key]} ->
-        key = Repo.preload(key, user: :emails)
-        Logger.info("Automated key revocation: key_id=#{key.id}")
-        {:ok, key, key.user}
+    Repo.transaction(fn ->
+      case Repo.one(query) do
+        nil ->
+          :not_found
 
-      {0, _} ->
-        :not_found
-    end
+        key ->
+          if Key.revoked?(key) do
+            :already_revoked
+          else
+            revoke_leaked_key(key, url)
+          end
+      end
+    end)
   end
+
+  defp revoke_leaked_key(key, url) do
+    Repo.update!(Key.revoke(key))
+
+    {tokens_query, sessions_query} = UserSessions.revoke_for_api_keys([key])
+    Repo.update_all(tokens_query, [])
+    Repo.update_all(sessions_query, [])
+
+    owner = key.user || key.organization
+
+    owner
+    |> Emails.key_leaked(key, url)
+    |> Outbox.enqueue!(
+      category: "key.leaked",
+      group_key: "key-leaked:#{key.id}",
+      scope_key: owner_scope_key(owner)
+    )
+
+    Logger.info("Automated key revocation: key_id=#{key.id}")
+    :revoked
+  end
+
+  defp owner_scope_key(%User{id: id}), do: "user:#{id}"
+  defp owner_scope_key(%Organization{id: id}), do: "organization:#{id}"
 
   def revoke_all(user_or_organization, audit: audit_data) do
     keys = all(user_or_organization)

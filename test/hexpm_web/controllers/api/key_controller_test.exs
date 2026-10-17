@@ -341,6 +341,17 @@ defmodule HexpmWeb.API.KeyControllerTest do
       |> get("/api/keys")
       |> json_response(200)
     end
+
+    test "hex_ key with a wrong checksum is refused as an invalid key" do
+      bad_key = "hex_" <> String.duplicate("a", 40)
+
+      for header <- [bad_key, "Bearer " <> bad_key] do
+        build_conn()
+        |> put_req_header("authorization", header)
+        |> get("/api/keys")
+        |> json_response(401)
+      end
+    end
   end
 
   describe "DELETE /api/keys" do

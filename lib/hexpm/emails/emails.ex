@@ -214,12 +214,13 @@ defmodule Hexpm.Emails do
     |> render_body(:tfa_recovery_rotated)
   end
 
-  def key_leaked(user, key, url \\ nil) do
+  def key_leaked(user_or_org, key, url \\ nil) do
     base_email(:key_leaked)
-    |> email_to(user)
+    |> email_to(user_or_org)
     |> subject("Hex.pm - API key #{key.name} was found in a public repository and revoked")
-    |> assign(:username, user.username)
+    |> assign(:username, display_name(user_or_org))
     |> assign(:key_name, key.name)
+    |> assign(:keys_url, HexpmWeb.EmailView.keys_url(user_or_org))
     |> assign(:found_url, safe_url(url))
     |> render_body(:key_leaked)
   end

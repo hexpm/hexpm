@@ -121,7 +121,7 @@ defmodule Hexpm.Accounts.AuthTest do
     test "rejects hex_-prefixed token with invalid CRC32 checksum" do
       # 40 hex chars with the wrong checksum — bypasses DB lookup entirely
       bad_token = "hex_" <> String.duplicate("a", 40)
-      assert Auth.key_auth(bad_token, %{}) == :error
+      assert Auth.key_auth(bad_token, %{}) == {:error, :invalid}
     end
   end
 

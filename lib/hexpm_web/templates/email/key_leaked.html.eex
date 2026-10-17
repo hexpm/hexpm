@@ -17,7 +17,7 @@
 <% end %>
 
 <p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
-  You can generate a new key at <a href="<%= url(~p"/dashboard/keys") %>"><%= url(~p"/dashboard/keys") %></a>.
+  You can generate a new key at <a href="<%= @keys_url %>"><%= @keys_url %></a>.
 </p>
 
 <p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
