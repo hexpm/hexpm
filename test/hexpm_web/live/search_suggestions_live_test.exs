@@ -114,6 +114,18 @@ defmodule HexpmWeb.SearchSuggestionsLiveTest do
       assert_redirect(view, "/packages?search=ecto&sort=recent_downloads")
     end
 
+    test "submitting caps the search at 1,000 bytes", %{conn: conn} do
+      {:ok, view, _html} =
+        live_isolated(conn, HexpmWeb.SearchSuggestionsLive, session: %{"variant" => "home"})
+
+      view |> element("form") |> render_submit(%{"search" => String.duplicate("a", 1_500)})
+
+      assert_redirect(
+        view,
+        "/packages?search=#{String.duplicate("a", 1_000)}&sort=recent_downloads"
+      )
+    end
+
     test "ArrowDown then submit navigates to the selected package", %{conn: conn} do
       insert(:package, name: "ecto")
 
