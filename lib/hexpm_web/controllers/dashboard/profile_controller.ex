@@ -1,6 +1,8 @@
 defmodule HexpmWeb.Dashboard.ProfileController do
   use HexpmWeb, :controller
 
+  alias HexpmWeb.SSOEnforcement
+
   plug :requires_login
   plug :requires_verified_primary_email
 
@@ -25,13 +27,58 @@ defmodule HexpmWeb.Dashboard.ProfileController do
     end
   end
 
+  def update_membership_visibility(conn, %{
+        "organization" => name,
+        "organization_user" => %{"public" => _} = params
+      }) do
+    user = conn.assigns.current_user
+
+    with %Organization{} = organization <- Organizations.get(name),
+         :ok <- listing_allowed(conn, organization, user, params),
+         {:ok, organization_user} <-
+           Organizations.change_visibility(organization, user, params, audit: audit_data(conn)) do
+      message =
+        if organization_user.public,
+          do: "Your membership in #{name} is public.",
+          else: "Your membership in #{name} is hidden."
+
+      conn
+      |> put_flash(:info, message)
+      |> redirect(to: ~p"/dashboard/profile")
+    else
+      {:refused, refusal, organization} ->
+        SSOEnforcement.refuse(conn, refusal, organization)
+
+      {:error, %Ecto.Changeset{}} ->
+        conn
+        |> put_status(400)
+        |> put_flash(:error, "Could not change the visibility of your membership in #{name}.")
+        |> render_index(User.update_profile(user, %{}))
+
+      _not_member ->
+        not_found(conn)
+    end
+  end
+
+  # Listing yourself is a write the organization's SSO and 2FA requirements
+  # govern, like its other pages. Unlisting stays open, as leaving does.
+  defp listing_allowed(conn, organization, user, %{"public" => "true"}) do
+    case SSOEnforcement.check(conn, organization, user) do
+      :ok -> :ok
+      {:error, refusal} -> {:refused, refusal, organization}
+    end
+  end
+
+  defp listing_allowed(_conn, _organization, _user, _params), do: :ok
+
   defp render_index(conn, changeset) do
     render(
       conn,
       "index.html",
       title: "Dashboard - Public profile",
       container: "flex-1 flex flex-col",
-      changeset: changeset
+      changeset: changeset,
+      memberships: Organizations.memberships(conn.assigns.current_user)
     )
   end
 

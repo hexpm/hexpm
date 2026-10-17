@@ -65,6 +65,7 @@ defmodule HexpmWeb.UserController do
       title: user.username,
       container: "flex-1 flex flex-col",
       user: user,
+      organizations: Organizations.public_by_user(user),
       packages: paginated_packages,
       downloads: downloads,
       total_downloads: total_downloads,
@@ -99,6 +100,7 @@ defmodule HexpmWeb.UserController do
         title: "#{user.username} — Stats",
         container: "flex-1 flex flex-col",
         gravatar_email: User.email(user, :gravatar),
+        organizations: Organizations.public_by_user(user),
         package_graphs: package_graphs,
         public_email: User.email(user, :public),
         sort_by: sort_by,
@@ -108,6 +110,31 @@ defmodule HexpmWeb.UserController do
       )
     else
       _ -> not_found(conn)
+    end
+  end
+
+  def members(conn, %{"username" => username}) do
+    case Users.get_by_username(username, [:emails, :organization, owned_packages: [:repository]]) do
+      %User{organization: %Organization{} = organization} = user ->
+        packages =
+          Packages.accessible_user_owned_packages(
+            user,
+            SSOEnforcement.reachable_organizations(conn)
+          )
+
+        render(conn, "members.html",
+          title: "#{user.username} — Members",
+          container: "flex-1 flex flex-col",
+          gravatar_email: User.email(user, :gravatar),
+          members: Organizations.public_members(organization),
+          public_email: User.email(user, :public),
+          total_downloads: sum_all_downloads(Downloads.packages_all_views(packages)),
+          total_packages: length(packages),
+          user: user
+        )
+
+      _user ->
+        not_found(conn)
     end
   end
 

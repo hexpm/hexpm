@@ -13,6 +13,23 @@ defmodule Hexpm.Accounts.Organizations do
     |> Repo.preload(preload)
   end
 
+  @doc """
+  The organizations the user chose to list publicly, ordered by name. A
+  deactivated account lists none, as organizations' profiles leave it out.
+  """
+  def public_by_user(user) do
+    from(organization in Organization,
+      join: organization_user in assoc(organization, :organization_users),
+      join: user in assoc(organization_user, :user),
+      where: organization_user.user_id == ^user.id,
+      where: organization_user.public,
+      where: is_nil(user.deactivated_at),
+      order_by: organization.name,
+      preload: [user: :emails]
+    )
+    |> Repo.all()
+  end
+
   def all_members(organization, preload \\ []) do
     from(organization_user in assoc(organization, :organization_users),
       join: user in assoc(organization_user, :user),
@@ -20,6 +37,43 @@ defmodule Hexpm.Accounts.Organizations do
     )
     |> Repo.all()
     |> Repo.preload(preload)
+  end
+
+  @doc "The account's memberships with their organizations, ordered by organization name."
+  def memberships(user) do
+    from(organization_user in OrganizationUser,
+      join: organization in assoc(organization_user, :organization),
+      where: organization_user.user_id == ^user.id,
+      order_by: organization.name,
+      preload: [organization: organization]
+    )
+    |> Repo.all()
+  end
+
+  @doc """
+  The members who chose to be listed on the organization's public profile,
+  leaving out accounts whose own profile isn't public.
+  """
+  def public_members(organization) do
+    from(user in User,
+      join: organization_user in assoc(user, :organization_users),
+      where: organization_user.organization_id == ^organization.id,
+      where: organization_user.public,
+      where: is_nil(user.deactivated_at),
+      order_by: user.username,
+      preload: :emails
+    )
+    |> Repo.all()
+    |> Enum.filter(&User.public_profile?/1)
+  end
+
+  @doc """
+  Whether the organization's profile lists this membership, with the same
+  rules as `public_members/1`. The membership's user must be loaded with its
+  emails.
+  """
+  def listed_on_profile?(%OrganizationUser{public: public, user: user}) do
+    public and is_nil(user.deactivated_at) and User.public_profile?(user)
   end
 
   def all_admin_notifiable_emails(opts \\ []) do
@@ -398,6 +452,50 @@ defmodule Hexpm.Accounts.Organizations do
 
       {:error, :organization_user, changeset, _} ->
         {:error, changeset}
+    end
+  end
+
+  @doc """
+  Lists or unlists `user`'s own membership on the user's and organization's
+  public profiles.
+  """
+  def change_visibility(organization, user, params, audit: audit_data) do
+    case Repo.get_by(OrganizationUser, organization_id: organization.id, user_id: user.id) do
+      nil ->
+        {:error, :not_member}
+
+      organization_user ->
+        organization_user
+        |> OrganizationUser.visibility_changeset(params)
+        |> update_visibility(organization, user, audit_data)
+    end
+  end
+
+  # Saving the setting it already has changes nothing and records nothing. A
+  # membership removed since it was read surfaces as a stale entry, which is
+  # the same answer as never having been a member.
+  defp update_visibility(%Ecto.Changeset{valid?: true, changes: changes} = changeset, _, _, _)
+       when changes == %{} do
+    {:ok, changeset.data}
+  end
+
+  defp update_visibility(changeset, organization, user, audit_data) do
+    Multi.new()
+    |> Multi.update(:organization_user, changeset, stale_error_field: :removed)
+    |> audit(
+      audit_data,
+      "organization.member.visibility",
+      &{organization, user, &1.organization_user.public}
+    )
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{organization_user: organization_user}} ->
+        {:ok, organization_user}
+
+      {:error, :organization_user, changeset, _changes} ->
+        if Keyword.has_key?(changeset.errors, :removed),
+          do: {:error, :not_member},
+          else: {:error, changeset}
     end
   end
 

@@ -134,6 +134,18 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
         </div>
 
         <p
+          id="profile-listing-note"
+          class="px-6 py-3 border-b border-grey-200 dark:border-grey-700 bg-grey-50 dark:bg-grey-900 text-sm text-grey-600 dark:text-grey-300"
+        >
+          The organization's
+          <a href={~p"/orgs/#{@organization}/members"} class="underline hover:text-primary-600">public profile</a>
+          lists only the members who choose to in their own <a
+            href={~p"/dashboard/profile"}
+            class="underline hover:text-primary-600"
+          >profile settings</a>.
+        </p>
+
+        <p
           :if={
             admin?(@current_user, @organization) and @sso_mode == :pilot and
               not is_nil(@sso_required_at)
@@ -179,6 +191,12 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
                       variant="yellow"
                     >
                       SSO exempt
+                    </.badge>
+                    <.badge
+                      :if={Hexpm.Accounts.Organizations.listed_on_profile?(org_user)}
+                      variant="green"
+                    >
+                      Public
                     </.badge>
                   </p>
                   <p class="text-xs text-grey-500 dark:text-grey-300">{org_user.user.full_name}</p>

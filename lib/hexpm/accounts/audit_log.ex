@@ -330,6 +330,9 @@ defmodule Hexpm.Accounts.AuditLog do
   defp extract_params("organization.member.role", {organization, user, role}),
     do: %{organization: serialize(organization), user: serialize(user), role: role}
 
+  defp extract_params("organization.member.visibility", {organization, user, public?}),
+    do: %{organization: serialize(organization), user: serialize(user), public: public?}
+
   defp extract_params(action, {organization, %OrganizationDomain{} = domain})
        when action in [
               "organization.domain.add",

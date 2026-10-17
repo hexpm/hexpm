@@ -6,6 +6,11 @@ defmodule HexpmWeb.Components.UserProfile do
   import HexpmWeb.ViewHelpers
   import HexpmWeb.Components.Icons
 
+  use Phoenix.VerifiedRoutes,
+    endpoint: HexpmWeb.Endpoint,
+    router: HexpmWeb.Router,
+    statics: HexpmWeb.static_paths()
+
   @doc """
   Renders the user profile sidebar with avatar, name, bio, and stats.
   """
@@ -14,6 +19,7 @@ defmodule HexpmWeb.Components.UserProfile do
   attr :public_email, :string, default: nil
   attr :total_packages, :integer, required: true
   attr :total_downloads, :integer, required: true
+  attr :organizations, :list, default: []
 
   def user_sidebar(assigns) do
     ~H"""
@@ -55,6 +61,36 @@ defmodule HexpmWeb.Components.UserProfile do
             {human_number_space(@total_downloads)}+
           </p>
         </div>
+      </div>
+
+      <div
+        :if={@organizations != []}
+        id="user-organizations"
+        class="border-t border-grey-200 dark:border-grey-800 pt-6 mb-6"
+      >
+        <h3 class="text-grey-900 dark:text-white text-sm font-semibold mb-3">
+          Organizations
+        </h3>
+        <ul class="space-y-2">
+          <li :for={organization <- @organizations}>
+            <a
+              href={~p"/orgs/#{organization.name}"}
+              class="flex items-center gap-3 text-sm font-medium text-grey-700 dark:text-grey-200 hover:text-primary-600 dark:hover:text-primary-300 transition-colors"
+            >
+              <img
+                src={
+                  gravatar_url(
+                    organization.user && Hexpm.Accounts.User.email(organization.user, :gravatar),
+                    :small
+                  )
+                }
+                alt={"#{organization.name} avatar"}
+                class="w-8 h-8 rounded-full flex-shrink-0"
+              />
+              <span class="break-all">{organization.name}</span>
+            </a>
+          </li>
+        </ul>
       </div>
 
       <%!-- Contact Info --%>
@@ -117,6 +153,59 @@ defmodule HexpmWeb.Components.UserProfile do
         </div>
       <% end %>
     </div>
+    """
+  end
+
+  @doc """
+  Renders the tabs above a profile's content. Organizations get a Members tab.
+  """
+  attr :user, :map, required: true
+  attr :active, :atom, required: true, values: [:packages, :members, :stats]
+
+  def profile_tabs(assigns) do
+    ~H"""
+    <div id="profile-tabs" class="flex gap-1 mb-6 border-b border-grey-200 dark:border-grey-800">
+      <.profile_tab href={~p"/users/#{@user.username}"} active={@active == :packages}>
+        Packages
+      </.profile_tab>
+      <.profile_tab
+        :if={@user.organization_id}
+        href={~p"/orgs/#{@user.username}/members"}
+        active={@active == :members}
+      >
+        Members
+      </.profile_tab>
+      <.profile_tab href={~p"/users/#{@user.username}/stats"} active={@active == :stats}>
+        Stats
+      </.profile_tab>
+    </div>
+    """
+  end
+
+  attr :href, :string, required: true
+  attr :active, :boolean, required: true
+  slot :inner_block, required: true
+
+  defp profile_tab(%{active: true} = assigns) do
+    ~H"""
+    <a
+      href={@href}
+      class="px-4 py-2.5 text-sm font-medium text-grey-900 dark:text-white border-b-2 border-primary-600 dark:border-primary-300 -mb-px"
+      aria-current="page"
+    >
+      {render_slot(@inner_block)}
+    </a>
+    """
+  end
+
+  defp profile_tab(assigns) do
+    ~H"""
+    <a
+      href={@href}
+      class="px-4 py-2.5 text-sm font-medium text-grey-500 dark:text-grey-300 hover:text-grey-900 dark:hover:text-grey-100 transition-colors"
+    >
+      {render_slot(@inner_block)}
+    </a>
     """
   end
 
