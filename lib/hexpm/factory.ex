@@ -66,7 +66,7 @@ defmodule Hexpm.Factory do
   end
 
   def organization_factory() do
-    name = Fake.sequence(:package)
+    name = organization_name()
 
     %Hexpm.Accounts.Organization{
       name: name,
@@ -84,7 +84,7 @@ defmodule Hexpm.Factory do
   end
 
   def repository_factory() do
-    name = Fake.sequence(:package)
+    name = organization_name()
 
     %Hexpm.Repository.Repository{
       name: name,
@@ -369,5 +369,13 @@ defmodule Hexpm.Factory do
         }
       ]
     }
+  end
+
+  # Organization names and usernames need 3 characters, and some package names have 2.
+  defp organization_name() do
+    case Fake.sequence(:package) do
+      name when byte_size(name) >= 3 -> name
+      _name -> organization_name()
+    end
   end
 end

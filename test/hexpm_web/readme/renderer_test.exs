@@ -11,15 +11,6 @@ defmodule HexpmWeb.Readme.RendererTest do
     Renderer.render("hexpm", "README.md", content, "my_package", "1.0.0", budget)
   end
 
-  # Trace messages can't go to the traced process, so a separate process counts
-  # them and reports the count when told to stop.
-  defp count_calls(test_pid, count) do
-    receive do
-      {:trace, ^test_pid, :call, _mfa} -> count_calls(test_pid, count + 1)
-      :stop -> send(test_pid, {:calls, count})
-    end
-  end
-
   test "author fragment links resolve to the anchored heading id" do
     content = """
     [Go to install](#installation)
@@ -38,24 +29,25 @@ defmodule HexpmWeb.Readme.RendererTest do
     tables = String.duplicate("| a |\n|---|\n| 1 |\n{: .wide}\n\n", 100)
 
     test_pid = self()
-    counter = spawn_link(fn -> count_calls(test_pid, 0) end)
+    to_html = {MDExNative.Comrak, :document_to_html, 2}
     Code.ensure_loaded!(MDExNative.Comrak)
-    session = :trace.session_create(:readme_renders, counter, [])
+    session = :trace.session_create(:readme_renders, self(), [])
 
-    document =
+    # call_time counts the calls of each process traced in the session, and
+    # :trace.info/3 reads the counts without any trace messages to wait for.
+    {html, calls} =
       try do
-        :trace.process(session, self(), true, [:call])
-        1 = :trace.function(session, {MDExNative.Comrak, :document_to_html, 2}, true, [])
+        1 = :trace.process(session, self(), true, [:call])
+        1 = :trace.function(session, to_html, true, [:call_time])
         html = render(headings <> "\n" <> tables)
-        ref = :trace.delivered(session, self())
-        assert_receive {:trace_delivered, ^test_pid, ^ref}
-        LazyHTML.from_fragment(html)
+        {:call_time, calls} = :trace.info(session, to_html, :call_time)
+        {html, calls}
       after
         :trace.session_destroy(session)
       end
 
-    send(counter, :stop)
-    assert_receive {:calls, 1}
+    assert [{^test_pid, 1, _seconds, _microseconds}] = calls
+    document = LazyHTML.from_fragment(html)
     assert Enum.count(LazyHTML.query(document, "h2[id]")) == 1_000
     assert Enum.count(LazyHTML.query(document, "table")) == 100
   end
