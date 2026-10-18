@@ -43,6 +43,18 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert device_code.scopes == ["api:read", "api:write"]
     end
 
+    test "ignores a refused token in the Authorization header", %{client: client} do
+      conn =
+        build_conn()
+        |> put_req_header("authorization", "Bearer invalid.jwt.token")
+        |> post(~p"/api/oauth/device_authorization", %{
+          "client_id" => client.client_id,
+          "scope" => "api"
+        })
+
+      assert json_response(conn, 200)["device_code"]
+    end
+
     test "handles multiple scopes", %{client: client} do
       conn =
         post(build_conn(), ~p"/api/oauth/device_authorization", %{
@@ -356,6 +368,23 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       # New tokens should be different
       refute response["access_token"] == refresh_token
       refute response["refresh_token"] == refresh_token
+    end
+
+    # A client renewing a refused access token may still send it
+    test "refreshes despite a refused token in the Authorization header", %{
+      client: client,
+      refresh_token: refresh_token
+    } do
+      conn =
+        build_conn()
+        |> put_req_header("authorization", "Bearer invalid.jwt.token")
+        |> post(~p"/api/oauth/token", %{
+          "grant_type" => "refresh_token",
+          "refresh_token" => refresh_token,
+          "client_id" => client.client_id
+        })
+
+      assert json_response(conn, 200)["access_token"]
     end
 
     test "re-expands repositories scope against current memberships", %{client: client} do

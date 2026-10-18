@@ -152,12 +152,7 @@ defmodule HexpmWeb.Plugs do
         |> assign(:workload_identity, workload_identity)
 
       {:error, :missing} ->
-        conn
-        |> assign(:auth_credential, nil)
-        |> assign(:current_user, nil)
-        |> assign(:current_organization, nil)
-        |> assign(:email, nil)
-        |> assign(:workload_identity, nil)
+        unauthenticated(conn, [])
 
       {:error, reason} = error when reason in [:blocked, :authentication_rate_limited] ->
         HexpmWeb.AuthHelpers.error(conn, error)
@@ -171,6 +166,17 @@ defmodule HexpmWeb.Plugs do
             HexpmWeb.AuthHelpers.error(conn, error)
         end
     end
+  end
+
+  # What a request without credentials is authenticated as, for the
+  # endpoints that don't authenticate the request.
+  def unauthenticated(conn, _opts) do
+    conn
+    |> assign(:auth_credential, nil)
+    |> assign(:current_user, nil)
+    |> assign(:current_organization, nil)
+    |> assign(:email, nil)
+    |> assign(:workload_identity, nil)
   end
 
   defp check_and_authenticate(conn) do
