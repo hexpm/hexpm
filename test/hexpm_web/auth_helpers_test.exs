@@ -103,6 +103,12 @@ defmodule HexpmWeb.AuthHelpersTest do
     assert_receive {^ref, %{count: 1}, %{scheme: :key, result: :key}}
 
     user |> auth_conn("Bearer no-such-token") |> AuthHelpers.authenticate_at(now)
+    assert_receive {^ref, %{count: 1}, %{scheme: :bearer, result: :invalid_token}}
+
+    user
+    |> auth_conn("Bearer " <> Key.token_prefix() <> "no-such-key")
+    |> AuthHelpers.authenticate_at(now)
+
     assert_receive {^ref, %{count: 1}, %{scheme: :bearer, result: :key}}
 
     assert {:error, :missing} = AuthHelpers.authenticate_at(build_conn(), now)
@@ -145,8 +151,64 @@ defmodule HexpmWeb.AuthHelpersTest do
   test "records an invalid Bearer token", %{user: user} do
     conn = auth_conn(user, "Bearer not-a-jwt")
 
-    assert {:error, :key} = AuthHelpers.authenticate_at(conn, ~U[2026-09-30 23:59:59Z])
+    assert {:error, :invalid_token} = AuthHelpers.authenticate_at(conn, ~U[2026-09-30 23:59:59Z])
     assert_received {Hexpm.LogLines, :warning, %{method: "oauth_token", reason: "invalid"}}
+  end
+
+  describe "a refused Bearer access token" do
+    test "gets the invalid_token challenge when it was revoked", %{user: user} do
+      client = insert(:oauth_client)
+      oauth_session = insert(:oauth_session, user: user, client_id: client.client_id)
+
+      {:ok, token} =
+        Tokens.create_and_insert_for_user(
+          user,
+          client.client_id,
+          ["api"],
+          "authorization_code",
+          "invalid-token-challenge",
+          user_session_id: oauth_session.id
+        )
+
+      {:ok, _token} = Tokens.revoke(token)
+
+      assert_invalid_token_challenge("Bearer " <> token.access_token)
+    end
+
+    test "gets the invalid_token challenge when it expired", %{user: user} do
+      {:ok, access_token, _jti} =
+        Hexpm.OAuth.JWT.generate_access_token(user.username, "user", ["api"], expires_in: -60)
+
+      assert_invalid_token_challenge("Bearer " <> access_token)
+    end
+
+    test "gets the invalid_token challenge when it doesn't verify" do
+      assert_invalid_token_challenge("Bearer invalid.jwt.token")
+    end
+
+    test "is told apart from an API key sent as a Bearer token, which a client can't renew" do
+      conn =
+        build_conn()
+        |> put_req_header("authorization", "Bearer " <> Key.token_prefix() <> "no-such-key")
+        |> get("/api/users/me")
+
+      assert json_response(conn, 401)["message"] == "invalid API key"
+      assert get_resp_header(conn, "www-authenticate") == ["Basic realm=hex"]
+    end
+  end
+
+  defp assert_invalid_token_challenge(authorization) do
+    conn =
+      build_conn()
+      |> put_req_header("authorization", authorization)
+      |> get("/api/users/me")
+
+    assert json_response(conn, 401)["message"] == "invalid or expired access token"
+
+    # hex_core matches this exact header value to renew the credential
+    assert get_resp_header(conn, "www-authenticate") == [
+             ~s(Bearer realm="hex", error="invalid_token")
+           ]
   end
 
   defp auth_conn(user, authorization) do

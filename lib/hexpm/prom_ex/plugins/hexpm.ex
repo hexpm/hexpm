@@ -29,7 +29,7 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
 
   @authenticate_results [
     basic: [:ok, :basic_auth_disabled, :password, :invalid],
-    bearer: [:ok, :key],
+    bearer: [:ok, :invalid_token, :key],
     key: [:ok, :key, :revoked_key]
   ]
   @registry_build_types [:package, :package_delete, :repository, :full]

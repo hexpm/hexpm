@@ -238,6 +238,15 @@ defmodule HexpmWeb.AuthHelpers do
       {:error, :key} ->
         unauthorized(conn, "invalid API key")
 
+      # RFC 6750's challenge for an access token that is expired, revoked or
+      # doesn't verify, which tells the client to get a new one. An API key
+      # sent as a Bearer token gets {:error, :key} instead, since a client
+      # can't renew it.
+      {:error, :invalid_token} ->
+        conn
+        |> put_resp_header("www-authenticate", ~s(Bearer realm="hex", error="invalid_token"))
+        |> render_error(401, message: "invalid or expired access token")
+
       {:error, :blocked} ->
         forbidden(conn, "Blocked")
 
@@ -356,7 +365,7 @@ defmodule HexpmWeb.AuthHelpers do
 
       {:error, reason} ->
         SecurityLog.auth_failure(conn, :oauth_token, reason)
-        {:error, :key}
+        {:error, :invalid_token}
     end
   end
 
