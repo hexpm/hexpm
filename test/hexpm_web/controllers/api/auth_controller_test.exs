@@ -451,11 +451,11 @@ defmodule HexpmWeb.API.AuthControllerTest do
     test "refuses a resource-less request rather than falling over", %{user: user} do
       token = oauth_token(user, ["api"])
 
-      for {domain, status} <- [{"package", 403}, {"repository", 401}, {"docs", 401}] do
+      for domain <- ["package", "repository", "docs"] do
         build_conn()
         |> put_req_header("authorization", "Bearer #{token.access_token}")
         |> get("/api/auth", domain: domain)
-        |> response(status)
+        |> response(403)
       end
     end
 

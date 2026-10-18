@@ -186,15 +186,73 @@ defmodule HexpmWeb.AuthHelpersTest do
       assert_invalid_token_challenge("Bearer invalid.jwt.token")
     end
 
-    test "is told apart from an API key sent as a Bearer token, which a client can't renew" do
+    test "gets the invalid_token challenge when it's an API key" do
       conn =
         build_conn()
         |> put_req_header("authorization", "Bearer " <> Key.token_prefix() <> "no-such-key")
         |> get("/api/users/me")
 
       assert json_response(conn, 401)["message"] == "invalid API key"
-      assert get_resp_header(conn, "www-authenticate") == ["Basic realm=hex"]
+
+      assert get_resp_header(conn, "www-authenticate") == [
+               ~s(Bearer realm="hex", error="invalid_token")
+             ]
     end
+  end
+
+  test "an access token without the scope gets a 403 with the insufficient_scope challenge", %{
+    user: user
+  } do
+    client = insert(:oauth_client)
+    oauth_session = insert(:oauth_session, user: user, client_id: client.client_id)
+
+    {:ok, token} =
+      Tokens.create_and_insert_for_user(
+        user,
+        client.client_id,
+        ["repositories"],
+        "authorization_code",
+        "insufficient-scope",
+        user_session_id: oauth_session.id
+      )
+
+    conn =
+      build_conn()
+      |> put_req_header("authorization", "Bearer " <> token.access_token)
+      |> get("/api/users/me")
+
+    assert json_response(conn, 403)["message"] == "insufficient scope for this action"
+
+    assert get_resp_header(conn, "www-authenticate") == [
+             ~s(Bearer realm="hex", error="insufficient_scope")
+           ]
+  end
+
+  test "an API key sent on its own without the permission keeps the 401", %{user: user} do
+    conn =
+      build_conn()
+      |> put_req_header("authorization", key_for(user, [%{domain: "repositories"}]))
+      |> get("/api/users/me")
+
+    assert json_response(conn, 401)["message"] == "key not authorized for this action"
+    assert get_resp_header(conn, "www-authenticate") == [~s(Bearer realm="hex")]
+  end
+
+  test "a request without credentials gets the Bearer challenge with no error code" do
+    conn = get(build_conn(), "/api/users/me")
+
+    assert json_response(conn, 401)["message"] == "missing authentication information"
+    assert get_resp_header(conn, "www-authenticate") == [~s(Bearer realm="hex")]
+  end
+
+  test "a refused Basic password gets the Basic challenge with a quoted realm", %{user: user} do
+    conn =
+      user
+      |> auth_conn("Basic " <> Base.encode64("#{user.username}:wrong"))
+      |> AuthHelpers.error({:error, :password})
+
+    assert json_response(conn, 401)["message"] == "invalid username and password combination"
+    assert get_resp_header(conn, "www-authenticate") == [~s(Basic realm="hex")]
   end
 
   defp assert_invalid_token_challenge(authorization) do
