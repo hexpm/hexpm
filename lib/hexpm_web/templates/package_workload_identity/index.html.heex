@@ -53,6 +53,9 @@
           <h2 class="text-base font-semibold text-grey-900 dark:text-white">
             Workload identities
           </h2>
+          <p class="mt-1 text-sm text-grey-500 dark:text-grey-300">
+            GitHub Actions workflows that publish {@package.name} without an API key. Organizations that own {@package.name} can also publish it with their workload identities. Workload identities only publish packages that exist, so a new package's first release is published with a user account or an API key.
+          </p>
         </div>
         <ul class="divide-y divide-grey-100 dark:divide-grey-700">
           <%= for workload_identity <- @workload_identities do %>
@@ -100,6 +103,61 @@
             class="text-primary-600 dark:text-primary-300 hover:underline"
           >security settings</a>.
         </p>
+      </div>
+
+      <%!-- Organization workload identities --%>
+      <div
+        :if={@organization_identities != []}
+        id="organization-workload-identities"
+        class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg overflow-hidden"
+      >
+        <div class="px-6 py-4 border-b border-grey-200 dark:border-grey-700">
+          <h2 class="text-base font-semibold text-grey-900 dark:text-white">
+            Organization workload identities
+          </h2>
+          <p class="mt-1 text-sm text-grey-500 dark:text-grey-300">
+            These workload identities of organizations that own {@package.name} publish it for as long as their organization owns it. The organization's admins manage them on its Workload identities page.
+          </p>
+        </div>
+        <ul class="divide-y divide-grey-100 dark:divide-grey-700">
+          <li :for={workload_identity <- @organization_identities} class="px-6 py-4">
+            <div class="flex flex-col gap-1">
+              <p class="text-sm font-medium text-grey-900 dark:text-white">
+                {workload_identity.repository} ({workload_identity.workflow})
+              </p>
+              <p class="text-xs text-grey-500 dark:text-grey-300">
+                Environment: {HexpmWeb.PackageWorkloadIdentityView.environment_label(
+                  workload_identity.environment
+                )}
+              </p>
+              <p class="text-xs text-grey-500 dark:text-grey-300">
+                Organization:
+                <a
+                  href={~p"/orgs/#{workload_identity.organization.name}"}
+                  class="text-primary-600 dark:text-primary-300 hover:underline"
+                >
+                  {workload_identity.organization.name}
+                </a>
+                <span aria-hidden="true">&middot;</span>
+                <a
+                  href={
+                    ~p"/dashboard/orgs/#{workload_identity.organization.name}/workload-identities"
+                  }
+                  class="text-primary-600 dark:text-primary-300 hover:underline"
+                >
+                  Workload identities page
+                </a>
+              </p>
+              <p class="text-xs text-grey-500 dark:text-grey-300">
+                Covers: {HexpmWeb.PackageWorkloadIdentityView.public_coverage_label(
+                  workload_identity.public_packages,
+                  workload_identity.organization,
+                  @package
+                )}
+              </p>
+            </div>
+          </li>
+        </ul>
       </div>
 
       <%!-- Add workload identity --%>

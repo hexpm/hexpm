@@ -1066,11 +1066,8 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
   def create_workload_identity(conn, %{"dashboard_org" => organization} = params) do
     access_organization(conn, organization, "admin", fn organization ->
-      params = params["workload_identity"] || %{}
-
-      with :ok <- workload_identity_tfa(conn, organization),
-           :ok <- workload_identity_billing(conn, organization, params) do
-        do_create_workload_identity(conn, organization, params)
+      with :ok <- workload_identity_tfa(conn, organization) do
+        do_create_workload_identity(conn, organization, params["workload_identity"] || %{})
       end
     end)
   end
@@ -1153,22 +1150,6 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     end
   end
 
-  # Fetching from the organization's repository and publishing to it need an
-  # active subscription. A write identity that only covers public packages
-  # doesn't, and the changeset refuses the rest whatever reaches it.
-  defp workload_identity_billing(conn, organization, params) do
-    if Organization.billing_active?(organization) or public_only?(params) do
-      :ok
-    else
-      conn
-      |> put_flash(:error, "This organization has no active billing subscription.")
-      |> redirect(to: ~p"/dashboard/orgs/#{organization}/workload-identities")
-    end
-  end
-
-  defp public_only?(params),
-    do: params["role"] == "write" and params["covers_private"] in [false, "false"]
-
   defp workload_identity_lookup_allowed(user) do
     case HexpmWeb.Plugs.Attack.workload_identity_lookup_throttle(user.id) do
       {:allow, _data} -> :ok
@@ -1203,9 +1184,15 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     end)
   end
 
-  # A new workload identity defaults to fetching only.
+  # A new workload identity defaults to fetching only. Without an active
+  # subscription it can only publish public packages.
   defp workload_identity_changeset(organization) do
-    WorkloadIdentity.changeset(%WorkloadIdentity{}, %{"role" => "read"}, organization)
+    params =
+      if Organization.billing_active?(organization),
+        do: %{"role" => "read"},
+        else: %{"role" => "write", "covers_private" => "false", "covers_public" => "true"}
+
+    WorkloadIdentity.changeset(%WorkloadIdentity{}, params, organization)
   end
 
   defp render_new(conn, opts \\ []) do
