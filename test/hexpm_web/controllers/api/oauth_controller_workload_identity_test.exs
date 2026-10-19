@@ -89,6 +89,20 @@ defmodule HexpmWeb.API.OAuthControllerWorkloadIdentityTest do
     assert body["error"] == "invalid_request"
   end
 
+  test "rejects an assertion over 16 KB before verifying it", %{package: package} do
+    scope = "package:hexpm/#{package.name}"
+    padded = &Map.put(WorkloadIdentityHelpers.github_claims(), "padding", &1)
+
+    small = WorkloadIdentityHelpers.sign_oidc_claims(padded.("a"))
+    assert json_response(post(build_conn(), "/api/oauth/token", mint_params(small, scope)), 200)
+
+    large = WorkloadIdentityHelpers.sign_oidc_claims(padded.(String.duplicate("a", 16_384)))
+
+    body = json_response(post(build_conn(), "/api/oauth/token", mint_params(large, scope)), 400)
+    assert body["error"] == "invalid_request"
+    assert body["error_description"] == "Assertion is larger than 16384 bytes"
+  end
+
   test "rejects a scope that does not name exactly one package", _context do
     oidc = WorkloadIdentityHelpers.sign_oidc_claims(WorkloadIdentityHelpers.github_claims())
 

@@ -388,10 +388,21 @@ defmodule HexpmWeb.API.OAuthController do
     {:error, :invalid_scope, "Expected a single package or repository scope"}
   end
 
+  # A GitHub Actions OIDC token is about 1 KB. Refusing anything over this
+  # before decoding it keeps a large body from costing a decode and a
+  # signature check.
+  @max_assertion_bytes 16_384
+
   defp fetch_assertion(params) do
     case safe_param(params, "assertion") do
-      nil -> {:error, :invalid_request, "Missing assertion"}
-      assertion -> {:ok, assertion}
+      nil ->
+        {:error, :invalid_request, "Missing assertion"}
+
+      assertion when byte_size(assertion) > @max_assertion_bytes ->
+        {:error, :invalid_request, "Assertion is larger than #{@max_assertion_bytes} bytes"}
+
+      assertion ->
+        {:ok, assertion}
     end
   end
 
