@@ -480,7 +480,7 @@ defmodule Hexpm.WorkloadIdentities.WorkloadIdentityTest do
       assert Ecto.Changeset.get_field(changeset, :public_packages) == nil
     end
 
-    test "rejects public package names a package can't be created with", %{
+    test "takes public package names a new package can't have, which ownership checks later", %{
       organization: organization
     } do
       changeset =
@@ -490,7 +490,26 @@ defmodule Hexpm.WorkloadIdentities.WorkloadIdentityTest do
             "role" => "write",
             "workflow" => "release.yml",
             "covers_public" => "true",
-            "public_packages" => "widget, Gadget"
+            "public_packages" => "widget, Gadget, stats"
+          }),
+          organization
+        )
+
+      refute Map.has_key?(errors_on(changeset), :public_packages)
+
+      assert Ecto.Changeset.get_field(changeset, :public_packages) ==
+               ["Gadget", "stats", "widget"]
+    end
+
+    test "rejects public package names no package can have", %{organization: organization} do
+      changeset =
+        WorkloadIdentity.changeset(
+          %WorkloadIdentity{},
+          organization_params(%{
+            "role" => "write",
+            "workflow" => "release.yml",
+            "covers_public" => "true",
+            "public_packages" => String.duplicate("a", 256)
           }),
           organization
         )

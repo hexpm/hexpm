@@ -180,23 +180,26 @@ defmodule Hexpm.WorkloadIdentities.WorkloadIdentity do
   # no package for code that only reads the list.
   defp validate_private_packages(changeset) do
     if get_field(changeset, :covers_private) == true,
-      do: validate_package_names(changeset, :packages),
+      do: validate_package_names(changeset, :packages, &valid_package_name?/1),
       else: put_change(changeset, :packages, [])
   end
 
+  # Listed public packages must already exist and be owned by the organization,
+  # which is checked against the database, so their names only need to be
+  # names a package can have had, including ones created before today's rules.
   defp validate_public_packages(changeset) do
     if get_field(changeset, :covers_public) == true,
-      do: validate_package_names(changeset, :public_packages),
+      do: validate_package_names(changeset, :public_packages, &existing_package_name?/1),
       else: put_change(changeset, :public_packages, nil)
   end
 
-  defp validate_package_names(changeset, field) do
+  defp validate_package_names(changeset, field, valid?) do
     case get_field(changeset, field) do
       nil ->
         changeset
 
       names ->
-        if Enum.all?(names, &valid_package_name?/1) do
+        if Enum.all?(names, valid?) do
           put_change(changeset, field, names |> Enum.uniq() |> Enum.sort())
         else
           add_error(changeset, field, "must be valid package names")
@@ -276,6 +279,10 @@ defmodule Hexpm.WorkloadIdentities.WorkloadIdentity do
   def valid_package_name?(name) do
     is_binary(name) and byte_size(name) in 2..255 and Regex.match?(@package_name_re, name) and
       name not in Package.reserved_names()
+  end
+
+  defp existing_package_name?(name) do
+    is_binary(name) and byte_size(name) in 1..255
   end
 
   @doc """

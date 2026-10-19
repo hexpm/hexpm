@@ -1958,6 +1958,29 @@ defmodule Hexpm.WorkloadIdentitiesTest do
       assert WorkloadIdentities.list(organization) == []
     end
 
+    test "lists owned public packages whose names a new package can't have", %{
+      admin: admin,
+      organization: organization
+    } do
+      expect_github_lookup()
+
+      for name <- ["Legacy_Package", "stats"] do
+        insert(:package,
+          name: name,
+          package_owners: [build(:package_owner, user: organization.user, level: "full")]
+        )
+      end
+
+      assert {:ok, identity} =
+               WorkloadIdentities.create(
+                 organization,
+                 public_params(%{"public_packages" => "stats Legacy_Package"}),
+                 audit: audit_data(admin)
+               )
+
+      assert identity.public_packages == ["Legacy_Package", "stats"]
+    end
+
     test "adds public packages without active billing, and refuses private packages and the read role",
          %{admin: admin, organization: organization} do
       organization =
