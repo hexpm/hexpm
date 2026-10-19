@@ -736,4 +736,46 @@ defmodule HexpmWeb.API.WorkloadIdentityPublishTest do
       refute Hexpm.Repo.get_by(Package, repository_id: repository.id, name: "private_package")
     end
   end
+
+  describe "a token for another package" do
+    test "gets the same answer for a private release whether it exists or not", %{
+      package: package
+    } do
+      repository = insert(:repository)
+      private_package = insert(:package, repository_id: repository.id)
+      insert(:release, package: private_package, version: "1.0.0", has_docs: true)
+      token = mint_token(package)
+      base = "/api/repos/#{repository.name}/packages"
+
+      paths = [
+        "#{base}/#{private_package.name}/releases/1.0.0",
+        "#{base}/#{private_package.name}/releases/2.0.0",
+        "#{base}/no_such_package/releases/1.0.0"
+      ]
+
+      requests = [
+        &get(&1, &2 <> "/docs"),
+        &post(&1, &2 <> "/docs", "docs"),
+        &delete(&1, &2 <> "/docs"),
+        &delete(&1, &2)
+      ]
+
+      for request <- requests do
+        assert [response, response, response] =
+                 for(path <- paths, do: send_request(token, request, path))
+
+        assert {403, _body} = response
+      end
+    end
+
+    defp send_request(token, request, path) do
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", "Bearer #{token.access_token}")
+        |> request.(path)
+
+      {conn.status, conn.resp_body}
+    end
+  end
 end
