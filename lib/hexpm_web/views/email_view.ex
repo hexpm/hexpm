@@ -234,21 +234,39 @@ defmodule HexpmWeb.EmailView do
       "#{username} added a workload identity to organization #{organization}."
     end
 
-    def warning(role, organization, packages) do
-      "Anyone who can run a matching workflow can now #{reach(role, organization, packages)}. " <>
+    def warning(role, organization, coverage) do
+      "Anyone who can run a matching workflow can now #{reach(role, organization, coverage)}. " <>
         "If you did not expect this change, remove the workload identity and review the organization's admins."
     end
 
-    defp reach("read", organization, _packages),
+    defp reach("read", organization, _coverage),
       do: "fetch every package in the #{organization} repository"
 
-    defp reach("write", organization, nil),
+    defp reach("write", organization, coverage) do
+      [private_reach(organization, coverage), public_reach(organization, coverage)]
+      |> Enum.reject(&is_nil/1)
+      |> Enum.join(", and ")
+    end
+
+    defp private_reach(_organization, %{covers_private: false}), do: nil
+
+    defp private_reach(organization, %{packages: nil}),
       do: "fetch, publish and create every package in the #{organization} repository"
 
-    defp reach("write", organization, _packages),
+    defp private_reach(organization, _coverage),
       do:
-        "fetch every package in the #{organization} repository, " <>
-          "and publish and create the packages listed above"
+        "fetch every package in the #{organization} repository " <>
+          "and publish and create the private packages listed above"
+
+    defp public_reach(_organization, %{covers_public: false}), do: nil
+
+    defp public_reach(organization, %{public_packages: nil}),
+      do:
+        "publish every public package #{organization} owns, " <>
+          "including packages it becomes an owner of later"
+
+    defp public_reach(organization, _coverage),
+      do: "publish the public packages listed above while #{organization} owns them"
   end
 
   defmodule OrganizationWorkloadIdentityRemove do
@@ -258,22 +276,58 @@ defmodule HexpmWeb.EmailView do
   end
 
   defmodule OrganizationWorkloadIdentityDetails do
-    def lines(role, owner, repository, workflow, environment, packages) do
+    def lines(role, owner, repository, workflow, environment, organization, coverage) do
       [
         "Role: #{role}",
         "GitHub repository: #{repository_label(owner, repository)}",
         "Workflow: #{if workflow in [nil, ""], do: "any", else: workflow}"
       ] ++
         WorkloadIdentityDetails.environment_line(environment) ++
-        packages_line(role, packages)
+        coverage_lines(role, organization, coverage)
     end
 
     defp repository_label(owner, ""), do: "any repository owned by #{owner}"
     defp repository_label(_owner, repository), do: repository
 
-    defp packages_line("write", nil), do: ["Packages: all"]
-    defp packages_line("write", packages), do: ["Packages: #{Enum.join(packages, ", ")}"]
-    defp packages_line(_role, _packages), do: []
+    defp coverage_lines("write", organization, coverage) do
+      private_line(coverage) ++ public_line(organization, coverage)
+    end
+
+    defp coverage_lines(_role, _organization, _coverage), do: []
+
+    defp private_line(%{covers_private: false}), do: []
+    defp private_line(%{packages: nil}), do: ["Private packages: all"]
+
+    defp private_line(%{packages: packages}),
+      do: ["Private packages: #{Enum.join(packages, ", ")}"]
+
+    defp public_line(_organization, %{covers_public: false}), do: []
+
+    defp public_line(organization, %{public_packages: nil}),
+      do: ["Public packages: all packages #{organization} owns"]
+
+    defp public_line(_organization, %{public_packages: packages}),
+      do: ["Public packages: #{Enum.join(packages, ", ")}"]
+  end
+
+  defmodule PublicWorkloadIdentityAdd do
+    def message(username, organization) do
+      "#{username} added a workload identity to organization #{organization}. " <>
+        "#{organization} is an owner of these packages, so the workload identity can publish them:"
+    end
+
+    def warning(organization) do
+      "Anyone who can run a matching workflow can now publish these packages. " <>
+        "If you did not expect this change, ask the admins of #{organization} about it, " <>
+        "or remove #{organization} as an owner of the packages."
+    end
+  end
+
+  defmodule PublicWorkloadIdentityRemove do
+    def message(username, organization) do
+      "#{username} removed a workload identity from organization #{organization}. " <>
+        "It could publish these packages, which #{organization} is an owner of:"
+    end
   end
 
   defmodule Verification do

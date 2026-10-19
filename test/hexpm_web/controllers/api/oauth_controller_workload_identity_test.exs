@@ -269,6 +269,40 @@ defmodule HexpmWeb.API.OAuthControllerWorkloadIdentityTest do
     assert json_response(conn, 403)["error"] == "access_denied"
   end
 
+  test "answers a name no public package has the same whether an organization's identity names it" do
+    exchange = fn name ->
+      oidc = WorkloadIdentityHelpers.sign_oidc_claims(WorkloadIdentityHelpers.github_claims())
+
+      conn =
+        build_conn()
+        |> post("/api/oauth/token", mint_params(oidc, "package:hexpm/#{name}"))
+
+      {conn.status, json_response(conn, conn.status)}
+    end
+
+    answer = exchange.("ghost_package")
+
+    for public_packages <- [nil, ["ghost_package"]] do
+      insert(:organization_workload_identity,
+        organization: insert(:organization),
+        role: "write",
+        repository_owner: "acme",
+        repository_owner_id: "12345",
+        repository_id: "67890",
+        repository: "acme/widget",
+        workflow: "release.yml",
+        covers_private: false,
+        packages: [],
+        covers_public: true,
+        public_packages: public_packages
+      )
+    end
+
+    assert {403, %{"error" => "access_denied"}} = answer
+    assert exchange.("ghost_package") == answer
+    assert exchange.("other_ghost_package") == answer
+  end
+
   test "rejects replayed tokens", %{package: package} do
     oidc = WorkloadIdentityHelpers.sign_oidc_claims(WorkloadIdentityHelpers.github_claims())
     params = mint_params(oidc, "package:hexpm/#{package.name}")

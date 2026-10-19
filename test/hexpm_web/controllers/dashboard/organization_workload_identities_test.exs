@@ -346,6 +346,57 @@ defmodule HexpmWeb.Dashboard.OrganizationWorkloadIdentitiesTest do
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "no active billing subscription"
       assert WorkloadIdentities.list(organization) == []
     end
+
+    test "adds a write workload identity for public packages only without active billing", %{
+      admin: admin,
+      organization: organization
+    } do
+      organization
+      |> Ecto.Changeset.change(billing_active: false, trial_end: nil)
+      |> Repo.update!()
+
+      insert(:package,
+        name: "public_one",
+        package_owners: [build(:package_owner, user: organization.user, level: "full")]
+      )
+
+      public_only = %{
+        "role" => "write",
+        "workflow" => "release.yml",
+        "covers_private" => "false",
+        "packages" => "",
+        "covers_public" => "true",
+        "public_packages" => "public_one"
+      }
+
+      conn =
+        build_conn()
+        |> test_login(admin)
+        |> post(
+          path(organization),
+          identity_params(Map.put(public_only, "covers_private", "true"))
+        )
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "no active billing subscription"
+
+      expect(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/widget", _, _ ->
+        {:ok, 200, [], %{"id" => 22, "owner" => %{"id" => 11}}}
+      end)
+
+      conn =
+        build_conn()
+        |> test_login(admin)
+        |> post(path(organization), identity_params(public_only))
+
+      assert redirected_to(conn) == path(organization)
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "added"
+
+      assert [identity] = WorkloadIdentities.list(organization)
+      assert identity.covers_private == false
+      assert identity.packages == []
+      assert identity.covers_public == true
+      assert identity.public_packages == ["public_one"]
+    end
   end
 
   describe "DELETE /dashboard/orgs/:dashboard_org/workload-identities/:id" do

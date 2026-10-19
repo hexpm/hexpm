@@ -124,6 +124,8 @@ defmodule Hexpm.Accounts.AuditLog do
     }
   end
 
+  # An organization's workload identity acts for the organization, wherever
+  # the package it publishes is.
   def build(
         %{user: %Hexpm.WorkloadIdentities.WorkloadIdentity{id: workload_identity_id}} = audit_data,
         action,
@@ -136,8 +138,8 @@ defmodule Hexpm.Accounts.AuditLog do
     %AuditLog{
       user_id: nil,
       organization_id:
-        params[:organization][:id] || params[:package][:organization_id] ||
-          params[:organization_id],
+        audit_data.user.organization_id || params[:organization][:id] ||
+          params[:package][:organization_id] || params[:organization_id],
       user_data: %{workload_identity_id: workload_identity_id, grant_type: "workload_identity"},
       key_data: serialize_key(key),
       key: key,
@@ -596,7 +598,10 @@ defmodule Hexpm.Accounts.AuditLog do
       :workflow,
       :environment,
       :role,
+      :covers_private,
       :packages,
+      :covers_public,
+      :public_packages,
       :package_id,
       :organization_id
     ]

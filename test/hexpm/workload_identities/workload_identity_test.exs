@@ -392,9 +392,261 @@ defmodule Hexpm.WorkloadIdentities.WorkloadIdentityTest do
         assert "must be valid package names" in List.wrap(errors_on(changeset).packages)
       end
     end
+
+    test "covers every private package and no public package by default", %{
+      organization: organization
+    } do
+      changeset =
+        WorkloadIdentity.changeset(
+          %WorkloadIdentity{},
+          organization_params(%{"role" => "write", "workflow" => "release.yml"}),
+          organization
+        )
+
+      assert changeset.valid?
+      assert Ecto.Changeset.get_field(changeset, :covers_private) == true
+      assert Ecto.Changeset.get_field(changeset, :packages) == nil
+      assert Ecto.Changeset.get_field(changeset, :covers_public) == false
+      assert Ecto.Changeset.get_field(changeset, :public_packages) == nil
+    end
+
+    test "stores an empty private list without private coverage", %{organization: organization} do
+      changeset =
+        WorkloadIdentity.changeset(
+          %WorkloadIdentity{},
+          organization_params(%{
+            "role" => "write",
+            "workflow" => "release.yml",
+            "covers_private" => "false",
+            "packages" => "widget",
+            "covers_public" => "true"
+          }),
+          organization
+        )
+
+      assert changeset.valid?
+      assert Ecto.Changeset.get_field(changeset, :covers_private) == false
+      assert Ecto.Changeset.get_field(changeset, :packages) == []
+    end
+
+    test "splits, deduplicates and sorts public package names", %{organization: organization} do
+      changeset =
+        WorkloadIdentity.changeset(
+          %WorkloadIdentity{},
+          organization_params(%{
+            "role" => "write",
+            "workflow" => "release.yml",
+            "covers_public" => "true",
+            "public_packages" => "widget_core, gadget\nwidget_core"
+          }),
+          organization
+        )
+
+      assert changeset.valid?
+      assert Ecto.Changeset.get_field(changeset, :public_packages) == ["gadget", "widget_core"]
+    end
+
+    test "stores no public package names as every owned package", %{organization: organization} do
+      changeset =
+        WorkloadIdentity.changeset(
+          %WorkloadIdentity{},
+          organization_params(%{
+            "role" => "write",
+            "workflow" => "release.yml",
+            "covers_public" => "true",
+            "public_packages" => " , "
+          }),
+          organization
+        )
+
+      assert changeset.valid?
+      assert Ecto.Changeset.get_field(changeset, :public_packages) == nil
+    end
+
+    test "ignores public package names without public coverage", %{organization: organization} do
+      changeset =
+        WorkloadIdentity.changeset(
+          %WorkloadIdentity{},
+          organization_params(%{
+            "role" => "write",
+            "workflow" => "release.yml",
+            "covers_public" => "false",
+            "public_packages" => "widget"
+          }),
+          organization
+        )
+
+      assert changeset.valid?
+      assert Ecto.Changeset.get_field(changeset, :public_packages) == nil
+    end
+
+    test "rejects public package names a package can't be created with", %{
+      organization: organization
+    } do
+      changeset =
+        WorkloadIdentity.changeset(
+          %WorkloadIdentity{},
+          organization_params(%{
+            "role" => "write",
+            "workflow" => "release.yml",
+            "covers_public" => "true",
+            "public_packages" => "widget, Gadget"
+          }),
+          organization
+        )
+
+      assert "must be valid package names" in List.wrap(errors_on(changeset).public_packages)
+    end
+
+    test "requires private packages, public packages or both for the write role", %{
+      organization: organization
+    } do
+      changeset =
+        WorkloadIdentity.changeset(
+          %WorkloadIdentity{},
+          organization_params(%{
+            "role" => "write",
+            "workflow" => "release.yml",
+            "covers_private" => "false",
+            "covers_public" => "false"
+          }),
+          organization
+        )
+
+      assert errors_on(changeset).covers_private ==
+               "select private packages, public packages or both"
+    end
+
+    test "refuses private packages and the read role without active billing" do
+      organization = insert(:organization, billing_active: false, trial_end: nil)
+
+      params = %{"role" => "write", "workflow" => "release.yml", "covers_public" => "true"}
+
+      changeset =
+        WorkloadIdentity.changeset(%WorkloadIdentity{}, organization_params(params), organization)
+
+      assert errors_on(changeset).covers_private ==
+               "private packages need an active billing subscription"
+
+      changeset =
+        WorkloadIdentity.changeset(
+          %WorkloadIdentity{},
+          organization_params(%{"role" => "read"}),
+          organization
+        )
+
+      assert errors_on(changeset).role == "needs an active billing subscription"
+
+      changeset =
+        WorkloadIdentity.changeset(
+          %WorkloadIdentity{},
+          organization_params(Map.put(params, "covers_private", "false")),
+          organization
+        )
+
+      assert changeset.valid?
+    end
+
+    test "covers the repository and no public package for the read role", %{
+      organization: organization
+    } do
+      changeset =
+        WorkloadIdentity.changeset(
+          %WorkloadIdentity{},
+          organization_params(%{
+            "role" => "read",
+            "covers_private" => "false",
+            "covers_public" => "true",
+            "public_packages" => "widget"
+          }),
+          organization
+        )
+
+      assert changeset.valid?
+      assert Ecto.Changeset.get_field(changeset, :covers_private) == true
+      assert Ecto.Changeset.get_field(changeset, :packages) == nil
+      assert Ecto.Changeset.get_field(changeset, :covers_public) == false
+      assert Ecto.Changeset.get_field(changeset, :public_packages) == nil
+    end
+  end
+
+  describe "covers_private_package?/2" do
+    test "needs private coverage and a list that is empty or names the package" do
+      identity = %WorkloadIdentity{organization_id: 1, role: "write"}
+
+      assert WorkloadIdentity.covers_private_package?(identity, "widget")
+
+      assert WorkloadIdentity.covers_private_package?(
+               %{identity | packages: ["widget"]},
+               "widget"
+             )
+
+      refute WorkloadIdentity.covers_private_package?(%{identity | packages: ["other"]}, "widget")
+
+      refute WorkloadIdentity.covers_private_package?(
+               %{identity | covers_private: false, packages: []},
+               "widget"
+             )
+
+      refute WorkloadIdentity.covers_private_package?(
+               %{identity | covers_private: false, packages: nil},
+               "widget"
+             )
+
+      refute WorkloadIdentity.covers_private_package?(%{identity | role: "read"}, "widget")
+
+      refute WorkloadIdentity.covers_private_package?(
+               %{identity | organization_id: nil},
+               "widget"
+             )
+    end
   end
 
   describe "database constraints" do
+    test "refuse public coverage on a read workload identity" do
+      assert_raise Ecto.ConstraintError, ~r/workload_identities_public_coverage/, fn ->
+        insert(:organization_workload_identity, covers_public: true)
+      end
+    end
+
+    test "refuse a workload identity that covers nothing" do
+      assert_raise Ecto.ConstraintError, ~r/workload_identities_private_coverage/, fn ->
+        insert(:organization_workload_identity,
+          role: "write",
+          workflow: "a.yml",
+          covers_private: false,
+          packages: []
+        )
+      end
+    end
+
+    test "refuse a null private list without private coverage" do
+      assert_raise Ecto.ConstraintError, ~r/workload_identities_private_coverage/, fn ->
+        insert(:organization_workload_identity,
+          role: "write",
+          workflow: "a.yml",
+          covers_private: false,
+          covers_public: true
+        )
+      end
+    end
+
+    test "refuse an empty private list with private coverage" do
+      assert_raise Ecto.ConstraintError, ~r/workload_identities_packages/, fn ->
+        insert(:organization_workload_identity, role: "write", workflow: "a.yml", packages: [])
+      end
+    end
+
+    test "refuse a public list without public coverage" do
+      assert_raise Ecto.ConstraintError, ~r/workload_identities_public_packages/, fn ->
+        insert(:organization_workload_identity,
+          role: "write",
+          workflow: "a.yml",
+          public_packages: ["widget"]
+        )
+      end
+    end
+
     test "refuse an empty workflow on a package workload identity", %{package: package} do
       assert_raise Ecto.ConstraintError, ~r/workload_identities_workflow/, fn ->
         insert(:workload_identity, package: package, workflow: "")

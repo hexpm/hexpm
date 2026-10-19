@@ -4,6 +4,8 @@ defmodule Hexpm.Emails do
   alias HexpmWeb.EmailView.{Common, PackageSearchDisabled}
   alias Hexpm.Accounts.{Email, Organization, User}
 
+  @coverage_fields [:covers_private, :packages, :covers_public, :public_packages]
+
   @doc """
   The types the builders tag their mail with. Each builder tags its mail with
   its own name, and every public function here other than `render_body`,
@@ -88,6 +90,52 @@ defmodule Hexpm.Emails do
   defp organization_workload_identity_email(type, workload_identity, organization, actor) do
     base_email(type)
     |> email_to(organization)
+    |> assign_organization_workload_identity(workload_identity, organization, actor)
+  end
+
+  @doc """
+  Tells an owner of public packages that an organization that also owns them
+  added a workload identity that publishes them.
+  """
+  def public_workload_identity_added(workload_identity, organization, owner, packages, actor) do
+    base_email(:public_workload_identity_added)
+    |> email_to(owner)
+    |> subject(
+      "Hex.pm - Workload identity of organization #{organization.name} " <>
+        "can publish #{Enum.join(packages, ", ")}"
+    )
+    |> assign_organization_workload_identity(workload_identity, organization, actor)
+    |> assign(:coverage, public_coverage(workload_identity, packages))
+    |> assign(:public_packages_covered, packages)
+    |> render_body(:public_workload_identity_add)
+  end
+
+  def public_workload_identity_removed(workload_identity, organization, owner, packages, actor) do
+    base_email(:public_workload_identity_removed)
+    |> email_to(owner)
+    |> subject(
+      "Hex.pm - Workload identity of organization #{organization.name} " <>
+        "can no longer publish #{Enum.join(packages, ", ")}"
+    )
+    |> assign_organization_workload_identity(workload_identity, organization, actor)
+    |> assign(:coverage, public_coverage(workload_identity, packages))
+    |> assign(:public_packages_covered, packages)
+    |> render_body(:public_workload_identity_remove)
+  end
+
+  # Owners outside the organization only learn about their own packages, not
+  # the workload identity's private coverage or the rest of its public list.
+  defp public_coverage(workload_identity, packages) do
+    %{
+      covers_private: false,
+      packages: [],
+      covers_public: true,
+      public_packages: workload_identity.public_packages && packages
+    }
+  end
+
+  defp assign_organization_workload_identity(email, workload_identity, organization, actor) do
+    email
     |> assign(:username, actor.username)
     |> assign(:organization, organization.name)
     |> assign(:role, workload_identity.role)
@@ -95,7 +143,7 @@ defmodule Hexpm.Emails do
     |> assign(:repository, workload_identity.repository)
     |> assign(:workflow, workload_identity.workflow)
     |> assign(:environment, workload_identity.environment)
-    |> assign(:packages, workload_identity.packages)
+    |> assign(:coverage, Map.take(workload_identity, @coverage_fields))
   end
 
   def verification(user, email) do

@@ -1066,9 +1066,11 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
   def create_workload_identity(conn, %{"dashboard_org" => organization} = params) do
     access_organization(conn, organization, "admin", fn organization ->
+      params = params["workload_identity"] || %{}
+
       with :ok <- workload_identity_tfa(conn, organization),
-           :ok <- workload_identity_billing(conn, organization) do
-        do_create_workload_identity(conn, organization, params["workload_identity"] || %{})
+           :ok <- workload_identity_billing(conn, organization, params) do
+        do_create_workload_identity(conn, organization, params)
       end
     end)
   end
@@ -1151,8 +1153,11 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     end
   end
 
-  defp workload_identity_billing(conn, organization) do
-    if Organization.billing_active?(organization) do
+  # Fetching from the organization's repository and publishing to it need an
+  # active subscription. A write identity that only covers public packages
+  # doesn't, and the changeset refuses the rest whatever reaches it.
+  defp workload_identity_billing(conn, organization, params) do
+    if Organization.billing_active?(organization) or public_only?(params) do
       :ok
     else
       conn
@@ -1160,6 +1165,9 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       |> redirect(to: ~p"/dashboard/orgs/#{organization}/workload-identities")
     end
   end
+
+  defp public_only?(params),
+    do: params["role"] == "write" and params["covers_private"] in [false, "false"]
 
   defp workload_identity_lookup_allowed(user) do
     case HexpmWeb.Plugs.Attack.workload_identity_lookup_throttle(user.id) do

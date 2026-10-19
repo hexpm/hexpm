@@ -1,0 +1,5 @@
+<%= PublicWorkloadIdentityRemove.message(@username, @organization) %>
+
+<%= Enum.join(@public_packages_covered, "\n") %>
+
+<%= Enum.join(OrganizationWorkloadIdentityDetails.lines(@role, @repository_owner, @repository, @workflow, @environment, @organization, @coverage), "\n") %>

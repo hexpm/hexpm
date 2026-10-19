@@ -17,7 +17,10 @@ defmodule Hexpm.WorkloadIdentities.WorkloadIdentity do
     field :workflow, :string
     field :environment, :string, default: ""
     field :role, :string, default: "write"
+    field :covers_private, :boolean, default: true
     field :packages, {:array, :string}
+    field :covers_public, :boolean, default: false
+    field :public_packages, {:array, :string}
 
     belongs_to :package, Package
     belongs_to :organization, Organization
@@ -44,19 +47,25 @@ defmodule Hexpm.WorkloadIdentities.WorkloadIdentity do
   end
 
   def changeset(workload_identity, params, %Organization{} = organization) do
-    params = split_packages(params)
+    params =
+      params
+      |> Map.new(fn {key, value} -> {to_string(key), value} end)
+      |> split_names("packages")
+      |> split_names("public_packages")
 
     workload_identity
     |> cast(
       params,
-      ~w(provider repository_owner repository repository_id workflow environment role packages)a
+      ~w(provider repository_owner repository repository_id workflow environment role
+         covers_private packages covers_public public_packages)a
     )
     |> put_assoc(:organization, organization)
     |> validate_required(~w(provider repository_owner role)a)
     |> validate_inclusion(:role, @roles)
     |> validate_identity()
     |> validate_organization_match()
-    |> validate_packages()
+    |> validate_coverage()
+    |> validate_billing(organization)
     |> unique_constraint(:repository,
       name: :workload_identities_organization_config_unique,
       message: "workload identity already configured for this organization"
@@ -136,23 +145,130 @@ defmodule Hexpm.WorkloadIdentities.WorkloadIdentity do
     end
   end
 
-  defp validate_packages(changeset) do
-    case {get_field(changeset, :role), get_field(changeset, :packages)} do
-      {_role, nil} ->
+  # A read workload identity fetches every package in the organization's
+  # repository, and public packages need no credentials to fetch. The form
+  # keeps the hidden checkboxes and package lists when the role goes back to
+  # read.
+  defp validate_coverage(changeset) do
+    case get_field(changeset, :role) do
+      "write" ->
         changeset
+        |> validate_required([:covers_private, :covers_public])
+        |> validate_covers_any()
+        |> validate_private_packages()
+        |> validate_public_packages()
 
-      {"write", packages} ->
-        if Enum.all?(packages, &valid_package_name?/1) do
-          put_change(changeset, :packages, packages |> Enum.uniq() |> Enum.sort())
-        else
-          add_error(changeset, :packages, "must be valid package names")
-        end
-
-      # The form keeps the hidden package list when the role goes back to read.
-      {_role, _packages} ->
-        put_change(changeset, :packages, nil)
+      _role ->
+        changeset
+        |> put_change(:covers_private, true)
+        |> put_change(:packages, nil)
+        |> put_change(:covers_public, false)
+        |> put_change(:public_packages, nil)
     end
   end
+
+  defp validate_covers_any(changeset) do
+    if get_field(changeset, :covers_private) == true or
+         get_field(changeset, :covers_public) == true do
+      changeset
+    else
+      add_error(changeset, :covers_private, "select private packages, public packages or both")
+    end
+  end
+
+  # An identity without private coverage stores an empty list, which covers
+  # no package for code that only reads the list.
+  defp validate_private_packages(changeset) do
+    if get_field(changeset, :covers_private) == true,
+      do: validate_package_names(changeset, :packages),
+      else: put_change(changeset, :packages, [])
+  end
+
+  defp validate_public_packages(changeset) do
+    if get_field(changeset, :covers_public) == true,
+      do: validate_package_names(changeset, :public_packages),
+      else: put_change(changeset, :public_packages, nil)
+  end
+
+  defp validate_package_names(changeset, field) do
+    case get_field(changeset, field) do
+      nil ->
+        changeset
+
+      names ->
+        if Enum.all?(names, &valid_package_name?/1) do
+          put_change(changeset, field, names |> Enum.uniq() |> Enum.sort())
+        else
+          add_error(changeset, field, "must be valid package names")
+        end
+    end
+  end
+
+  # Fetching from the organization's repository and publishing to it need an
+  # active subscription. Public packages don't, the same as for an
+  # organization key.
+  defp validate_billing(changeset, organization) do
+    cond do
+      Organization.billing_active?(organization) ->
+        changeset
+
+      get_field(changeset, :role) == "read" ->
+        add_error(changeset, :role, "needs an active billing subscription")
+
+      get_field(changeset, :covers_private) == true ->
+        add_error(
+          changeset,
+          :covers_private,
+          "private packages need an active billing subscription"
+        )
+
+      true ->
+        changeset
+    end
+  end
+
+  @doc """
+  Adds an error for listed public package names that aren't public packages
+  the organization owns.
+  """
+  def validate_public_owner(changeset, []), do: changeset
+
+  def validate_public_owner(changeset, not_owned) do
+    add_error(
+      changeset,
+      :public_packages,
+      "must be public packages the organization owns, not #{Enum.join(not_owned, ", ")}"
+    )
+  end
+
+  @doc """
+  Whether an organization workload identity publishes, and may create, the
+  package with this name in the organization's repository.
+  """
+  def covers_private_package?(
+        %__MODULE__{role: "write", covers_private: true, packages: packages} = identity,
+        name
+      )
+      when is_binary(name) do
+    not is_nil(identity.organization_id) and (is_nil(packages) or name in packages)
+  end
+
+  def covers_private_package?(_workload_identity, _name), do: false
+
+  @doc """
+  Whether an organization workload identity publishes the public package with
+  this name while the organization owns it. The list being empty covers every
+  public package the organization owns.
+  """
+  def covers_public_package?(
+        %__MODULE__{role: "write", covers_public: true, public_packages: packages} = identity,
+        name
+      )
+      when is_binary(name) do
+    not is_nil(identity.organization_id) and (is_nil(packages) or name in packages)
+  end
+
+  def covers_public_package?(_workload_identity, _name), do: false
 
   @doc """
   Whether a package can be created with this name.
@@ -168,20 +284,18 @@ defmodule Hexpm.WorkloadIdentities.WorkloadIdentity do
   def repository_name(nil), do: nil
   def repository_name(repository), do: repository |> String.split("/") |> List.last()
 
-  # The form sends one string, so names may be separated by commas or
+  # The form sends one string per list, so names may be separated by commas or
   # whitespace. No names means every package.
-  defp split_packages(params) do
-    params = Map.new(params, fn {key, value} -> {to_string(key), value} end)
-
-    case params["packages"] do
+  defp split_names(params, key) do
+    case params[key] do
       value when is_binary(value) ->
         case String.split(value, [",", " ", "\n", "\r", "\t"], trim: true) do
-          [] -> Map.put(params, "packages", nil)
-          names -> Map.put(params, "packages", names)
+          [] -> Map.put(params, key, nil)
+          names -> Map.put(params, key, names)
         end
 
       [] ->
-        Map.put(params, "packages", nil)
+        Map.put(params, key, nil)
 
       _ ->
         params
