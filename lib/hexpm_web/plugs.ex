@@ -136,20 +136,8 @@ defmodule HexpmWeb.Plugs do
 
   def authenticate(conn, _opts) do
     case check_and_authenticate(conn) do
-      {:ok,
-       %{
-         auth_credential: auth_credential,
-         user: user,
-         organization: organization,
-         email: email,
-         workload_identity: workload_identity
-       }} ->
-        conn
-        |> assign(:auth_credential, auth_credential)
-        |> assign(:current_user, user)
-        |> assign(:current_organization, organization)
-        |> assign(:email, email)
-        |> assign(:workload_identity, workload_identity)
+      {:ok, result} ->
+        assign_authentication(conn, result)
 
       {:error, :missing} ->
         unauthenticated(conn, [])
@@ -168,8 +156,33 @@ defmodule HexpmWeb.Plugs do
     end
   end
 
-  # What a request without credentials is authenticated as, for the
-  # endpoints that don't authenticate the request.
+  # For the endpoints that authenticate from the request body instead: a
+  # credential in the Authorization header that authenticates still
+  # identifies the account, for rate limiting, and one that doesn't is
+  # treated as no credentials rather than refusing the request.
+  def optional_authenticate(conn, _opts) do
+    case HexpmWeb.AuthHelpers.authenticate(conn) do
+      {:ok, result} -> assign_authentication(conn, result)
+      {:error, _reason} -> unauthenticated(conn, [])
+    end
+  end
+
+  defp assign_authentication(conn, %{
+         auth_credential: auth_credential,
+         user: user,
+         organization: organization,
+         email: email,
+         workload_identity: workload_identity
+       }) do
+    conn
+    |> assign(:auth_credential, auth_credential)
+    |> assign(:current_user, user)
+    |> assign(:current_organization, organization)
+    |> assign(:email, email)
+    |> assign(:workload_identity, workload_identity)
+  end
+
+  # What a request without credentials is authenticated as.
   def unauthenticated(conn, _opts) do
     conn
     |> assign(:auth_credential, nil)

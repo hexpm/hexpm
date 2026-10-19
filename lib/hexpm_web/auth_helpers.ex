@@ -253,7 +253,8 @@ defmodule HexpmWeb.AuthHelpers do
         key_unauthorized(conn, "API key revoked")
 
       # RFC 6750 section 3.1: a Bearer token that verifies but lacks the
-      # scope gets a 403, which tells the client a new token won't help
+      # scope gets a 403, which tells the client the token isn't invalid,
+      # it doesn't grant this request
       {:error, :domain} ->
         if bearer_request?(conn) do
           conn

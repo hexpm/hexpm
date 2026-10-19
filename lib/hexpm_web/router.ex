@@ -85,15 +85,15 @@ defmodule HexpmWeb.Router do
   end
 
   # The OAuth endpoints authenticate the client and the grant from the request
-  # body (RFC 6749 section 2.3), so the Authorization header isn't checked.
-  # A client renewing a refused token can send it without being refused for it.
+  # body, so a refused credential in the Authorization header, which a client
+  # renewing it may still send, doesn't refuse the request.
   pipeline :oauth do
     plug :accepts, @accepted_formats
 
     plug HexpmWeb.Plugs.ReadOnly
 
     plug :user_agent
-    plug :unauthenticated
+    plug :optional_authenticate
     plug HexpmWeb.Plugs.Attack
     plug Corsica, origins: "*", allow_methods: ["HEAD", "GET"]
   end

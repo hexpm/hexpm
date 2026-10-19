@@ -263,7 +263,7 @@ defmodule HexpmWeb.AuthHelpersTest do
 
     assert json_response(conn, 401)["message"] == "invalid or expired access token"
 
-    # hex_core matches this exact header value to renew the credential
+    # The RFC 6750 challenge hex_core renews the credential on
     assert get_resp_header(conn, "www-authenticate") == [
              ~s(Bearer realm="hex", error="invalid_token")
            ]
