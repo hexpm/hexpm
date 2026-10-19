@@ -680,6 +680,44 @@ defmodule HexpmWeb.API.WorkloadIdentityPublishTest do
       assert json_response(publish_public(token, owned.name), 201)
     end
 
+    test "a token for one public package can't publish another the organization owns", %{
+      public_organization: organization,
+      owned: owned
+    } do
+      other_owned =
+        insert(:package,
+          package_owners: [build(:package_owner, user: organization.user, level: "full")]
+        )
+
+      token = mint_public(owned.name)
+
+      assert json_response(publish_public(token, other_owned.name), 403)["message"] =~
+               "insufficient scope"
+
+      refute Hexpm.Repo.get_by(Release, package_id: other_owned.id)
+    end
+
+    test "with private coverage too, publishes public packages and fetches nothing without active billing",
+         %{public_organization: organization, owned: owned, public_identity: identity} do
+      repository = insert(:repository, organization: organization, name: organization.name)
+
+      identity
+      |> Ecto.Changeset.change(covers_private: true, packages: nil)
+      |> Hexpm.Repo.update!()
+
+      organization
+      |> Ecto.Changeset.change(billing_active: false)
+      |> Hexpm.Repo.update!()
+
+      assert {:error, :billing_inactive} =
+               WorkloadIdentityHelpers.github_claims()
+               |> WorkloadIdentityHelpers.sign_oidc_claims()
+               |> Hexpm.WorkloadIdentities.verify_and_mint(repository: repository.name)
+
+      token = mint_public(owned.name)
+      assert json_response(publish_public(token, owned.name), 201)
+    end
+
     test "can't publish into the organization's repository without private coverage", %{
       public_organization: organization,
       owned: owned
