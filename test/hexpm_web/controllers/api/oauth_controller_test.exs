@@ -43,6 +43,35 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert device_code.scopes == ["api:read", "api:write"]
     end
 
+    test "ignores a refused token in the Authorization header", %{client: client} do
+      conn =
+        build_conn()
+        |> Map.put(:remote_ip, {198, 51, 100, 21})
+        |> put_req_header("authorization", "Bearer invalid.jwt.token")
+        |> post(~p"/api/oauth/device_authorization", %{
+          "client_id" => client.client_id,
+          "scope" => "api"
+        })
+
+      assert json_response(conn, 200)["device_code"]
+      assert get_resp_header(conn, "x-ratelimit-limit") == ["100"]
+    end
+
+    # So clients behind one address don't share its limit
+    test "rate limits by the account of a credential that authenticates", %{client: client} do
+      conn =
+        build_conn()
+        |> Map.put(:remote_ip, {198, 51, 100, 22})
+        |> put_req_header("authorization", key_for(insert(:user)))
+        |> post(~p"/api/oauth/device_authorization", %{
+          "client_id" => client.client_id,
+          "scope" => "api"
+        })
+
+      assert json_response(conn, 200)["device_code"]
+      assert get_resp_header(conn, "x-ratelimit-limit") == ["500"]
+    end
+
     test "handles multiple scopes", %{client: client} do
       conn =
         post(build_conn(), ~p"/api/oauth/device_authorization", %{
@@ -61,8 +90,8 @@ defmodule HexpmWeb.API.OAuthControllerTest do
     test "returns error for missing client_id" do
       conn = post(build_conn(), ~p"/api/oauth/device_authorization", %{})
 
-      assert json_response(conn, 401)
-      response = json_response(conn, 401)
+      assert json_response(conn, 400)
+      response = json_response(conn, 400)
       assert response["error"] == "invalid_client"
     end
 
@@ -72,8 +101,8 @@ defmodule HexpmWeb.API.OAuthControllerTest do
           "client_id" => Ecto.UUID.generate()
         })
 
-      assert json_response(conn, 401)
-      response = json_response(conn, 401)
+      assert json_response(conn, 400)
+      response = json_response(conn, 400)
       assert response["error"] == "invalid_client"
     end
 
@@ -173,8 +202,8 @@ defmodule HexpmWeb.API.OAuthControllerTest do
           "scope" => "api"
         })
 
-      assert json_response(conn, 401)
-      response = json_response(conn, 401)
+      assert json_response(conn, 400)
+      response = json_response(conn, 400)
       assert response["error"] == "invalid_client"
     end
 
@@ -224,6 +253,27 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert response_body["error"] == "authorization_pending"
     end
 
+    test "refuses a device authorized by an account deactivated since", %{
+      client: client,
+      device_code: device_code
+    } do
+      user = insert(:user)
+      {:ok, _} = DeviceCodes.authorize_device(device_code.user_code, user, device_code.scopes)
+      deactivate(user)
+
+      response =
+        build_conn()
+        |> post(~p"/api/oauth/token", %{
+          "grant_type" => "urn:ietf:params:oauth:grant-type:device_code",
+          "device_code" => device_code.device_code,
+          "client_id" => client.client_id
+        })
+        |> json_response(400)
+
+      assert response["error"] == "invalid_grant"
+      assert response["error_description"] == "Account has been deactivated"
+    end
+
     test "returns access token for authorized device code", %{
       client: client,
       device_code: device_code
@@ -246,6 +296,10 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert response["token_type"] == "bearer"
       assert response["expires_in"] > 0
       assert response["scope"] == "api:read api:write"
+
+      # RFC 6749 section 5.1
+      assert get_resp_header(conn, "cache-control") == ["no-store"]
+      assert get_resp_header(conn, "pragma") == ["no-cache"]
     end
 
     test "returns error for invalid grant type", %{client: client, response: response} do
@@ -294,8 +348,8 @@ defmodule HexpmWeb.API.OAuthControllerTest do
           "client_id" => Ecto.UUID.generate()
         })
 
-      assert json_response(conn, 401)
-      response_body = json_response(conn, 401)
+      assert json_response(conn, 400)
+      response_body = json_response(conn, 400)
       assert response_body["error"] == "invalid_client"
     end
   end
@@ -356,6 +410,23 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       # New tokens should be different
       refute response["access_token"] == refresh_token
       refute response["refresh_token"] == refresh_token
+    end
+
+    # A client renewing a refused access token may still send it
+    test "refreshes despite a refused token in the Authorization header", %{
+      client: client,
+      refresh_token: refresh_token
+    } do
+      conn =
+        build_conn()
+        |> put_req_header("authorization", "Bearer invalid.jwt.token")
+        |> post(~p"/api/oauth/token", %{
+          "grant_type" => "refresh_token",
+          "refresh_token" => refresh_token,
+          "client_id" => client.client_id
+        })
+
+      assert json_response(conn, 200)["access_token"]
     end
 
     test "re-expands repositories scope against current memberships", %{client: client} do
@@ -453,8 +524,8 @@ defmodule HexpmWeb.API.OAuthControllerTest do
           "client_id" => Ecto.UUID.generate()
         })
 
-      assert json_response(conn, 401)
-      response = json_response(conn, 401)
+      assert json_response(conn, 400)
+      response = json_response(conn, 400)
       assert response["error"] == "invalid_client"
     end
 
@@ -1041,7 +1112,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
           "scope" => "api"
         })
 
-      assert json_response(conn, 401)["error"] == "invalid_client"
+      assert json_response(conn, 400)["error"] == "invalid_client"
     end
 
     test "revoking the API key refuses the token it minted", %{
@@ -1173,8 +1244,8 @@ defmodule HexpmWeb.API.OAuthControllerTest do
           "scope" => "api"
         })
 
-      assert json_response(conn, 401)
-      response = json_response(conn, 401)
+      assert json_response(conn, 400)
+      response = json_response(conn, 400)
       assert response["error"] == "invalid_client"
     end
 
@@ -1187,8 +1258,8 @@ defmodule HexpmWeb.API.OAuthControllerTest do
           "scope" => "api"
         })
 
-      assert json_response(conn, 401)
-      response = json_response(conn, 401)
+      assert json_response(conn, 400)
+      response = json_response(conn, 400)
       assert response["error"] == "invalid_client"
 
       assert_received {Hexpm.LogLines, :warning,
@@ -1206,7 +1277,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
           "scope" => "api"
         })
 
-      assert json_response(conn, 401)["error"] == "invalid_client"
+      assert json_response(conn, 400)["error"] == "invalid_client"
 
       key_id = key.id
       user_id = user.id

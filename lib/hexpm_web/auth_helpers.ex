@@ -222,10 +222,10 @@ defmodule HexpmWeb.AuthHelpers do
         unauthorized(conn, "missing authentication information")
 
       {:error, :invalid} ->
-        unauthorized(conn, "invalid authentication information")
+        basic_unauthorized(conn, "invalid authentication information")
 
       {:error, :password} ->
-        unauthorized(conn, "invalid username and password combination")
+        basic_unauthorized(conn, "invalid username and password combination")
 
       {:error, :basic_auth_disabled} ->
         conn
@@ -236,7 +236,10 @@ defmodule HexpmWeb.AuthHelpers do
         )
 
       {:error, :key} ->
-        unauthorized(conn, "invalid API key")
+        key_unauthorized(conn, "invalid API key")
+
+      {:error, :invalid_token} ->
+        invalid_token(conn, "invalid or expired access token")
 
       {:error, :blocked} ->
         forbidden(conn, "Blocked")
@@ -247,10 +250,22 @@ defmodule HexpmWeb.AuthHelpers do
         )
 
       {:error, :revoked_key} ->
-        unauthorized(conn, "API key revoked")
+        key_unauthorized(conn, "API key revoked")
 
+      # RFC 6750 section 3.1: a Bearer token that verifies but lacks the
+      # scope gets a 403, which tells the client the token isn't invalid,
+      # it doesn't grant this request
       {:error, :domain} ->
-        unauthorized(conn, "key not authorized for this action")
+        if bearer_request?(conn) do
+          conn
+          |> put_resp_header(
+            "www-authenticate",
+            ~s(Bearer realm="hex", error="insufficient_scope")
+          )
+          |> render_error(403, message: "insufficient scope for this action")
+        else
+          unauthorized(conn, "key not authorized for this action")
+        end
 
       {:error, :totp_required} ->
         conn
@@ -356,7 +371,7 @@ defmodule HexpmWeb.AuthHelpers do
 
       {:error, reason} ->
         SecurityLog.auth_failure(conn, :oauth_token, reason)
-        {:error, :key}
+        {:error, :invalid_token}
     end
   end
 
@@ -383,10 +398,42 @@ defmodule HexpmWeb.AuthHelpers do
     }
   end
 
+  # A 401 must name a scheme the client can authenticate with (RFC 9110
+  # section 11.6.1). Without an error code this is the RFC 6750 section 3
+  # challenge for a request that carries no Bearer token.
   def unauthorized(conn, reason) do
     conn
-    |> put_resp_header("www-authenticate", "Basic realm=hex")
+    |> put_resp_header("www-authenticate", ~s(Bearer realm="hex"))
     |> render_error(401, message: reason)
+  end
+
+  defp basic_unauthorized(conn, reason) do
+    conn
+    |> put_resp_header("www-authenticate", ~s(Basic realm="hex"))
+    |> render_error(401, message: reason)
+  end
+
+  # RFC 6750 section 3.1: a Bearer token that is expired, revoked or doesn't
+  # verify, which the client can replace and retry with
+  defp invalid_token(conn, reason) do
+    conn
+    |> put_resp_header("www-authenticate", ~s(Bearer realm="hex", error="invalid_token"))
+    |> render_error(401, message: reason)
+  end
+
+  # An API key sent with the Bearer scheme is a Bearer token, so it's refused
+  # the way RFC 6750 refuses one. A key sent on its own isn't, and keeps the
+  # plain 401.
+  defp key_unauthorized(conn, reason) do
+    if bearer_request?(conn) do
+      invalid_token(conn, reason)
+    else
+      unauthorized(conn, reason)
+    end
+  end
+
+  defp bearer_request?(conn) do
+    match?(["Bearer " <> _], get_req_header(conn, "authorization"))
   end
 
   def forbidden(conn, reason) do

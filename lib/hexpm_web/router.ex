@@ -84,6 +84,20 @@ defmodule HexpmWeb.Router do
     plug :default_repository
   end
 
+  # The OAuth endpoints authenticate the client and the grant from the request
+  # body, so a refused credential in the Authorization header, which a client
+  # renewing it may still send, doesn't refuse the request.
+  pipeline :oauth do
+    plug :accepts, @accepted_formats
+
+    plug HexpmWeb.Plugs.ReadOnly
+
+    plug :user_agent
+    plug :optional_authenticate
+    plug HexpmWeb.Plugs.Attack
+    plug Corsica, origins: "*", allow_methods: ["HEAD", "GET"]
+  end
+
   pipeline :varsel do
     plug :accepts, ["json"]
     plug :user_agent
@@ -612,11 +626,16 @@ defmodule HexpmWeb.Router do
     post "/short_url", ShortURLController, :create
     get "/auth", AuthController, :show
 
+    post "/oauth/organization_authorization", SSOAuthorizationController, :create
+  end
+
+  scope "/api", HexpmWeb.API, as: :api do
+    pipe_through :oauth
+
     post "/oauth/token", OAuthController, :token
     post "/oauth/device_authorization", OAuthController, :device_authorization
     post "/oauth/revoke", OAuthController, :revoke
     post "/oauth/revoke_by_hash", OAuthController, :revoke_by_hash
-    post "/oauth/organization_authorization", SSOAuthorizationController, :create
 
     get "/oidc/audience", OIDCController, :audience
   end

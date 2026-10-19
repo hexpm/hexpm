@@ -604,7 +604,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         |> post("/api/publish", create_tar(meta))
 
       assert conn.status == 401
-      assert get_resp_header(conn, "www-authenticate") == ["Basic realm=hex"]
+      assert get_resp_header(conn, "www-authenticate") == [~s(Bearer realm="hex")]
     end
 
     test "update package authorizes", %{package: package} do
@@ -617,7 +617,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         |> post("/api/publish", create_tar(meta))
 
       assert conn.status == 401
-      assert get_resp_header(conn, "www-authenticate") == ["Basic realm=hex"]
+      assert get_resp_header(conn, "www-authenticate") == [~s(Bearer realm="hex")]
     end
 
     test "organization owned package", %{user: user, organization: organization} do
@@ -2214,9 +2214,13 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         |> put_req_header("authorization", "Bearer #{read_token.access_token}")
         |> post("/api/packages/#{meta.name}/releases", create_tar(meta))
 
-      result = json_response(conn, 401)
+      result = json_response(conn, 403)
       # Should fail with domain error, not TOTP error
-      assert result["message"] == "key not authorized for this action"
+      assert result["message"] == "insufficient scope for this action"
+
+      assert get_resp_header(conn, "www-authenticate") == [
+               ~s(Bearer realm="hex", error="insufficient_scope")
+             ]
     end
 
     test "write operation with API key (not OAuth) doesn't require TOTP", %{

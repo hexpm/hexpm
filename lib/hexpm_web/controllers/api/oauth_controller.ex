@@ -10,6 +10,9 @@ defmodule HexpmWeb.API.OAuthController do
 
   @jwt_bearer_grant_type "urn:ietf:params:oauth:grant-type:jwt-bearer"
 
+  # RFC 6749 section 5.1: a response carrying tokens must not be stored
+  plug :put_no_store when action == :token
+
   defp safe_param(params, key), do: safe_string(params[key])
 
   @doc """
@@ -706,6 +709,12 @@ defmodule HexpmWeb.API.OAuthController do
     end)
   end
 
+  defp put_no_store(conn, _opts) do
+    conn
+    |> put_resp_header("cache-control", "no-store")
+    |> put_resp_header("pragma", "no-cache")
+  end
+
   defp render_oauth_error(conn, error_type, description) do
     status = error_status(error_type)
 
@@ -715,7 +724,9 @@ defmodule HexpmWeb.API.OAuthController do
   end
 
   defp error_status(:invalid_request), do: 400
-  defp error_status(:invalid_client), do: 401
+  # RFC 6749 section 5.2: 401 is for a client that authenticated with the
+  # Authorization header, and hexpm's clients authenticate in the request body
+  defp error_status(:invalid_client), do: 400
   defp error_status(:invalid_grant), do: 400
   defp error_status(:unauthorized_client), do: 400
   defp error_status(:unsupported_grant_type), do: 400

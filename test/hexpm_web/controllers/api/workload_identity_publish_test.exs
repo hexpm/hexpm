@@ -151,7 +151,7 @@ defmodule HexpmWeb.API.WorkloadIdentityPublishTest do
       |> put_req_header("authorization", "Bearer #{token.access_token}")
       |> post("/api/publish", create_tar(meta))
 
-    assert json_response(conn, 401)["message"] =~ "not authorized"
+    assert json_response(conn, 403)["message"] =~ "insufficient scope"
   end
 
   test "minted token cannot create a brand-new package", %{package: package} do
@@ -338,7 +338,7 @@ defmodule HexpmWeb.API.WorkloadIdentityPublishTest do
     } do
       token = mint(repository: repository.name, package: "new_package")
 
-      assert json_response(publish(token, repository, "other_package"), 401)
+      assert json_response(publish(token, repository, "other_package"), 403)
       refute Hexpm.Repo.get_by(Package, repository_id: repository.id, name: "other_package")
     end
 
@@ -372,7 +372,7 @@ defmodule HexpmWeb.API.WorkloadIdentityPublishTest do
       other = insert(:repository)
       token = mint(repository: repository.name, package: "new_package")
 
-      assert json_response(publish(token, other, "new_package"), 401)
+      assert json_response(publish(token, other, "new_package"), 403)
       refute Hexpm.Repo.get_by(Package, repository_id: other.id, name: "new_package")
     end
 
@@ -409,8 +409,8 @@ defmodule HexpmWeb.API.WorkloadIdentityPublishTest do
     test "a repository token can't publish", %{repository: repository, org_package: package} do
       token = mint(repository: repository.name)
 
-      assert json_response(publish(token, repository, package.name), 401)
-      assert json_response(publish(token, repository, "new_package"), 401)
+      assert json_response(publish(token, repository, package.name), 403)
+      assert json_response(publish(token, repository, "new_package"), 403)
     end
 
     test "a repository token can't call the API", %{repository: repository} do
@@ -439,7 +439,7 @@ defmodule HexpmWeb.API.WorkloadIdentityPublishTest do
       )
 
       token = mint(repository: repository.name)
-      assert json_response(publish(token, repository, package.name), 401)
+      assert json_response(publish(token, repository, package.name), 403)
     end
   end
 end
