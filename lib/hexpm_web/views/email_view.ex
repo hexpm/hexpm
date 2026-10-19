@@ -180,6 +180,11 @@ defmodule HexpmWeb.EmailView do
     def message(username, package) do
       "#{username} has been added as an owner to package #{package}."
     end
+
+    def started(package) do
+      "These workload identities of your organization now publish #{package}, so anyone " <>
+        "who can run these workflows on GitHub can publish it:"
+    end
   end
 
   defmodule OwnerRemove do
@@ -193,8 +198,19 @@ defmodule HexpmWeb.EmailView do
         "with access to the repositories:"
     end
 
+    def stopped(username, package) do
+      "These workload identities of organization #{username} no longer publish #{package}:"
+    end
+
     def review(url, format) do
       "Review them at #{Common.link(url, url, format)}."
+    end
+  end
+
+  defmodule OrganizationWorkloadIdentityLine do
+    def line(workload_identity) do
+      "#{workload_identity.repository} (#{workload_identity.workflow}), " <>
+        "organization #{workload_identity.organization.name}"
     end
   end
 

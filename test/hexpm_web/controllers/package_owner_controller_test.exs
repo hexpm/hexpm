@@ -126,6 +126,55 @@ defmodule HexpmWeb.PackageOwnerControllerTest do
       assert body =~ ~s(href="/packages/#{package.name}/workload-identities")
     end
 
+    test "the remove dialog for an organization lists the workload identities that stop publishing",
+         %{full_owner: full_owner, package: package} do
+      organization = insert(:organization)
+      insert(:package_owner, package: package, user: organization.user, level: "full")
+
+      insert(:organization_workload_identity,
+        organization: organization,
+        role: "write",
+        repository: "acme/widget",
+        workflow: "release.yml",
+        covers_public: true
+      )
+
+      insert(:organization_workload_identity,
+        organization: organization,
+        role: "write",
+        repository: "acme/gadget",
+        workflow: "other.yml",
+        covers_public: true,
+        public_packages: ["other_package"]
+      )
+
+      document =
+        build_conn()
+        |> test_login(full_owner)
+        |> get("/packages/#{package.name}/owners")
+        |> html_response(200)
+        |> LazyHTML.from_document()
+
+      organization_dialog =
+        document
+        |> LazyHTML.query("#remove-owner-#{organization.user.id}")
+        |> LazyHTML.text(separator: " ")
+        |> String.replace(~r/\s+/, " ")
+
+      assert organization_dialog =~
+               "These workload identities of #{organization.name} publish #{package.name}"
+
+      assert organization_dialog =~ "acme/widget (release.yml)"
+      refute organization_dialog =~ "acme/gadget"
+
+      user_dialog =
+        document
+        |> LazyHTML.query("#remove-owner-#{full_owner.id}")
+        |> LazyHTML.text(separator: " ")
+
+      refute user_dialog =~ "acme/widget"
+    end
+
     test "an organization admin who owns nothing directly manages the owners" do
       %{organization: organization, package: package} = organization_package()
       admin = insert(:user)

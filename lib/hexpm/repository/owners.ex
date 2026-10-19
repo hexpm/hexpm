@@ -30,6 +30,16 @@ defmodule Hexpm.Repository.Owners do
   end
 
   @doc """
+  The workload identities of the organizations that own a public package,
+  which publish it for as long as their organization owns it, with their
+  organizations.
+  """
+  def organization_workload_identities(%Package{repository_id: 1} = package),
+    do: Hexpm.WorkloadIdentities.list_covering(package)
+
+  def organization_workload_identities(%Package{}), do: []
+
+  @doc """
   Whether `user` appears in `owners` with `level: "full"`. Safe to call with a
   nil user (returns false) and an empty owners list. `owners` is the
   already-loaded list from `Owners.all/2`.
@@ -73,6 +83,9 @@ defmodule Hexpm.Repository.Owners do
       |> Multi.run(:owners, fn _repo, _changes ->
         {:ok, lock_owners(package, user: [:emails, :organization])}
       end)
+      |> Multi.run(:covering, fn _repo, _changes ->
+        {:ok, organization_workload_identities(package)}
+      end)
       |> Multi.run(:existing, fn _repo, %{owners: owners} ->
         owner = Enum.find(owners, &(&1.user_id == user.id))
 
@@ -87,12 +100,15 @@ defmodule Hexpm.Repository.Owners do
       end)
       |> remove_existing_owners(params)
       |> remove_workload_identities(package, params, audit_data)
+      |> Multi.run(:covered, fn _repo, _changes ->
+        {:ok, organization_workload_identities(package)}
+      end)
       |> audit(audit_data, add_owner_audit_log_action(params), fn %{owner: owner} ->
         {package, owner.level, user}
       end)
 
     case Repo.transaction(multi) do
-      {:ok, %{owner: owner, owners: owners}} ->
+      {:ok, %{owner: owner, owners: owners, covering: covering, covered: covered}} ->
         owners =
           owners
           |> Enum.map(& &1.user)
@@ -100,11 +116,7 @@ defmodule Hexpm.Repository.Owners do
           |> Repo.preload(organization: [organization_users: [user: :emails]])
           |> Enum.filter(&OptionalEmails.allowed?(&1, :owner_added_to_package))
 
-        if owners != [] do
-          Emails.owner_added(package, owners, user)
-          |> Mailer.deliver!()
-        end
-
+        notify_owner_added(package, owners, user, identities_not_in(covered, covering))
         {:ok, %{owner | user: user}}
 
       {:error, :existing, reason, _} ->
@@ -113,6 +125,32 @@ defmodule Hexpm.Repository.Owners do
       {:error, :owner, changeset, _} ->
         {:error, changeset}
     end
+  end
+
+  defp notify_owner_added(_package, [], _user, _started), do: :ok
+
+  defp notify_owner_added(package, owners, user, []) do
+    package
+    |> Emails.owner_added(owners, user, [])
+    |> Mailer.deliver!()
+  end
+
+  # Any full owner can transfer a package to any organization, so only the new
+  # owner hears which of its workload identities now publish the package.
+  defp notify_owner_added(package, owners, user, started) do
+    {new_owner, others} = Enum.split_with(owners, &(&1.id == user.id))
+    notified = deliver_unless_notified(Emails.owner_added(package, new_owner, user, started), [])
+    deliver_unless_notified(Emails.owner_added(package, others, user, []), notified)
+  end
+
+  defp deliver_unless_notified(email, notified) do
+    email = %{email | to: Enum.reject(email.to, fn {_name, address} -> address in notified end)}
+
+    if email.to != [] do
+      Mailer.deliver!(email)
+    end
+
+    notified ++ Enum.map(email.to, fn {_name, address} -> address end)
   end
 
   defp add_owner_audit_log_action(%{"transfer" => true}), do: "owner.transfer"
@@ -217,13 +255,19 @@ defmodule Hexpm.Repository.Owners do
             {:ok, owner}
         end
       end)
+      |> Multi.run(:covering, fn _repo, _changes ->
+        {:ok, organization_workload_identities(package)}
+      end)
       |> Multi.delete(:removed, fn %{owner: owner} -> owner end)
+      |> Multi.run(:covered, fn _repo, _changes ->
+        {:ok, organization_workload_identities(package)}
+      end)
       |> audit(audit_data, "owner.remove", fn %{owner: owner} ->
         {package, owner.level, owner.user}
       end)
 
     case Repo.transaction(multi) do
-      {:ok, %{owners: owners, owner: owner}} ->
+      {:ok, %{owners: owners, owner: owner, covering: covering, covered: covered}} ->
         owners =
           owners
           |> Enum.map(& &1.user)
@@ -231,7 +275,13 @@ defmodule Hexpm.Repository.Owners do
           |> Enum.filter(&OptionalEmails.allowed?(&1, :owner_removed_from_package))
 
         if owners != [] do
-          Emails.owner_removed(package, owners, owner.user, workload_identities(package))
+          Emails.owner_removed(
+            package,
+            owners,
+            owner.user,
+            workload_identities(package),
+            identities_not_in(covering, covered)
+          )
           |> Mailer.deliver!()
         end
 
@@ -251,4 +301,9 @@ defmodule Hexpm.Repository.Owners do
   end
 
   defp last_full_owner?(owners), do: Enum.count(owners, &(&1.level == "full")) == 1
+
+  defp identities_not_in(workload_identities, others) do
+    ids = MapSet.new(others, & &1.id)
+    Enum.reject(workload_identities, &MapSet.member?(ids, &1.id))
+  end
 end

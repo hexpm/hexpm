@@ -17,7 +17,8 @@ defmodule HexpmWeb.PackageOwnerController do
       [
         title: "Manage owners – #{package.name}",
         container: "container",
-        workload_identities: Owners.workload_identities(package)
+        workload_identities: Owners.workload_identities(package),
+        organization_workload_identities: Owners.organization_workload_identities(package)
       ] ++ PackageLayoutAssigns.for_package(conn, package)
     )
   end

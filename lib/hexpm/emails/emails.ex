@@ -18,22 +18,32 @@ defmodule Hexpm.Emails do
         do: Atom.to_string(name)
   end
 
-  def owner_added(package, owners, owner) do
+  @doc """
+  `started` are the new owner organization's workload identities that publish
+  the package since the change.
+  """
+  def owner_added(package, owners, owner, started) do
     base_email(:owner_added)
     |> email_to(owners)
     |> subject("Hex.pm - Owner added to package #{package.name}")
     |> assign(:username, owner.username)
     |> assign(:package, package.name)
+    |> assign(:started, started)
     |> render_body(:owner_add)
   end
 
-  def owner_removed(package, owners, owner, workload_identities) do
+  @doc """
+  `workload_identities` are the package's own, which keep publishing it, and
+  `stopped` the organization workload identities that no longer do.
+  """
+  def owner_removed(package, owners, owner, workload_identities, stopped) do
     base_email(:owner_removed)
     |> email_to(owners)
     |> subject("Hex.pm - Owner removed from package #{package.name}")
     |> assign(:username, owner.username)
     |> assign(:package, package.name)
     |> assign(:workload_identities, workload_identities)
+    |> assign(:stopped, stopped)
     |> assign(
       :workload_identities_url,
       HexpmWeb.EmailView.email_url(HexpmWeb.ViewHelpers.path_for_workload_identities(package))

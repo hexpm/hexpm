@@ -3,6 +3,7 @@ defmodule Hexpm.Repository.OwnersTest do
 
   import Swoosh.TestAssertions
 
+  alias Hexpm.Accounts.User
   alias Hexpm.Repository.Owners
 
   setup do
@@ -114,6 +115,94 @@ defmodule Hexpm.Repository.OwnersTest do
       assert log.params["package"]["name"] == package.name
     end
 
+    test "a transfer to an organization lists its workload identities that start publishing to its admins only",
+         %{owner: owner, package: package} do
+      admin = insert(:user)
+
+      organization =
+        insert(:organization,
+          organization_users: [build(:organization_user, user: admin, role: "admin")]
+        )
+
+      insert(:organization_workload_identity,
+        organization: organization,
+        role: "write",
+        repository: "acme/widget",
+        workflow: "release.yml",
+        covers_public: true
+      )
+
+      insert(:organization_workload_identity,
+        organization: organization,
+        role: "write",
+        repository: "acme/gadget",
+        workflow: "listed.yml",
+        covers_public: true,
+        public_packages: [package.name]
+      )
+
+      insert(:organization_workload_identity,
+        organization: organization,
+        role: "write",
+        repository: "acme/other",
+        workflow: "other.yml",
+        covers_public: true,
+        public_packages: ["other_package"]
+      )
+
+      organization_user =
+        Repo.preload(organization.user, [:emails, organization: [organization_users: :user]])
+
+      assert {:ok, _} =
+               Owners.add(package, organization_user, %{"transfer" => true},
+                 audit: audit_data(owner)
+               )
+
+      assert_email_sent(fn email ->
+        refute email.text_body =~ "acme/other"
+        assert Enum.map(email.to, &elem(&1, 1)) == [User.email(admin, :primary)]
+        assert email.subject =~ "Owner added to package #{package.name}"
+        assert email.text_body =~ "These workload identities of your organization now publish"
+        assert email.text_body =~ "acme/widget (release.yml), organization #{organization.name}"
+        assert email.text_body =~ "acme/gadget (listed.yml), organization #{organization.name}"
+      end)
+
+      assert_email_sent(fn email ->
+        refute email.text_body =~ "acme/"
+        assert Enum.map(email.to, &elem(&1, 1)) == [User.email(owner, :primary)]
+        assert email.subject =~ "Owner added to package #{package.name}"
+      end)
+
+      refute_email_sent()
+    end
+
+    test "a transfer away from an organization doesn't show its workload identities to anyone",
+         %{owner: owner, package: package} do
+      organization = insert(:organization)
+      insert(:package_owner, package: package, user: organization.user, level: "full")
+
+      insert(:organization_workload_identity,
+        organization: organization,
+        role: "write",
+        repository: "acme/widget",
+        workflow: "release.yml",
+        covers_public: true
+      )
+
+      new_owner = insert(:user)
+
+      assert {:ok, _} =
+               Owners.add(package, new_owner, %{"transfer" => true}, audit: audit_data(owner))
+
+      assert_email_sent(fn email ->
+        refute email.text_body =~ "acme/widget"
+
+        assert User.email(new_owner, :primary) in Enum.map(email.to, &elem(&1, 1))
+      end)
+
+      refute_email_sent()
+    end
+
     test "adding an owner keeps the package's workload identities", %{
       owner: owner,
       package: package
@@ -149,6 +238,61 @@ defmodule Hexpm.Repository.OwnersTest do
 
         assert email.text_body =~ "acme/widget (release.yml)"
         assert email.text_body =~ "/packages/#{package.name}/workload-identities"
+      end)
+    end
+
+    test "removing an organization lists its workload identities that stop publishing", %{
+      owner: owner,
+      package: package
+    } do
+      organization = insert(:organization)
+      insert(:package_owner, package: package, user: organization.user, level: "full")
+
+      insert(:organization_workload_identity,
+        organization: organization,
+        role: "write",
+        repository: "acme/widget",
+        workflow: "release.yml",
+        covers_public: true
+      )
+
+      insert(:workload_identity, package: package, repository: "acme/own", workflow: "own.yml")
+
+      assert :ok = Owners.remove(package, organization.user, audit: audit_data(owner))
+
+      assert Hexpm.WorkloadIdentities.list_covering(package) == []
+
+      assert_email_sent(fn email ->
+        assert email.text_body =~
+                 "These workload identities of organization #{organization.name} no longer publish #{package.name}"
+
+        assert email.text_body =~ "acme/widget (release.yml)"
+        assert email.text_body =~ "acme/own (own.yml)"
+      end)
+    end
+
+    test "removing a person leaves the organization's workload identities out", %{
+      owner: owner,
+      package: package
+    } do
+      organization = insert(:organization)
+      insert(:package_owner, package: package, user: organization.user, level: "full")
+      removed = insert(:user)
+      insert(:package_owner, package: package, user: removed)
+
+      insert(:organization_workload_identity,
+        organization: organization,
+        role: "write",
+        repository: "acme/widget",
+        workflow: "release.yml",
+        covers_public: true
+      )
+
+      assert :ok = Owners.remove(package, removed, audit: audit_data(owner))
+
+      assert_email_sent(fn email ->
+        refute email.text_body =~ "acme/widget"
+        assert email.subject =~ "Owner removed"
       end)
     end
 
