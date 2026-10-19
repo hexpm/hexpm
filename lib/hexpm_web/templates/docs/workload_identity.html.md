@@ -2,7 +2,7 @@
 
 Workload Identity, sometimes also known as "Trusted Publishing", lets CI jobs publish and fetch Hex packages without storing a long-lived API key. A GitHub Actions job presents a short-lived OpenID Connect (OIDC) identity token. Hex verifies it against a workload identity you configured and returns a short-lived, scoped access token that the normal publish path accepts.
 
-Package workload identities are for packages in the public `hexpm` repository. An organization's workload identities publish the packages in its private repository and fetch them. See [Organization workload identities](#organization-workload-identities).
+Package workload identities are for packages in the public `hexpm` repository. An organization's workload identities publish the packages in its private repository and fetch them, and can also publish the public packages the organization owns. See [Organization workload identities](#organization-workload-identities).
 
 GitHub Actions is the only supported CI provider.
 
@@ -14,9 +14,11 @@ GitHub Actions is the only supported CI provider.
 4. Hex verifies the token, matches a workload identity, and returns a Hex access token that expires in 15 minutes and can only publish that package.
 5. The job publishes with `Authorization: Bearer <token>` (for Mix, `HEX_API_KEY="Bearer <token>"`, since Mix sends `HEX_API_KEY` as the raw `Authorization` header value).
 
-The package must already exist. A package's workload identities can't create a new package or publish its first release, so do that once with a normal Hex account or API key.
+The package must already exist. Workload identities can't create a public package or publish its first release, so do that once with a normal Hex account or API key. This is the same for an organization's workload identities, which only publish public packages the organization already owns.
 
 Transferring a package (`mix hex.owner transfer`) removes its workload identities, so one that a previous owner set up can't keep publishing it. The new owners add their own. Adding or removing an owner without a transfer keeps them, and a removed owner who can still run one of their workflows on GitHub can still publish the package. Hex points this out when an owner is removed, in the confirmation on the Owners tab and in the email to the package's owners. Removing an organization member works the same way for organization workload identities.
+
+An organization that owns a public package publishes it with its own workload identities that cover public packages. Transferring the package to the organization makes them publish it, and removing the organization as an owner or transferring the package away stops them. The email to the package's owners lists the organization workload identities that start or stop publishing the package, and so does the confirmation on the Owners tab when an organization is removed.
 
 ### Before you begin
 
@@ -59,7 +61,7 @@ A package can have several workload identities, for example for several workflow
 
 ### Organization workload identities
 
-An organization admin configures workload identities for the organization's private repository on the "Workload identities" page of the organization dashboard. Every member can see the page. Adding one requires the admin role, two-factor authentication on the admin's account, and an active organization billing state. Removing one has the same requirements except billing. Hex emails every organization admin when one is added or removed, and records the change in the organization's activity log. A private package's own "Workload identities" tab lists the organization workload identities that can publish it and links to the organization page.
+An organization admin configures workload identities for the organization's private repository, and for the public packages the organization owns, on the "Workload identities" page of the organization dashboard. Every member can see the page. Adding one requires the admin role and two-factor authentication on the admin's account, and removing one has the same requirements. The `read` role and private packages also need an active billing subscription. A `write` workload identity that only covers public packages doesn't, the same as an organization API key publishing public packages, so the page stays usable without one and offers only public packages. Hex emails every organization admin when one is added or removed, and records the change in the organization's activity log. A package's own "Workload identities" tab lists the organization workload identities that can publish it and links to the organization page.
 
 Each organization workload identity has a role:
 
@@ -67,8 +69,19 @@ Each organization workload identity has a role:
   <dt><code>read</code></dt>
   <dd>Fetches every package in the organization's repository, including docs tarballs, from repo.hex.pm.</dd>
   <dt><code>write</code></dt>
-  <dd>Fetches like <code>read</code>, publishes releases and docs of packages in the repository, and creates new packages in it. The "Packages" field limits which package names it covers. Leave it empty to cover every package. A name in the list doesn't have to exist yet, so the workflow can create that package.</dd>
+  <dd>Publishes releases and docs of the packages it covers, as set by "Private packages" and "Public packages" below. With private packages it also fetches like <code>read</code> and creates new packages in the organization's repository.</dd>
 </dl>
+
+A `write` workload identity covers private packages, public packages or both:
+
+<dl class="dl-horizontal">
+  <dt><code>Private packages</code></dt>
+  <dd>Packages in the organization's repository, checked by default. The list of package names limits which ones it covers. Leave it empty to cover every package in the repository. A name in the list doesn't have to exist yet, so the workflow can create that package.</dd>
+  <dt><code>Public packages</code></dt>
+  <dd>Public packages on hex.pm that the organization owns. Leave the list empty to cover every public package the organization owns, including packages it becomes an owner of later. The list can only name public packages the organization owns when the workload identity is added. It never creates a public package, so publish a package's first release with a user account or an API key, and transfer it to the organization with <code>mix hex.owner transfer</code>.</dd>
+</dl>
+
+The `read` role covers the organization's repository only, because public packages need no credentials to fetch.
 
 The other fields are the same as for a package workload identity. The `write` role needs a repository name and a workflow, and an environment when the repository is public. The `read` role can leave the repository name and workflow empty, and never needs an environment:
 
@@ -77,7 +90,9 @@ The other fields are the same as for a package workload identity. The `write` ro
 
 A common setup is one `read` workload identity with an empty repository name, so every repository in your GitHub organization can fetch private dependencies, and one `write` workload identity per repository that releases packages, naming its release workflow and environment.
 
-Organization workload identities never cover the public `hexpm` repository. Public packages owned by an organization use package workload identities, and private packages only use organization workload identities.
+A public package is published by its own package workload identities and by the workload identities with public packages of the organizations that own it. Hex checks the organization's ownership at the exchange and again at publish, the same as for an organization API key, which needs the owner level "maintainer" or "full". Removing the organization as an owner or transferring the package away stops its workload identities from publishing the package at once, and the identities stay on the organization's page. Private packages only use organization workload identities.
+
+Adding or removing a workload identity with public packages also emails the other owners of the public packages it covers, one email per person naming their packages, the same as adding a package workload identity emails every package owner.
 
 Neither role can retire releases, revert, or change owners, keys, members, or settings. The organization's single sign-on and two-factor authentication requirements don't apply to organization workload identities, the same as for organization API keys.
 
@@ -91,15 +106,23 @@ Send the access token to repo.hex.pm as `Authorization: Bearer <token>`. It can'
 
 Mix does this exchange itself when it fetches packages from an organization's repository in a GitHub Actions job with the `id-token: write` permission, and neither an organization key nor an authenticated user is configured.
 
-To publish or create a package, use a package scope in the organization's repository, the same as for a package workload identity:
+To publish or create a private package, use a package scope in the organization's repository, the same as for a package workload identity:
 
 ```nohighlight
 scope=package:ORG/PACKAGE
 ```
 
-Hex matches the organization's `write` workload identities whose package list covers the name. A package created this way has no owners, the same as one created with an organization API key. A job that fetches private dependencies and then publishes exchanges twice, once per scope, with a new OIDC token each time.
+Hex matches the organization's `write` workload identities with private packages whose list covers the name. A package created this way has no owners, the same as one created with an organization API key. A job that fetches private dependencies and then publishes exchanges twice, once per scope, with a new OIDC token each time.
 
-Removing a workload identity stops its tokens at the Hex API on the next request. repo.hex.pm verifies tokens without asking Hex, so a fetch token keeps working there until it expires, at most 15 minutes later. A lapsed billing subscription behaves the same, since Hex checks billing during the exchange.
+To publish a public package the organization owns, use the public repository's package scope:
+
+```nohighlight
+scope=package:hexpm/PACKAGE
+```
+
+Hex matches the package's own workload identities, and the `write` workload identities with public packages of the organizations that own it whose list is empty or names the package. A name no public package has gets the same `access_denied` as no matching workload identity.
+
+Removing a workload identity stops its tokens at the Hex API on the next request. repo.hex.pm verifies tokens without asking Hex, so a fetch token keeps working there until it expires, at most 15 minutes later. A lapsed billing subscription behaves the same, since Hex checks billing during the exchange for the organization's repository. Publishing public packages doesn't need an active subscription.
 
 ### GitHub Actions workflow
 
@@ -186,7 +209,7 @@ assertion=<github-oidc-jwt>&
 scope=package:hexpm/PACKAGE
 ```
 
-No `client_id` is needed, because the OIDC token is the credential. `scope` names exactly one package as `package:REPOSITORY/PACKAGE`. An [organization workload identity](#organization-workload-identities) uses its organization's repository (`package:ORG/PACKAGE`), or requests `repository:ORG` to fetch. Successful response:
+No `client_id` is needed, because the OIDC token is the credential. `scope` names exactly one package as `package:REPOSITORY/PACKAGE`. An [organization workload identity](#organization-workload-identities) uses its organization's repository (`package:ORG/PACKAGE`) for a private package and `package:hexpm/PACKAGE` for a public one, or requests `repository:ORG` to fetch. Successful response:
 
 ```nohighlight
 {
@@ -197,7 +220,7 @@ No `client_id` is needed, because the OIDC token is the credential. `scope` name
 }
 ```
 
-Errors use OAuth-style bodies (`error`, `error_description`), for example missing fields (`invalid_request`), a malformed or missing `scope` (`invalid_scope`), bad or replayed OIDC tokens (`invalid_grant`), or no matching workload identity (`access_denied`). An unknown package, repository, or organization returns the same `access_denied` as no matching workload identity. A matching workload identity of an organization without an active billing state also gets `access_denied`, with a description saying so.
+Errors use OAuth-style bodies (`error`, `error_description`), for example missing fields (`invalid_request`), a malformed or missing `scope` (`invalid_scope`), bad or replayed OIDC tokens (`invalid_grant`), or no matching workload identity (`access_denied`). An unknown package, repository, or organization returns the same `access_denied` as no matching workload identity. A matching workload identity of an organization without an active billing state also gets `access_denied` for the organization's repository, with a description saying so.
 
 The grant is public, since the OIDC token is the credential. Exchanges are limited to 1,000 a minute per address, far above what CI runners sharing an address send, and beyond that the endpoint answers `429`. Exchanges that fail after the OIDC token is verified count toward a limit per GitHub repository. Once a repository exceeds it, the endpoint answers `429` with `slow_down` for that repository only. Tokens from rejected events and replayed tokens don't count, because a pull request from a fork can produce them.
 
@@ -217,19 +240,21 @@ token=<hex-access-token>
 * Pinning the repository ID as well as the owner ID matters inside an organization. If the configured repository is deleted, anyone who can create a repository in that organization could otherwise recreate the name, add the configured workflow, and get a token. The owner ID alone wouldn't stop that.
 * Hex tokens issued this way expire after 15 minutes, cover one package or one organization repository, and are attributed to the workload identity. The release has no publishing user, and the audit log records the publish.
 * Hex rejects tokens from `pull_request_target` and `workflow_run` workflows. A `workflow_run` run gets write permissions even when a pull request from a fork triggered the run that started it, and no OIDC claim says whether one did.
-* Configuring or removing a package workload identity requires full package ownership and two-factor authentication, because a workload identity grants publish rights the same way a personal API key does. Hex emails every package owner when a workload identity is added or removed, and the email can't be turned off. Transferring the package removes its workload identities. The CI exchange and publish don't require two-factor authentication, because the grant has no interactive user.
+* Configuring or removing a package workload identity requires full package ownership and two-factor authentication, because a workload identity grants publish rights the same way a personal API key does. Hex emails every package owner when a workload identity is added or removed, and the email can't be turned off. Transferring the package removes its workload identities. An organization workload identity with public packages emails the owners of the public packages it covers in the same way. The CI exchange and publish don't require two-factor authentication, because the grant has no interactive user.
 * Hex records an allowlisted snapshot of the verified OIDC claims (repository, workflow ref, commit SHA, run id, and similar) on the Hex token and attaches it to the release published with that token. The release API exposes it as `oidc_claims`. The package page shows it in a Provenance card that links to the source commit, build file, branch or tag, environment, triggering actor, and workflow run, so anyone using the package can see that a release was published with Workload Identity and which workflow produced it.
 
 ### Limitations
 
 * Only GitHub Actions can act as a workload identity. GitLab, CircleCI, and custom OIDC issuers aren't supported.
-* A package's workload identities can't create a package or publish its first release from CI. Publish once manually, then attach a workload identity. For a private package, use an organization workload identity, which can create it.
+* Workload identities can't create a package or publish its first release from CI, except an organization workload identity creating a package in the organization's repository. Publish a public package once manually, then attach a workload identity, or transfer the package to an organization whose workload identities cover public packages.
 
 ### Troubleshooting
 
 * **The form reports the GitHub repository could not be resolved:** the GitHub owner doesn't exist or is misspelled. Hex could read neither the repository nor the owner profile.
 * **The form reports that a repository ID is required:** Hex couldn't see the repository, so it can't pin the ID itself. For a private repository, fill in the repository ID field. For a public one, this usually means the repository name is misspelled, because GitHub answers 404 both for a repository that doesn't exist and for one Hex can't see, so a typo looks the same as a private repository. A wrong repository name combined with a repository ID you fill in is created but never matches, and the exchange returns no matching workload identity.
 * **The form reports that the environment is required for a public repository:** a workload identity that can publish from a public repository must name a GitHub environment. Create one under the repository's Settings, Environments, add protection rules such as required reviewers, set `environment:` on the publishing job, and enter the environment's name in the form.
+* **The form reports that public package names must be public packages the organization owns:** a listed name isn't a public package, or the organization isn't one of its owners. Publish the package's first release and transfer it to the organization first, or remove the name from the list.
+* **The form reports that private packages or the read role need an active billing subscription:** the organization's subscription isn't active. Set up billing on the organization's Billing page, or add a `write` workload identity that only covers public packages.
 * **The form reports that GitHub could not be reached:** GitHub was unreachable, rate-limited, or answered with something unexpected. Nothing was stored, so you can submit the same form again.
 * **The exchange returns no matching workload identity:** check the package name, Hex repository, GitHub `owner/repo`, workflow **filename**, and environment against the configured workload identity, including the exact casing of the workflow filename. The workflow file that requests the OIDC token must be in the configured repository. A workload identity without an environment stops matching when its repository is made public, so remove it and add one that names an environment.
 * **The exchange rejects the OIDC token:** confirm `id-token: write`, audience `hexpm`, and that you aren't reusing a JWT that was already exchanged.
