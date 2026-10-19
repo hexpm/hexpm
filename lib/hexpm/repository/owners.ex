@@ -50,7 +50,7 @@ defmodule Hexpm.Repository.Owners do
     Enum.any?(owners, &(&1.user_id == user_id && &1.level == "full"))
   end
 
-  def add(package, user, params, audit: audit_data) do
+  def add(package, user, params, opts) do
     repository = package.repository
     repository_access = Organizations.access?(repository.organization, user, "read")
 
@@ -71,11 +71,12 @@ defmodule Hexpm.Repository.Owners do
         {:error, :organization_user_conflict}
 
       true ->
-        add_owner(package, user, params, audit_data)
+        add_owner(package, user, params, opts)
     end
   end
 
-  defp add_owner(package, user, params, audit_data) do
+  defp add_owner(package, user, params, opts) do
+    audit_data = Keyword.fetch!(opts, :audit)
     new_level = Map.get(params, "level", "full")
 
     multi =
@@ -83,6 +84,7 @@ defmodule Hexpm.Repository.Owners do
       |> Multi.run(:owners, fn _repo, _changes ->
         {:ok, lock_owners(package, user: [:emails, :organization])}
       end)
+      |> Multi.run(:actor, fn _repo, _changes -> authorize_actor(package, opts) end)
       |> Multi.run(:covering, fn _repo, _changes ->
         {:ok, organization_workload_identities(package)}
       end)
@@ -118,6 +120,9 @@ defmodule Hexpm.Repository.Owners do
 
         notify_owner_added(package, owners, user, identities_not_in(covered, covering))
         {:ok, %{owner | user: user}}
+
+      {:error, :actor, reason, _} ->
+        {:error, reason}
 
       {:error, :existing, reason, _} ->
         {:error, reason}
@@ -200,7 +205,9 @@ defmodule Hexpm.Repository.Owners do
     multi
   end
 
-  def update_level(package, user, level, audit: audit_data) do
+  def update_level(package, user, level, opts) do
+    audit_data = Keyword.fetch!(opts, :audit)
+
     multi =
       Multi.new()
       |> Multi.run(:existing, fn _repo, _changes ->
@@ -208,6 +215,9 @@ defmodule Hexpm.Repository.Owners do
         owner = Enum.find(owners, &(&1.user_id == user.id))
 
         cond do
+          authorize_actor(package, opts) != {:ok, :authorized} ->
+            {:error, :not_full_owner}
+
           !owner ->
             {:error, :not_owner}
 
@@ -232,7 +242,9 @@ defmodule Hexpm.Repository.Owners do
     end
   end
 
-  def remove(package, user, audit: audit_data) do
+  def remove(package, user, opts) do
+    audit_data = Keyword.fetch!(opts, :audit)
+
     multi =
       Multi.new()
       |> Multi.run(:owners, fn _repo, _changes -> {:ok, lock_owners(package, user: :emails)} end)
@@ -240,6 +252,9 @@ defmodule Hexpm.Repository.Owners do
         owner = Enum.find(owners, &(&1.user_id == user.id))
 
         cond do
+          authorize_actor(package, opts) != {:ok, :authorized} ->
+            {:error, :not_full_owner}
+
           !owner ->
             {:error, :not_owner}
 
@@ -306,4 +321,28 @@ defmodule Hexpm.Repository.Owners do
     ids = MapSet.new(others, & &1.id)
     Enum.reject(workload_identities, &MapSet.member?(ids, &1.id))
   end
+
+  # Callers authorize the acting user before the package lock, so a change that
+  # waited on the lock checks again once it holds it: the change it waited for
+  # may have removed or demoted the acting user. Admin tasks act without owning
+  # the package.
+  defp authorize_actor(package, opts) do
+    cond do
+      Keyword.get(opts, :admin, false) -> {:ok, :authorized}
+      full_owner_actor?(package, Keyword.fetch!(opts, :audit).user) -> {:ok, :authorized}
+      true -> {:error, :not_full_owner}
+    end
+  end
+
+  defp full_owner_actor?(package, %User{} = user),
+    do: Packages.owner_with_access?(package, user, "full")
+
+  defp full_owner_actor?(package, %Organization{} = organization) do
+    organization = Repo.preload(organization, :user)
+
+    package.repository.organization_id == organization.id or
+      Packages.owner_with_access?(package, organization.user, "full")
+  end
+
+  defp full_owner_actor?(_package, _actor), do: false
 end

@@ -311,4 +311,44 @@ defmodule Hexpm.Repository.OwnersTest do
       end)
     end
   end
+
+  describe "the acting owner" do
+    test "is checked again once the package is locked", %{owner: owner, package: package} do
+      maintainer = insert(:user)
+      insert(:package_owner, package: package, user: maintainer, level: "maintainer")
+      audit = audit_data(maintainer)
+
+      assert {:error, :not_full_owner} =
+               Owners.add(package, insert(:user), %{"transfer" => true}, audit: audit)
+
+      assert {:error, :not_full_owner} =
+               Owners.update_level(package, owner, "maintainer", audit: audit)
+
+      assert {:error, :not_full_owner} = Owners.remove(package, owner, audit: audit)
+
+      assert Enum.map(Owners.all(package), &{&1.user_id, &1.level}) |> Enum.sort() ==
+               Enum.sort([{owner.id, "full"}, {maintainer.id, "maintainer"}])
+    end
+
+    test "can be an organization that owns the package" do
+      organization = insert(:organization)
+
+      package =
+        insert(:package,
+          package_owners: [build(:package_owner, user: organization.user, level: "full")]
+        )
+        |> Repo.preload(repository: :organization)
+
+      audit = %{audit_data(insert(:user)) | user: organization}
+
+      assert {:ok, _} = Owners.add(package, insert(:user), %{}, audit: audit)
+
+      other_package =
+        insert(:package, package_owners: [build(:package_owner, user: insert(:user))])
+        |> Repo.preload(repository: :organization)
+
+      assert {:error, :not_full_owner} =
+               Owners.add(other_package, insert(:user), %{}, audit: audit)
+    end
+  end
 end

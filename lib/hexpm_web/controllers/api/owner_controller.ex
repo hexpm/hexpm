@@ -96,6 +96,9 @@ defmodule HexpmWeb.API.OwnerController do
               "username" => "cannot demote the last full owner of a package"
             })
 
+          {:error, :not_full_owner} ->
+            render_error(conn, 403, message: "account not authorized for this action")
+
           {:error, changeset} ->
             validation_failed(conn, changeset)
         end
@@ -129,6 +132,9 @@ defmodule HexpmWeb.API.OwnerController do
             validation_failed(conn, %{
               "username" => "cannot remove the last full owner of package"
             })
+
+          {:error, :not_full_owner} ->
+            render_error(conn, 403, message: "account not authorized for this action")
         end
       else
         not_found(conn)
