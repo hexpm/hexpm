@@ -284,7 +284,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.WorkloadIdentitiesTab do
                     placeholder={"All public packages #{@organization.name} owns"}
                   />
                   <p class="mt-1 text-xs text-grey-500 dark:text-grey-300">
-                    Names of public packages {@organization.name} owns, separated by commas. Leave empty to cover every public package {@organization.name} owns, including packages it becomes an owner of later. Workload identities don't create public packages, so publish a package's first release with a user account or an API key.
+                    Names of public packages {@organization.name} owns, separated by commas. Leave empty to cover every public package {@organization.name} owns, including packages it becomes an owner of later. Workload identities don't create public packages, so publish a package's first release with a user account or an API key. Each public release shows the GitHub repository, workflow and actor that published it, also when the repository is private.
                   </p>
                 </div>
               </div>

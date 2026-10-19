@@ -78,7 +78,7 @@ A `write` workload identity covers private packages, public packages or both:
   <dt><code>Private packages</code></dt>
   <dd>Packages in the organization's repository, checked by default. The list of package names limits which ones it covers. Leave it empty to cover every package in the repository. A name in the list doesn't have to exist yet, so the workflow can create that package.</dd>
   <dt><code>Public packages</code></dt>
-  <dd>Public packages on hex.pm that the organization owns. Leave the list empty to cover every public package the organization owns, including packages it becomes an owner of later. The list can only name public packages the organization owns when the workload identity is added. It never creates a public package, so publish a package's first release with a user account or an API key, and transfer it to the organization with <code>mix hex.owner transfer</code>.</dd>
+  <dd>Public packages on hex.pm that the organization owns. Leave the list empty to cover every public package the organization owns, including packages it becomes an owner of later. The list can only name public packages the organization owns when the workload identity is added. It never creates a public package, so publish a package's first release with a user account or an API key, and transfer it to the organization with <code>mix hex.owner transfer</code>. Each public release shows the GitHub repository, workflow and actor that published it in its Provenance card and in the release API, also when the repository is private.</dd>
 </dl>
 
 The `read` role covers the organization's repository only, because public packages need no credentials to fetch.
