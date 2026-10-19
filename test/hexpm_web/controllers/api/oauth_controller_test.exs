@@ -236,6 +236,27 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       assert response_body["error"] == "authorization_pending"
     end
 
+    test "refuses a device authorized by an account deactivated since", %{
+      client: client,
+      device_code: device_code
+    } do
+      user = insert(:user)
+      {:ok, _} = DeviceCodes.authorize_device(device_code.user_code, user, device_code.scopes)
+      deactivate(user)
+
+      response =
+        build_conn()
+        |> post(~p"/api/oauth/token", %{
+          "grant_type" => "urn:ietf:params:oauth:grant-type:device_code",
+          "device_code" => device_code.device_code,
+          "client_id" => client.client_id
+        })
+        |> json_response(400)
+
+      assert response["error"] == "invalid_grant"
+      assert response["error_description"] == "Account has been deactivated"
+    end
+
     test "returns access token for authorized device code", %{
       client: client,
       device_code: device_code
