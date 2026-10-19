@@ -806,6 +806,31 @@ defmodule HexpmWeb.SSOEnforcementTest do
       assert html_response(conn, 200) =~ "Current owners"
     end
 
+    test "sends a governed member off the owners page", context do
+      require_sso(context)
+      {conn, _session} = login(context.member)
+
+      path = "/packages/#{context.public_package.name}/owners"
+      conn = get(conn, path)
+
+      assert redirected_to(conn) ==
+               "/organizations/#{context.organization.name}/authenticate?return=" <>
+                 URI.encode_www_form(path)
+    end
+
+    test "shows a member who has authenticated the owners page without the controls", context do
+      require_sso(context)
+      {conn, session} = login(context.member)
+      authenticate(context, context.member, session)
+
+      body =
+        conn
+        |> get("/packages/#{context.public_package.name}/owners")
+        |> html_response(200)
+
+      assert body =~ "Only full owners and organization admins can add, change and remove owners."
+    end
+
     test "refuses the package domain at /api/auth for a governed member", context do
       require_sso(context)
       token = oauth_token(context.member, ["api:write"])

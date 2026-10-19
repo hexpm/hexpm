@@ -11,7 +11,7 @@ defmodule HexpmWeb.RepositoryAccess do
   """
 
   alias Hexpm.Accounts.Users
-  alias Hexpm.Repository.{Package, Packages}
+  alias Hexpm.Repository.{Owners, Package, Packages}
   alias HexpmWeb.SSOEnforcement
 
   @doc """
@@ -47,5 +47,42 @@ defmodule HexpmWeb.RepositoryAccess do
       other ->
         other
     end
+  end
+
+  @doc """
+  What the current user may do on a package's settings pages.
+
+  Full owners `:manage` them. Maintainers, members of an organization that owns
+  the package and members of a private package's organization `:view` them, once
+  each of those organizations lets the request in.
+  """
+  def package_settings(conn_or_socket, package) do
+    current_user = conn_or_socket.assigns.current_user
+
+    cond do
+      Packages.owner_with_access?(package, current_user, "full") ->
+        with :ok <- SSOEnforcement.check_package(conn_or_socket, package, current_user, "full"),
+             do: {:ok, :manage}
+
+      Owners.get(package, current_user) ->
+        with :ok <-
+               SSOEnforcement.check_package(conn_or_socket, package, current_user, "maintainer"),
+             do: {:ok, :view}
+
+      true ->
+        case Packages.organization_memberships(package, current_user) do
+          [] -> :error
+          memberships -> check_memberships(conn_or_socket, memberships, current_user)
+        end
+    end
+  end
+
+  defp check_memberships(conn_or_socket, memberships, current_user) do
+    Enum.reduce_while(memberships, {:ok, :view}, fn %{organization: organization}, ok ->
+      case SSOEnforcement.check(conn_or_socket, organization, current_user) do
+        :ok -> {:cont, ok}
+        {:error, refusal} -> {:halt, {:error, refusal, organization}}
+      end
+    end)
   end
 end

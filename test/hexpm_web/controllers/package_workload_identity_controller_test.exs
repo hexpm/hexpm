@@ -99,26 +99,56 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
       assert redirected_to(conn) =~ "/sudo"
     end
 
-    test "refuses a full owner without two-factor authentication", %{package: package} do
+    test "shows a full owner without two-factor authentication the page without the controls", %{
+      package: package
+    } do
       full_owner_no_tfa = insert(:user)
       insert(:package_owner, package: package, user: full_owner_no_tfa, level: "full")
+      insert(:workload_identity, package: package, repository: "acme/widget")
 
-      conn =
+      document =
         build_conn()
         |> test_login(full_owner_no_tfa)
         |> get("/packages/#{package.name}/workload-identities")
+        |> html_response(200)
+        |> LazyHTML.from_document()
 
-      assert conn.status == 403
-      assert conn.resp_body =~ "Two-factor authentication is required"
+      assert LazyHTML.text(document) =~ "acme/widget"
+
+      assert LazyHTML.text(document) =~
+               "Two-factor authentication is required to add and remove workload identities."
+
+      refute LazyHTML.text(document) =~ "Only full owners and organization admins"
+      assert document |> LazyHTML.query("#add-workload-identity-form") |> Enum.empty?()
+
+      assert document
+             |> LazyHTML.query(~s(form[id^="remove-workload-identity-form-"]))
+             |> Enum.empty?()
     end
 
-    test "maintainer is forbidden", %{maintainer: maintainer, package: package} do
-      conn =
+    test "shows a maintainer the workload identities without the controls", %{
+      maintainer: maintainer,
+      package: package
+    } do
+      insert(:workload_identity, package: package, repository: "acme/widget")
+
+      document =
         build_conn()
         |> test_login(maintainer)
         |> get("/packages/#{package.name}/workload-identities")
+        |> html_response(200)
+        |> LazyHTML.from_document()
 
-      assert conn.status == 403
+      assert LazyHTML.text(document) =~ "acme/widget"
+
+      assert LazyHTML.text(document) =~
+               "Only full owners and organization admins can add and remove workload identities."
+
+      assert document |> LazyHTML.query("#add-workload-identity-form") |> Enum.empty?()
+
+      assert document
+             |> LazyHTML.query(~s(form[id^="remove-workload-identity-form-"]))
+             |> Enum.empty?()
     end
 
     test "non-owner is forbidden", %{non_owner: non_owner, package: package} do
@@ -644,6 +674,103 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
     end
   end
 
+  describe "a public package an organization owns" do
+    setup do
+      organization = insert(:organization)
+      insert(:repository, organization: organization, name: organization.name)
+
+      package =
+        insert(:package,
+          repository_id: 1,
+          package_owners: [build(:package_owner, user: organization.user, level: "full")]
+        )
+
+      workload_identity =
+        insert(:workload_identity,
+          package: package,
+          repository: "acme/widget",
+          workflow: "release.yml"
+        )
+
+      %{organization: organization, package: package, workload_identity: workload_identity}
+    end
+
+    test "shows a member without 2FA the workload identities without the controls", %{
+      organization: organization,
+      package: package
+    } do
+      member = insert(:user)
+      insert(:organization_user, organization: organization, user: member, role: "read")
+
+      document =
+        build_conn()
+        |> test_login(member)
+        |> get("/packages/#{package.name}/workload-identities")
+        |> html_response(200)
+        |> LazyHTML.from_document()
+
+      assert LazyHTML.text(document) =~ "acme/widget (release.yml)"
+
+      assert LazyHTML.text(document) =~
+               "Only full owners and organization admins can add and remove workload identities."
+
+      assert document |> LazyHTML.query("#add-workload-identity-form") |> Enum.empty?()
+
+      assert document
+             |> LazyHTML.query(~s(form[id^="remove-workload-identity-form-"]))
+             |> Enum.empty?()
+
+      assert settings_nav(document) == [{"Owners", nil}, {"Workload identities", "page"}]
+    end
+
+    test "shows an admin the controls", %{organization: organization, package: package} do
+      admin = insert(:user_with_tfa)
+      insert(:organization_user, organization: organization, user: admin, role: "admin")
+
+      document =
+        build_conn()
+        |> test_login(admin)
+        |> get("/packages/#{package.name}/workload-identities")
+        |> html_response(200)
+        |> LazyHTML.from_document()
+
+      refute LazyHTML.text(document) =~ "Only full owners and organization admins"
+      refute document |> LazyHTML.query("#add-workload-identity-form") |> Enum.empty?()
+
+      refute document
+             |> LazyHTML.query(~s(form[id^="remove-workload-identity-form-"]))
+             |> Enum.empty?()
+    end
+
+    test "refuses a member's changes", %{
+      organization: organization,
+      package: package,
+      workload_identity: workload_identity
+    } do
+      member = insert(:user_with_tfa)
+      insert(:organization_user, organization: organization, user: member, role: "write")
+      conn = test_login(build_conn(), member, sudo: true)
+
+      added =
+        post(conn, "/packages/#{package.name}/workload-identities", %{
+          "workload_identity" => %{
+            "provider" => "github",
+            "repository_owner" => "acme",
+            "repository" => "other",
+            "workflow" => "release.yml"
+          }
+        })
+
+      removed =
+        delete(conn, "/packages/#{package.name}/workload-identities/#{workload_identity.id}")
+
+      assert added.status == 403
+      assert removed.status == 403
+      assert [%{id: id}] = WorkloadIdentities.list(package)
+      assert id == workload_identity.id
+    end
+  end
+
   describe "private package" do
     setup do
       org_user = insert(:user_with_tfa)
@@ -786,20 +913,29 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
       assert missing.status == 404
     end
 
-    test "keeps naming a member who is not an owner", %{
+    test "shows a member who is not an owner the organization workload identities", %{
       organization: organization,
       repository: repository,
       package: package
     } do
+      insert(:organization_workload_identity,
+        organization: organization,
+        role: "write",
+        repository: "acme/covering",
+        workflow: "release.yml"
+      )
+
       member = insert(:user)
       insert(:organization_user, organization: organization, user: member, role: "read")
 
-      conn =
+      body =
         build_conn()
         |> test_login(member)
         |> get("/packages/#{repository.name}/#{package.name}/workload-identities")
+        |> html_response(200)
 
-      assert conn.status == 403
+      assert body =~ "acme/covering (release.yml)"
+      assert body =~ "/dashboard/orgs/#{repository.name}/workload-identities"
     end
   end
 end

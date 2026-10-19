@@ -4,13 +4,15 @@
     <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg overflow-hidden mb-6">
       <div class="px-6 py-4 border-b border-grey-200 dark:border-grey-700 flex items-center justify-between">
         <h2 class="text-base font-semibold text-grey-900 dark:text-white">Current owners</h2>
-        {Phoenix.Component.live_render(@conn, HexpmWeb.PackageOwnerLive.AddOwner,
-          id: "add-owner-live",
-          session: %{
-            "package_id" => @package.id,
-            "current_user_id" => @current_user.id
-          }
-        )}
+        <%= if @manage? do %>
+          {Phoenix.Component.live_render(@conn, HexpmWeb.PackageOwnerLive.AddOwner,
+            id: "add-owner-live",
+            session: %{
+              "package_id" => @package.id,
+              "current_user_id" => @current_user.id
+            }
+          )}
+        <% end %>
       </div>
       <ul class="divide-y divide-grey-100 dark:divide-grey-700">
         <%= for owner <- @owners do %>
@@ -47,7 +49,7 @@
                 {HexpmWeb.PackageOwnerView.role_label(owner.level)}
               </span>
 
-              <%= if length(@owners) > 1 do %>
+              <%= if @manage? and length(@owners) > 1 do %>
                 <.icon_button
                   icon="pencil-square"
                   variant="default"
@@ -65,10 +67,17 @@
           </li>
         <% end %>
       </ul>
+
+      <p
+        :if={not @manage?}
+        class="px-6 py-3 border-t border-grey-200 dark:border-grey-700 bg-grey-50 dark:bg-grey-900 text-sm text-grey-600 dark:text-grey-300"
+      >
+        Only full owners and organization admins can add, change and remove owners.
+      </p>
     </div>
 
     <%!-- Edit role + Remove modals (one per owner, only when more than one) --%>
-    <%= for owner <- @owners, length(@owners) > 1 do %>
+    <%= for owner <- @owners, @manage?, length(@owners) > 1 do %>
       <.modal id={"edit-role-#{owner.user.id}"} title="Change role" max_width="md">
         <.sudo_form
           current_user={@current_user}
