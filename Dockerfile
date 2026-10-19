@@ -68,9 +68,10 @@ RUN mix do sentry.package_source_code + release
 # prepare release image
 FROM debian:${DEBIAN_VERSION} AS app
 
+# Erlang/OTP loads libsctp.so.1 when it starts and prints a warning without it
 RUN apt update && \
     apt upgrade -y && \
-    apt install --no-install-recommends -y bash openssl ca-certificates git && \
+    apt install --no-install-recommends -y bash openssl ca-certificates git libsctp1 && \
     apt clean -y && rm -rf /var/lib/apt/lists/*
 
 # The release creates /app/tmp when it starts and writes its runtime config
