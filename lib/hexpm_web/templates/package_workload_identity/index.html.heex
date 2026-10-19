@@ -69,6 +69,7 @@
               </div>
 
               <.icon_button
+                :if={@manage? and @tfa?}
                 icon="x-mark"
                 variant="danger"
                 aria-label={"Remove workload identity #{workload_identity.repository}"}
@@ -83,10 +84,29 @@
             No workload identities configured for this package.
           </li>
         </ul>
+
+        <p
+          :if={not @manage?}
+          class="px-6 py-3 border-t border-grey-200 dark:border-grey-700 bg-grey-50 dark:bg-grey-900 text-sm text-grey-600 dark:text-grey-300"
+        >
+          Only full owners and organization admins can add and remove workload identities.
+        </p>
+        <p
+          :if={@manage? and not @tfa?}
+          class="px-6 py-3 border-t border-grey-200 dark:border-grey-700 bg-grey-50 dark:bg-grey-900 text-sm text-grey-600 dark:text-grey-300"
+        >
+          Two-factor authentication is required to add and remove workload identities. Enable it in your <a
+            href={~p"/dashboard/security"}
+            class="text-primary-600 dark:text-primary-300 hover:underline"
+          >security settings</a>.
+        </p>
       </div>
 
       <%!-- Add workload identity --%>
-      <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg overflow-hidden">
+      <div
+        :if={@manage? and @tfa?}
+        class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg overflow-hidden"
+      >
         <div class="px-6 py-4 border-b border-grey-200 dark:border-grey-700">
           <h2 class="text-base font-semibold text-grey-900 dark:text-white">
             Add workload identity
@@ -151,7 +171,7 @@
     </div>
 
     <%!-- Remove modals --%>
-    <%= for workload_identity <- @workload_identities do %>
+    <%= for workload_identity <- @workload_identities, @manage? and @tfa? do %>
       <.modal
         id={"remove-workload-identity-#{workload_identity.id}"}
         title="Remove workload identity?"

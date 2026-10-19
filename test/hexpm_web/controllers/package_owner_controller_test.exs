@@ -20,6 +20,31 @@ defmodule HexpmWeb.PackageOwnerControllerTest do
     %{full_owner: full_owner, maintainer: maintainer, non_owner: non_owner, package: package}
   end
 
+  defp organization_package do
+    organization = insert(:organization)
+    insert(:repository, organization: organization, name: organization.name)
+    maintainer = insert(:user)
+
+    package =
+      insert(:package,
+        repository_id: 1,
+        package_owners: [
+          build(:package_owner, user: organization.user, level: "full"),
+          build(:package_owner, user: maintainer, level: "maintainer")
+        ]
+      )
+
+    %{organization: organization, package: package, maintainer: maintainer}
+  end
+
+  defp controls(document) do
+    %{
+      add: document |> LazyHTML.query("#add-owner-form") |> Enum.count(),
+      edit: document |> LazyHTML.query(~s(button[aria-label^="Edit role for"])) |> Enum.count(),
+      remove: document |> LazyHTML.query(~s(form[id^="remove-form-"])) |> Enum.count()
+    }
+  end
+
   defp links(document, selector) do
     document
     |> LazyHTML.query(selector)
@@ -101,24 +126,60 @@ defmodule HexpmWeb.PackageOwnerControllerTest do
       assert body =~ ~s(href="/packages/#{package.name}/workload-identities")
     end
 
-    test "an organization admin who owns nothing directly sees the page" do
-      organization = insert(:organization)
-      insert(:repository, organization: organization, name: organization.name)
+    test "an organization admin who owns nothing directly manages the owners" do
+      %{organization: organization, package: package} = organization_package()
       admin = insert(:user)
       insert(:organization_user, organization: organization, user: admin, role: "admin")
 
-      package =
-        insert(:package,
-          repository_id: 1,
-          package_owners: [build(:package_owner, user: organization.user, level: "full")]
-        )
-
-      conn =
+      document =
         build_conn()
         |> test_login(admin)
         |> get("/packages/#{package.name}/owners")
+        |> html_response(200)
+        |> LazyHTML.from_document()
 
-      assert html_response(conn, 200) =~ "Current owners"
+      assert controls(document) == %{add: 1, edit: 2, remove: 2}
+      refute LazyHTML.text(document) =~ "Only full owners and organization admins"
+    end
+
+    test "members of an organization that owns the package see the owners without the controls" do
+      %{organization: organization, package: package, maintainer: maintainer} =
+        organization_package()
+
+      for role <- ["read", "write"] do
+        member = insert(:user)
+        insert(:organization_user, organization: organization, user: member, role: role)
+
+        document =
+          build_conn()
+          |> test_login(member)
+          |> get("/packages/#{package.name}/owners")
+          |> html_response(200)
+          |> LazyHTML.from_document()
+
+        assert LazyHTML.text(document) =~ maintainer.username
+        assert controls(document) == %{add: 0, edit: 0, remove: 0}
+
+        assert LazyHTML.text(document) =~
+                 "Only full owners and organization admins can add, change and remove owners."
+      end
+    end
+
+    test "a member of the public repository's organization is forbidden", %{package: package} do
+      member = insert(:user)
+
+      insert(:organization_user,
+        organization: Hexpm.Repo.get!(Hexpm.Accounts.Organization, 1),
+        user: member,
+        role: "read"
+      )
+
+      conn =
+        build_conn()
+        |> test_login(member)
+        |> get("/packages/#{package.name}/owners")
+
+      assert conn.status == 403
     end
 
     test "uses selector-safe modal IDs for owners with dots in their usernames", %{
@@ -174,13 +235,23 @@ defmodule HexpmWeb.PackageOwnerControllerTest do
       assert redirected_to(conn) =~ "/sudo"
     end
 
-    test "maintainer is forbidden", %{maintainer: maintainer, package: package} do
-      conn =
+    test "shows a maintainer the owners without the controls", %{
+      full_owner: full_owner,
+      maintainer: maintainer,
+      package: package
+    } do
+      document =
         build_conn()
         |> test_login(maintainer)
         |> get("/packages/#{package.name}/owners")
+        |> html_response(200)
+        |> LazyHTML.from_document()
 
-      assert conn.status == 403
+      assert LazyHTML.text(document) =~ full_owner.username
+      assert controls(document) == %{add: 0, edit: 0, remove: 0}
+
+      assert LazyHTML.text(document) =~
+               "Only full owners and organization admins can add, change and remove owners."
     end
 
     test "non-owner is forbidden", %{non_owner: non_owner, package: package} do
@@ -196,6 +267,30 @@ defmodule HexpmWeb.PackageOwnerControllerTest do
       conn = get(build_conn(), "/packages/#{package.name}/owners")
       assert redirected_to(conn) =~ "/login"
     end
+  end
+
+  test "an organization member who isn't an admin can't change the owners", %{
+    non_owner: non_owner
+  } do
+    %{organization: organization, package: package, maintainer: maintainer} =
+      organization_package()
+
+    member = insert(:user)
+    insert(:organization_user, organization: organization, user: member, role: "write")
+    conn = test_login(build_conn(), member, sudo: true)
+
+    added = post(conn, "/packages/#{package.name}/owners", %{"username" => non_owner.username})
+
+    changed =
+      put(conn, "/packages/#{package.name}/owners/#{maintainer.username}", %{"level" => "full"})
+
+    removed = delete(conn, "/packages/#{package.name}/owners/#{maintainer.username}")
+
+    assert added.status == 403
+    assert changed.status == 403
+    assert removed.status == 403
+    refute Owners.get(package, non_owner)
+    assert Owners.get(package, maintainer).level == "maintainer"
   end
 
   describe "POST /packages/:name/owners (direct add)" do
@@ -531,20 +626,45 @@ defmodule HexpmWeb.PackageOwnerControllerTest do
       assert conn.status == 404
     end
 
-    test "keeps naming a member who is not an owner", %{
+    test "an organization admin who owns nothing directly manages the owners", %{
       organization: organization,
       repository: repository,
+      package: package
+    } do
+      admin = insert(:user)
+      insert(:organization_user, organization: organization, user: admin, role: "admin")
+
+      document =
+        build_conn()
+        |> test_login(admin)
+        |> get("/packages/#{repository.name}/#{package.name}/owners")
+        |> html_response(200)
+        |> LazyHTML.from_document()
+
+      assert controls(document).add == 1
+    end
+
+    test "shows a member who is not an owner the owners without the controls", %{
+      organization: organization,
+      repository: repository,
+      full_owner: full_owner,
       package: package
     } do
       member = insert(:user)
       insert(:organization_user, organization: organization, user: member, role: "read")
 
-      conn =
+      document =
         build_conn()
         |> test_login(member)
         |> get("/packages/#{repository.name}/#{package.name}/owners")
+        |> html_response(200)
+        |> LazyHTML.from_document()
 
-      assert conn.status == 403
+      assert LazyHTML.text(document) =~ full_owner.username
+      assert controls(document) == %{add: 0, edit: 0, remove: 0}
+
+      assert LazyHTML.text(document) =~
+               "Only full owners and organization admins can add, change and remove owners."
     end
   end
 

@@ -247,7 +247,7 @@ defmodule HexpmWeb.PackageControllerTest do
       assert counts == 1
     end
 
-    test "groups the owner pages under a Settings tab that only full owners see" do
+    test "groups the owner pages under a Settings tab" do
       owner = insert(:user)
       maintainer = insert(:user)
 
@@ -280,8 +280,90 @@ defmodule HexpmWeb.PackageControllerTest do
                "Settings"
              ]
 
-      refute "Settings" in (build_conn() |> test_login(maintainer) |> tabs.())
+      assert "Settings" in (build_conn() |> test_login(maintainer) |> tabs.())
+      refute "Settings" in (build_conn() |> test_login(insert(:user)) |> tabs.())
       refute "Settings" in tabs.(build_conn())
+    end
+
+    test "shows organization members the Settings tab and organization admins the Manage link" do
+      organization = insert(:organization)
+      repository = insert(:repository, organization: organization, name: organization.name)
+
+      public =
+        insert(:package,
+          repository_id: 1,
+          package_owners: [build(:package_owner, user: organization.user, level: "full")]
+        )
+
+      admin = insert(:user)
+      member = insert(:user)
+      owner = insert(:user)
+      insert(:organization_user, organization: organization, user: admin, role: "admin")
+      insert(:organization_user, organization: organization, user: member, role: "read")
+      insert(:organization_user, organization: organization, user: owner, role: "write")
+
+      private =
+        insert(:package,
+          repository_id: repository.id,
+          package_owners: [build(:package_owner, user: owner, level: "full")]
+        )
+
+      for package <- [public, private] do
+        insert(:release, package: package, meta: build(:release_metadata, app: package.name))
+      end
+
+      settings = fn user, path ->
+        document =
+          build_conn()
+          |> test_login(user)
+          |> get(path)
+          |> html_response(200)
+          |> LazyHTML.from_document()
+
+        tabs =
+          document
+          |> LazyHTML.query("#package-tabs a")
+          |> Enum.map(&(&1 |> LazyHTML.text(separator: " ") |> String.trim()))
+
+        links =
+          document
+          |> LazyHTML.query(~s(a[href="#{path}/owners"]))
+          |> Enum.map(&(&1 |> LazyHTML.text(separator: " ") |> String.trim()))
+
+        {"Settings" in tabs, "Manage" in links}
+      end
+
+      for path <- ["/packages/#{public.name}", "/packages/#{repository.name}/#{private.name}"] do
+        assert settings.(admin, path) == {true, true}
+        assert settings.(member, path) == {true, false}
+      end
+
+      assert settings.(insert(:user), "/packages/#{public.name}") == {false, false}
+    end
+
+    test "leaves the Settings tab out for members of the public repository's organization" do
+      package =
+        insert(:package, package_owners: [build(:package_owner, user: insert(:user))])
+
+      insert(:release, package: package, meta: build(:release_metadata, app: package.name))
+      member = insert(:user)
+
+      insert(:organization_user,
+        organization: Hexpm.Repo.get!(Hexpm.Accounts.Organization, 1),
+        user: member,
+        role: "admin"
+      )
+
+      tabs =
+        build_conn()
+        |> test_login(member)
+        |> get("/packages/#{package.name}")
+        |> html_response(200)
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#package-tabs a")
+        |> Enum.map(&(&1 |> LazyHTML.text(separator: " ") |> String.trim()))
+
+      refute "Settings" in tabs
     end
 
     test "banners the release on screen when an advisory affects it", %{package1: package1} do
