@@ -392,10 +392,15 @@ defmodule Hexpm.WorkloadIdentities.WorkloadIdentity do
 
   # Fetching from the organization's repository and publishing to it need an
   # active subscription. Public packages don't, the same as for an
-  # organization key.
+  # organization key. An existing workload identity can still be changed
+  # without one, for example to stop trusting a repository, as long as the
+  # change doesn't turn private packages on.
   defp validate_billing(changeset, organization) do
     cond do
       Organization.billing_active?(organization) ->
+        changeset
+
+      changeset.data.id && not turns_on_private?(changeset) ->
         changeset
 
       get_field(changeset, :role) == "read" ->
@@ -411,6 +416,11 @@ defmodule Hexpm.WorkloadIdentities.WorkloadIdentity do
       true ->
         changeset
     end
+  end
+
+  defp turns_on_private?(changeset) do
+    get_field(changeset, :role) == "write" and get_field(changeset, :covers_private) == true and
+      changeset.data.covers_private != true
   end
 
   @doc """
@@ -542,6 +552,12 @@ defmodule Hexpm.WorkloadIdentities.WorkloadIdentity do
   # A repository recreated under the same name is a different repository, so
   # a workload identity never trusts a repository without its pinned ID. Hex
   # can't read the ID of a repository it can't see, so the admin types it.
+  defp pin_repository(repository, %{moved: true}, _pinned) do
+    {:error,
+     "#{repository.name} was renamed or transferred on GitHub. " <>
+       "Replace it with the repository's new name"}
+  end
+
   defp pin_repository(repository, %{id: id}, pinned) when not is_nil(id) do
     id = to_string(id)
 

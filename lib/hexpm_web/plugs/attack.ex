@@ -505,6 +505,24 @@ defmodule HexpmWeb.Plugs.Attack do
     )
   end
 
+  # Hex's GitHub API calls share one OAuth app's hourly limit, so every user
+  # gets a share of the calls that looking up workload identity repositories
+  # makes. Counted in the database, so the share holds across pods.
+  def workload_identity_github_throttle(user_id, calls, opts \\ [])
+
+  def workload_identity_github_throttle(_user_id, 0, _opts), do: {:allow, nil}
+
+  def workload_identity_github_throttle(user_id, calls, opts) do
+    timed_throttle(
+      {:workload_identity_github, user_id},
+      time: opts[:time] || System.system_time(:millisecond),
+      increment: calls,
+      storage: @database_storage,
+      limit: 100,
+      period: 60 * 60_000
+    )
+  end
+
   def account_delete_request_throttle(user_id, opts \\ []) do
     time = opts[:time] || System.system_time(:millisecond)
 

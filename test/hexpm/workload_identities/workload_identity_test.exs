@@ -892,6 +892,25 @@ defmodule Hexpm.WorkloadIdentities.WorkloadIdentityTest do
       assert pinned_repositories(changeset) == [{"acme/widget", "456"}, {"acme/gadget", "123"}]
     end
 
+    test "names a repository GitHub reports as renamed or transferred", %{package: package} do
+      changeset =
+        package
+        |> new_changeset("widget 456\ngadget")
+        |> WorkloadIdentity.put_immutable_ids(
+          resolved(%{
+            "acme/widget" => %{id: nil, public: false, moved: true},
+            "acme/gadget" => %{id: 789, public: false}
+          })
+        )
+
+      refute changeset.valid?
+
+      assert repository_errors(changeset) == [
+               "acme/widget was renamed or transferred on GitHub. " <>
+                 "Replace it with the repository's new name"
+             ]
+    end
+
     test "names a repository Hex can't see that has no ID", %{package: package} do
       changeset =
         package
@@ -1199,6 +1218,25 @@ defmodule Hexpm.WorkloadIdentities.WorkloadIdentityTest do
           ] do
         assert_raise Ecto.ConstraintError, ~r/workload_identities_repositories/, fn ->
           insert(:workload_identity, package: package, repositories: [repository])
+        end
+      end
+    end
+
+    test "refuse a nested array or an element that isn't an object", %{package: package} do
+      identity = insert(:workload_identity, package: package)
+
+      for repositories <- [
+            [[%{"name" => "acme/widget", "id" => "1"}]],
+            ["acme/widget"],
+            [1]
+          ] do
+        assert_raise Postgrex.Error, ~r/workload_identities_repositories/, fn ->
+          Hexpm.Repo.transaction(fn ->
+            Hexpm.Repo.query!(
+              "UPDATE workload_identities SET repositories = $1 WHERE id = $2",
+              [repositories, identity.id]
+            )
+          end)
         end
       end
     end

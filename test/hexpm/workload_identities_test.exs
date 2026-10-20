@@ -430,7 +430,7 @@ defmodule Hexpm.WorkloadIdentitiesTest do
         {:ok, 200, [], %{"id" => 99, "owner" => %{"id" => 42}}}
       end)
 
-      transfer = fn ->
+      transfer = fn _calls ->
         Repo.delete_all(
           from(o in Hexpm.Repository.PackageOwner, where: o.package_id == ^package.id)
         )
@@ -2431,25 +2431,135 @@ defmodule Hexpm.WorkloadIdentitiesTest do
       assert updated.repositories == [trusted("acme/widget")]
     end
 
-    test "refuses a repository GitHub now reports under another ID", %{
+    test "keeps the pinned IDs of the repositories it names without asking GitHub", %{
       user: user,
       workload_identity: workload_identity
     } do
+      expect(Hexpm.HTTP.Mock, :get, 0, fn _url, _headers, _opts -> flunk("asked GitHub") end)
+
+      assert {:ok, updated} =
+               WorkloadIdentities.update(
+                 workload_identity,
+                 %{
+                   "repositories" => "widget",
+                   "workflow" => "publish.yml",
+                   "environment" => "release"
+                 },
+                 audit: audit_data(user)
+               )
+
+      assert updated.repositories == [trusted("acme/widget")]
+      assert updated.workflow == "publish.yml"
+    end
+
+    test "only asks GitHub about the repositories it adds", %{
+      user: user,
+      workload_identity: workload_identity
+    } do
+      expect(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/gadget", _, _ ->
+        {:ok, 200, [], %{"id" => 70001, "owner" => %{"id" => 12345}, "visibility" => "private"}}
+      end)
+
+      assert {:ok, updated} =
+               WorkloadIdentities.update(
+                 workload_identity,
+                 %{"repositories" => "widget\ngadget", "workflow" => "release.yml"},
+                 audit: audit_data(user),
+                 before_lookup: fn calls ->
+                   send(self(), {:github_calls, calls})
+                   :ok
+                 end
+               )
+
+      assert updated.repositories == [trusted("acme/widget"), trusted("acme/gadget", "70001")]
+      assert_received {:github_calls, 1}
+    end
+
+    test "uses the pinned owner ID when Hex can't see the repositories it adds", %{
+      user: user,
+      workload_identity: workload_identity
+    } do
+      expect(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/gadget", _, _ ->
+        {:ok, 404, [], %{}}
+      end)
+
+      assert {:ok, updated} =
+               WorkloadIdentities.update(
+                 workload_identity,
+                 %{"repositories" => "widget\ngadget 70001", "workflow" => "release.yml"},
+                 audit: audit_data(user)
+               )
+
+      assert updated.repository_owner_id == "12345"
+      assert updated.repositories == [trusted("acme/widget"), trusted("acme/gadget", "70001")]
+    end
+
+    test "refuses a repository GitHub now reports under another ID once it removes the environment",
+         %{user: user, workload_identity: workload_identity} do
+      workload_identity =
+        workload_identity |> Ecto.Changeset.change(environment: "release") |> Repo.update!()
+
       stub_github(%{"widget" => {99999, "private"}})
 
       assert {:error, changeset} =
                WorkloadIdentities.update(
                  workload_identity,
-                 %{"repositories" => "widget", "workflow" => "publish.yml"},
-                 audit: audit_data(user)
+                 %{"repositories" => "widget", "workflow" => "release.yml", "environment" => ""},
+                 audit: audit_data(user),
+                 before_lookup: fn calls ->
+                   send(self(), {:github_calls, calls})
+                   :ok
+                 end
                )
 
       assert errors_on(changeset)[:repositories] ==
                "acme/widget was deleted and created again on GitHub since it was added. " <>
                  "Remove it and save, then add it again"
 
+      assert_received {:github_calls, 1}
+
       reloaded = Repo.get!(Hexpm.WorkloadIdentities.WorkloadIdentity, workload_identity.id)
-      assert reloaded.workflow == "release.yml"
+      assert reloaded.environment == "release"
+      refute_email_sent()
+    end
+
+    test "refuses a repository it adds that was renamed or transferred", %{
+      user: user,
+      workload_identity: workload_identity
+    } do
+      expect(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/gadget", _, _ ->
+        {:ok, 301, [{"location", "https://api.github.com/repositories/70001"}], %{}}
+      end)
+
+      assert {:error, changeset} =
+               WorkloadIdentities.update(
+                 workload_identity,
+                 %{"repositories" => "widget\ngadget", "workflow" => "release.yml"},
+                 audit: audit_data(user)
+               )
+
+      assert errors_on(changeset)[:repositories] ==
+               "acme/gadget was renamed or transferred on GitHub. " <>
+                 "Replace it with the repository's new name"
+    end
+
+    test "refuses a change made to a workload identity someone else changed since", %{
+      user: user,
+      workload_identity: workload_identity
+    } do
+      workload_identity
+      |> Ecto.Changeset.change(workflow: "other.yml")
+      |> Repo.update!()
+
+      assert {:error, :changed} =
+               WorkloadIdentities.update(
+                 workload_identity,
+                 %{"repositories" => "widget", "workflow" => "publish.yml"},
+                 audit: audit_data(user)
+               )
+
+      reloaded = Repo.get!(Hexpm.WorkloadIdentities.WorkloadIdentity, workload_identity.id)
+      assert reloaded.workflow == "other.yml"
       refute_email_sent()
     end
 
@@ -2475,14 +2585,14 @@ defmodule Hexpm.WorkloadIdentitiesTest do
       user: user,
       workload_identity: workload_identity
     } do
-      stub(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/widget", _, _ ->
-        {:ok, 200, [], %{"id" => 67890, "owner" => %{"id" => 999}}}
+      stub(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/gadget", _, _ ->
+        {:ok, 200, [], %{"id" => 70001, "owner" => %{"id" => 999}}}
       end)
 
       assert {:error, changeset} =
                WorkloadIdentities.update(
                  workload_identity,
-                 %{"repositories" => "widget", "workflow" => "publish.yml"},
+                 %{"repositories" => "widget\ngadget", "workflow" => "publish.yml"},
                  audit: audit_data(user)
                )
 
@@ -2512,16 +2622,33 @@ defmodule Hexpm.WorkloadIdentitiesTest do
       assert updated.provider == "github"
     end
 
-    test "requires an environment when a repository is public", %{
+    test "requires an environment when a repository it adds is public", %{
       user: user,
       workload_identity: workload_identity
     } do
+      stub_github(%{"gadget" => {70001, "public"}})
+
+      assert {:error, changeset} =
+               WorkloadIdentities.update(
+                 workload_identity,
+                 %{"repositories" => "widget\ngadget", "workflow" => "publish.yml"},
+                 audit: audit_data(user)
+               )
+
+      assert errors_on(changeset)[:environment] == "is required because acme/gadget is public"
+    end
+
+    test "requires an environment when it removes the environment and a repository is public",
+         %{user: user, workload_identity: workload_identity} do
+      workload_identity =
+        workload_identity |> Ecto.Changeset.change(environment: "release") |> Repo.update!()
+
       stub_github(%{"widget" => {67890, "public"}})
 
       assert {:error, changeset} =
                WorkloadIdentities.update(
                  workload_identity,
-                 %{"repositories" => "widget", "workflow" => "publish.yml"},
+                 %{"repositories" => "widget", "workflow" => "release.yml", "environment" => ""},
                  audit: audit_data(user)
                )
 
@@ -2614,7 +2741,7 @@ defmodule Hexpm.WorkloadIdentitiesTest do
     } do
       stub_github(%{"widget" => {67890, "private"}})
 
-      transfer = fn ->
+      transfer = fn _calls ->
         Repo.delete_all(
           from(o in Hexpm.Repository.PackageOwner, where: o.package_id == ^package.id)
         )
@@ -2942,6 +3069,158 @@ defmodule Hexpm.WorkloadIdentitiesTest do
                )
 
       assert token.workload_identity_id == identity.id
+    end
+
+    defp without_billing(organization) do
+      organization
+      |> Ecto.Changeset.change(billing_active: false, trial_end: nil)
+      |> Repo.update!()
+    end
+
+    defp reload(identity), do: Repo.get!(Hexpm.WorkloadIdentities.WorkloadIdentity, identity.id)
+
+    test "keeps private coverage and its packages without billing when it changes the repositories",
+         %{admin: admin, organization: organization, identity: identity} do
+      identity =
+        identity
+        |> Ecto.Changeset.change(packages: ["private_one"])
+        |> Repo.update!()
+
+      without_billing(organization)
+
+      assert {:ok, updated} =
+               WorkloadIdentities.update(
+                 reload(identity),
+                 organization_params(%{
+                   "repositories" => "widget\ngadget",
+                   "packages" => "private_one"
+                 }),
+                 audit: audit_data(admin)
+               )
+
+      assert updated.covers_private
+      assert updated.packages == ["private_one"]
+      assert updated.repositories == [trusted("acme/widget"), trusted("acme/gadget", "70001")]
+    end
+
+    test "refuses to turn private packages on without billing", %{
+      admin: admin,
+      organization: organization,
+      identity: identity
+    } do
+      identity =
+        identity
+        |> Ecto.Changeset.change(covers_private: false, packages: [])
+        |> Repo.update!()
+
+      without_billing(organization)
+
+      assert {:error, changeset} =
+               WorkloadIdentities.update(
+                 reload(identity),
+                 organization_params(%{"covers_private" => "true"}),
+                 audit: audit_data(admin)
+               )
+
+      assert errors_on(changeset)[:covers_private] ==
+               "private packages need an active billing subscription"
+
+      refute reload(identity).covers_private
+    end
+
+    test "changes a read identity without billing", %{
+      admin: admin,
+      organization: organization
+    } do
+      identity =
+        insert(:organization_workload_identity,
+          organization: organization,
+          repositories: [trusted("acme/widget"), trusted("acme/gadget", "70001")]
+        )
+
+      without_billing(organization)
+
+      assert {:ok, updated} =
+               WorkloadIdentities.update(reload(identity), %{"repositories" => "widget"},
+                 audit: audit_data(admin)
+               )
+
+      assert updated.repositories == [trusted("acme/widget")]
+    end
+
+    test "revokes the tokens of a read identity for every repository once it lists repositories",
+         %{admin: admin, organization: organization, repository: repository} do
+      identity =
+        insert(:organization_workload_identity, organization: organization, repositories: [])
+
+      WorkloadIdentityHelpers.stub_oidc_discovery()
+
+      assert {:ok, token} =
+               mint([repository: repository.name],
+                 repository: "acme/gizmo",
+                 repository_id: "70002",
+                 workflow: "ci.yml"
+               )
+
+      stub_github(%{"widget" => {67890, "private"}})
+
+      assert {:ok, updated} =
+               WorkloadIdentities.update(identity, %{"repositories" => "widget"},
+                 audit: audit_data(admin)
+               )
+
+      assert updated.repositories == [trusted("acme/widget")]
+      assert revoked?(token)
+    end
+
+    test "keeps the tokens of a read identity that stops listing repositories", %{
+      admin: admin,
+      organization: organization,
+      repository: repository
+    } do
+      identity =
+        insert(:organization_workload_identity,
+          organization: organization,
+          repositories: [trusted("acme/widget")]
+        )
+
+      WorkloadIdentityHelpers.stub_oidc_discovery()
+      assert {:ok, token} = mint([repository: repository.name], workflow: "ci.yml")
+
+      assert {:ok, updated} =
+               WorkloadIdentities.update(identity, %{"repositories" => ""},
+                 audit: audit_data(admin)
+               )
+
+      assert updated.repositories == []
+      refute revoked?(token)
+    end
+
+    test "keeps the tokens and tells no other owner when only the environment's case changes",
+         %{admin: admin, repository: repository, identity: identity} do
+      identity =
+        identity
+        |> Ecto.Changeset.change(environment: "Release")
+        |> Repo.update!()
+
+      WorkloadIdentityHelpers.stub_oidc_discovery()
+      assert {:ok, token} = mint([repository: repository.name], environment: "release")
+
+      assert {:ok, updated} =
+               WorkloadIdentities.update(
+                 identity,
+                 organization_params(%{"environment" => "RELEASE"}),
+                 audit: audit_data(admin)
+               )
+
+      assert updated.environment == "RELEASE"
+      refute revoked?(token)
+
+      assert_email_sent(fn email ->
+        assert email.subject =~ "Workload identity changed in organization"
+      end)
+
+      refute_email_sent()
     end
   end
 

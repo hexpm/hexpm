@@ -960,7 +960,7 @@ defmodule HexpmWeb.Dashboard.OrganizationWorkloadIdentitiesTest do
         )
 
       assert redirected_to(conn) == path(organization)
-      assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Workload identity changed."
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Workload identity saved."
 
       changed = Repo.get!(WorkloadIdentity, identity.id)
       assert changed.packages == ["private_one"]
@@ -1074,6 +1074,39 @@ defmodule HexpmWeb.Dashboard.OrganizationWorkloadIdentitiesTest do
       assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
                "Too many attempts to change a workload identity in the last hour. Try again later."
     end
+
+    test "sends the admin back to the form when someone else changed it meanwhile", %{
+      admin: admin,
+      organization: organization,
+      identity: identity
+    } do
+      stub(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/gadget", _, _ ->
+        identity
+        |> Ecto.Changeset.change(workflow: "other.yml")
+        |> Repo.update!()
+
+        {:ok, 200, [], %{"id" => 33, "owner" => %{"id" => 11}}}
+      end)
+
+      conn =
+        build_conn()
+        |> test_login(admin)
+        |> put(
+          "#{path(organization)}/#{identity.id}",
+          change_params(%{"repositories" => "widget\ngadget"})
+        )
+
+      assert redirected_to(conn) == "#{path(organization)}/#{identity.id}/edit"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "Someone else changed the workload identity while you were editing it. " <>
+                 "Review it and save again."
+
+      changed = Repo.get!(WorkloadIdentity, identity.id)
+      assert changed.workflow == "other.yml"
+      assert changed.repositories == [%TrustedRepository{name: "acme/widget", id: "22"}]
+      refute Repo.get_by(AuditLog, action: "organization.workload_identity.update")
+    end
   end
 
   describe "DELETE /dashboard/orgs/:dashboard_org/workload-identities/:id" do
@@ -1115,6 +1148,174 @@ defmodule HexpmWeb.Dashboard.OrganizationWorkloadIdentitiesTest do
 
       assert conn.status == 400
       assert Repo.get(WorkloadIdentity, identity.id)
+    end
+  end
+
+  describe "GitHub call limit" do
+    setup do
+      PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage)
+      on_exit(fn -> PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage) end)
+      align_to_throttle_bucket(60 * 60_000)
+      :ok
+    end
+
+    test "refuses an add before asking GitHub once its calls would pass the limit", %{
+      admin: admin,
+      organization: organization
+    } do
+      HexpmWeb.Plugs.Attack.workload_identity_github_throttle(admin.id, 100)
+      expect(Hexpm.HTTP.Mock, :get, 0, fn _url, _headers, _opts -> flunk("asked GitHub") end)
+
+      conn =
+        build_conn()
+        |> test_login(admin)
+        |> post(path(organization), identity_params(%{"role" => "read"}))
+
+      assert redirected_to(conn) == path(organization)
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "Too many attempts to add a workload identity in the last hour. Try again later."
+
+      assert WorkloadIdentities.list(organization) == []
+    end
+
+    test "changes a workload identity without GitHub calls once the call limit is used up", %{
+      admin: admin,
+      organization: organization
+    } do
+      identity =
+        insert(:organization_workload_identity,
+          organization: organization,
+          role: "write",
+          repository_owner: "acme",
+          repository_owner_id: "11",
+          repositories: [%TrustedRepository{name: "acme/widget", id: "22"}],
+          workflow: "release.yml"
+        )
+
+      HexpmWeb.Plugs.Attack.workload_identity_github_throttle(admin.id, 100)
+      expect(Hexpm.HTTP.Mock, :get, 0, fn _url, _headers, _opts -> flunk("asked GitHub") end)
+
+      conn =
+        build_conn()
+        |> test_login(admin)
+        |> put("#{path(organization)}/#{identity.id}", %{
+          "workload_identity" => %{
+            "repositories" => "widget",
+            "workflow" => "publish.yml",
+            "covers_private" => "true",
+            "covers_public" => "false"
+          }
+        })
+
+      assert redirected_to(conn) == path(organization)
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Workload identity saved."
+      assert Repo.get!(WorkloadIdentity, identity.id).workflow == "publish.yml"
+    end
+  end
+
+  describe "changing a workload identity without active billing" do
+    setup %{organization: organization} do
+      organization =
+        organization
+        |> Ecto.Changeset.change(billing_active: false, trial_end: nil)
+        |> Repo.update!()
+
+      %{organization: organization}
+    end
+
+    test "keeps the private packages of a write workload identity", %{
+      admin: admin,
+      organization: organization
+    } do
+      identity =
+        insert(:organization_workload_identity,
+          organization: organization,
+          role: "write",
+          repository_owner: "acme",
+          repository_owner_id: "11",
+          repositories: [%TrustedRepository{name: "acme/widget", id: "22"}],
+          workflow: "release.yml",
+          covers_private: true,
+          packages: ["private_one"]
+        )
+
+      document =
+        build_conn()
+        |> test_login(admin)
+        |> get("#{path(organization)}/#{identity.id}/edit")
+        |> html_response(200)
+        |> LazyHTML.from_document()
+
+      checkbox = LazyHTML.query(document, "#workload_identity_covers_private")
+      assert LazyHTML.attribute(checkbox, "checked") != []
+      assert LazyHTML.attribute(checkbox, "disabled") != []
+
+      assert document
+             |> LazyHTML.query(~s(input[type="hidden"][name="workload_identity[covers_private]"]))
+             |> LazyHTML.attribute("value") == ["true"]
+
+      expect(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/gadget", _, _ ->
+        {:ok, 200, [], %{"id" => 33, "owner" => %{"id" => 11}}}
+      end)
+
+      conn =
+        build_conn()
+        |> test_login(admin)
+        |> put("#{path(organization)}/#{identity.id}", %{
+          "workload_identity" => %{
+            "repositories" => "widget\ngadget",
+            "workflow" => "release.yml",
+            "environment" => "",
+            "covers_private" => "true",
+            "packages" => "private_one",
+            "covers_public" => "false"
+          }
+        })
+
+      assert redirected_to(conn) == path(organization)
+
+      changed = Repo.get!(WorkloadIdentity, identity.id)
+      assert changed.covers_private == true
+      assert changed.packages == ["private_one"]
+
+      assert changed.repositories == [
+               %TrustedRepository{name: "acme/widget", id: "22"},
+               %TrustedRepository{name: "acme/gadget", id: "33"}
+             ]
+    end
+
+    test "changes a read workload identity", %{admin: admin, organization: organization} do
+      identity =
+        insert(:organization_workload_identity,
+          organization: organization,
+          role: "read",
+          repository_owner: "acme",
+          repository_owner_id: "11",
+          repositories: [%TrustedRepository{name: "acme/widget", id: "22"}],
+          workflow: ""
+        )
+
+      build_conn()
+      |> test_login(admin)
+      |> get("#{path(organization)}/#{identity.id}/edit")
+      |> html_response(200)
+
+      conn =
+        build_conn()
+        |> test_login(admin)
+        |> put("#{path(organization)}/#{identity.id}", %{
+          "workload_identity" => %{
+            "repositories" => "widget",
+            "workflow" => "ci.yml",
+            "environment" => "",
+            "covers_private" => "false",
+            "covers_public" => "false"
+          }
+        })
+
+      assert redirected_to(conn) == path(organization)
+      assert Repo.get!(WorkloadIdentity, identity.id).workflow == "ci.yml"
     end
   end
 

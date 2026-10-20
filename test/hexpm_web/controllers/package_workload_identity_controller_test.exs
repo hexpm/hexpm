@@ -930,7 +930,7 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
         })
 
       assert redirected_to(conn) == "/packages/#{package.name}/workload-identities"
-      assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Workload identity changed."
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Workload identity saved."
 
       assert [changed] = WorkloadIdentities.list(package)
       assert changed.workflow == "publish.yml"
@@ -963,25 +963,83 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
       assert [%{workflow: "release.yml"}] = WorkloadIdentities.list(package)
     end
 
-    test "refuses a repository GitHub reports under a new ID", %{
+    test "says which repository was renamed or transferred", %{
       full_owner: full_owner,
       package: package,
       workload_identity: workload_identity
     } do
-      stub_github(%{"widget" => 99})
+      stub(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/gadget", _, _ ->
+        {:ok, 301, [], %{}}
+      end)
 
       conn =
         build_conn()
         |> test_login(full_owner)
         |> put("/packages/#{package.name}/workload-identities/#{workload_identity.id}", %{
-          "workload_identity" => %{"repositories" => "widget", "workflow" => "publish.yml"}
+          "workload_identity" => %{
+            "repositories" => "widget\ngadget",
+            "workflow" => "release.yml"
+          }
         })
 
       assert html_response(conn, 400) =~
-               "acme/widget was deleted and created again on GitHub since it was added"
+               "acme/gadget was renamed or transferred on GitHub. " <>
+                 "Replace it with the repository&#39;s new name"
 
-      assert [%{workflow: "release.yml", repositories: [%{id: "22"}]}] =
+      assert [%{repositories: [%{name: "acme/widget"}]}] = WorkloadIdentities.list(package)
+    end
+
+    test "sends the owner back to the form when someone else changed it meanwhile", %{
+      full_owner: full_owner,
+      package: package,
+      workload_identity: workload_identity
+    } do
+      stub(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/gadget", _, _ ->
+        workload_identity
+        |> Ecto.Changeset.change(workflow: "other.yml")
+        |> Hexpm.Repo.update!()
+
+        {:ok, 200, [], %{"id" => 33, "owner" => %{"id" => 11}}}
+      end)
+
+      conn =
+        build_conn()
+        |> test_login(full_owner)
+        |> put("/packages/#{package.name}/workload-identities/#{workload_identity.id}", %{
+          "workload_identity" => %{
+            "repositories" => "widget\ngadget",
+            "workflow" => "release.yml"
+          }
+        })
+
+      assert redirected_to(conn) ==
+               "/packages/#{package.name}/workload-identities/#{workload_identity.id}/edit"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "Someone else changed the workload identity while you were editing it. " <>
+                 "Review it and save again."
+
+      assert [%{workflow: "other.yml", repositories: [%{name: "acme/widget"}]}] =
                WorkloadIdentities.list(package)
+    end
+
+    test "returns 404 for another package's workload identity", %{
+      full_owner: full_owner,
+      package: package
+    } do
+      other = insert(:workload_identity)
+
+      conn =
+        build_conn()
+        |> test_login(full_owner)
+        |> put("/packages/#{package.name}/workload-identities/#{other.id}", %{
+          "workload_identity" => %{"repositories" => "widget", "workflow" => "release.yml"}
+        })
+
+      assert response(conn, 404)
+
+      assert Hexpm.Repo.get!(Hexpm.WorkloadIdentities.WorkloadIdentity, other.id).workflow ==
+               other.workflow
     end
 
     test "is forbidden for a maintainer", %{

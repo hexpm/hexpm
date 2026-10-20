@@ -34,11 +34,11 @@ defmodule HexpmWeb.PackageWorkloadIdentityController do
     with {:ok, workload_identity} <- fetch_workload_identity(conn, package, id) do
       case WorkloadIdentities.update(workload_identity, params["workload_identity"] || %{},
              audit: audit_data(conn),
-             before_lookup: fn -> lookup_allowed(conn.assigns.current_user) end
+             before_lookup: &lookup_allowed(conn.assigns.current_user, &1)
            ) do
         {:ok, _workload_identity} ->
           conn
-          |> put_flash(:info, "Workload identity changed.")
+          |> put_flash(:info, "Workload identity saved.")
           |> redirect(to: ViewHelpers.path_for_workload_identities(package))
 
         {:error, %Ecto.Changeset{} = changeset} ->
@@ -50,6 +50,16 @@ defmodule HexpmWeb.PackageWorkloadIdentityController do
           conn
           |> render_error(404, message: "Workload identity not found")
           |> halt()
+
+        {:error, :changed} ->
+          conn
+          |> put_flash(
+            :error,
+            "Someone else changed the workload identity while you were editing it. Review it and save again."
+          )
+          |> redirect(
+            to: ViewHelpers.path_for_workload_identity(package, workload_identity.id) <> "/edit"
+          )
 
         {:error, reason} ->
           lookup_error(conn, package, reason, "change")
@@ -75,7 +85,7 @@ defmodule HexpmWeb.PackageWorkloadIdentityController do
 
     case WorkloadIdentities.create(package, params,
            audit: audit_data(conn),
-           before_lookup: fn -> lookup_allowed(conn.assigns.current_user) end
+           before_lookup: &lookup_allowed(conn.assigns.current_user, &1)
          ) do
       {:ok, _workload_identity} ->
         conn
@@ -158,9 +168,13 @@ defmodule HexpmWeb.PackageWorkloadIdentityController do
     )
   end
 
-  defp lookup_allowed(user) do
-    case HexpmWeb.Plugs.Attack.workload_identity_lookup_throttle(user.id) do
-      {:allow, _data} -> :ok
+  # Every save counts, and so does every GitHub call its lookup can make.
+  defp lookup_allowed(user, calls) do
+    with {:allow, _data} <- HexpmWeb.Plugs.Attack.workload_identity_lookup_throttle(user.id),
+         {:allow, _data} <-
+           HexpmWeb.Plugs.Attack.workload_identity_github_throttle(user.id, calls) do
+      :ok
+    else
       {:block, _data} -> {:error, :rate_limited}
     end
   end

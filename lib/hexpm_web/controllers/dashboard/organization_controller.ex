@@ -1083,7 +1083,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   defp do_create_workload_identity(conn, organization, params) do
     case WorkloadIdentities.create(organization, params,
            audit: audit_data(conn),
-           before_lookup: fn -> workload_identity_lookup_allowed(conn.assigns.current_user) end
+           before_lookup: &workload_identity_lookup_allowed(conn.assigns.current_user, &1)
          ) do
       {:ok, _workload_identity} ->
         conn
@@ -1138,11 +1138,11 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   defp do_update_workload_identity(conn, organization, workload_identity, params) do
     case WorkloadIdentities.update(workload_identity, params,
            audit: audit_data(conn),
-           before_lookup: fn -> workload_identity_lookup_allowed(conn.assigns.current_user) end
+           before_lookup: &workload_identity_lookup_allowed(conn.assigns.current_user, &1)
          ) do
       {:ok, _workload_identity} ->
         conn
-        |> put_flash(:info, "Workload identity changed.")
+        |> put_flash(:info, "Workload identity saved.")
         |> redirect(to: ~p"/dashboard/orgs/#{organization}/workload-identities")
 
       {:error, %Ecto.Changeset{} = changeset} ->
@@ -1158,6 +1158,16 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         conn
         |> put_flash(:error, "The workload identity was not found.")
         |> redirect(to: ~p"/dashboard/orgs/#{organization}/workload-identities")
+
+      {:error, :changed} ->
+        conn
+        |> put_flash(
+          :error,
+          "Someone else changed the workload identity while you were editing it. Review it and save again."
+        )
+        |> redirect(
+          to: ~p"/dashboard/orgs/#{organization}/workload-identities/#{workload_identity}/edit"
+        )
 
       {:error, reason} ->
         workload_identity_error(conn, organization, reason, "change")
@@ -1227,9 +1237,13 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     end
   end
 
-  defp workload_identity_lookup_allowed(user) do
-    case HexpmWeb.Plugs.Attack.workload_identity_lookup_throttle(user.id) do
-      {:allow, _data} -> :ok
+  # Every save counts, and so does every GitHub call its lookup can make.
+  defp workload_identity_lookup_allowed(user, calls) do
+    with {:allow, _data} <- HexpmWeb.Plugs.Attack.workload_identity_lookup_throttle(user.id),
+         {:allow, _data} <-
+           HexpmWeb.Plugs.Attack.workload_identity_github_throttle(user.id, calls) do
+      :ok
+    else
       {:block, _data} -> {:error, :rate_limited}
     end
   end

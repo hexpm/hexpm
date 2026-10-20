@@ -291,13 +291,22 @@ defmodule HexpmWeb.Dashboard.Organization.Components.WorkloadIdentitiesTab do
                   "flex items-start gap-3",
                   if(@billing?, do: "cursor-pointer", else: "cursor-not-allowed opacity-50")
                 ]}>
-                  <input type="hidden" name="workload_identity[covers_private]" value="false" />
+                  <%!-- Without billing the box is disabled, and an edit keeps what's stored --%>
+                  <input
+                    type="hidden"
+                    name="workload_identity[covers_private]"
+                    value={
+                      if @billing?,
+                        do: "false",
+                        else: to_string(checked?(@form[:covers_private].value))
+                    }
+                  />
                   <input
                     type="checkbox"
                     id="workload_identity_covers_private"
                     name="workload_identity[covers_private]"
                     value="true"
-                    checked={@billing? and checked?(@form[:covers_private].value)}
+                    checked={checked?(@form[:covers_private].value)}
                     disabled={not @billing?}
                     class="mt-0.5 w-4 h-4 text-purple-600 border-grey-300 dark:border-grey-600 rounded focus:ring-2 focus:ring-purple-500"
                   />

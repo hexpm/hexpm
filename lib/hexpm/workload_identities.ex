@@ -155,8 +155,8 @@ defmodule Hexpm.WorkloadIdentities do
   Adds a workload identity to a package or to an organization.
 
   `:before_lookup` runs once the params are valid, right before Hex asks GitHub
-  for the owner and repository IDs, and refuses the add when it returns
-  `{:error, reason}`.
+  for the owner and repository IDs. It gets the most GitHub calls the lookup
+  can make, and refuses the add when it returns `{:error, reason}`.
   """
   def create(owner, params, opts)
 
@@ -171,7 +171,7 @@ defmodule Hexpm.WorkloadIdentities do
 
   def create(owner, params, opts) do
     audit_data = Keyword.fetch!(opts, :audit)
-    before_lookup = Keyword.get(opts, :before_lookup, fn -> :ok end)
+    before_lookup = Keyword.get(opts, :before_lookup, fn _calls -> :ok end)
     provider_name = params["provider"] || params[:provider]
 
     with {:ok, provider} <- fetch_provider(provider_name) do
@@ -197,11 +197,17 @@ defmodule Hexpm.WorkloadIdentities do
   that drops a repository or changes the workflow or the environment revokes
   the tokens the workload identity issued.
 
+  Hex only asks GitHub about the repositories a change adds, since the others
+  keep their pinned IDs. A change that removes the environment of a workload
+  identity that publishes looks all of them up, to know whether one is public.
+  It returns `{:error, :changed}` when the workload identity changed after
+  `workload_identity` was read.
+
   `:before_lookup` works as for `create/3`.
   """
   def update(%WorkloadIdentity{} = workload_identity, params, opts) do
     audit_data = Keyword.fetch!(opts, :audit)
-    before_lookup = Keyword.get(opts, :before_lookup, fn -> :ok end)
+    before_lookup = Keyword.get(opts, :before_lookup, fn _calls -> :ok end)
     workload_identity = preload_owner(workload_identity)
     owner = workload_identity.organization || workload_identity.package
 
@@ -229,25 +235,23 @@ defmodule Hexpm.WorkloadIdentities do
     :public_packages
   ]
 
-  defp identity_changed?(workload_identity, changeset) do
-    updated = Ecto.Changeset.apply_changes(changeset)
+  defp identity_changed?(workload_identity, changeset),
+    do:
+      configuration_snapshot(workload_identity) !=
+        configuration_snapshot(Ecto.Changeset.apply_changes(changeset))
 
-    Map.take(workload_identity, @changeable_fields) != Map.take(updated, @changeable_fields) or
-      repository_set(workload_identity) != repository_set(updated)
-  end
+  defp configuration_snapshot(workload_identity),
+    do: {Map.take(workload_identity, @changeable_fields), repository_set(workload_identity)}
 
   # Hex asks GitHub for the IDs once everything else is valid.
   defp resolve_ids(changeset, provider, before_lookup) do
     action = if changeset.data.id, do: :update, else: :insert
 
     if changeset.valid? do
-      attrs = %{
-        repository_owner: Ecto.Changeset.get_field(changeset, :repository_owner),
-        repositories: Enum.map(Ecto.Changeset.get_field(changeset, :repositories), & &1.name)
-      }
+      names = names_to_resolve(changeset)
 
-      with :ok <- before_lookup.(),
-           {:ok, immutable_ids} <- provider.resolve_immutable_ids(attrs) do
+      with :ok <- before_lookup.(github_calls(changeset, names)),
+           {:ok, immutable_ids} <- resolve(changeset, provider, names) do
         changeset = WorkloadIdentity.put_immutable_ids(changeset, immutable_ids)
 
         if changeset.valid?,
@@ -257,6 +261,44 @@ defmodule Hexpm.WorkloadIdentities do
     else
       {:error, %{changeset | action: action}}
     end
+  end
+
+  defp names_to_resolve(%Ecto.Changeset{data: %WorkloadIdentity{id: nil}} = changeset),
+    do: Enum.map(Ecto.Changeset.get_field(changeset, :repositories), & &1.name)
+
+  defp names_to_resolve(changeset) do
+    names = Enum.map(Ecto.Changeset.get_field(changeset, :repositories), & &1.name)
+
+    if removes_environment?(changeset) do
+      names
+    else
+      names -- Enum.map(changeset.data.repositories, & &1.name)
+    end
+  end
+
+  defp removes_environment?(changeset) do
+    Ecto.Changeset.get_field(changeset, :role) == "write" and
+      Ecto.Changeset.get_field(changeset, :environment) in [nil, ""] and
+      changeset.data.environment not in [nil, ""]
+  end
+
+  # One call per repository, and on an add one more for the owner's profile
+  # when Hex sees none of them. A change uses the owner's pinned ID instead.
+  defp github_calls(%Ecto.Changeset{data: %WorkloadIdentity{id: nil}}, names),
+    do: length(names) + 1
+
+  defp github_calls(_changeset, names), do: length(names)
+
+  defp resolve(%Ecto.Changeset{data: %WorkloadIdentity{id: id} = data}, _provider, [])
+       when not is_nil(id),
+       do: {:ok, %{repository_owner_id: data.repository_owner_id, repositories: %{}}}
+
+  defp resolve(changeset, provider, names) do
+    provider.resolve_immutable_ids(%{
+      repository_owner: Ecto.Changeset.get_field(changeset, :repository_owner),
+      repository_owner_id: changeset.data.repository_owner_id,
+      repositories: names
+    })
   end
 
   # Only public packages the organization owns can be listed. Ownership is
@@ -345,7 +387,8 @@ defmodule Hexpm.WorkloadIdentities do
     multi =
       Multi.new()
       |> check_owner(owner, audit_data)
-      |> Multi.update(:workload_identity, changeset, stale_error_field: :id)
+      |> Multi.run(:current, fn repo, _changes -> lock_unchanged(repo, previous) end)
+      |> Multi.update(:workload_identity, changeset)
       |> Multi.run(:tokens, fn repo, %{workload_identity: updated} ->
         if revokes_tokens?(previous, updated) do
           {count, _} = repo.update_all(revoke_tokens_query([updated.id]), [])
@@ -364,11 +407,26 @@ defmodule Hexpm.WorkloadIdentities do
         notify_change(previous, updated, audit_data)
         {:ok, updated}
 
-      {:error, :workload_identity, %Ecto.Changeset{errors: [id: _]}, _} ->
-        {:error, :not_found}
+      {:error, :current, reason, _} ->
+        {:error, reason}
 
       {:error, _op, changeset, _} ->
         {:error, changeset}
+    end
+  end
+
+  # The change was made to the workload identity as it was read before the
+  # GitHub lookup. Locking its row, and refusing when it differs, keeps a
+  # concurrent change from being overwritten unseen, and keeps the tokens to
+  # revoke, the audit entry and the emails based on what it was.
+  defp lock_unchanged(repo, previous) do
+    current =
+      repo.one(from(wi in WorkloadIdentity, where: wi.id == ^previous.id, lock: "FOR UPDATE"))
+
+    cond do
+      is_nil(current) -> {:error, :not_found}
+      configuration_snapshot(current) != configuration_snapshot(previous) -> {:error, :changed}
+      true -> {:ok, current}
     end
   end
 
@@ -590,7 +648,8 @@ defmodule Hexpm.WorkloadIdentities do
   end
 
   defp trust_changed?(previous, updated) do
-    previous.workflow != updated.workflow or previous.environment != updated.environment or
+    previous.workflow != updated.workflow or
+      String.downcase(previous.environment || "") != String.downcase(updated.environment || "") or
       repository_set(previous) != repository_set(updated)
   end
 
@@ -961,18 +1020,44 @@ defmodule Hexpm.WorkloadIdentities do
         oidc_claims: provider.claims_snapshot(claims)
       }
 
-      case Repo.insert(Token.build(attrs)) do
+      Repo.transaction(fn ->
+        with :ok <- lock_still_matching(workload_identity, provider, claims),
+             {:ok, token} <- Repo.insert(Token.build(attrs)) do
+          token
+        else
+          {:error, reason} -> Repo.rollback(reason)
+        end
+      end)
+      |> case do
         {:ok, token} ->
           {:ok, %{token | access_token: access_token}}
 
-        {:error, changeset} ->
+        {:error, %Ecto.Changeset{} = changeset} ->
           if unique_grant_reference_error?(changeset) do
             {:error, :token_replayed}
           else
             {:error, changeset}
           end
+
+        {:error, reason} ->
+          {:error, reason}
       end
     end
+  end
+
+  # A change locks the workload identity's row while it saves and revokes its
+  # tokens. Matching again under a shared lock means a token is either inserted
+  # before a change, which then revokes it, or matched against the changed
+  # workload identity.
+  defp lock_still_matching(workload_identity, provider, claims) do
+    current =
+      Repo.one(
+        from(wi in WorkloadIdentity, where: wi.id == ^workload_identity.id, lock: "FOR SHARE")
+      )
+
+    if current && provider.match?(current, claims),
+      do: :ok,
+      else: {:error, :no_matching_identity}
   end
 
   defp unique_grant_reference_error?(changeset) do

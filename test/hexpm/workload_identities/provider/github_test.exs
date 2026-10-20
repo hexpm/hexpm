@@ -470,6 +470,40 @@ defmodule Hexpm.WorkloadIdentities.Provider.GitHubTest do
       end
     end
 
+    test "marks a repository GitHub redirects as moved" do
+      expect(Hexpm.HTTP.Mock, :get, 2, fn
+        "https://api.github.com/repos/acme/widget", _, _ ->
+          {:ok, 301, [{"location", "https://api.github.com/repositories/456"}], %{}}
+
+        "https://api.github.com/users/acme", _, _ ->
+          {:ok, 200, [], %{"id" => 123}}
+      end)
+
+      assert resolve(["acme/widget"]) ==
+               {:ok,
+                %{
+                  repository_owner_id: 123,
+                  repositories: %{"acme/widget" => %{id: nil, public: false, moved: true}}
+                }}
+    end
+
+    test "uses the pinned owner id instead of the owner's profile" do
+      expect(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/widget", _, _ ->
+        {:ok, 404, [], %{}}
+      end)
+
+      assert GitHub.resolve_immutable_ids(%{
+               repository_owner: "acme",
+               repository_owner_id: "123",
+               repositories: ["acme/widget"]
+             }) ==
+               {:ok,
+                %{
+                  repository_owner_id: "123",
+                  repositories: %{"acme/widget" => %{id: nil, public: false}}
+                }}
+    end
+
     test "pins only the owner id for a workload identity that matches every repository" do
       expect(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/users/acme", _, _ ->
         {:ok, 200, [], %{"id" => 123}}
@@ -592,5 +626,39 @@ defmodule Hexpm.WorkloadIdentities.Provider.GitHubTest do
       assert resolve([], "ac me") == {:error, :repository_not_found}
       assert resolve(["acme/widget"], "acme/widget") == {:error, :repository_not_found}
     end
+  end
+end
+
+defmodule Hexpm.WorkloadIdentities.Provider.GitHubTimeoutTest do
+  # Changes the application environment, so it can't run alongside other tests.
+  use Hexpm.DataCase, async: false
+  import Mox
+
+  alias Hexpm.WorkloadIdentities.Provider.GitHub
+
+  setup :verify_on_exit!
+
+  setup do
+    config = Application.fetch_env!(:hexpm, :workload_identity)
+    on_exit(fn -> Application.put_env(:hexpm, :workload_identity, config) end)
+
+    Application.put_env(
+      :hexpm,
+      :workload_identity,
+      Keyword.put(config, :github_lookup_timeout, 50)
+    )
+  end
+
+  test "returns a timeout when a repository lookup takes too long" do
+    expect(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/widget", _, _ ->
+      Process.sleep(5_000)
+      {:ok, 404, [], %{}}
+    end)
+
+    assert GitHub.resolve_immutable_ids(%{
+             repository_owner: "acme",
+             repositories: ["acme/widget"]
+           }) ==
+             {:error, :timeout}
   end
 end

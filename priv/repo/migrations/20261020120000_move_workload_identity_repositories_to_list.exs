@@ -1,7 +1,13 @@
 defmodule Hexpm.Repo.Migrations.MoveWorkloadIdentityRepositoriesToList do
   use Ecto.Migration
 
-  # Every element names a repository as "owner/name" and pins its immutable ID.
+  # Every element is an object that names a repository as "owner/name" and
+  # pins its immutable ID. The lax path reads the fields, and would unwrap a
+  # nested array, so the strict path checks that every element is an object.
+  @non_object ~S"""
+  strict $[*] ? (@.type() != "object")
+  """
+
   @invalid_repository ~S"""
   lax $[*] ? (!(exists(@.name)) || !(exists(@.id)) || @.name.type() != "string" ||
     @.id.type() != "string" || @.name == "" || @.id == "")
@@ -33,6 +39,7 @@ defmodule Hexpm.Repo.Migrations.MoveWorkloadIdentityRepositoriesToList do
     create constraint(:workload_identities, :workload_identities_repositories,
              check:
                "jsonb_typeof(repositories) = 'array' AND " <>
+                 "NOT jsonb_path_exists(repositories, $$#{@non_object}$$) AND " <>
                  "NOT jsonb_path_exists(repositories, $$#{@invalid_repository}$$) AND " <>
                  "(jsonb_array_length(repositories) > 0 OR " <>
                  "(workflow = '' AND environment = '' AND organization_id IS NOT NULL AND " <>
