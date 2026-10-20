@@ -416,7 +416,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
               <p>
                 Removing a member doesn't change the organization's {workload_identities_count(
                   @workload_identities
-                )}, so anyone who can run their workflows on GitHub can still fetch its packages, and publish them through write workload identities, including a removed member with access to the repositories.
+                )}, so anyone who can run their workflows on GitHub can still fetch its packages, and publish them and the public packages it owns through write workload identities, including a removed member with access to the repositories.
               </p>
               <p>
                 Review them on the <a

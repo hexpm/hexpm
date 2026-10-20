@@ -1718,6 +1718,36 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       assert Hexpm.Repo.get_by(assoc(package, :releases), version: "0.0.1")
     end
 
+    test "a read-only key gets the same answer whether the release exists or not", %{
+      user: user,
+      repository: repository
+    } do
+      package = insert(:package, repository_id: repository.id)
+      insert(:release, package: package, version: "0.0.1")
+      key = key_for(user, [%{domain: "api", resource: "read"}])
+      base = "/api/repos/#{repository.name}/packages"
+
+      paths = [
+        "#{base}/#{package.name}/releases/0.0.1",
+        "#{base}/#{package.name}/releases/0.0.2",
+        "#{base}/no_such_package/releases/0.0.1"
+      ]
+
+      responses =
+        for path <- paths do
+          conn =
+            build_conn()
+            |> put_req_header("authorization", key)
+            |> delete(path)
+
+          {conn.status, conn.resp_body}
+        end
+
+      assert [response, response, response] = responses
+
+      assert Hexpm.Repo.get_by(assoc(package, :releases), version: "0.0.1")
+    end
+
     test "organization needs to have active billing", %{user: user} do
       repository = insert(:repository, organization: build(:organization, billing_active: false))
       insert(:organization_user, organization: repository.organization, user: user, role: "write")

@@ -4,8 +4,7 @@ defmodule HexpmWeb.API.ReleaseController do
   @tarball_max_size 16 * 1024 * 1024
   @metadata_string_max_size 255
 
-  plug :maybe_fetch_release when action in [:show]
-  plug :fetch_release when action in [:delete]
+  plug :maybe_fetch_release when action in [:show, :delete]
   plug :maybe_fetch_package when action in [:create]
 
   plug :authorize,
@@ -28,6 +27,8 @@ defmodule HexpmWeb.API.ReleaseController do
          fun: [{AuthHelpers, :package_owner}, {AuthHelpers, :organization_billing_active}]
        ]
        when action in [:delete]
+
+  plug :require_release when action in [:delete]
 
   # The package a publish names is in the tarball, so a caller with no
   # credential is refused before the body is read and the package is

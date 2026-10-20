@@ -2,8 +2,8 @@ defmodule HexpmWeb.Dashboard.Organization.Components.WorkloadIdentitiesTab do
   @moduledoc """
   Workload identities tab content for the organization dashboard. Lists the
   GitHub Actions workflows that can fetch from the organization's repository,
-  and publish to it with the write role. Admins with 2FA on their account add
-  and remove them.
+  and with the write role publish to it and publish the public packages the
+  organization owns. Admins with 2FA on their account add and remove them.
   """
   use Phoenix.Component
 
@@ -15,11 +15,14 @@ defmodule HexpmWeb.Dashboard.Organization.Components.WorkloadIdentitiesTab do
   import HexpmWeb.Components.Badge, only: [badge: 1]
   import HexpmWeb.Components.Buttons, only: [button: 1, button_link: 1, icon_button: 1]
   import HexpmWeb.Components.Form, only: [sudo_form: 1]
-  import HexpmWeb.Components.Input, only: [text_input: 1, select_input: 1]
+
+  import HexpmWeb.Components.Input,
+    only: [errors: 1, field_errors: 2, text_input: 1, select_input: 1]
+
   import HexpmWeb.Components.Modal, only: [modal: 1, show_modal: 1, hide_modal: 1]
   import HexpmWeb.Components.Tooltip, only: [tooltip: 1]
 
-  alias Hexpm.Accounts.User
+  alias Hexpm.Accounts.{Organization, User}
   alias Hexpm.WorkloadIdentities.WorkloadIdentity
 
   attr :changeset, :any, required: true
@@ -32,6 +35,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.WorkloadIdentitiesTab do
       assigns
       |> assign(:admin?, admin?(assigns.current_user, assigns.organization))
       |> assign(:tfa?, User.tfa_enabled?(assigns.current_user))
+      |> assign(:billing?, Organization.billing_active?(assigns.organization))
       |> assign(:form, to_form(assigns.changeset, as: :workload_identity))
 
     ~H"""
@@ -40,7 +44,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.WorkloadIdentitiesTab do
         <div class="px-6 py-5 border-b border-grey-200 dark:border-grey-700">
           <h2 class="text-grey-900 dark:text-white text-lg font-semibold">Workload identities</h2>
           <p class="text-grey-500 dark:text-grey-300 text-sm mt-1">
-            GitHub Actions workflows that fetch packages from the {@organization.name} repository without an API key. With the write role they also publish and create packages in it.
+            GitHub Actions workflows that fetch packages from the {@organization.name} repository without an API key. With the write role they also publish and create packages in it, and can publish the public packages {@organization.name} owns.
             <a
               href={~p"/docs/workload-identity" <> "#organization-workload-identities"}
               class="text-primary-600 dark:text-primary-300 hover:underline"
@@ -69,10 +73,16 @@ defmodule HexpmWeb.Dashboard.Organization.Components.WorkloadIdentitiesTab do
                 Environment: {environment_label(workload_identity.environment)}
               </p>
               <p
-                :if={workload_identity.role == "write"}
+                :if={workload_identity.role == "write" and workload_identity.covers_private}
                 class="text-xs text-grey-500 dark:text-grey-300"
               >
-                Packages: {packages_label(workload_identity.packages)}
+                Private: {private_label(workload_identity.packages)}
+              </p>
+              <p
+                :if={workload_identity.role == "write" and workload_identity.covers_public}
+                class="text-xs text-grey-500 dark:text-grey-300"
+              >
+                Public: {public_label(workload_identity.public_packages)}
               </p>
             </div>
 
@@ -136,6 +146,17 @@ defmodule HexpmWeb.Dashboard.Organization.Components.WorkloadIdentitiesTab do
           </.button_link>
         </div>
 
+        <p
+          :if={not @billing?}
+          id="workload-identity-billing-note"
+          class="mx-6 mt-5 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 text-sm text-amber-900 dark:text-amber-100"
+        >
+          Private packages and the read role need an active billing subscription. Public packages {@organization.name} owns don't.
+          <a href={~p"/dashboard/orgs/#{@organization}/billing"} class="font-medium underline">
+            Billing
+          </a>
+        </p>
+
         <.sudo_form
           current_user={@current_user}
           action={~p"/dashboard/orgs/#{@organization}/workload-identities"}
@@ -166,6 +187,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.WorkloadIdentitiesTab do
                   {"Read: fetch packages", "read"},
                   {"Write: fetch, publish and create packages", "write"}
                 ]}
+                disabled_options={if @billing?, do: [], else: ["read"]}
               />
               <.text_input
                 field={@form[:workflow]}
@@ -184,21 +206,95 @@ defmodule HexpmWeb.Dashboard.Organization.Components.WorkloadIdentitiesTab do
               />
             </div>
 
-            <div class="hidden group-has-[option[value=write]:checked]/workload-identity:block">
-              <.text_input
-                field={@form[:packages]}
-                value={packages_value(@form[:packages].value)}
-                label="Packages"
-                placeholder="All packages"
-              />
-              <p class="mt-1 text-xs text-grey-500 dark:text-grey-300">
-                Package names separated by commas. A name can be a package that doesn't exist yet, which the workflow can then create. Leave empty to cover every package in the repository.
-              </p>
+            <div class="flex flex-col gap-3">
+              <div class="group/private rounded-lg border border-grey-200 dark:border-grey-700 p-4 flex flex-col gap-3">
+                <label class={[
+                  "hidden group-has-[option[value=write]:checked]/workload-identity:flex items-start gap-3",
+                  if(@billing?, do: "cursor-pointer", else: "cursor-not-allowed opacity-50")
+                ]}>
+                  <input type="hidden" name="workload_identity[covers_private]" value="false" />
+                  <input
+                    type="checkbox"
+                    id="workload_identity_covers_private"
+                    name="workload_identity[covers_private]"
+                    value="true"
+                    checked={@billing? and checked?(@form[:covers_private].value)}
+                    disabled={not @billing?}
+                    class="mt-0.5 w-4 h-4 text-purple-600 border-grey-300 dark:border-grey-600 rounded focus:ring-2 focus:ring-purple-500"
+                  />
+                  <span class="flex flex-col gap-0.5">
+                    <span class="text-small font-medium text-grey-900 dark:text-grey-100">
+                      Private packages
+                    </span>
+                    <span class="text-xs text-grey-500 dark:text-grey-300">
+                      Packages in the {@organization.name} repository.
+                      <span :if={not @billing?}>Needs an active billing subscription.</span>
+                    </span>
+                  </span>
+                </label>
+                <div class="group-has-[option[value=write]:checked]/workload-identity:hidden flex flex-col gap-0.5">
+                  <span class="text-small font-medium text-grey-900 dark:text-grey-100">
+                    Private packages
+                  </span>
+                  <span class="text-xs text-grey-500 dark:text-grey-300">
+                    The read role fetches every package in the {@organization.name} repository.
+                  </span>
+                </div>
+                <div class="hidden group-has-[option[value=write]:checked]/workload-identity:group-has-[:checked]/private:block">
+                  <.text_input
+                    field={@form[:packages]}
+                    value={names_value(@form, :packages)}
+                    label="Private package names"
+                    placeholder="All packages in the repository"
+                  />
+                  <p class="mt-1 text-xs text-grey-500 dark:text-grey-300">
+                    Package names separated by commas. A name can be a package that doesn't exist yet, which the workflow can then create. Leave empty to cover every package in the repository.
+                  </p>
+                </div>
+              </div>
+
+              <div class="group/public rounded-lg border border-grey-200 dark:border-grey-700 p-4 flex flex-col gap-3">
+                <label class="flex items-start gap-3 cursor-pointer group-has-[option[value=read]:checked]/workload-identity:cursor-not-allowed group-has-[option[value=read]:checked]/workload-identity:opacity-50">
+                  <input type="hidden" name="workload_identity[covers_public]" value="false" />
+                  <input
+                    type="checkbox"
+                    id="workload_identity_covers_public"
+                    name="workload_identity[covers_public]"
+                    value="true"
+                    checked={checked?(@form[:covers_public].value)}
+                    class="mt-0.5 w-4 h-4 text-purple-600 border-grey-300 dark:border-grey-600 rounded focus:ring-2 focus:ring-purple-500 group-has-[option[value=read]:checked]/workload-identity:pointer-events-none"
+                  />
+                  <span class="flex flex-col gap-0.5">
+                    <span class="text-small font-medium text-grey-900 dark:text-grey-100">
+                      Public packages
+                    </span>
+                    <span class="text-xs text-grey-500 dark:text-grey-300">
+                      Public packages on hex.pm that {@organization.name} owns.
+                    </span>
+                  </span>
+                </label>
+                <p class="group-has-[option[value=write]:checked]/workload-identity:hidden text-xs text-grey-500 dark:text-grey-300">
+                  Only the write role covers public packages. Public packages need no credentials to fetch.
+                </p>
+                <div class="hidden group-has-[option[value=write]:checked]/workload-identity:group-has-[:checked]/public:block">
+                  <.text_input
+                    field={@form[:public_packages]}
+                    value={names_value(@form, :public_packages)}
+                    label="Public package names"
+                    placeholder={"All public packages #{@organization.name} owns"}
+                  />
+                  <p class="mt-1 text-xs text-grey-500 dark:text-grey-300">
+                    Names of public packages {@organization.name} owns, separated by commas. Leave empty to cover every public package {@organization.name} owns, including packages it becomes an owner of later. Workload identities don't create public packages, so publish a package's first release with a user account or an API key. Each public release shows the GitHub repository, workflow and actor that published it, also when the repository is private.
+                  </p>
+                </div>
+              </div>
+
+              <.errors errors={field_errors(@form, :covers_private)} />
             </div>
 
             <div class="flex flex-col gap-2 text-xs text-grey-500 dark:text-grey-300">
               <p>
-                The write role needs a repository name and a workflow, and an environment when the repository is public. With the read role, an empty workflow matches every workflow in the repository, and an empty repository name matches every repository the owner has, for example so all of them can fetch private dependencies.
+                The write role needs a repository name and a workflow, an environment when the repository is public, and private packages, public packages or both. Private packages and the read role need an active billing subscription. With the read role, an empty workflow matches every workflow in the repository, and an empty repository name matches every repository the owner has, for example so all of them can fetch private dependencies.
               </p>
               <p>
                 Anyone who can push a workflow file to a matching repository can then fetch, the same as with an organization key stored as a GitHub secret. Set an environment with protection rules to narrow a single repository.
@@ -274,9 +370,25 @@ defmodule HexpmWeb.Dashboard.Organization.Components.WorkloadIdentitiesTab do
   defp environment_label(environment) when environment in [nil, ""], do: "Any"
   defp environment_label(environment), do: environment
 
-  defp packages_label(nil), do: "All"
-  defp packages_label(packages), do: Enum.join(packages, ", ")
+  defp private_label(nil), do: "all packages"
+  defp private_label(packages), do: Enum.join(packages, ", ")
 
-  defp packages_value(packages) when is_list(packages), do: Enum.join(packages, ", ")
-  defp packages_value(packages), do: packages
+  defp public_label(nil), do: "all owned packages"
+  defp public_label(packages), do: Enum.join(packages, ", ")
+
+  defp checked?(value), do: Phoenix.HTML.Form.normalize_value("checkbox", value)
+
+  # The submitted names, so a list hidden behind an unchecked box or the read
+  # role keeps what was typed.
+  defp names_value(form, field) do
+    key = Atom.to_string(field)
+
+    case form.params do
+      %{^key => names} -> join_names(names)
+      _params -> join_names(form[field].value)
+    end
+  end
+
+  defp join_names(names) when is_list(names), do: Enum.join(names, ", ")
+  defp join_names(names), do: names
 end

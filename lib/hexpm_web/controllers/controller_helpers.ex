@@ -286,27 +286,15 @@ defmodule HexpmWeb.ControllerHelpers do
     |> assign(:organization, repository && repository.organization)
   end
 
-  def fetch_release(conn, _opts) do
-    case Version.parse(conn.params["version"]) do
-      {:ok, version} ->
-        repository = Repositories.get(conn.params["repository"], [:organization])
-        package = repository && Packages.get(repository, conn.params["name"])
-        release = package && Releases.get(package, version)
-
-        if release do
-          conn
-          |> assign(:repository, repository)
-          |> assign(:package, package)
-          |> assign(:release, release)
-          |> assign(:organization, repository && repository.organization)
-        else
-          conn
-          |> not_found()
-          |> halt()
-        end
-
-      :error ->
-        render_error(conn, 400, message: "invalid version: #{conn.params["version"]}")
+  # Runs after authorization, so a caller that may not see the repository gets
+  # the same answer for a release that exists and one that doesn't.
+  def require_release(conn, _opts) do
+    if conn.assigns.release do
+      conn
+    else
+      conn
+      |> not_found()
+      |> halt()
     end
   end
 

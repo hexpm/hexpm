@@ -149,6 +149,31 @@
         <% end %>
 
         <div
+          :if={
+            HexpmWeb.PackageOwnerView.stopped_workload_identities(
+              @organization_workload_identities,
+              owner.user
+            ) != []
+          }
+          class="mt-4 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 p-4 space-y-2 text-sm text-amber-900 dark:text-amber-100"
+        >
+          <p>
+            These workload identities of {owner.user.username} publish {@package.name} because {owner.user.username} owns it, and stop publishing it when it's removed:
+          </p>
+          <ul class="list-disc pl-5">
+            <li :for={
+              workload_identity <-
+                HexpmWeb.PackageOwnerView.stopped_workload_identities(
+                  @organization_workload_identities,
+                  owner.user
+                )
+            }>
+              {workload_identity.repository} ({workload_identity.workflow})
+            </li>
+          </ul>
+        </div>
+
+        <div
           :if={@workload_identities != []}
           class="mt-4 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 p-4 space-y-2 text-sm text-amber-900 dark:text-amber-100"
         >

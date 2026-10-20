@@ -68,6 +68,118 @@ defmodule HexpmWeb.Dashboard.OrganizationWorkloadIdentitiesTest do
       refute body =~ ~r/<fieldset[^>]*\sdisabled[\s>]/
     end
 
+    test "shows each workload identity's coverage", %{admin: admin, organization: organization} do
+      insert(:organization_workload_identity,
+        organization: organization,
+        role: "write",
+        repository: "acme/all",
+        workflow: "release.yml"
+      )
+
+      insert(:organization_workload_identity,
+        organization: organization,
+        role: "write",
+        repository: "acme/both",
+        workflow: "release.yml",
+        packages: ["private_one"],
+        covers_public: true,
+        public_packages: ["public_one", "public_two"]
+      )
+
+      insert(:organization_workload_identity,
+        organization: organization,
+        role: "write",
+        repository: "acme/public",
+        workflow: "release.yml",
+        covers_private: false,
+        packages: [],
+        covers_public: true
+      )
+
+      document =
+        build_conn()
+        |> test_login(admin)
+        |> get(path(organization))
+        |> html_response(200)
+        |> LazyHTML.from_document()
+
+      coverage = fn repository ->
+        document
+        |> LazyHTML.query("li[id^=workload-identity-]")
+        |> Enum.find(&(LazyHTML.text(&1) =~ repository))
+        |> LazyHTML.query("p")
+        |> Enum.map(&(&1 |> LazyHTML.text() |> String.replace(~r/\s+/, " ") |> String.trim()))
+        |> Enum.filter(&String.match?(&1, ~r/^(Private|Public):/))
+      end
+
+      assert coverage.("acme/all") == ["Private: all packages"]
+      assert coverage.("acme/both") == ["Private: private_one", "Public: public_one, public_two"]
+      assert coverage.("acme/public") == ["Public: all owned packages"]
+    end
+
+    test "offers only public packages without active billing", %{
+      admin: admin,
+      organization: organization
+    } do
+      organization
+      |> Ecto.Changeset.change(billing_active: false, trial_end: nil)
+      |> Repo.update!()
+
+      document =
+        build_conn()
+        |> test_login(admin)
+        |> get(path(organization))
+        |> html_response(200)
+        |> LazyHTML.from_document()
+
+      assert LazyHTML.text(document) =~
+               "Private packages and the read role need an active billing subscription."
+
+      assert document
+             |> LazyHTML.query("#workload_identity_role option[value=read][disabled]")
+             |> Enum.count() == 1
+
+      assert document
+             |> LazyHTML.query("#workload_identity_role option[value=write][selected]")
+             |> Enum.count() == 1
+
+      assert document
+             |> LazyHTML.query("#workload_identity_covers_private[disabled]")
+             |> Enum.count() == 1
+
+      assert document
+             |> LazyHTML.query("#workload_identity_covers_private[checked]")
+             |> Enum.count() == 0
+
+      assert document
+             |> LazyHTML.query("#workload_identity_covers_public[checked]")
+             |> Enum.count() == 1
+    end
+
+    test "checks private packages and leaves public packages unchecked in a new form", %{
+      admin: admin,
+      organization: organization
+    } do
+      document =
+        build_conn()
+        |> test_login(admin)
+        |> get(path(organization))
+        |> html_response(200)
+        |> LazyHTML.from_document()
+
+      assert document
+             |> LazyHTML.query("#workload_identity_covers_private[checked]")
+             |> Enum.count() == 1
+
+      assert document |> LazyHTML.query("#workload_identity_covers_public") |> Enum.count() == 1
+
+      assert document
+             |> LazyHTML.query("#workload_identity_covers_public[checked]")
+             |> Enum.count() == 0
+
+      assert document |> LazyHTML.query("#workload_identity_public_packages") |> Enum.count() == 1
+    end
+
     test "disables the form for an admin without 2FA and links to enabling it", %{
       organization: organization
     } do
@@ -264,6 +376,111 @@ defmodule HexpmWeb.Dashboard.OrganizationWorkloadIdentitiesTest do
       assert WorkloadIdentities.list(organization) == []
     end
 
+    test "adds a workload identity for public packages only", %{
+      admin: admin,
+      organization: organization
+    } do
+      insert(:package,
+        name: "public_one",
+        package_owners: [build(:package_owner, user: organization.user, level: "full")]
+      )
+
+      expect(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/widget", _, _ ->
+        {:ok, 200, [], %{"id" => 22, "owner" => %{"id" => 11}}}
+      end)
+
+      conn =
+        build_conn()
+        |> test_login(admin)
+        |> post(
+          path(organization),
+          identity_params(%{
+            "role" => "write",
+            "workflow" => "release.yml",
+            "covers_private" => "false",
+            "packages" => "ignored",
+            "covers_public" => "true",
+            "public_packages" => "public_one"
+          })
+        )
+
+      assert redirected_to(conn) == path(organization)
+
+      assert [identity] = WorkloadIdentities.list(organization)
+      assert identity.covers_private == false
+      assert identity.packages == []
+      assert identity.covers_public == true
+      assert identity.public_packages == ["public_one"]
+    end
+
+    test "refuses a public package the organization doesn't own and keeps the form", %{
+      admin: admin,
+      organization: organization
+    } do
+      package = insert(:package, package_owners: [build(:package_owner, user: admin)])
+
+      conn =
+        build_conn()
+        |> test_login(admin)
+        |> post(
+          path(organization),
+          identity_params(%{
+            "role" => "write",
+            "workflow" => "release.yml",
+            "covers_private" => "false",
+            "packages" => "private_one",
+            "covers_public" => "true",
+            "public_packages" => package.name
+          })
+        )
+
+      body = html_response(conn, 400)
+
+      assert body =~
+               "must be public packages the organization owns, not #{package.name}"
+
+      document = LazyHTML.from_document(body)
+
+      assert document
+             |> LazyHTML.query("#workload_identity_covers_public[checked]")
+             |> Enum.count() == 1
+
+      assert document
+             |> LazyHTML.query("#workload_identity_covers_private[checked]")
+             |> Enum.count() == 0
+
+      assert document
+             |> LazyHTML.query("#workload_identity_public_packages")
+             |> LazyHTML.attribute("value") == [package.name]
+
+      assert document
+             |> LazyHTML.query("#workload_identity_packages")
+             |> LazyHTML.attribute("value") == ["private_one"]
+
+      assert WorkloadIdentities.list(organization) == []
+    end
+
+    test "requires private packages, public packages or both for the write role", %{
+      admin: admin,
+      organization: organization
+    } do
+      conn =
+        build_conn()
+        |> test_login(admin)
+        |> post(
+          path(organization),
+          identity_params(%{
+            "role" => "write",
+            "workflow" => "release.yml",
+            "covers_private" => "false",
+            "covers_public" => "false"
+          })
+        )
+
+      assert html_response(conn, 400) =~ "select private packages, public packages or both"
+      assert WorkloadIdentities.list(organization) == []
+    end
+
     test "keeps the typed workflow when the repository name is missing", %{
       admin: admin,
       organization: organization
@@ -329,22 +546,68 @@ defmodule HexpmWeb.Dashboard.OrganizationWorkloadIdentitiesTest do
       assert WorkloadIdentities.list(organization) == []
     end
 
-    test "refuses an organization without active billing", %{
+    test "refuses private packages and the read role without active billing", %{
       admin: admin,
       organization: organization
     } do
       organization
-      |> Ecto.Changeset.change(billing_active: false)
+      |> Ecto.Changeset.change(billing_active: false, trial_end: nil)
       |> Repo.update!()
+
+      body =
+        build_conn()
+        |> test_login(admin)
+        |> post(path(organization), identity_params(%{"role" => "read"}))
+        |> html_response(400)
+
+      assert body =~ "needs an active billing subscription"
+
+      body =
+        build_conn()
+        |> test_login(admin)
+        |> post(
+          path(organization),
+          identity_params(%{
+            "role" => "write",
+            "workflow" => "release.yml",
+            "covers_private" => "true",
+            "covers_public" => "false"
+          })
+        )
+        |> html_response(400)
+
+      assert body =~ "private packages need an active billing subscription"
+      assert WorkloadIdentities.list(organization) == []
+    end
+
+    test "adds a workload identity for public packages without active billing", %{
+      admin: admin,
+      organization: organization
+    } do
+      organization
+      |> Ecto.Changeset.change(billing_active: false, trial_end: nil)
+      |> Repo.update!()
+
+      expect(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/widget", _, _ ->
+        {:ok, 200, [], %{"id" => 22, "owner" => %{"id" => 11}}}
+      end)
 
       conn =
         build_conn()
         |> test_login(admin)
-        |> post(path(organization), identity_params(%{"role" => "read"}))
+        |> post(
+          path(organization),
+          identity_params(%{
+            "role" => "write",
+            "workflow" => "release.yml",
+            "covers_private" => "false",
+            "covers_public" => "true"
+          })
+        )
 
       assert redirected_to(conn) == path(organization)
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "no active billing subscription"
-      assert WorkloadIdentities.list(organization) == []
+      assert [identity] = WorkloadIdentities.list(organization)
+      assert identity.covers_public == true
     end
   end
 

@@ -781,7 +781,7 @@ defmodule Hexpm.AdminTasks do
       |> maybe_put_param("level", Keyword.get(opts, :level))
       |> maybe_put_param("transfer", Keyword.get(opts, :transfer))
 
-    Owners.add(package, user, params, audit: AuditLogs.admin())
+    Owners.add(package, user, params, audit: AuditLogs.admin(), admin: true)
   end
 
   defp maybe_put_param(params, _key, nil), do: params
@@ -808,7 +808,7 @@ defmodule Hexpm.AdminTasks do
     package = Packages.get("hexpm", package_name)
     user = Users.get(username_or_email, [:emails])
 
-    Owners.remove(package, user, audit: AuditLogs.admin())
+    Owners.remove(package, user, audit: AuditLogs.admin(), admin: true)
   end
 
   @doc """

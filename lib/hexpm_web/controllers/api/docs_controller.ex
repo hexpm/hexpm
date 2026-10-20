@@ -4,7 +4,7 @@ defmodule HexpmWeb.API.DocsController do
   @tarball_max_size 16 * 1024 * 1024
   @tarball_max_uncompressed_size 128 * 1024 * 1024
 
-  plug :fetch_release
+  plug :maybe_fetch_release
 
   plug :authorize,
        [
@@ -27,6 +27,8 @@ defmodule HexpmWeb.API.DocsController do
          fun: [{AuthHelpers, :package_owner}, {AuthHelpers, :organization_billing_active}]
        ]
        when action in [:delete]
+
+  plug :require_release
 
   plug :fetch_body, [max_size: @tarball_max_size] when action in [:create]
 

@@ -89,6 +89,20 @@ defmodule HexpmWeb.API.OAuthControllerWorkloadIdentityTest do
     assert body["error"] == "invalid_request"
   end
 
+  test "rejects an assertion over 16 KB before verifying it", %{package: package} do
+    scope = "package:hexpm/#{package.name}"
+    padded = &Map.put(WorkloadIdentityHelpers.github_claims(), "padding", &1)
+
+    small = WorkloadIdentityHelpers.sign_oidc_claims(padded.("a"))
+    assert json_response(post(build_conn(), "/api/oauth/token", mint_params(small, scope)), 200)
+
+    large = WorkloadIdentityHelpers.sign_oidc_claims(padded.(String.duplicate("a", 16_384)))
+
+    body = json_response(post(build_conn(), "/api/oauth/token", mint_params(large, scope)), 400)
+    assert body["error"] == "invalid_request"
+    assert body["error_description"] == "Assertion is larger than 16384 bytes"
+  end
+
   test "rejects a scope that does not name exactly one package", _context do
     oidc = WorkloadIdentityHelpers.sign_oidc_claims(WorkloadIdentityHelpers.github_claims())
 
@@ -267,6 +281,40 @@ defmodule HexpmWeb.API.OAuthControllerWorkloadIdentityTest do
       |> post("/api/oauth/token", mint_params(oidc, "package:hexpm/#{package.name}"))
 
     assert json_response(conn, 403)["error"] == "access_denied"
+  end
+
+  test "answers a name no public package has the same whether an organization's identity names it" do
+    exchange = fn name ->
+      oidc = WorkloadIdentityHelpers.sign_oidc_claims(WorkloadIdentityHelpers.github_claims())
+
+      conn =
+        build_conn()
+        |> post("/api/oauth/token", mint_params(oidc, "package:hexpm/#{name}"))
+
+      {conn.status, json_response(conn, conn.status)}
+    end
+
+    answer = exchange.("ghost_package")
+
+    for public_packages <- [nil, ["ghost_package"]] do
+      insert(:organization_workload_identity,
+        organization: insert(:organization),
+        role: "write",
+        repository_owner: "acme",
+        repository_owner_id: "12345",
+        repository_id: "67890",
+        repository: "acme/widget",
+        workflow: "release.yml",
+        covers_private: false,
+        packages: [],
+        covers_public: true,
+        public_packages: public_packages
+      )
+    end
+
+    assert {403, %{"error" => "access_denied"}} = answer
+    assert exchange.("ghost_package") == answer
+    assert exchange.("other_ghost_package") == answer
   end
 
   test "rejects replayed tokens", %{package: package} do

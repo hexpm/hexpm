@@ -8,6 +8,7 @@ defmodule HexpmWeb.AuthHelpers do
   alias Hexpm.SecurityLog
   alias Hexpm.Repository.{Package, Packages, PackageOwner, Repository}
   alias Hexpm.OAuth.Token
+  alias Hexpm.WorkloadIdentities
   alias Hexpm.WorkloadIdentities.WorkloadIdentity
   alias HexpmWeb.BasicAuth
   alias HexpmWeb.Plugs.Attack
@@ -479,6 +480,7 @@ defmodule HexpmWeb.AuthHelpers do
     cond do
       workload_identity.package_id == package.id -> :ok
       organization_publishes?(workload_identity, repository, package.name) -> :ok
+      WorkloadIdentities.publishes_public?(workload_identity, package) -> :ok
       repository.id == 1 -> {:error, :auth}
       true -> {:error, :not_found}
     end
@@ -564,12 +566,12 @@ defmodule HexpmWeb.AuthHelpers do
   end
 
   defp organization_publishes?(
-         %WorkloadIdentity{organization_id: organization_id, role: "write", packages: packages},
+         %WorkloadIdentity{organization_id: organization_id} = workload_identity,
          %Repository{id: repository_id, organization_id: organization_id},
          name
        )
-       when not is_nil(organization_id) and repository_id != 1 and is_binary(name) do
-    is_nil(packages) or name in packages
+       when not is_nil(organization_id) and repository_id != 1 do
+    WorkloadIdentity.covers_private_package?(workload_identity, name)
   end
 
   defp organization_publishes?(_workload_identity, _repository, _name), do: false

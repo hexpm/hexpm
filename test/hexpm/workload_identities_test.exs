@@ -1178,8 +1178,8 @@ defmodule Hexpm.WorkloadIdentitiesTest do
         assert email.subject =~ "Workload identity added to organization #{organization.name}"
         assert email.text_body =~ "#{admin.username} added a workload identity"
         assert email.text_body =~ "Role: write"
-        assert email.text_body =~ "Packages: widget"
-        assert email.text_body =~ "publish and create the packages listed above"
+        assert email.text_body =~ "Private packages: widget"
+        assert email.text_body =~ "publish and create the private packages listed above"
 
         assert Enum.sort(Enum.map(email.to, &elem(&1, 1))) ==
                  Enum.sort([
@@ -1371,6 +1371,732 @@ defmodule Hexpm.WorkloadIdentitiesTest do
         assert email.text_body =~ "#{admin.username} removed a workload identity"
         assert Enum.map(email.to, &elem(&1, 1)) == [Hexpm.Accounts.User.email(admin, :primary)]
       end)
+    end
+  end
+
+  describe "verify_and_mint/2 with public coverage" do
+    setup do
+      admin = insert(:user)
+
+      organization =
+        insert(:organization,
+          organization_users: [build(:organization_user, user: admin, role: "admin")]
+        )
+
+      owned =
+        insert(:package,
+          package_owners: [build(:package_owner, user: organization.user, level: "full")]
+        )
+
+      identity =
+        insert(:organization_workload_identity,
+          organization: organization,
+          role: "write",
+          repository: "acme/widget",
+          workflow: "release.yml",
+          covers_private: false,
+          packages: [],
+          covers_public: true
+        )
+
+      %{admin: admin, organization: organization, owned: owned, identity: identity}
+    end
+
+    defp mint_public(name, claims \\ []) do
+      claims
+      |> WorkloadIdentityHelpers.github_claims()
+      |> WorkloadIdentityHelpers.sign_oidc_claims()
+      |> WorkloadIdentities.verify_and_mint(repository: "hexpm", package: name)
+    end
+
+    test "mints a package token for a public package the organization owns", %{
+      organization: organization,
+      owned: owned,
+      identity: identity
+    } do
+      ref =
+        :telemetry_test.attach_event_handlers(self(), [
+          [:hexpm, :workload_identity, :mint, :success]
+        ])
+
+      assert {:ok, token} = mint_public(owned.name)
+      assert token.scopes == ["package:hexpm/#{owned.name}"]
+      assert token.workload_identity_id == identity.id
+
+      organization_id = organization.id
+
+      assert_received {[:hexpm, :workload_identity, :mint, :success], ^ref, %{count: 1},
+                       %{organization_id: ^organization_id, package_id: nil}}
+    end
+
+    test "matches an organization that owns the package as a maintainer", %{
+      organization: organization
+    } do
+      package =
+        insert(:package,
+          package_owners: [build(:package_owner, user: organization.user, level: "maintainer")]
+        )
+
+      assert {:ok, _token} = mint_public(package.name)
+    end
+
+    test "refuses a public package the organization doesn't own" do
+      package = insert(:package, package_owners: [build(:package_owner, user: insert(:user))])
+
+      assert {:error, :no_matching_identity} = mint_public(package.name)
+    end
+
+    test "stops matching once the organization is no longer an owner", %{owned: owned} do
+      assert {:ok, _token} = mint_public(owned.name)
+
+      Repo.delete_all(
+        from(po in Hexpm.Repository.PackageOwner, where: po.package_id == ^owned.id)
+      )
+
+      insert(:package_owner, package: owned, user: insert(:user))
+
+      assert {:error, :no_matching_identity} = mint_public(owned.name)
+    end
+
+    test "matches a package the public list names and no other", %{
+      organization: organization,
+      owned: owned,
+      identity: identity
+    } do
+      other_owned =
+        insert(:package,
+          package_owners: [build(:package_owner, user: organization.user, level: "full")]
+        )
+
+      identity
+      |> Ecto.Changeset.change(public_packages: [owned.name])
+      |> Repo.update!()
+
+      assert {:ok, _token} = mint_public(owned.name)
+      assert {:error, :no_matching_identity} = mint_public(other_owned.name)
+    end
+
+    test "a listed name that isn't a package matches nothing", %{identity: identity} do
+      identity
+      |> Ecto.Changeset.change(public_packages: ["new_package"])
+      |> Repo.update!()
+
+      assert {:error, :package_not_found} = mint_public("new_package")
+      assert {:error, :package_not_found} = mint_public("other_package")
+    end
+
+    test "covering every owned package matches no name that isn't a package" do
+      assert {:error, :package_not_found} = mint_public("new_package")
+    end
+
+    test "matches the earlier identity when two owning organizations match", %{
+      organization: organization,
+      owned: owned,
+      identity: identity
+    } do
+      other_organization = insert(:organization)
+      insert(:package_owner, package: owned, user: other_organization.user, level: "full")
+
+      insert(:organization_workload_identity,
+        organization: other_organization,
+        role: "write",
+        repository: "acme/widget",
+        workflow: "release.yml",
+        covers_private: false,
+        packages: [],
+        covers_public: true
+      )
+
+      owners = fn ->
+        Repo.all(
+          from(po in Hexpm.Repository.PackageOwner,
+            where: po.package_id == ^owned.id,
+            order_by: po.id
+          )
+        )
+      end
+
+      owners_before = owners.()
+
+      assert {:ok, token} = mint_public(owned.name)
+      assert token.workload_identity_id == identity.id
+      assert identity.organization_id == organization.id
+      assert owners.() == owners_before
+    end
+
+    test "skips a matching identity of an organization without the feature flag", %{
+      owned: owned,
+      identity: identity
+    } do
+      other_organization = insert(:organization)
+      insert(:package_owner, package: owned, user: other_organization.user, level: "full")
+
+      enabled =
+        insert(:organization_workload_identity,
+          organization: other_organization,
+          role: "write",
+          repository: "acme/widget",
+          workflow: "release.yml",
+          covers_private: false,
+          packages: [],
+          covers_public: true
+        )
+
+      assert identity.id < enabled.id
+
+      flags = Application.fetch_env!(:hexpm, :feature_flags)
+      on_exit(fn -> Application.put_env(:hexpm, :feature_flags, flags) end)
+
+      Application.put_env(
+        :hexpm,
+        :feature_flags,
+        Keyword.put(flags, :workload_identity,
+          mode: :beta,
+          beta_organizations: [other_organization.name]
+        )
+      )
+
+      assert {:ok, token} = mint_public(owned.name)
+      assert token.workload_identity_id == enabled.id
+    end
+
+    test "a listed name of a package someone else owns doesn't match", %{identity: identity} do
+      package = insert(:package, package_owners: [build(:package_owner, user: insert(:user))])
+
+      identity
+      |> Ecto.Changeset.change(public_packages: [package.name])
+      |> Repo.update!()
+
+      assert {:error, :no_matching_identity} = mint_public(package.name)
+    end
+
+    test "matches the package's own workload identity first", %{owned: owned} do
+      own =
+        insert(:workload_identity,
+          package: owned,
+          repository: "acme/widget",
+          workflow: "release.yml"
+        )
+
+      assert {:ok, token} = mint_public(owned.name)
+      assert token.workload_identity_id == own.id
+    end
+
+    test "doesn't cover the organization's repository without private coverage", %{
+      organization: organization
+    } do
+      repository = insert(:repository, organization: organization, name: organization.name)
+      package = insert(:package, repository_id: repository.id)
+
+      assert {:error, :no_matching_identity} =
+               WorkloadIdentityHelpers.github_claims()
+               |> WorkloadIdentityHelpers.sign_oidc_claims()
+               |> WorkloadIdentities.verify_and_mint(
+                 repository: repository.name,
+                 package: package.name
+               )
+
+      assert {:error, :no_matching_identity} =
+               WorkloadIdentityHelpers.github_claims()
+               |> WorkloadIdentityHelpers.sign_oidc_claims()
+               |> WorkloadIdentities.verify_and_mint(repository: repository.name)
+    end
+
+    test "a read workload identity covers no public package", %{
+      organization: organization,
+      owned: owned,
+      identity: identity
+    } do
+      Repo.delete!(identity)
+
+      insert(:organization_workload_identity,
+        organization: organization,
+        repository: "acme/widget",
+        workflow: "release.yml"
+      )
+
+      assert {:error, :no_matching_identity} = mint_public(owned.name)
+    end
+
+    test "a write workload identity without public coverage covers no public package", %{
+      owned: owned,
+      identity: identity
+    } do
+      identity
+      |> Ecto.Changeset.change(covers_private: true, packages: nil, covers_public: false)
+      |> Repo.update!()
+
+      assert {:error, :no_matching_identity} = mint_public(owned.name)
+    end
+
+    test "doesn't need active billing", %{organization: organization, owned: owned} do
+      organization
+      |> Ecto.Changeset.change(billing_active: false)
+      |> Repo.update!()
+
+      assert {:ok, _token} = mint_public(owned.name)
+    end
+
+    test "follows the feature flag on the organization", %{
+      organization: organization,
+      owned: owned
+    } do
+      flags = Application.fetch_env!(:hexpm, :feature_flags)
+      on_exit(fn -> Application.put_env(:hexpm, :feature_flags, flags) end)
+
+      Application.put_env(
+        :hexpm,
+        :feature_flags,
+        Keyword.put(flags, :workload_identity, mode: :beta, beta_organizations: ["other"])
+      )
+
+      assert {:error, :disabled} = mint_public(owned.name)
+
+      Application.put_env(
+        :hexpm,
+        :feature_flags,
+        Keyword.put(flags, :workload_identity,
+          mode: :beta,
+          beta_organizations: [organization.name]
+        )
+      )
+
+      assert {:ok, _token} = mint_public(owned.name)
+    end
+  end
+
+  describe "list_covering/1 for a public package" do
+    test "lists the write workload identities with public coverage of the owning organizations" do
+      organization = insert(:organization)
+
+      package =
+        insert(:package,
+          package_owners: [build(:package_owner, user: organization.user, level: "full")]
+        )
+
+      all =
+        insert(:organization_workload_identity,
+          organization: organization,
+          role: "write",
+          workflow: "all.yml",
+          covers_public: true
+        )
+
+      listed =
+        insert(:organization_workload_identity,
+          organization: organization,
+          role: "write",
+          workflow: "listed.yml",
+          covers_private: false,
+          packages: [],
+          covers_public: true,
+          public_packages: [package.name]
+        )
+
+      insert(:organization_workload_identity,
+        organization: organization,
+        role: "write",
+        workflow: "other.yml",
+        covers_public: true,
+        public_packages: ["other"]
+      )
+
+      insert(:organization_workload_identity,
+        organization: organization,
+        role: "write",
+        workflow: "private.yml"
+      )
+
+      insert(:organization_workload_identity, organization: organization)
+
+      insert(:organization_workload_identity,
+        role: "write",
+        workflow: "elsewhere.yml",
+        covers_public: true
+      )
+
+      covering = WorkloadIdentities.list_covering(package)
+      assert Enum.map(covering, & &1.id) == [all.id, listed.id]
+      assert Enum.all?(covering, &(&1.organization.id == organization.id))
+
+      Repo.delete_all(
+        from(po in Hexpm.Repository.PackageOwner, where: po.package_id == ^package.id)
+      )
+
+      assert WorkloadIdentities.list_covering(package) == []
+    end
+
+    test "leaves out organizations without the feature flag" do
+      organization = insert(:organization)
+
+      package =
+        insert(:package,
+          package_owners: [build(:package_owner, user: organization.user, level: "full")]
+        )
+
+      identity =
+        insert(:organization_workload_identity,
+          organization: organization,
+          role: "write",
+          workflow: "all.yml",
+          covers_public: true
+        )
+
+      flags = Application.fetch_env!(:hexpm, :feature_flags)
+      on_exit(fn -> Application.put_env(:hexpm, :feature_flags, flags) end)
+
+      Application.put_env(
+        :hexpm,
+        :feature_flags,
+        Keyword.put(flags, :workload_identity, mode: :beta, beta_organizations: ["other"])
+      )
+
+      assert WorkloadIdentities.list_covering(package) == []
+
+      Application.put_env(
+        :hexpm,
+        :feature_flags,
+        Keyword.put(flags, :workload_identity,
+          mode: :beta,
+          beta_organizations: [organization.name]
+        )
+      )
+
+      assert Enum.map(WorkloadIdentities.list_covering(package), & &1.id) == [identity.id]
+    end
+  end
+
+  describe "create/3 with public coverage" do
+    setup do
+      admin = insert(:user)
+      co_owner = insert(:user)
+      admin_co_owner = insert(:user)
+
+      organization =
+        insert(:organization,
+          organization_users: [
+            build(:organization_user, user: admin, role: "admin"),
+            build(:organization_user, user: admin_co_owner, role: "admin")
+          ]
+        )
+
+      insert(:repository, organization: organization, name: organization.name)
+
+      owned =
+        insert(:package,
+          name: "owned_one",
+          package_owners: [
+            build(:package_owner, user: organization.user, level: "full"),
+            build(:package_owner, user: co_owner, level: "maintainer"),
+            build(:package_owner, user: admin_co_owner, level: "full")
+          ]
+        )
+
+      other_owned =
+        insert(:package,
+          name: "owned_two",
+          package_owners: [
+            build(:package_owner, user: organization.user, level: "full"),
+            build(:package_owner, user: co_owner, level: "full")
+          ]
+        )
+
+      %{
+        admin: admin,
+        co_owner: co_owner,
+        admin_co_owner: admin_co_owner,
+        organization: organization,
+        owned: owned,
+        other_owned: other_owned
+      }
+    end
+
+    defp public_params(params) do
+      Map.merge(
+        %{
+          "provider" => "github",
+          "repository_owner" => "acme",
+          "repository" => "widget",
+          "role" => "write",
+          "workflow" => "release.yml",
+          "covers_private" => "false",
+          "packages" => "",
+          "covers_public" => "true",
+          "public_packages" => ""
+        },
+        params
+      )
+    end
+
+    defp expect_github_lookup do
+      expect(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/widget", _, _ ->
+        {:ok, 200, [], %{"id" => 99, "owner" => %{"id" => 42}}}
+      end)
+    end
+
+    test "stores the coverage, audits it and emails the admins and the other owners once each",
+         %{
+           admin: admin,
+           co_owner: co_owner,
+           admin_co_owner: admin_co_owner,
+           organization: organization
+         } do
+      expect_github_lookup()
+
+      assert {:ok, identity} =
+               WorkloadIdentities.create(organization, public_params(%{}),
+                 audit: audit_data(admin)
+               )
+
+      assert identity.covers_private == false
+      assert identity.packages == []
+      assert identity.covers_public == true
+      assert identity.public_packages == nil
+
+      log = Repo.get_by!(AuditLog, action: "organization.workload_identity.add")
+      assert log.params["covers_private"] == false
+      assert log.params["packages"] == []
+      assert log.params["covers_public"] == true
+      assert log.params["public_packages"] == nil
+
+      assert_email_sent(fn email ->
+        assert email.subject =~ "Workload identity added to organization #{organization.name}"
+        refute email.text_body =~ "Private packages"
+        assert email.text_body =~ "Public packages: all packages #{organization.name} owns"
+        assert email.text_body =~ "publish every public package #{organization.name} owns"
+        refute email.text_body =~ "fetch"
+
+        assert Enum.sort(Enum.map(email.to, &elem(&1, 1))) ==
+                 Enum.sort([
+                   Hexpm.Accounts.User.email(admin, :primary),
+                   Hexpm.Accounts.User.email(admin_co_owner, :primary)
+                 ])
+      end)
+
+      co_owner_email = Hexpm.Accounts.User.email(co_owner, :primary)
+
+      assert_email_sent(fn email ->
+        assert Enum.map(email.to, &elem(&1, 1)) == [co_owner_email]
+        assert email.subject =~ "Workload identity of organization #{organization.name}"
+        assert email.subject =~ "can publish owned_one, owned_two"
+        assert email.text_body =~ "#{admin.username} added a workload identity"
+        assert email.text_body =~ "owned_one\nowned_two"
+        assert email.text_body =~ "GitHub repository: acme/widget"
+      end)
+
+      refute_email_sent()
+    end
+
+    test "names only each owner's own packages to the owners outside the organization", %{
+      admin: admin,
+      co_owner: co_owner,
+      organization: organization,
+      owned: owned,
+      other_owned: other_owned
+    } do
+      expect_github_lookup()
+      lone_owner = insert(:user)
+      insert(:package_owner, package: owned, user: lone_owner)
+
+      assert {:ok, identity} =
+               WorkloadIdentities.create(
+                 organization,
+                 public_params(%{
+                   "covers_private" => "true",
+                   "packages" => "private_one",
+                   "public_packages" => "#{owned.name}, #{other_owned.name}"
+                 }),
+                 audit: audit_data(admin)
+               )
+
+      assert identity.packages == ["private_one"]
+      assert identity.public_packages == [owned.name, other_owned.name]
+
+      assert_email_sent(fn email ->
+        assert email.text_body =~ "Private packages: private_one"
+        assert email.text_body =~ "Public packages: #{owned.name}, #{other_owned.name}"
+      end)
+
+      assert_email_sent(fn email ->
+        refute email.text_body =~ "private_one"
+        assert Enum.map(email.to, &elem(&1, 1)) == [Hexpm.Accounts.User.email(co_owner, :primary)]
+        assert email.text_body =~ "Public packages: #{owned.name}, #{other_owned.name}"
+      end)
+
+      assert_email_sent(fn email ->
+        refute email.text_body =~ other_owned.name
+        refute email.text_body =~ "private_one"
+
+        assert Enum.map(email.to, &elem(&1, 1)) == [
+                 Hexpm.Accounts.User.email(lone_owner, :primary)
+               ]
+
+        assert email.subject =~ "can publish #{owned.name}"
+        assert email.text_body =~ "Public packages: #{owned.name}"
+      end)
+
+      refute_email_sent()
+    end
+
+    test "refuses listed names that aren't public packages the organization owns before asking GitHub",
+         %{admin: admin, organization: organization, owned: owned} do
+      someone_elses = insert(:package, package_owners: [build(:package_owner, user: admin)])
+
+      assert {:error, changeset} =
+               WorkloadIdentities.create(
+                 organization,
+                 public_params(%{
+                   "public_packages" => "#{owned.name} #{someone_elses.name} new_package"
+                 }),
+                 audit: audit_data(admin)
+               )
+
+      assert errors_on(changeset)[:public_packages] ==
+               "must be public packages the organization owns, " <>
+                 "not " <> Enum.join(Enum.sort([someone_elses.name, "new_package"]), ", ")
+
+      assert WorkloadIdentities.list(organization) == []
+    end
+
+    test "lists owned public packages whose names a new package can't have", %{
+      admin: admin,
+      organization: organization
+    } do
+      expect_github_lookup()
+
+      for name <- ["Legacy_Package", "stats"] do
+        insert(:package,
+          name: name,
+          package_owners: [build(:package_owner, user: organization.user, level: "full")]
+        )
+      end
+
+      assert {:ok, identity} =
+               WorkloadIdentities.create(
+                 organization,
+                 public_params(%{"public_packages" => "stats Legacy_Package"}),
+                 audit: audit_data(admin)
+               )
+
+      assert identity.public_packages == ["Legacy_Package", "stats"]
+    end
+
+    test "adds public packages without active billing, and refuses private packages and the read role",
+         %{admin: admin, organization: organization} do
+      organization =
+        organization
+        |> Ecto.Changeset.change(billing_active: false, trial_end: nil)
+        |> Repo.update!()
+
+      for {params, field, message} <- [
+            {%{"covers_private" => "true"}, :covers_private,
+             "private packages need an active billing subscription"},
+            {%{"role" => "read"}, :role, "needs an active billing subscription"}
+          ] do
+        assert {:error, changeset} =
+                 WorkloadIdentities.create(organization, public_params(params),
+                   audit: audit_data(admin)
+                 )
+
+        assert errors_on(changeset)[field] == message
+      end
+
+      expect_github_lookup()
+
+      assert {:ok, identity} =
+               WorkloadIdentities.create(organization, public_params(%{}),
+                 audit: audit_data(admin)
+               )
+
+      assert identity.covers_private == false
+      assert identity.covers_public == true
+    end
+
+    test "requires private packages, public packages or both", %{
+      admin: admin,
+      organization: organization
+    } do
+      assert {:error, changeset} =
+               WorkloadIdentities.create(
+                 organization,
+                 public_params(%{"covers_public" => "false"}),
+                 audit: audit_data(admin)
+               )
+
+      assert errors_on(changeset)[:covers_private] ==
+               "select private packages, public packages or both"
+    end
+
+    test "a read workload identity covers the repository and no public package", %{
+      admin: admin,
+      organization: organization
+    } do
+      expect_github_lookup()
+
+      assert {:ok, identity} =
+               WorkloadIdentities.create(
+                 organization,
+                 public_params(%{"role" => "read", "public_packages" => "owned_one"}),
+                 audit: audit_data(admin)
+               )
+
+      assert identity.covers_private == true
+      assert identity.packages == nil
+      assert identity.covers_public == false
+      assert identity.public_packages == nil
+
+      assert_email_sent(fn email ->
+        refute email.text_body =~ "Public packages"
+        assert email.text_body =~ "fetch every package in the #{organization.name} repository"
+      end)
+
+      refute_email_sent()
+    end
+  end
+
+  describe "delete/2 with public coverage" do
+    test "emails the admins and the other owners of the covered packages" do
+      admin = insert(:user)
+      co_owner = insert(:user)
+
+      organization =
+        insert(:organization,
+          organization_users: [build(:organization_user, user: admin, role: "admin")]
+        )
+
+      package =
+        insert(:package,
+          package_owners: [
+            build(:package_owner, user: organization.user, level: "full"),
+            build(:package_owner, user: co_owner, level: "full")
+          ]
+        )
+
+      identity =
+        insert(:organization_workload_identity,
+          organization: organization,
+          role: "write",
+          repository: "acme/widget",
+          workflow: "release.yml",
+          covers_public: true
+        )
+
+      assert {:ok, _} = WorkloadIdentities.delete(identity, audit: audit_data(admin))
+
+      log = Repo.get_by!(AuditLog, action: "organization.workload_identity.remove")
+      assert log.params["covers_public"] == true
+
+      assert_email_sent(fn email ->
+        assert email.subject =~ "Workload identity removed from organization #{organization.name}"
+      end)
+
+      assert_email_sent(fn email ->
+        assert Enum.map(email.to, &elem(&1, 1)) == [Hexpm.Accounts.User.email(co_owner, :primary)]
+        assert email.subject =~ "can no longer publish #{package.name}"
+        assert email.text_body =~ "#{admin.username} removed a workload identity"
+      end)
+
+      refute_email_sent()
     end
   end
 end

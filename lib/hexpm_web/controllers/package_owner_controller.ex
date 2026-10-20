@@ -17,7 +17,8 @@ defmodule HexpmWeb.PackageOwnerController do
       [
         title: "Manage owners – #{package.name}",
         container: "container",
-        workload_identities: Owners.workload_identities(package)
+        workload_identities: Owners.workload_identities(package),
+        organization_workload_identities: Owners.organization_workload_identities(package)
       ] ++ PackageLayoutAssigns.for_package(conn, package)
     )
   end
@@ -67,6 +68,11 @@ defmodule HexpmWeb.PackageOwnerController do
           |> put_flash(:error, "Cannot demote the last full owner of a package.")
           |> redirect(to: ViewHelpers.path_for_owners(package))
 
+        {:error, :not_full_owner} ->
+          conn
+          |> put_flash(:error, "You must be a full owner of this package.")
+          |> redirect(to: ViewHelpers.path_for_owners(package))
+
         {:error, changeset} ->
           conn
           |> put_flash(:error, changeset_error_to_string(changeset))
@@ -98,6 +104,11 @@ defmodule HexpmWeb.PackageOwnerController do
         {:error, :last_full_owner} ->
           conn
           |> put_flash(:error, "Cannot demote the last full owner of a package.")
+          |> redirect(to: ViewHelpers.path_for_owners(package))
+
+        {:error, :not_full_owner} ->
+          conn
+          |> put_flash(:error, "You must be a full owner of this package.")
           |> redirect(to: ViewHelpers.path_for_owners(package))
 
         {:error, changeset} ->
@@ -136,6 +147,11 @@ defmodule HexpmWeb.PackageOwnerController do
         {:error, :not_owner} ->
           conn
           |> put_flash(:error, "#{username} is not an owner of this package.")
+          |> redirect(to: ViewHelpers.path_for_owners(package))
+
+        {:error, :not_full_owner} ->
+          conn
+          |> put_flash(:error, "You must be a full owner of this package.")
           |> redirect(to: ViewHelpers.path_for_owners(package))
       end
     end

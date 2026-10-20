@@ -90,6 +90,111 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
       assert html_response(conn, 200) =~ "acme/widget"
     end
 
+    test "lists the organization workload identities that publish a public package", %{
+      full_owner: full_owner,
+      package: package
+    } do
+      organization = insert(:organization)
+      insert(:package_owner, package: package, user: organization.user, level: "full")
+
+      insert(:organization_workload_identity,
+        organization: organization,
+        role: "write",
+        repository: "acme/widget",
+        workflow: "release.yml",
+        environment: "release",
+        covers_public: true
+      )
+
+      insert(:organization_workload_identity,
+        organization: organization,
+        role: "write",
+        repository: "acme/gadget",
+        workflow: "private.yml"
+      )
+
+      insert(:organization_workload_identity,
+        organization: organization,
+        role: "write",
+        repository: "acme/listed",
+        workflow: "listed.yml",
+        covers_public: true,
+        public_packages: [package.name, "secret_other_package"]
+      )
+
+      body =
+        build_conn()
+        |> test_login(full_owner)
+        |> get("/packages/#{package.name}/workload-identities")
+        |> html_response(200)
+
+      assert body =~ "Organization workload identities"
+      assert body =~ "acme/widget (release.yml)"
+      assert body =~ "every public package #{organization.name} owns"
+      assert body =~ "acme/listed (listed.yml)"
+      assert body =~ ~s(href="/orgs/#{organization.name}")
+      assert body =~ ~s(href="/dashboard/orgs/#{organization.name}/workload-identities")
+      assert body =~ "first release is published with a user account or an API key"
+      refute body =~ "acme/gadget"
+      refute body =~ "secret_other_package"
+    end
+
+    test "leaves out organization workload identities of organizations without the feature flag",
+         %{full_owner: full_owner, package: package} do
+      organization = insert(:organization)
+      insert(:package_owner, package: package, user: organization.user, level: "full")
+
+      insert(:organization_workload_identity,
+        organization: organization,
+        role: "write",
+        repository: "acme/widget",
+        workflow: "release.yml",
+        covers_public: true
+      )
+
+      flags = Application.fetch_env!(:hexpm, :feature_flags)
+      on_exit(fn -> Application.put_env(:hexpm, :feature_flags, flags) end)
+
+      Application.put_env(
+        :hexpm,
+        :feature_flags,
+        Keyword.put(flags, :workload_identity, mode: :beta, beta_users: [full_owner.username])
+      )
+
+      body =
+        build_conn()
+        |> test_login(full_owner)
+        |> get("/packages/#{package.name}/workload-identities")
+        |> html_response(200)
+
+      refute body =~ "Organization workload identities"
+      refute body =~ "acme/widget"
+    end
+
+    test "leaves out organization workload identities once the organization stops owning it", %{
+      full_owner: full_owner,
+      package: package
+    } do
+      organization = insert(:organization)
+
+      insert(:organization_workload_identity,
+        organization: organization,
+        role: "write",
+        repository: "acme/widget",
+        workflow: "release.yml",
+        covers_public: true
+      )
+
+      body =
+        build_conn()
+        |> test_login(full_owner)
+        |> get("/packages/#{package.name}/workload-identities")
+        |> html_response(200)
+
+      refute body =~ "Organization workload identities"
+      refute body =~ "acme/widget"
+    end
+
     test "redirects to /sudo when no sudo mode", %{full_owner: full_owner, package: package} do
       conn =
         build_conn()
