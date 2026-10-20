@@ -1,19 +1,22 @@
 defmodule Hexpm.WorkloadIdentities.WorkloadIdentity do
   use Hexpm.Schema
 
+  alias Hexpm.WorkloadIdentities.TrustedRepository
+
   @providers ~w(github)
   @roles ~w(read write)
   @github_issuer "https://token.actions.githubusercontent.com"
   @repo_name_re ~r/\A[A-Za-z0-9._-]+\z/
+  @repository_id_re ~r/\A[1-9][0-9]{0,18}\z/
   @package_name_re ~r/\A[a-z][a-z0-9_]*\z/
+  @max_repositories 50
 
   schema "workload_identities" do
     field :provider, :string
     field :issuer, :string
     field :repository_owner, :string
     field :repository_owner_id, :string
-    field :repository_id, :string
-    field :repository, :string
+    embeds_many :repositories, TrustedRepository, on_replace: :delete
     field :workflow, :string
     field :environment, :string, default: ""
     field :role, :string, default: "write"
@@ -34,42 +37,91 @@ defmodule Hexpm.WorkloadIdentities.WorkloadIdentity do
 
   def roles, do: @roles
 
+  def max_repositories, do: @max_repositories
+
+  @doc """
+  Builds a new workload identity for a package or an organization.
+
+  `"repositories"` takes the repositories as text, one per line or separated
+  by commas, each a name optionally followed by its repository ID, or as a
+  list of those entries or of `%{"name" => name, "id" => id}` maps. Hex reads
+  the IDs from GitHub before the workload identity is stored, see
+  `put_immutable_ids/3`.
+  """
   def changeset(workload_identity, params, %Package{} = package) do
+    params = normalize_params(params)
+
     workload_identity
-    |> cast(params, ~w(provider repository_owner repository repository_id workflow environment)a)
+    |> cast(params, ~w(provider repository_owner workflow environment)a)
     |> put_assoc(:package, package)
-    |> validate_required(~w(provider repository_owner repository workflow)a)
-    |> validate_identity()
-    |> unique_constraint(:repository,
-      name: :workload_identities_package_config_unique,
-      message: "workload identity already configured for this package"
-    )
+    |> validate_package_identity(params)
   end
 
   def changeset(workload_identity, params, %Organization{} = organization) do
-    params =
-      params
-      |> Map.new(fn {key, value} -> {to_string(key), value} end)
-      |> split_names("packages")
-      |> split_names("public_packages")
+    params = normalize_params(params)
 
     workload_identity
     |> cast(
       params,
-      ~w(provider repository_owner repository repository_id workflow environment role
+      ~w(provider repository_owner workflow environment role
          covers_private packages covers_public public_packages)a
     )
     |> put_assoc(:organization, organization)
+    |> validate_organization_identity(params, organization)
+  end
+
+  @doc """
+  Changes a workload identity's repositories, workflow, environment and, for
+  an organization's, the packages it covers. Its provider, repository owner
+  and role stay, since changing them makes it a different workload identity.
+  """
+  def update_changeset(%__MODULE__{package_id: package_id} = workload_identity, params)
+      when not is_nil(package_id) do
+    params = normalize_params(params)
+
+    workload_identity
+    |> cast(params, ~w(workflow environment)a)
+    |> validate_package_identity(params)
+  end
+
+  def update_changeset(
+        %__MODULE__{organization: %Organization{} = organization} = workload_identity,
+        params
+      ) do
+    params = normalize_params(params)
+
+    workload_identity
+    |> cast(
+      params,
+      ~w(workflow environment covers_private packages covers_public public_packages)a
+    )
+    |> validate_organization_identity(params, organization)
+  end
+
+  defp validate_package_identity(changeset, params) do
+    changeset
+    |> validate_required(~w(provider repository_owner workflow)a)
+    |> validate_identity()
+    |> cast_repositories(params)
+    |> validate_some_repositories("is required")
+  end
+
+  defp validate_organization_identity(changeset, params, organization) do
+    changeset
     |> validate_required(~w(provider repository_owner role)a)
     |> validate_inclusion(:role, @roles)
     |> validate_identity()
+    |> cast_repositories(params)
     |> validate_organization_match()
     |> validate_coverage()
     |> validate_billing(organization)
-    |> unique_constraint(:repository,
-      name: :workload_identities_organization_config_unique,
-      message: "workload identity already configured for this organization"
-    )
+  end
+
+  defp normalize_params(params) do
+    params
+    |> Map.new(fn {key, value} -> {to_string(key), value} end)
+    |> split_names("packages")
+    |> split_names("public_packages")
   end
 
   defp validate_identity(changeset) do
@@ -78,44 +130,176 @@ defmodule Hexpm.WorkloadIdentities.WorkloadIdentity do
     |> update_change(:environment, &normalize_environment/1)
     |> update_change(:workflow, &normalize_workflow/1)
     |> update_change(:repository_owner, &normalize_name/1)
-    |> update_change(:repository, &normalize_name/1)
-    |> qualify_repository()
     |> validate_length(:repository_owner, count: :bytes, max: 39)
-    |> validate_length(:repository, count: :bytes, max: 140)
-    |> validate_length(:repository_id, count: :bytes, max: 19)
     |> validate_length(:workflow, count: :bytes, max: 255)
     |> validate_length(:environment, count: :codepoints, max: 255)
     |> validate_format(
       :repository_owner,
       ~r/\A[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}\z/
     )
-    |> validate_repository()
     |> validate_format(:workflow, ~r/\A[A-Za-z0-9._-]+\.(yml|yaml)\z/)
-    |> validate_format(:repository_id, ~r/\A[1-9][0-9]*\z/)
     |> validate_format(:environment, ~r/\A[^\p{Cc}\p{Zl}\p{Zp}]*\z/u,
       message: "must not contain control characters or line breaks"
     )
     |> put_issuer()
   end
 
-  # A read workload identity may leave the workflow empty to match every workflow in the
-  # repository, or the repository empty to match every repository its owner
-  # has. Either reaches as far as an organization key stored as a GitHub secret.
-  # A write workload identity names both.
+  # Without "repositories" in the params, an existing workload identity keeps
+  # its repositories. A repository ID typed after a name is kept until Hex reads
+  # the IDs from GitHub, which replace it for the repositories Hex can see.
+  defp cast_repositories(changeset, params) do
+    case Map.fetch(params, "repositories") do
+      {:ok, value} ->
+        owner = get_field(changeset, :repository_owner)
+
+        case parse_repositories(value, owner) do
+          {:ok, repositories} -> put_embed(changeset, :repositories, repositories)
+          {:error, message} -> add_error(changeset, :repositories, message)
+        end
+
+      :error ->
+        changeset
+    end
+  end
+
+  defp parse_repositories(value, owner) do
+    with {:ok, entries} <- repository_entries(value) do
+      entries
+      |> Enum.reduce_while({:ok, []}, fn entry, {:ok, acc} ->
+        case parse_repository(entry, owner) do
+          {:ok, repository} -> {:cont, {:ok, [repository | acc]}}
+          {:error, message} -> {:halt, {:error, message}}
+        end
+      end)
+      |> validate_repository_list()
+    end
+  end
+
+  defp repository_entries(nil), do: {:ok, []}
+
+  defp repository_entries(value) when is_binary(value),
+    do: {:ok, String.split(value, ["\n", "\r", ","], trim: true) |> Enum.map(&String.trim/1)}
+
+  defp repository_entries(value) when is_list(value), do: {:ok, value}
+  defp repository_entries(_value), do: {:error, "must be a list of repositories"}
+
+  defp parse_repository(%{"name" => name} = entry, owner) when is_binary(name),
+    do: build_repository(name, entry["id"], owner)
+
+  defp parse_repository(%{name: name} = entry, owner) when is_binary(name),
+    do: build_repository(name, Map.get(entry, :id), owner)
+
+  defp parse_repository(entry, owner) when is_binary(entry) do
+    case String.split(entry) do
+      [] -> {:ok, nil}
+      [name] -> build_repository(name, nil, owner)
+      [name, id] -> build_repository(name, id, owner)
+      _ -> {:error, "must have one repository per line, a name and an optional repository ID"}
+    end
+  end
+
+  defp parse_repository(_entry, _owner), do: {:error, "must be a list of repositories"}
+
+  defp build_repository(name, id, owner) do
+    name = name |> String.trim() |> String.downcase()
+    id = if is_integer(id), do: Integer.to_string(id), else: id
+
+    with {:ok, name} <- qualify_repository(name, owner),
+         :ok <- validate_repository_id(name, id) do
+      {:ok, %TrustedRepository{name: name, id: id}}
+    end
+  end
+
+  # The owner is validated on its own, so a name is only checked once the
+  # owner is valid.
+  defp qualify_repository(name, owner) when is_binary(owner) and owner != "" do
+    short_name =
+      case String.split(name, "/") do
+        [^owner, short_name] -> short_name
+        [short_name] -> short_name
+        _ -> nil
+      end
+
+    cond do
+      is_nil(short_name) ->
+        {:error, "#{name} must be a repository of #{owner}"}
+
+      byte_size(short_name) > 100 or not Regex.match?(@repo_name_re, short_name) ->
+        {:error, "#{name} must be a valid GitHub repository name"}
+
+      true ->
+        {:ok, "#{owner}/#{short_name}"}
+    end
+  end
+
+  defp qualify_repository(name, _owner), do: {:ok, name}
+
+  defp validate_repository_id(_name, id) when id in [nil, ""], do: :ok
+
+  defp validate_repository_id(name, id) when is_binary(id) do
+    if Regex.match?(@repository_id_re, id),
+      do: :ok,
+      else: {:error, "#{name} must be followed by a numeric repository ID"}
+  end
+
+  defp validate_repository_id(name, _id),
+    do: {:error, "#{name} must be followed by a numeric repository ID"}
+
+  defp validate_repository_list({:ok, repositories}) do
+    repositories =
+      repositories
+      |> Enum.reject(&is_nil/1)
+      |> Enum.reverse()
+      |> Enum.map(&%{&1 | id: if(&1.id == "", do: nil, else: &1.id)})
+
+    duplicates =
+      repositories
+      |> Enum.frequencies_by(& &1.name)
+      |> Enum.filter(fn {_name, count} -> count > 1 end)
+      |> Enum.map(&elem(&1, 0))
+      |> Enum.sort()
+
+    cond do
+      duplicates != [] ->
+        {:error, "must list each repository once, not #{Enum.join(duplicates, ", ")} again"}
+
+      length(repositories) > @max_repositories ->
+        {:error, "must be at most #{@max_repositories} repositories"}
+
+      true ->
+        {:ok, repositories}
+    end
+  end
+
+  defp validate_repository_list(error), do: error
+
+  defp validate_some_repositories(changeset, message) do
+    if Keyword.has_key?(changeset.errors, :repositories) or
+         get_field(changeset, :repositories) != [] do
+      changeset
+    else
+      add_error(changeset, :repositories, message)
+    end
+  end
+
+  # A read workload identity may leave the workflow empty to match every
+  # workflow in its repositories, or list no repositories to match every
+  # repository its owner has. Either reaches as far as an organization key
+  # stored as a GitHub secret. A write workload identity names both.
   defp validate_organization_match(changeset) do
-    case {get_field(changeset, :role), get_field(changeset, :repository)} do
-      {"read", nil} ->
+    case {get_field(changeset, :role), get_field(changeset, :repositories)} do
+      {"read", []} ->
         any_repository(changeset)
 
-      {"read", _repository} ->
+      {"read", _repositories} ->
         if get_field(changeset, :workflow),
           do: changeset,
           else: put_change(changeset, :workflow, "")
 
       _ ->
-        validate_required(changeset, [:repository, :workflow],
-          message: "is required for the write role"
-        )
+        changeset
+        |> validate_required([:workflow], message: "is required for the write role")
+        |> validate_some_repositories("are required for the write role")
     end
   end
 
@@ -124,16 +308,15 @@ defmodule Hexpm.WorkloadIdentities.WorkloadIdentity do
   # what was typed when they aren't empty, so a resubmitted form doesn't turn
   # into a workload identity for every repository.
   defp any_repository(changeset) do
-    fields = [:workflow, :environment, :repository_id]
-    changeset = Enum.reduce(fields, changeset, &validate_empty(&2, &1))
-
-    if Enum.any?(fields, &Keyword.has_key?(changeset.errors, &1)) do
+    if Keyword.has_key?(changeset.errors, :repositories) do
       changeset
     else
-      changeset
-      |> put_change(:repository, "")
-      |> put_change(:repository_id, "")
-      |> put_change(:workflow, "")
+      fields = [:workflow, :environment]
+      changeset = Enum.reduce(fields, changeset, &validate_empty(&2, &1))
+
+      if Enum.any?(fields, &Keyword.has_key?(changeset.errors, &1)),
+        do: changeset,
+        else: put_change(changeset, :workflow, "")
     end
   end
 
@@ -285,12 +468,6 @@ defmodule Hexpm.WorkloadIdentities.WorkloadIdentity do
     is_binary(name) and byte_size(name) in 1..255
   end
 
-  @doc """
-  The repository's name without its owner, as the forms take it.
-  """
-  def repository_name(nil), do: nil
-  def repository_name(repository), do: repository |> String.split("/") |> List.last()
-
   # The form sends one string per list, so names may be separated by commas or
   # whitespace. No names means every package.
   defp split_names(params, key) do
@@ -309,48 +486,116 @@ defmodule Hexpm.WorkloadIdentities.WorkloadIdentity do
     end
   end
 
-  def put_immutable_ids(changeset, attrs) do
+  @doc """
+  Pins the GitHub IDs Hex read for the repository owner and the repositories.
+
+  `resolved` has the owner's ID, and for each repository name the ID Hex read,
+  nil for a repository Hex can't see, and whether it's public. A repository
+  Hex can't see keeps the ID typed after its name. A repository the workload
+  identity already trusts keeps the ID it was pinned to, so one deleted and
+  created again under the same name is refused instead of trusted.
+  """
+  def put_immutable_ids(changeset, resolved) do
+    pinned = Map.new(changeset.data.repositories, &{&1.name, &1.id})
+
     changeset
-    |> put_change(:repository_owner_id, to_string(attrs.repository_owner_id))
-    |> put_repository_id(Map.get(attrs, :repository_id))
-    |> validate_required([:repository_owner_id])
+    |> put_owner_id(to_string(resolved.repository_owner_id))
+    |> put_repository_ids(resolved.repositories, pinned)
+    |> validate_public_environment(public_repositories(changeset, resolved.repositories))
   end
 
-  @doc """
-  Requires an environment on a workload identity that publishes from a public
-  repository.
+  defp put_owner_id(%{data: %{repository_owner_id: nil}} = changeset, owner_id),
+    do: put_change(changeset, :repository_owner_id, owner_id)
 
-  GitHub offers environments in public repositories on every plan, and their
-  protection rules are the only check GitHub runs before a job gets a token.
-  Private repositories only have environments on paid GitHub plans.
-  """
-  def validate_public_environment(changeset, true = _public?) do
-    if get_field(changeset, :role) == "write" and get_field(changeset, :environment) in [nil, ""] do
-      add_error(changeset, :environment, "is required for a public repository")
-    else
+  defp put_owner_id(%{data: %{repository_owner_id: owner_id}} = changeset, owner_id),
+    do: changeset
+
+  defp put_owner_id(changeset, _owner_id) do
+    add_error(
+      changeset,
+      :repository_owner,
+      "is a different GitHub account than when the workload identity was added"
+    )
+  end
+
+  defp put_repository_ids(changeset, resolved, pinned) do
+    {repositories, errors} =
       changeset
+      |> get_field(:repositories)
+      |> Enum.map_reduce([], fn repository, errors ->
+        case pin_repository(repository, resolved[repository.name], pinned[repository.name]) do
+          {:ok, repository} -> {repository, errors}
+          {:error, message} -> {repository, [message | errors]}
+        end
+      end)
+
+    case errors do
+      [] ->
+        put_embed(changeset, :repositories, repositories)
+
+      # Each error is prepended, so the errors end up in the typed order.
+      errors ->
+        Enum.reduce(errors, changeset, &add_error(&2, :repositories, &1))
     end
   end
 
-  def validate_public_environment(changeset, false = _public?), do: changeset
+  # A repository recreated under the same name is a different repository, so
+  # a workload identity never trusts a repository without its pinned ID. Hex
+  # can't read the ID of a repository it can't see, so the admin types it.
+  defp pin_repository(repository, %{id: id}, pinned) when not is_nil(id) do
+    id = to_string(id)
 
-  # A repository recreated under the same name is a different repository, so a
-  # workload identity is never stored without a pinned repository id. Hex cannot read
-  # that id for a repository it cannot see, so the client supplies it instead.
-  defp put_repository_id(changeset, nil) do
-    if get_field(changeset, :repository_id) do
-      changeset
+    if pinned in [nil, id] do
+      {:ok, %{repository | id: id}}
     else
+      {:error,
+       "#{repository.name} was deleted and created again on GitHub since it was added. " <>
+         "Remove it and save, then add it again"}
+    end
+  end
+
+  defp pin_repository(repository, _resolved, pinned) when is_binary(pinned) do
+    if repository.id in [nil, pinned] do
+      {:ok, %{repository | id: pinned}}
+    else
+      {:error,
+       "#{repository.name} has repository ID #{pinned}. " <>
+         "Remove it and save, then add it again with the new ID"}
+    end
+  end
+
+  defp pin_repository(%{id: id} = repository, _resolved, nil) when is_binary(id),
+    do: {:ok, repository}
+
+  defp pin_repository(repository, _resolved, nil) do
+    {:error,
+     "#{repository.name} needs its repository ID after the name, because Hex can't see it on GitHub"}
+  end
+
+  defp public_repositories(changeset, resolved) do
+    changeset
+    |> get_field(:repositories)
+    |> Enum.filter(&match?(%{public: true}, resolved[&1.name]))
+    |> Enum.map(& &1.name)
+  end
+
+  # GitHub offers environments in public repositories on every plan, and their
+  # protection rules are the only check GitHub runs before a job gets a token.
+  # Private repositories only have environments on paid GitHub plans.
+  defp validate_public_environment(changeset, []), do: changeset
+
+  defp validate_public_environment(changeset, public) do
+    if get_field(changeset, :role) == "write" and get_field(changeset, :environment) in [nil, ""] do
+      verb = if length(public) == 1, do: "is", else: "are"
+
       add_error(
         changeset,
-        :repository_id,
-        "is required when Hex cannot resolve the repository on GitHub"
+        :environment,
+        "is required because #{Enum.join(public, ", ")} #{verb} public"
       )
+    else
+      changeset
     end
-  end
-
-  defp put_repository_id(changeset, repository_id) do
-    put_change(changeset, :repository_id, to_string(repository_id))
   end
 
   defp put_issuer(changeset) do
@@ -358,46 +603,6 @@ defmodule Hexpm.WorkloadIdentities.WorkloadIdentity do
       "github" -> put_change(changeset, :issuer, @github_issuer)
       _ -> changeset
     end
-  end
-
-  defp qualify_repository(changeset) do
-    owner = get_field(changeset, :repository_owner)
-    repository = get_field(changeset, :repository)
-
-    if is_binary(owner) and is_binary(repository) and not String.contains?(repository, "/") do
-      put_change(changeset, :repository, "#{owner}/#{repository}")
-    else
-      changeset
-    end
-  end
-
-  defp validate_repository(changeset) do
-    owner = get_field(changeset, :repository_owner)
-    repository = get_field(changeset, :repository)
-
-    if is_nil(owner) or is_nil(repository) do
-      changeset
-    else
-      case String.split(repository, "/") do
-        [^owner, name] ->
-          if Regex.match?(@repo_name_re, name) do
-            changeset
-          else
-            invalid_repository(changeset)
-          end
-
-        _ ->
-          invalid_repository(changeset)
-      end
-    end
-  end
-
-  defp invalid_repository(changeset) do
-    add_error(
-      changeset,
-      :repository,
-      "must be a valid GitHub repository owned by repository_owner"
-    )
   end
 
   # The workflow keeps its casing because it is matched exactly against the OIDC

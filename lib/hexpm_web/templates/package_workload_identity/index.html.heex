@@ -8,7 +8,7 @@
       >
         <div class="px-6 py-4 border-b border-grey-200 dark:border-grey-700">
           <h2 class="text-base font-semibold text-grey-900 dark:text-white">
-            Workload identities
+            Workload identities that publish {@package.name}
           </h2>
           <p class="mt-1 text-sm text-grey-500 dark:text-grey-300">
             Packages in the {@package.repository.name} repository are published by the organization's workload identities, which organization admins manage on the <a
@@ -18,27 +18,20 @@
               organization's Workload identities page</a>.
           </p>
         </div>
-        <ul class="divide-y divide-grey-100 dark:divide-grey-700">
-          <li :for={workload_identity <- @organization_identities} class="px-6 py-4">
-            <div class="flex flex-col gap-1">
-              <p class="text-sm font-medium text-grey-900 dark:text-white">
-                {workload_identity.repository} ({workload_identity.workflow})
-              </p>
-              <p class="text-xs text-grey-500 dark:text-grey-300">
-                Environment: {HexpmWeb.PackageWorkloadIdentityView.environment_label(
-                  workload_identity.environment
-                )}
-              </p>
-              <p class="text-xs text-grey-500 dark:text-grey-300">
-                Packages: {HexpmWeb.PackageWorkloadIdentityView.packages_label(
-                  workload_identity.packages
-                )}
-              </p>
-            </div>
+        <ul class="flex flex-col gap-3 p-4">
+          <li
+            :for={workload_identity <- @organization_identities}
+            id={"organization-workload-identity-#{workload_identity.id}"}
+            class="rounded-lg border border-grey-200 dark:border-grey-700 px-4 py-3 flex flex-col gap-3"
+          >
+            <p class="text-sm font-semibold text-grey-900 dark:text-white">
+              Publish {@package.name}
+            </p>
+            <.trusted_workflows workload_identity={workload_identity} />
           </li>
           <li
             :if={@organization_identities == []}
-            class="px-6 py-4 text-sm text-grey-500 dark:text-grey-300"
+            class="px-2 py-1 text-sm text-grey-500 dark:text-grey-300"
           >
             None of the organization's workload identities can publish this package.
           </li>
@@ -47,42 +40,96 @@
     </div>
 
     <div :if={@package.repository.id == 1} class="flex flex-col gap-6">
-      <%!-- Current workload identities --%>
-      <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg overflow-hidden">
+      <div
+        id="workload-identities"
+        class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg overflow-hidden"
+      >
         <div class="px-6 py-4 border-b border-grey-200 dark:border-grey-700">
           <h2 class="text-base font-semibold text-grey-900 dark:text-white">
-            Workload identities
+            Workload identities that publish {@package.name}
           </h2>
           <p class="mt-1 text-sm text-grey-500 dark:text-grey-300">
             GitHub Actions workflows that publish {@package.name} without an API key. Organizations that own {@package.name} can also publish it with their workload identities. Workload identities only publish packages that exist, so a new package's first release is published with a user account or an API key.
           </p>
         </div>
-        <ul class="divide-y divide-grey-100 dark:divide-grey-700">
-          <%= for workload_identity <- @workload_identities do %>
-            <li class="flex items-center justify-between px-6 py-4">
-              <div class="flex flex-col gap-1">
-                <p class="text-sm font-medium text-grey-900 dark:text-white">
-                  {workload_identity.repository} ({workload_identity.workflow})
-                </p>
-                <p class="text-xs text-grey-500 dark:text-grey-300">
-                  Environment: {HexpmWeb.PackageWorkloadIdentityView.environment_label(
-                    workload_identity.environment
-                  )}
-                </p>
-              </div>
 
-              <.icon_button
-                :if={@manage? and @tfa?}
-                icon="x-mark"
-                variant="danger"
-                aria-label={"Remove workload identity #{workload_identity.repository}"}
-                phx-click={show_modal("remove-workload-identity-#{workload_identity.id}")}
-              />
-            </li>
-          <% end %>
+        <ul class="flex flex-col gap-3 p-4">
           <li
-            :if={@workload_identities == []}
-            class="px-6 py-4 text-sm text-grey-500 dark:text-grey-300"
+            :for={workload_identity <- @workload_identities}
+            id={"workload-identity-#{workload_identity.id}"}
+            class={[
+              "rounded-lg border px-4 py-3 flex flex-col gap-3",
+              if(@editing && @editing.id == workload_identity.id,
+                do: "border-primary-400 dark:border-primary-500",
+                else: "border-grey-200 dark:border-grey-700"
+              )
+            ]}
+          >
+            <div class="flex items-start justify-between gap-3">
+              <p class="flex flex-wrap items-center gap-2 text-sm font-semibold text-grey-900 dark:text-white">
+                Publish {@package.name}
+                <.badge variant="purple">Package</.badge>
+              </p>
+              <div :if={@manage? and @tfa?} class="flex shrink-0 items-center gap-2">
+                <.button_link
+                  href={
+                    HexpmWeb.ViewHelpers.path_for_workload_identity(@package, workload_identity.id) <>
+                      "/edit#workload-identity-form"
+                  }
+                  variant="outline"
+                  size="sm"
+                >
+                  Edit
+                </.button_link>
+                <.icon_button
+                  icon="x-mark"
+                  variant="danger"
+                  aria-label={"Remove workload identity #{HexpmWeb.ViewHelpers.workload_identity_repositories(workload_identity)}"}
+                  phx-click={show_modal("remove-workload-identity-#{workload_identity.id}")}
+                />
+              </div>
+            </div>
+            <.trusted_workflows workload_identity={workload_identity} />
+            <p class="text-xs text-grey-500 dark:text-grey-300">
+              Added {Calendar.strftime(workload_identity.inserted_at, "%-d %b %Y")}
+            </p>
+          </li>
+
+          <li
+            :for={workload_identity <- @organization_identities}
+            id={"organization-workload-identity-#{workload_identity.id}"}
+            class="rounded-lg border border-grey-200 dark:border-grey-700 px-4 py-3 flex flex-col gap-3"
+          >
+            <div class="flex items-start justify-between gap-3">
+              <p class="flex flex-wrap items-center gap-2 text-sm font-semibold text-grey-900 dark:text-white">
+                Publish {@package.name}
+                <.badge>Organization {workload_identity.organization.name}</.badge>
+              </p>
+              <a
+                href={
+                  ~p"/dashboard/orgs/#{workload_identity.organization.name}/workload-identities"
+                }
+                class="shrink-0 text-xs font-medium text-primary-600 dark:text-primary-300 hover:underline"
+              >
+                Manage on {workload_identity.organization.name}'s page
+              </a>
+            </div>
+            <.trusted_workflows workload_identity={workload_identity} />
+            <p class="text-xs text-grey-500 dark:text-grey-300">
+              Publishes {@package.name} while
+              <a
+                href={~p"/orgs/#{workload_identity.organization.name}"}
+                class="text-primary-600 dark:text-primary-300 hover:underline"
+              >
+                {workload_identity.organization.name}
+              </a>
+              owns it.
+            </p>
+          </li>
+
+          <li
+            :if={@workload_identities == [] and @organization_identities == []}
+            class="px-2 py-1 text-sm text-grey-500 dark:text-grey-300"
           >
             No workload identities configured for this package.
           </li>
@@ -92,110 +139,65 @@
           :if={not @manage?}
           class="px-6 py-3 border-t border-grey-200 dark:border-grey-700 bg-grey-50 dark:bg-grey-900 text-sm text-grey-600 dark:text-grey-300"
         >
-          Only full owners and organization admins can add and remove workload identities.
+          Only full owners and organization admins can add, change and remove workload identities.
         </p>
         <p
           :if={@manage? and not @tfa?}
           class="px-6 py-3 border-t border-grey-200 dark:border-grey-700 bg-grey-50 dark:bg-grey-900 text-sm text-grey-600 dark:text-grey-300"
         >
-          Two-factor authentication is required to add and remove workload identities. Enable it in your <a
+          Two-factor authentication is required to add, change and remove workload identities. Enable it in your <a
             href={~p"/dashboard/security"}
             class="text-primary-600 dark:text-primary-300 hover:underline"
           >security settings</a>.
         </p>
       </div>
 
-      <%!-- Organization workload identities --%>
-      <div
-        :if={@organization_identities != []}
-        id="organization-workload-identities"
-        class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg overflow-hidden"
-      >
-        <div class="px-6 py-4 border-b border-grey-200 dark:border-grey-700">
-          <h2 class="text-base font-semibold text-grey-900 dark:text-white">
-            Organization workload identities
-          </h2>
-          <p class="mt-1 text-sm text-grey-500 dark:text-grey-300">
-            These workload identities of organizations that own {@package.name} publish it for as long as their organization owns it. The organization's admins manage them on its Workload identities page.
-          </p>
-        </div>
-        <ul class="divide-y divide-grey-100 dark:divide-grey-700">
-          <li :for={workload_identity <- @organization_identities} class="px-6 py-4">
-            <div class="flex flex-col gap-1">
-              <p class="text-sm font-medium text-grey-900 dark:text-white">
-                {workload_identity.repository} ({workload_identity.workflow})
-              </p>
-              <p class="text-xs text-grey-500 dark:text-grey-300">
-                Environment: {HexpmWeb.PackageWorkloadIdentityView.environment_label(
-                  workload_identity.environment
-                )}
-              </p>
-              <p class="text-xs text-grey-500 dark:text-grey-300">
-                Organization:
-                <a
-                  href={~p"/orgs/#{workload_identity.organization.name}"}
-                  class="text-primary-600 dark:text-primary-300 hover:underline"
-                >
-                  {workload_identity.organization.name}
-                </a>
-                <span aria-hidden="true">&middot;</span>
-                <a
-                  href={
-                    ~p"/dashboard/orgs/#{workload_identity.organization.name}/workload-identities"
-                  }
-                  class="text-primary-600 dark:text-primary-300 hover:underline"
-                >
-                  Workload identities page
-                </a>
-              </p>
-              <p class="text-xs text-grey-500 dark:text-grey-300">
-                Covers: {HexpmWeb.PackageWorkloadIdentityView.public_coverage_label(
-                  workload_identity.public_packages,
-                  workload_identity.organization,
-                  @package
-                )}
-              </p>
-            </div>
-          </li>
-        </ul>
-      </div>
-
-      <%!-- Add workload identity --%>
       <div
         :if={@manage? and @tfa?}
+        id="workload-identity-form"
         class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg overflow-hidden"
       >
         <div class="px-6 py-4 border-b border-grey-200 dark:border-grey-700">
           <h2 class="text-base font-semibold text-grey-900 dark:text-white">
-            Add workload identity
+            {if @editing, do: "Change workload identity", else: "Add workload identity"}
           </h2>
         </div>
 
         <.sudo_form
           current_user={@current_user}
-          action={HexpmWeb.ViewHelpers.path_for_workload_identities(@package)}
-          method="post"
+          action={
+            if @editing,
+              do: HexpmWeb.ViewHelpers.path_for_workload_identity(@package, @editing.id),
+              else: HexpmWeb.ViewHelpers.path_for_workload_identities(@package)
+          }
+          method={if @editing, do: "put", else: "post"}
           id="add-workload-identity-form"
           class="px-6 py-4 flex flex-col gap-4"
         >
-          <input type="hidden" name="workload_identity[provider]" value="github" />
+          <input :if={!@editing} type="hidden" name="workload_identity[provider]" value="github" />
+
+          <.text_input
+            :if={!@editing}
+            field={form[:repository_owner]}
+            label="Repository owner"
+            placeholder="acme"
+            required
+          />
+          <p :if={@editing} class="text-sm text-grey-900 dark:text-grey-100">
+            <span class="font-medium">Repository owner</span>
+            <span class="ml-2 font-mono">{@editing.repository_owner}</span>
+            <span class="block mt-1 text-xs text-grey-500 dark:text-grey-300">
+              The repository owner can't change. Add a new workload identity for a different one.
+            </span>
+          </p>
+
+          <.repositories_input form={form} required>
+            <:help>
+              One per line, at least one. Hex reads each repository's ID from GitHub. For a private repository Hex can't see, add its ID after the name, found with <code class="text-xs">gh api repos/OWNER/NAME --jq .id</code>.
+            </:help>
+          </.repositories_input>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <.text_input
-              field={form[:repository_owner]}
-              label="Repository owner"
-              placeholder="acme"
-              required
-            />
-            <.text_input
-              field={form[:repository]}
-              value={
-                Hexpm.WorkloadIdentities.WorkloadIdentity.repository_name(form[:repository].value)
-              }
-              label="Repository name"
-              placeholder="widget"
-              required
-            />
             <.text_input
               field={form[:workflow]}
               label="Workflow"
@@ -205,24 +207,24 @@
             <.text_input
               field={form[:environment]}
               label="Environment"
-              placeholder="Any"
+              placeholder="release"
             />
           </div>
           <p class="text-xs text-grey-500 dark:text-grey-300">
-            The environment is required when the GitHub repository is public. Its protection rules, such as required reviewers or allowed branches, run before the workflow can get a token.
+            The environment is required when a GitHub repository is public. Its protection rules, such as required reviewers or allowed branches, run before the workflow can get a token.
           </p>
 
-          <.text_input
-            field={form[:repository_id]}
-            label="Repository ID"
-            placeholder="123456"
-          />
-          <p class="text-xs text-grey-500 dark:text-grey-300">
-            Required for private GitHub repositories Hex cannot see. Find it with <code class="text-xs">gh api repos/OWNER/NAME --jq .id</code>.
-          </p>
-
-          <div class="flex justify-end">
-            <.button type="submit" variant="primary">Add workload identity</.button>
+          <div class="flex justify-end gap-3">
+            <.button_link
+              :if={@editing}
+              href={HexpmWeb.ViewHelpers.path_for_workload_identities(@package)}
+              variant="secondary"
+            >
+              Cancel
+            </.button_link>
+            <.button type="submit" variant="primary">
+              {if @editing, do: "Save changes", else: "Add workload identity"}
+            </.button>
           </div>
         </.sudo_form>
       </div>
@@ -238,7 +240,7 @@
         <p class="text-sm text-grey-600 dark:text-grey-300">
           Are you sure you want to remove the workload identity for
           <strong class="font-semibold text-grey-900 dark:text-white">
-            {workload_identity.repository}
+            {HexpmWeb.ViewHelpers.workload_identity_repositories(workload_identity)}
           </strong>
           ({workload_identity.workflow})?
         </p>

@@ -322,6 +322,12 @@ defmodule HexpmWeb.Router do
     delete "/packages/:name/owners/:username", PackageOwnerController, :delete
     get "/packages/:name/workload-identities", PackageWorkloadIdentityController, :index
     post "/packages/:name/workload-identities", PackageWorkloadIdentityController, :create
+
+    get "/packages/:name/workload-identities/:id/edit",
+        PackageWorkloadIdentityController,
+        :edit
+
+    put "/packages/:name/workload-identities/:id", PackageWorkloadIdentityController, :update
     delete "/packages/:name/workload-identities/:id", PackageWorkloadIdentityController, :delete
     get "/packages/:name", PackageController, :show
     get "/packages/:name/audit-logs", PackageController, :audit_logs
@@ -353,6 +359,14 @@ defmodule HexpmWeb.Router do
     post "/packages/:repository/:name/workload-identities",
          PackageWorkloadIdentityController,
          :create
+
+    get "/packages/:repository/:name/workload-identities/:id/edit",
+        PackageWorkloadIdentityController,
+        :edit
+
+    put "/packages/:repository/:name/workload-identities/:id",
+        PackageWorkloadIdentityController,
+        :update
 
     delete "/packages/:repository/:name/workload-identities/:id",
            PackageWorkloadIdentityController,
@@ -490,6 +504,14 @@ defmodule HexpmWeb.Router do
     post "/orgs/:dashboard_org/workload-identities",
          OrganizationController,
          :create_workload_identity
+
+    get "/orgs/:dashboard_org/workload-identities/:id/edit",
+        OrganizationController,
+        :edit_workload_identity
+
+    put "/orgs/:dashboard_org/workload-identities/:id",
+        OrganizationController,
+        :update_workload_identity
 
     delete "/orgs/:dashboard_org/workload-identities/:id",
            OrganizationController,

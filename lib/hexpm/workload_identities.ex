@@ -117,6 +117,19 @@ defmodule Hexpm.WorkloadIdentities do
 
   def covered_public_packages(%WorkloadIdentity{}), do: []
 
+  @doc """
+  The public packages an organization workload identity lists that its
+  organization doesn't own at the level it needs, so it doesn't publish them.
+  """
+  def unowned_public_packages(
+        %WorkloadIdentity{covers_public: true, public_packages: names} = workload_identity
+      )
+      when is_list(names) do
+    names -- Enum.map(covered_public_packages(workload_identity), & &1.name)
+  end
+
+  def unowned_public_packages(%WorkloadIdentity{}), do: []
+
   def get(%Package{} = package, id) do
     case parse_id(id) do
       {:ok, id} -> Repo.get_by(WorkloadIdentity, id: id, package_id: package.id)
@@ -162,69 +175,151 @@ defmodule Hexpm.WorkloadIdentities do
     provider_name = params["provider"] || params[:provider]
 
     with {:ok, provider} <- fetch_provider(provider_name) do
-      params = normalize_create_params(params, provider)
+      params = params |> normalize_params() |> Map.put("provider", provider.name())
 
       changeset =
         %WorkloadIdentity{}
         |> WorkloadIdentity.changeset(params, owner)
-        |> check_public_owner(owner)
+        |> check_public_owner(owner, [])
+        |> check_duplicate(owner)
 
-      if changeset.valid? do
-        resolve_attrs = %{
-          repository: Ecto.Changeset.get_field(changeset, :repository),
-          repository_owner: Ecto.Changeset.get_field(changeset, :repository_owner)
-        }
-
-        with :ok <- before_lookup.(),
-             {:ok, immutable_ids} <- provider.resolve_immutable_ids(resolve_attrs),
-             {:ok, changeset} <- check_public_environment(changeset, immutable_ids) do
-          insert_identity(owner, changeset, immutable_ids, audit_data)
-        end
-      else
-        {:error, %{changeset | action: :insert}}
+      with {:ok, changeset} <- resolve_ids(changeset, provider, before_lookup) do
+        insert_identity(owner, changeset, audit_data)
       end
+    end
+  end
+
+  @doc """
+  Changes a workload identity, see `WorkloadIdentity.update_changeset/2`.
+
+  Tokens are checked against the packages a workload identity covers when
+  they're used, but not against the workflow they were issued to. So a change
+  that drops a repository or changes the workflow or the environment revokes
+  the tokens the workload identity issued.
+
+  `:before_lookup` works as for `create/3`.
+  """
+  def update(%WorkloadIdentity{} = workload_identity, params, opts) do
+    audit_data = Keyword.fetch!(opts, :audit)
+    before_lookup = Keyword.get(opts, :before_lookup, fn -> :ok end)
+    workload_identity = preload_owner(workload_identity)
+    owner = workload_identity.organization || workload_identity.package
+
+    with {:ok, provider} <- fetch_provider(workload_identity.provider) do
+      changeset =
+        workload_identity
+        |> WorkloadIdentity.update_changeset(normalize_params(params))
+        |> check_public_owner(owner, workload_identity.public_packages || [])
+        |> check_duplicate(owner)
+
+      with {:ok, changeset} <- resolve_ids(changeset, provider, before_lookup) do
+        if identity_changed?(workload_identity, changeset),
+          do: update_identity(owner, workload_identity, changeset, audit_data),
+          else: {:ok, workload_identity}
+      end
+    end
+  end
+
+  @changeable_fields [
+    :workflow,
+    :environment,
+    :covers_private,
+    :packages,
+    :covers_public,
+    :public_packages
+  ]
+
+  defp identity_changed?(workload_identity, changeset) do
+    updated = Ecto.Changeset.apply_changes(changeset)
+
+    Map.take(workload_identity, @changeable_fields) != Map.take(updated, @changeable_fields) or
+      repository_set(workload_identity) != repository_set(updated)
+  end
+
+  # Hex asks GitHub for the IDs once everything else is valid.
+  defp resolve_ids(changeset, provider, before_lookup) do
+    action = if changeset.data.id, do: :update, else: :insert
+
+    if changeset.valid? do
+      attrs = %{
+        repository_owner: Ecto.Changeset.get_field(changeset, :repository_owner),
+        repositories: Enum.map(Ecto.Changeset.get_field(changeset, :repositories), & &1.name)
+      }
+
+      with :ok <- before_lookup.(),
+           {:ok, immutable_ids} <- provider.resolve_immutable_ids(attrs) do
+        changeset = WorkloadIdentity.put_immutable_ids(changeset, immutable_ids)
+
+        if changeset.valid?,
+          do: {:ok, changeset},
+          else: {:error, %{changeset | action: action}}
+      end
+    else
+      {:error, %{changeset | action: action}}
     end
   end
 
   # Only public packages the organization owns can be listed. Ownership is
   # checked again at every exchange and publish, so this only tells the admin
-  # about a name they can't use.
-  defp check_public_owner(changeset, %Organization{} = organization) do
+  # about a name they can't use. A change only checks the names it adds, so a
+  # package the organization stopped owning doesn't block it.
+  defp check_public_owner(changeset, %Organization{} = organization, listed) do
     names = Ecto.Changeset.get_field(changeset, :public_packages)
 
     if is_list(names) and not Keyword.has_key?(changeset.errors, :public_packages) do
+      added = names -- listed
+
       owned =
         from(p in Package,
           join: po in assoc(p, :package_owners),
           join: u in assoc(po, :user),
-          where: p.repository_id == 1 and p.name in ^names,
+          where: p.repository_id == 1 and p.name in ^added,
           where: u.organization_id == ^organization.id,
           where: po.level in ^PackageOwner.level_or_higher(@public_owner_level),
           select: p.name
         )
         |> Repo.all()
 
-      WorkloadIdentity.validate_public_owner(changeset, names -- owned)
+      WorkloadIdentity.validate_public_owner(changeset, added -- owned)
     else
       changeset
     end
   end
 
-  defp check_public_owner(changeset, %Package{}), do: changeset
+  defp check_public_owner(changeset, %Package{}, _listed), do: changeset
 
-  # Checked before the resolved ids go into the changeset, so the form shows
-  # the repository ID as it was typed.
-  defp check_public_environment(changeset, immutable_ids) do
-    public? = Map.get(immutable_ids, :public, false)
-    changeset = WorkloadIdentity.validate_public_environment(changeset, public?)
+  # Another workload identity of the same package or organization with the
+  # same repositories, workflow and environment would match the same tokens.
+  defp check_duplicate(%Ecto.Changeset{valid?: false} = changeset, _owner), do: changeset
 
-    if changeset.valid?,
-      do: {:ok, changeset},
-      else: {:error, %{changeset | action: :insert}}
+  defp check_duplicate(changeset, owner) do
+    configuration = configuration(Ecto.Changeset.apply_changes(changeset))
+
+    duplicate? =
+      owner
+      |> list()
+      |> Enum.any?(&(&1.id != changeset.data.id and configuration(&1) == configuration))
+
+    if duplicate?,
+      do:
+        Ecto.Changeset.add_error(
+          changeset,
+          :repositories,
+          "already have a workload identity with this workflow and environment"
+        ),
+      else: changeset
   end
 
-  defp insert_identity(owner, changeset, immutable_ids, audit_data) do
-    changeset = WorkloadIdentity.put_immutable_ids(changeset, immutable_ids)
+  defp configuration(workload_identity) do
+    {
+      workload_identity.repository_owner,
+      MapSet.new(workload_identity.repositories, & &1.name),
+      workload_identity.workflow || "",
+      String.downcase(workload_identity.environment || "")
+    }
+  end
+
+  defp insert_identity(owner, changeset, audit_data) do
     action = audit_action(owner, :add)
 
     multi =
@@ -242,6 +337,56 @@ defmodule Hexpm.WorkloadIdentities do
       {:error, _op, changeset, _} ->
         {:error, changeset}
     end
+  end
+
+  defp update_identity(owner, previous, changeset, audit_data) do
+    action = audit_action(owner, :update)
+
+    multi =
+      Multi.new()
+      |> check_owner(owner, audit_data)
+      |> Multi.update(:workload_identity, changeset, stale_error_field: :id)
+      |> Multi.run(:tokens, fn repo, %{workload_identity: updated} ->
+        if revokes_tokens?(previous, updated) do
+          {count, _} = repo.update_all(revoke_tokens_query([updated.id]), [])
+          {:ok, count}
+        else
+          {:ok, 0}
+        end
+      end)
+      |> audit(audit_data, action, fn %{workload_identity: updated} ->
+        {previous, preload_owner(updated)}
+      end)
+
+    case Repo.transaction(multi) do
+      {:ok, %{workload_identity: updated}} ->
+        updated = preload_owner(updated)
+        notify_change(previous, updated, audit_data)
+        {:ok, updated}
+
+      {:error, :workload_identity, %Ecto.Changeset{errors: [id: _]}, _} ->
+        {:error, :not_found}
+
+      {:error, _op, changeset, _} ->
+        {:error, changeset}
+    end
+  end
+
+  defp revokes_tokens?(previous, updated) do
+    previous.workflow != updated.workflow or
+      String.downcase(previous.environment || "") != String.downcase(updated.environment || "") or
+      not keeps_repositories?(previous.repositories, updated.repositories)
+  end
+
+  # No repositories match every repository of the owner.
+  defp keeps_repositories?(_previous, []), do: true
+  defp keeps_repositories?([], _updated), do: false
+
+  defp keeps_repositories?(previous, updated) do
+    MapSet.subset?(
+      MapSet.new(previous, &{&1.name, &1.id}),
+      MapSet.new(updated, &{&1.name, &1.id})
+    )
   end
 
   # Ownership was checked before Hex asked GitHub. A transfer in the meantime
@@ -298,8 +443,10 @@ defmodule Hexpm.WorkloadIdentities do
   end
 
   defp audit_action(%Organization{}, :add), do: "organization.workload_identity.add"
+  defp audit_action(%Organization{}, :update), do: "organization.workload_identity.update"
   defp audit_action(%Organization{}, :remove), do: "organization.workload_identity.remove"
   defp audit_action(%Package{}, :add), do: "workload_identity.create"
+  defp audit_action(%Package{}, :update), do: "workload_identity.update"
   defp audit_action(%Package{}, :remove), do: "workload_identity.remove"
 
   defp preload_owner(%WorkloadIdentity{} = workload_identity) do
@@ -342,30 +489,54 @@ defmodule Hexpm.WorkloadIdentities do
     end
   end
 
+  defp notify_change(
+         previous,
+         %WorkloadIdentity{organization: %Organization{} = organization} = updated,
+         audit_data
+       ) do
+    organization = %{
+      organization
+      | organization_users: Organizations.all_members(organization, user: :emails)
+    }
+
+    email =
+      Emails.organization_workload_identity_changed(
+        previous,
+        updated,
+        organization,
+        audit_data.user
+      )
+
+    if email.to != [] do
+      Mailer.deliver!(email)
+    end
+
+    notify_public_owners_of_change(previous, updated, organization, email.to, audit_data.user)
+  end
+
+  defp notify_change(previous, %WorkloadIdentity{package: package} = updated, audit_data) do
+    owners =
+      package
+      |> Owners.all(user: [:emails, organization: [organization_users: [user: :emails]]])
+      |> Enum.map(& &1.user)
+
+    if owners != [] do
+      previous
+      |> Emails.workload_identity_changed(updated, owners, audit_data.user)
+      |> Mailer.deliver!()
+    end
+  end
+
   # The other owners of the public packages an organization workload identity
   # publishes hear about it the same way as about a package's own workload
   # identity. Everyone the organization's email already reached is left out,
   # and everyone else gets one email that names their packages.
   defp notify_public_owners(event, workload_identity, organization, notified, actor) do
-    notified = MapSet.new(notified, &recipient_address/1)
-
     workload_identity
     |> covered_public_packages()
-    |> Enum.flat_map(fn package ->
-      package
-      |> Owners.all(user: [:emails, organization: [organization_users: [user: :emails]]])
-      |> Enum.reject(&(&1.user.organization_id == organization.id))
-      |> Enum.flat_map(&people(&1.user))
-      |> Enum.map(&{&1, package.name})
-    end)
-    |> Enum.reject(fn {user, _name} ->
-      address = User.email(user, :primary)
-      is_nil(address) or MapSet.member?(notified, address)
-    end)
-    |> Enum.group_by(fn {user, _name} -> user.id end)
-    |> Enum.sort_by(fn {user_id, _entries} -> user_id end)
-    |> Enum.each(fn {_user_id, [{user, _name} | _] = entries} ->
-      names = entries |> Enum.map(&elem(&1, 1)) |> Enum.uniq() |> Enum.sort()
+    |> Enum.map(&{&1, event})
+    |> each_public_owner(organization, notified, fn user, packages ->
+      names = Map.fetch!(packages, event)
 
       case event do
         :added ->
@@ -387,6 +558,72 @@ defmodule Hexpm.WorkloadIdentities do
           )
       end
       |> Mailer.deliver!()
+    end)
+  end
+
+  # A change tells the owners of the packages it starts or stops publishing,
+  # and, when it changes which workflows the workload identity trusts, the
+  # owners of the packages it keeps publishing.
+  defp notify_public_owners_of_change(previous, updated, organization, notified, actor) do
+    before = covered_public_packages(previous)
+    now = covered_public_packages(updated)
+    before_names = MapSet.new(before, & &1.name)
+    now_names = MapSet.new(now, & &1.name)
+    trust_changed? = trust_changed?(previous, updated)
+
+    started_or_kept =
+      Enum.flat_map(now, fn package ->
+        cond do
+          not MapSet.member?(before_names, package.name) -> [{package, :started}]
+          trust_changed? -> [{package, :kept}]
+          true -> []
+        end
+      end)
+
+    stopped = for package <- before, package.name not in now_names, do: {package, :stopped}
+
+    each_public_owner(started_or_kept ++ stopped, organization, notified, fn user, packages ->
+      previous
+      |> Emails.public_workload_identity_changed(updated, organization, user, packages, actor)
+      |> Mailer.deliver!()
+    end)
+  end
+
+  defp trust_changed?(previous, updated) do
+    previous.workflow != updated.workflow or previous.environment != updated.environment or
+      repository_set(previous) != repository_set(updated)
+  end
+
+  defp repository_set(workload_identity),
+    do: MapSet.new(workload_identity.repositories, &{&1.name, &1.id})
+
+  # Calls `fun` once for each person who owns some of the packages, other than
+  # through the organization or as one of `notified`, with their package names
+  # grouped by tag.
+  defp each_public_owner(tagged_packages, organization, notified, fun) do
+    notified = MapSet.new(notified, &recipient_address/1)
+
+    tagged_packages
+    |> Enum.flat_map(fn {package, tag} ->
+      package
+      |> Owners.all(user: [:emails, organization: [organization_users: [user: :emails]]])
+      |> Enum.reject(&(&1.user.organization_id == organization.id))
+      |> Enum.flat_map(&people(&1.user))
+      |> Enum.map(&{&1, tag, package.name})
+    end)
+    |> Enum.reject(fn {user, _tag, _name} ->
+      address = User.email(user, :primary)
+      is_nil(address) or MapSet.member?(notified, address)
+    end)
+    |> Enum.group_by(fn {user, _tag, _name} -> user.id end)
+    |> Enum.sort_by(fn {user_id, _entries} -> user_id end)
+    |> Enum.each(fn {_user_id, [{user, _tag, _name} | _] = entries} ->
+      packages =
+        entries
+        |> Enum.group_by(&elem(&1, 1), &elem(&1, 2))
+        |> Map.new(fn {tag, names} -> {tag, names |> Enum.uniq() |> Enum.sort()} end)
+
+      fun.(user, packages)
     end)
   end
 
@@ -509,19 +746,7 @@ defmodule Hexpm.WorkloadIdentities do
     end
   end
 
-  defp normalize_create_params(params, provider) do
-    params
-    |> Map.new(fn {k, v} -> {to_string(k), v} end)
-    |> Map.put("provider", provider.name())
-    |> stringify_repository_id()
-  end
-
-  defp stringify_repository_id(%{"repository_id" => repository_id} = params)
-       when is_integer(repository_id) do
-    Map.put(params, "repository_id", Integer.to_string(repository_id))
-  end
-
-  defp stringify_repository_id(params), do: params
+  defp normalize_params(params), do: Map.new(params, fn {k, v} -> {to_string(k), v} end)
 
   # Inserting the token is what makes an OIDC token single-use. Checking first
   # answers a used token the same way whatever scope it asks for.

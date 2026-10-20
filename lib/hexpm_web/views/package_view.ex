@@ -217,6 +217,9 @@ defmodule HexpmWeb.PackageView do
       "workload_identity.create" ->
         do_workload_identity_action("Add workload identity", params)
 
+      "workload_identity.update" ->
+        do_workload_identity_action("Change workload identity", params)
+
       "workload_identity.remove" ->
         do_workload_identity_action("Remove workload identity", params)
 
@@ -261,12 +264,13 @@ defmodule HexpmWeb.PackageView do
 
   defp version_from_params(params) when is_map(params), do: params["release"]["version"]
 
-  defp do_workload_identity_action(base_message, %{
-         "repository" => repository,
-         "workflow" => workflow
-       })
-       when not is_nil(repository) and not is_nil(workflow),
-       do: "#{base_message} #{repository} (#{workflow})"
+  defp do_workload_identity_action(base_message, %{"workflow" => workflow} = params)
+       when is_binary(workflow) do
+    case HexpmWeb.ViewHelpers.audited_workload_identity_repositories(params) do
+      nil -> base_message
+      repositories -> "#{base_message} #{repositories} (#{workflow})"
+    end
+  end
 
   defp do_workload_identity_action(base_message, _params), do: base_message
 

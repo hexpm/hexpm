@@ -459,6 +459,13 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCard do
   end
 
   defp humanize_action(%AuditLog{
+         action: "organization.workload_identity.update",
+         params: %{"role" => role, "organization" => %{"name" => org}} = params
+       }) do
+    "Changed the workload identity #{workload_identity_repository(params)} (#{role}) in #{org}"
+  end
+
+  defp humanize_action(%AuditLog{
          action: "organization.workload_identity.remove",
          params: %{"role" => role, "organization" => %{"name" => org}} = params
        }) do
@@ -763,8 +770,10 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCard do
     |> String.capitalize()
   end
 
-  defp workload_identity_repository(%{"repository" => "", "repository_owner" => owner}),
-    do: "for any repository owned by #{owner}"
-
-  defp workload_identity_repository(%{"repository" => repository}), do: repository
+  defp workload_identity_repository(params) do
+    case HexpmWeb.ViewHelpers.audited_workload_identity_repositories(params) do
+      "any repository owned by " <> _ = any -> "for #{any}"
+      repositories -> repositories
+    end
+  end
 end

@@ -293,8 +293,9 @@ defmodule Hexpm.Factory do
       issuer: Hexpm.WorkloadIdentities.WorkloadIdentity.github_issuer(),
       repository_owner: "acme",
       repository_owner_id: "12345",
-      repository_id: "67890",
-      repository: "acme/widget-#{n}",
+      repositories: [
+        %Hexpm.WorkloadIdentities.TrustedRepository{name: "acme/widget-#{n}", id: "67890"}
+      ],
       workflow: "release-#{n}.yml",
       environment: ""
     }
@@ -310,8 +311,9 @@ defmodule Hexpm.Factory do
       issuer: Hexpm.WorkloadIdentities.WorkloadIdentity.github_issuer(),
       repository_owner: "acme",
       repository_owner_id: "12345",
-      repository_id: "67890",
-      repository: "acme/widget-#{n}",
+      repositories: [
+        %Hexpm.WorkloadIdentities.TrustedRepository{name: "acme/widget-#{n}", id: "67890"}
+      ],
       workflow: "",
       environment: ""
     }

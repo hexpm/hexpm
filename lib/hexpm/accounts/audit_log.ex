@@ -314,6 +314,12 @@ defmodule Hexpm.Accounts.AuditLog do
   defp extract_params("organization.workload_identity.remove", workload_identity),
     do: serialize(workload_identity)
 
+  defp extract_params("workload_identity.update", {previous, workload_identity}),
+    do: serialize_workload_identity_change(previous, workload_identity)
+
+  defp extract_params("organization.workload_identity.update", {previous, workload_identity}),
+    do: serialize_workload_identity_change(previous, workload_identity)
+
   defp extract_params("password.add", _), do: %{}
   defp extract_params("password.remove", _), do: %{}
   defp extract_params("organization.create", organization), do: serialize(organization)
@@ -538,12 +544,34 @@ defmodule Hexpm.Accounts.AuditLog do
   defp serialize(%Hexpm.WorkloadIdentities.WorkloadIdentity{} = workload_identity) do
     workload_identity
     |> do_serialize()
+    |> Map.update!(:repositories, &Enum.map(&1, fn r -> %{name: r.name, id: r.id} end))
     |> Map.put(:package, serialize_if_loaded(workload_identity.package))
     |> Map.put(:organization, serialize_if_loaded(workload_identity.organization))
   end
 
   defp serialize(nil), do: nil
   defp serialize(schema), do: do_serialize(schema)
+
+  # A change records the workload identity as it is now, and under
+  # `:previous` what it trusted and covered before.
+  defp serialize_workload_identity_change(previous, workload_identity) do
+    previous =
+      previous
+      |> serialize()
+      |> Map.take([
+        :repositories,
+        :workflow,
+        :environment,
+        :covers_private,
+        :packages,
+        :covers_public,
+        :public_packages
+      ])
+
+    workload_identity
+    |> serialize()
+    |> Map.put(:previous, previous)
+  end
 
   defp serialize_if_loaded(%Ecto.Association.NotLoaded{}), do: nil
   defp serialize_if_loaded(assoc), do: serialize(assoc)
@@ -594,7 +622,7 @@ defmodule Hexpm.Accounts.AuditLog do
       :provider,
       :issuer,
       :repository_owner,
-      :repository,
+      :repositories,
       :workflow,
       :environment,
       :role,

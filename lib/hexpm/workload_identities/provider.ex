@@ -6,15 +6,26 @@ defmodule Hexpm.WorkloadIdentities.Provider do
   alias Hexpm.WorkloadIdentities.WorkloadIdentity
 
   @type claims :: map()
+  @type repository_ids :: %{
+          required(:id) => String.t() | integer() | nil,
+          required(:public) => boolean()
+        }
+
   @type immutable_ids :: %{
           required(:repository_owner_id) => String.t() | integer(),
-          optional(:repository_id) => String.t() | integer() | nil,
-          optional(:public) => boolean()
+          required(:repositories) => %{String.t() => repository_ids()}
         }
 
   @callback name() :: String.t()
   @callback issuer() :: String.t()
-  @callback resolve_immutable_ids(map()) :: {:ok, immutable_ids()} | {:error, term()}
+
+  @doc """
+  Reads the immutable IDs of `:repository_owner` and of each of
+  `:repositories`, named `owner/name`. A repository Hex can't see resolves
+  to a nil ID.
+  """
+  @callback resolve_immutable_ids(%{repository_owner: String.t(), repositories: [String.t()]}) ::
+              {:ok, immutable_ids()} | {:error, term()}
   @callback validate_claims(claims()) :: :ok | {:error, term()}
   @callback rate_limit_key(claims()) :: term()
   @callback match?(WorkloadIdentity.t(), claims()) :: boolean()

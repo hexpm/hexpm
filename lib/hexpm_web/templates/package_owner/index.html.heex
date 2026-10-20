@@ -168,7 +168,7 @@
                   owner.user
                 )
             }>
-              {workload_identity.repository} ({workload_identity.workflow})
+              {HexpmWeb.ViewHelpers.workload_identity_repositories(workload_identity)} ({workload_identity.workflow})
             </li>
           </ul>
         </div>
@@ -182,7 +182,7 @@
           </p>
           <ul class="list-disc pl-5">
             <li :for={workload_identity <- @workload_identities}>
-              {workload_identity.repository} ({workload_identity.workflow})
+              {HexpmWeb.ViewHelpers.workload_identity_repositories(workload_identity)} ({workload_identity.workflow})
             </li>
           </ul>
           <p>

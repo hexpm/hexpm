@@ -209,8 +209,8 @@ defmodule HexpmWeb.EmailView do
 
   defmodule OrganizationWorkloadIdentityLine do
     def line(workload_identity) do
-      "#{workload_identity.repository} (#{workload_identity.workflow}), " <>
-        "organization #{workload_identity.organization.name}"
+      "#{HexpmWeb.ViewHelpers.workload_identity_repositories(workload_identity)} " <>
+        "(#{workload_identity.workflow}), organization #{workload_identity.organization.name}"
     end
   end
 
@@ -231,13 +231,32 @@ defmodule HexpmWeb.EmailView do
     end
   end
 
+  defmodule WorkloadIdentityChange do
+    def message(username, package) do
+      "#{username} changed a workload identity of package #{package}."
+    end
+
+    def before, do: "Before:"
+    def now, do: "Now:"
+
+    def warning(package) do
+      "Anyone who can run these workflows can now publish #{package}. " <>
+        "If you did not expect this change, remove the workload identity and review the package owners."
+    end
+  end
+
   defmodule WorkloadIdentityDetails do
-    def lines(repository, workflow, environment) do
+    def lines(%{repositories: repositories, workflow: workflow, environment: environment}) do
       [
-        "GitHub repository: #{repository}",
+        repositories_line(repositories),
         "Workflow: #{workflow}"
       ] ++ environment_line(environment)
     end
+
+    def repositories_line([repository]), do: "GitHub repository: #{repository}"
+
+    def repositories_line(repositories),
+      do: "GitHub repositories: #{Enum.join(repositories, ", ")}"
 
     def environment_line(environment) when environment in [nil, ""], do: []
 
@@ -291,19 +310,28 @@ defmodule HexpmWeb.EmailView do
     end
   end
 
+  defmodule OrganizationWorkloadIdentityChange do
+    def message(username, organization) do
+      "#{username} changed a workload identity of organization #{organization}."
+    end
+  end
+
   defmodule OrganizationWorkloadIdentityDetails do
-    def lines(role, owner, repository, workflow, environment, organization, coverage) do
+    def lines(role, workflows, organization, coverage) do
       [
         "Role: #{role}",
-        "GitHub repository: #{repository_label(owner, repository)}",
-        "Workflow: #{if workflow in [nil, ""], do: "any", else: workflow}"
+        repositories_line(workflows),
+        "Workflow: #{if workflows.workflow in [nil, ""], do: "any", else: workflows.workflow}"
       ] ++
-        WorkloadIdentityDetails.environment_line(environment) ++
+        WorkloadIdentityDetails.environment_line(workflows.environment) ++
         coverage_lines(role, organization, coverage)
     end
 
-    defp repository_label(owner, ""), do: "any repository owned by #{owner}"
-    defp repository_label(_owner, repository), do: repository
+    defp repositories_line(%{repositories: [], repository_owner: owner}),
+      do: "GitHub repositories: any repository owned by #{owner}"
+
+    defp repositories_line(%{repositories: repositories}),
+      do: WorkloadIdentityDetails.repositories_line(repositories)
 
     defp coverage_lines("write", organization, coverage) do
       private_line(coverage) ++ public_line(organization, coverage)
@@ -343,6 +371,24 @@ defmodule HexpmWeb.EmailView do
     def message(username, organization) do
       "#{username} removed a workload identity from organization #{organization}. " <>
         "It could publish these packages, which #{organization} is an owner of:"
+    end
+  end
+
+  defmodule PublicWorkloadIdentityChange do
+    def message(username, organization) do
+      "#{username} changed a workload identity of organization #{organization}, " <>
+        "which is an owner of packages you own."
+    end
+
+    def started, do: "It can now publish:"
+    def stopped, do: "It can no longer publish:"
+    def kept, do: "It still publishes these, from the changed workflows below:"
+
+    def warning(organization) do
+      "Anyone who can run a matching workflow can publish the packages it can now publish " <>
+        "or still publishes. " <>
+        "If you did not expect this change, ask the admins of #{organization} about it, " <>
+        "or remove #{organization} as an owner of the packages."
     end
   end
 

@@ -7,12 +7,66 @@ defmodule HexpmWeb.PackageWorkloadIdentityController do
   plug :fetch_package
   plug :feature_enabled
   plug :authorize_settings
-  plug :requires_tfa when action in [:create, :delete]
+  plug :requires_tfa when action in [:create, :edit, :update, :delete]
   plug HexpmWeb.Plugs.Sudo
 
   def index(conn, _params) do
     package = conn.assigns.package
     render_index(conn, package, WorkloadIdentity.changeset(%WorkloadIdentity{}, %{}, package))
+  end
+
+  def edit(conn, %{"id" => id}) do
+    package = conn.assigns.package
+
+    with {:ok, workload_identity} <- fetch_workload_identity(conn, package, id) do
+      render_index(
+        conn,
+        package,
+        WorkloadIdentity.update_changeset(workload_identity, %{}),
+        workload_identity
+      )
+    end
+  end
+
+  def update(conn, %{"id" => id} = params) do
+    package = conn.assigns.package
+
+    with {:ok, workload_identity} <- fetch_workload_identity(conn, package, id) do
+      case WorkloadIdentities.update(workload_identity, params["workload_identity"] || %{},
+             audit: audit_data(conn),
+             before_lookup: fn -> lookup_allowed(conn.assigns.current_user) end
+           ) do
+        {:ok, _workload_identity} ->
+          conn
+          |> put_flash(:info, "Workload identity changed.")
+          |> redirect(to: ViewHelpers.path_for_workload_identities(package))
+
+        {:error, %Ecto.Changeset{} = changeset} ->
+          conn
+          |> put_status(400)
+          |> render_index(package, changeset, workload_identity)
+
+        {:error, :not_found} ->
+          conn
+          |> render_error(404, message: "Workload identity not found")
+          |> halt()
+
+        {:error, reason} ->
+          lookup_error(conn, package, reason, "change")
+      end
+    end
+  end
+
+  defp fetch_workload_identity(conn, package, id) do
+    case WorkloadIdentities.get(package, id) do
+      nil ->
+        conn
+        |> render_error(404, message: "Workload identity not found")
+        |> halt()
+
+      workload_identity ->
+        {:ok, %{workload_identity | package: package}}
+    end
   end
 
   def create(conn, params) do
@@ -41,32 +95,33 @@ defmodule HexpmWeb.PackageWorkloadIdentityController do
         )
         |> redirect(to: ~p"/dashboard/orgs/#{package.repository.name}/workload-identities")
 
-      {:error, :rate_limited} ->
-        conn
-        |> put_flash(
-          :error,
-          "Too many attempts to add a workload identity in the last hour. Try again later."
-        )
-        |> redirect(to: ViewHelpers.path_for_workload_identities(package))
-
-      {:error, :not_owner} ->
-        render_error(conn, 403, message: "You must be a full owner of this package")
-
-      {:error, :unknown_provider} ->
-        conn
-        |> put_flash(:error, "The provider is invalid.")
-        |> redirect(to: ViewHelpers.path_for_workload_identities(package))
-
-      {:error, :repository_not_found} ->
-        conn
-        |> put_flash(:error, "The GitHub repository could not be resolved.")
-        |> redirect(to: ViewHelpers.path_for_workload_identities(package))
-
-      {:error, _reason} ->
-        conn
-        |> put_flash(:error, "GitHub could not be reached, try again later.")
-        |> redirect(to: ViewHelpers.path_for_workload_identities(package))
+      {:error, reason} ->
+        lookup_error(conn, package, reason, "add")
     end
+  end
+
+  defp lookup_error(conn, _package, :not_owner, _verb),
+    do: render_error(conn, 403, message: "You must be a full owner of this package")
+
+  defp lookup_error(conn, package, reason, verb) do
+    message =
+      case reason do
+        :rate_limited ->
+          "Too many attempts to #{verb} a workload identity in the last hour. Try again later."
+
+        :unknown_provider ->
+          "The provider is invalid."
+
+        :repository_not_found ->
+          "The GitHub repository could not be resolved."
+
+        _reason ->
+          "GitHub could not be reached, try again later."
+      end
+
+    conn
+    |> put_flash(:error, message)
+    |> redirect(to: ViewHelpers.path_for_workload_identities(package))
   end
 
   def delete(conn, %{"id" => id}) do
@@ -87,7 +142,7 @@ defmodule HexpmWeb.PackageWorkloadIdentityController do
     end
   end
 
-  defp render_index(conn, package, changeset) do
+  defp render_index(conn, package, changeset, editing \\ nil) do
     render(
       conn,
       "index.html",
@@ -97,6 +152,7 @@ defmodule HexpmWeb.PackageWorkloadIdentityController do
         workload_identities: WorkloadIdentities.list(package),
         organization_identities: WorkloadIdentities.list_covering(package),
         changeset: changeset,
+        editing: editing,
         tfa?: User.tfa_enabled?(conn.assigns.current_user)
       ] ++ PackageLayoutAssigns.for_package(conn, package)
     )

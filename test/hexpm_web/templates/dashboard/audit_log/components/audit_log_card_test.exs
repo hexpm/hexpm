@@ -79,6 +79,45 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCardTest do
     assert any =~ "Added the workload identity for any repository owned by acme (read) to acme"
   end
 
+  test "describes organization workload identities with several repositories and their changes" do
+    stub(Hexpm.Geo.Mock, :lookup_country, fn _ -> nil end)
+
+    params = %{
+      "repository_owner" => "acme",
+      "repositories" => [
+        %{"name" => "acme/widget", "id" => "1"},
+        %{"name" => "acme/gadget", "id" => "2"}
+      ],
+      "role" => "write",
+      "organization" => %{"name" => "acme"}
+    }
+
+    html =
+      render_component(&AuditLogCard.audit_log_card/1,
+        audit_logs: [
+          login_log(%{action: "organization.workload_identity.add", params: params}),
+          login_log(%{action: "organization.workload_identity.update", params: params}),
+          login_log(%{action: "organization.workload_identity.remove", params: params})
+        ]
+      )
+
+    assert html =~ "Added the workload identity acme/widget, acme/gadget (write) to acme"
+    assert html =~ "Changed the workload identity acme/widget, acme/gadget (write) in acme"
+    assert html =~ "Removed the workload identity acme/widget, acme/gadget (write) from acme"
+
+    any =
+      render_component(&AuditLogCard.audit_log_card/1,
+        audit_logs: [
+          login_log(%{
+            action: "organization.workload_identity.update",
+            params: %{params | "repositories" => [], "role" => "read"}
+          })
+        ]
+      )
+
+    assert any =~ "Changed the workload identity for any repository owned by acme (read) in acme"
+  end
+
   test "describes membership visibility changes" do
     stub(Hexpm.Geo.Mock, :lookup_country, fn _ -> nil end)
 

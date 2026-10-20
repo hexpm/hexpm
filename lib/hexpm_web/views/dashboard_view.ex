@@ -129,11 +129,15 @@ defmodule HexpmWeb.DashboardView do
   end
 
   def humanize_audit_log_info(%AuditLog{action: "workload_identity.create", params: params}) do
-    "Add workload identity #{params["repository"]} (#{params["workflow"]}) on package #{params["package"]["name"]}"
+    "Add workload identity #{HexpmWeb.ViewHelpers.audited_workload_identity_repositories(params)} (#{params["workflow"]}) on package #{params["package"]["name"]}"
+  end
+
+  def humanize_audit_log_info(%AuditLog{action: "workload_identity.update", params: params}) do
+    "Change workload identity #{HexpmWeb.ViewHelpers.audited_workload_identity_repositories(params)} (#{params["workflow"]}) on package #{params["package"]["name"]}"
   end
 
   def humanize_audit_log_info(%AuditLog{action: "workload_identity.remove", params: params}) do
-    "Remove workload identity #{params["repository"]} (#{params["workflow"]}) from package #{params["package"]["name"]}"
+    "Remove workload identity #{HexpmWeb.ViewHelpers.audited_workload_identity_repositories(params)} (#{params["workflow"]}) from package #{params["package"]["name"]}"
   end
 
   def humanize_audit_log_info(%AuditLog{action: "release.publish", params: params}) do

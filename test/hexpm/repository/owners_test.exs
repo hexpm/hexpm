@@ -111,7 +111,10 @@ defmodule Hexpm.Repository.OwnersTest do
       assert Repo.get!(Hexpm.OAuth.Token, token.id).revoked_at
 
       log = Repo.get_by!(Hexpm.Accounts.AuditLog, action: "workload_identity.remove")
-      assert log.params["repository"] == workload_identity.repository
+
+      assert log.params["repositories"] ==
+               Enum.map(workload_identity.repositories, &%{"name" => &1.name, "id" => &1.id})
+
       assert log.params["package"]["name"] == package.name
     end
 
@@ -127,7 +130,9 @@ defmodule Hexpm.Repository.OwnersTest do
       insert(:organization_workload_identity,
         organization: organization,
         role: "write",
-        repository: "acme/widget",
+        repositories: [
+          %Hexpm.WorkloadIdentities.TrustedRepository{name: "acme/widget", id: "67890"}
+        ],
         workflow: "release.yml",
         covers_public: true
       )
@@ -135,7 +140,9 @@ defmodule Hexpm.Repository.OwnersTest do
       insert(:organization_workload_identity,
         organization: organization,
         role: "write",
-        repository: "acme/gadget",
+        repositories: [
+          %Hexpm.WorkloadIdentities.TrustedRepository{name: "acme/gadget", id: "67890"}
+        ],
         workflow: "listed.yml",
         covers_public: true,
         public_packages: [package.name]
@@ -144,7 +151,9 @@ defmodule Hexpm.Repository.OwnersTest do
       insert(:organization_workload_identity,
         organization: organization,
         role: "write",
-        repository: "acme/other",
+        repositories: [
+          %Hexpm.WorkloadIdentities.TrustedRepository{name: "acme/other", id: "67890"}
+        ],
         workflow: "other.yml",
         covers_public: true,
         public_packages: ["other_package"]
@@ -184,7 +193,9 @@ defmodule Hexpm.Repository.OwnersTest do
       insert(:organization_workload_identity,
         organization: organization,
         role: "write",
-        repository: "acme/widget",
+        repositories: [
+          %Hexpm.WorkloadIdentities.TrustedRepository{name: "acme/widget", id: "67890"}
+        ],
         workflow: "release.yml",
         covers_public: true
       )
@@ -224,7 +235,9 @@ defmodule Hexpm.Repository.OwnersTest do
 
       insert(:workload_identity,
         package: package,
-        repository: "acme/widget",
+        repositories: [
+          %Hexpm.WorkloadIdentities.TrustedRepository{name: "acme/widget", id: "67890"}
+        ],
         workflow: "release.yml"
       )
 
@@ -251,12 +264,18 @@ defmodule Hexpm.Repository.OwnersTest do
       insert(:organization_workload_identity,
         organization: organization,
         role: "write",
-        repository: "acme/widget",
+        repositories: [
+          %Hexpm.WorkloadIdentities.TrustedRepository{name: "acme/widget", id: "67890"}
+        ],
         workflow: "release.yml",
         covers_public: true
       )
 
-      insert(:workload_identity, package: package, repository: "acme/own", workflow: "own.yml")
+      insert(:workload_identity,
+        package: package,
+        repositories: [%Hexpm.WorkloadIdentities.TrustedRepository{name: "acme/own", id: "67890"}],
+        workflow: "own.yml"
+      )
 
       assert :ok = Owners.remove(package, organization.user, audit: audit_data(owner))
 
@@ -283,7 +302,9 @@ defmodule Hexpm.Repository.OwnersTest do
       insert(:organization_workload_identity,
         organization: organization,
         role: "write",
-        repository: "acme/widget",
+        repositories: [
+          %Hexpm.WorkloadIdentities.TrustedRepository{name: "acme/widget", id: "67890"}
+        ],
         workflow: "release.yml",
         covers_public: true
       )

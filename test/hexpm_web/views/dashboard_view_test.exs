@@ -180,6 +180,47 @@ defmodule HexpmWeb.DashboardViewTest do
       assert DashboardView.humanize_audit_log_info(log) == "Update user profile"
     end
 
+    test "workload_identity.create, update and remove" do
+      params = %{
+        "repositories" => [
+          %{"name" => "acme/widget", "id" => "1"},
+          %{"name" => "acme/gadget", "id" => "2"}
+        ],
+        "workflow" => "release.yml",
+        "package" => %{"name" => "Awesome"}
+      }
+
+      assert DashboardView.humanize_audit_log_info(
+               build(:audit_log, action: "workload_identity.create", params: params)
+             ) ==
+               "Add workload identity acme/widget, acme/gadget (release.yml) on package Awesome"
+
+      assert DashboardView.humanize_audit_log_info(
+               build(:audit_log, action: "workload_identity.update", params: params)
+             ) ==
+               "Change workload identity acme/widget, acme/gadget (release.yml) on package Awesome"
+
+      assert DashboardView.humanize_audit_log_info(
+               build(:audit_log, action: "workload_identity.remove", params: params)
+             ) ==
+               "Remove workload identity acme/widget, acme/gadget (release.yml) from package Awesome"
+    end
+
+    test "workload_identity.create recorded with a single repository" do
+      log =
+        build(:audit_log,
+          action: "workload_identity.create",
+          params: %{
+            "repository" => "acme/widget",
+            "workflow" => "release.yml",
+            "package" => %{"name" => "Awesome"}
+          }
+        )
+
+      assert DashboardView.humanize_audit_log_info(log) ==
+               "Add workload identity acme/widget (release.yml) on package Awesome"
+    end
+
     test "organization.create" do
       log = build(:audit_log, action: "organization.create", params: %{"name" => "Test Inc."})
 
