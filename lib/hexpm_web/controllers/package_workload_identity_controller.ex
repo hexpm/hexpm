@@ -137,18 +137,16 @@ defmodule HexpmWeb.PackageWorkloadIdentityController do
   def delete(conn, %{"id" => id}) do
     package = conn.assigns.package
 
-    case WorkloadIdentities.get(package, id) do
-      nil ->
+    with %WorkloadIdentity{} = workload_identity <- WorkloadIdentities.get(package, id),
+         {:ok, _deleted} <- WorkloadIdentities.delete(workload_identity, audit: audit_data(conn)) do
+      conn
+      |> put_flash(:info, "Workload identity removed.")
+      |> redirect(to: ViewHelpers.path_for_workload_identities(package))
+    else
+      _not_found ->
         conn
         |> render_error(404, message: "Workload identity not found")
         |> halt()
-
-      workload_identity ->
-        {:ok, _} = WorkloadIdentities.delete(workload_identity, audit: audit_data(conn))
-
-        conn
-        |> put_flash(:info, "Workload identity removed.")
-        |> redirect(to: ViewHelpers.path_for_workload_identities(package))
     end
   end
 

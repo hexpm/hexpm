@@ -512,15 +512,27 @@ defmodule HexpmWeb.Plugs.Attack do
 
   def workload_identity_github_throttle(_user_id, 0, _opts), do: {:allow, nil}
 
+  # A lookup is only charged when all its calls fit, so a refused save doesn't
+  # use up calls it never made.
   def workload_identity_github_throttle(user_id, calls, opts) do
-    timed_throttle(
-      {:workload_identity_github, user_id},
-      time: opts[:time] || System.system_time(:millisecond),
-      increment: calls,
-      storage: @database_storage,
-      limit: 100,
-      period: 60 * 60_000
-    )
+    throttle = fn increment ->
+      timed_throttle(
+        {:workload_identity_github, user_id},
+        time: opts[:time] || System.system_time(:millisecond),
+        increment: increment,
+        storage: @database_storage,
+        limit: 100,
+        period: 60 * 60_000
+      )
+    end
+
+    case throttle.(0) do
+      {:allow, {:throttle, data} = throttle_data} ->
+        if data[:remaining] >= calls, do: throttle.(calls), else: {:block, throttle_data}
+
+      blocked ->
+        blocked
+    end
   end
 
   def account_delete_request_throttle(user_id, opts \\ []) do

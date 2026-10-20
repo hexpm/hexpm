@@ -175,6 +175,12 @@
           class="px-6 py-4 flex flex-col gap-4"
         >
           <input :if={!@editing} type="hidden" name="workload_identity[provider]" value="github" />
+          <input
+            :if={@editing}
+            type="hidden"
+            name="workload_identity[version]"
+            value={form.params["version"] || Hexpm.WorkloadIdentities.version(@editing)}
+          />
 
           <.text_input
             :if={!@editing}

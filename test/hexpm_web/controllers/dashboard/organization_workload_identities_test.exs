@@ -607,6 +607,36 @@ defmodule HexpmWeb.Dashboard.OrganizationWorkloadIdentitiesTest do
       assert WorkloadIdentities.list(organization) == []
     end
 
+    test "re-renders an add refused without billing with private packages off", %{
+      admin: admin,
+      organization: organization
+    } do
+      organization
+      |> Ecto.Changeset.change(billing_active: false, trial_end: nil)
+      |> Repo.update!()
+
+      document =
+        build_conn()
+        |> test_login(admin)
+        |> post(
+          path(organization),
+          identity_params(%{
+            "role" => "write",
+            "workflow" => "release.yml",
+            "covers_private" => "true",
+            "covers_public" => "true"
+          })
+        )
+        |> html_response(400)
+        |> LazyHTML.from_document()
+
+      assert document
+             |> LazyHTML.query(~s(input[type="hidden"][name="workload_identity[covers_private]"]))
+             |> LazyHTML.attribute("value") == ["false"]
+
+      assert WorkloadIdentities.list(organization) == []
+    end
+
     test "adds a workload identity for public packages without active billing", %{
       admin: admin,
       organization: organization
@@ -903,6 +933,36 @@ defmodule HexpmWeb.Dashboard.OrganizationWorkloadIdentitiesTest do
     end
   end
 
+  describe "the version in the change form" do
+    test "is the version of the workload identity it changes", %{
+      admin: admin,
+      organization: organization
+    } do
+      identity =
+        insert(:organization_workload_identity,
+          organization: organization,
+          role: "write",
+          repository_owner: "acme",
+          repositories: repositories(["acme/widget"]),
+          workflow: "release.yml"
+        )
+
+      document =
+        build_conn()
+        |> test_login(admin)
+        |> get("#{path(organization)}/#{identity.id}/edit")
+        |> html_response(200)
+        |> LazyHTML.from_document()
+
+      assert document
+             |> LazyHTML.query(
+               ~s(#add-workload-identity-form input[name="workload_identity[version]"])
+             )
+             |> LazyHTML.attribute("value") ==
+               [WorkloadIdentities.version(Repo.get!(WorkloadIdentity, identity.id))]
+    end
+  end
+
   describe "PUT /dashboard/orgs/:dashboard_org/workload-identities/:id" do
     setup %{organization: organization} do
       identity =
@@ -1073,6 +1133,35 @@ defmodule HexpmWeb.Dashboard.OrganizationWorkloadIdentitiesTest do
 
       assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
                "Too many attempts to change a workload identity in the last hour. Try again later."
+    end
+
+    test "sends the admin back to the form when it changed since the form was loaded", %{
+      admin: admin,
+      organization: organization,
+      identity: identity
+    } do
+      version = WorkloadIdentities.version(Repo.get!(WorkloadIdentity, identity.id))
+
+      identity
+      |> Ecto.Changeset.change(workflow: "other.yml")
+      |> Repo.update!()
+
+      conn =
+        build_conn()
+        |> test_login(admin)
+        |> put(
+          "#{path(organization)}/#{identity.id}",
+          change_params(%{"workflow" => "publish.yml", "version" => version})
+        )
+
+      assert redirected_to(conn) == "#{path(organization)}/#{identity.id}/edit"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "Someone else changed the workload identity while you were editing it. " <>
+                 "Review it and save again."
+
+      assert Repo.get!(WorkloadIdentity, identity.id).workflow == "other.yml"
+      refute Repo.get_by(AuditLog, action: "organization.workload_identity.update")
     end
 
     test "sends the admin back to the form when someone else changed it meanwhile", %{

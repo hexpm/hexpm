@@ -789,6 +789,37 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
   end
 
   describe "GET /packages/:name/workload-identities/:id/edit" do
+    test "carries the version of the workload identity it changes", %{
+      full_owner: full_owner,
+      package: package
+    } do
+      workload_identity =
+        insert(:workload_identity,
+          package: package,
+          repository_owner: "acme",
+          repositories: repositories(["acme/widget"]),
+          workflow: "release.yml"
+        )
+
+      document =
+        build_conn()
+        |> test_login(full_owner)
+        |> get("/packages/#{package.name}/workload-identities/#{workload_identity.id}/edit")
+        |> html_response(200)
+        |> LazyHTML.from_document()
+
+      version =
+        WorkloadIdentities.version(
+          Hexpm.Repo.get!(Hexpm.WorkloadIdentities.WorkloadIdentity, workload_identity.id)
+        )
+
+      assert document
+             |> LazyHTML.query(
+               ~s(#add-workload-identity-form input[name="workload_identity[version]"])
+             )
+             |> LazyHTML.attribute("value") == [version]
+    end
+
     test "shows a full owner the change form filled in", %{
       full_owner: full_owner,
       package: package
@@ -987,6 +1018,41 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
                  "Replace it with the repository&#39;s new name"
 
       assert [%{repositories: [%{name: "acme/widget"}]}] = WorkloadIdentities.list(package)
+    end
+
+    test "sends the owner back to the form when it changed since the form was loaded", %{
+      full_owner: full_owner,
+      package: package,
+      workload_identity: workload_identity
+    } do
+      version =
+        WorkloadIdentities.version(
+          Hexpm.Repo.get!(Hexpm.WorkloadIdentities.WorkloadIdentity, workload_identity.id)
+        )
+
+      workload_identity
+      |> Ecto.Changeset.change(workflow: "other.yml")
+      |> Hexpm.Repo.update!()
+
+      conn =
+        build_conn()
+        |> test_login(full_owner)
+        |> put("/packages/#{package.name}/workload-identities/#{workload_identity.id}", %{
+          "workload_identity" => %{
+            "repositories" => "widget",
+            "workflow" => "publish.yml",
+            "version" => version
+          }
+        })
+
+      assert redirected_to(conn) ==
+               "/packages/#{package.name}/workload-identities/#{workload_identity.id}/edit"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "Someone else changed the workload identity while you were editing it. " <>
+                 "Review it and save again."
+
+      assert [%{workflow: "other.yml"}] = WorkloadIdentities.list(package)
     end
 
     test "sends the owner back to the form when someone else changed it meanwhile", %{

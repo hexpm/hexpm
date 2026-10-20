@@ -657,6 +657,18 @@ defmodule HexpmWeb.Plugs.AttackTest do
       assert data[:remaining] == 99
     end
 
+    test "doesn't charge a lookup that's refused", %{user: user} do
+      time = System.system_time(:millisecond)
+
+      assert {:allow, _data} = Attack.workload_identity_github_throttle(user.id, 60, time: time)
+      assert {:block, _data} = Attack.workload_identity_github_throttle(user.id, 51, time: time)
+
+      assert {:allow, {:throttle, data}} =
+               Attack.workload_identity_github_throttle(user.id, 1, time: time)
+
+      assert data[:remaining] == 39
+    end
+
     test "keeps its count across pods", %{user: user} do
       time = System.system_time(:millisecond)
 
@@ -666,7 +678,7 @@ defmodule HexpmWeb.Plugs.AttackTest do
 
       assert {:block, _data} = Attack.workload_identity_github_throttle(user.id, 1, time: time)
 
-      assert [%Hexpm.RateLimit{key: key, count: 101}] = Hexpm.Repo.all(Hexpm.RateLimit)
+      assert [%Hexpm.RateLimit{key: key, count: 100}] = Hexpm.Repo.all(Hexpm.RateLimit)
       assert key == "workload_identity_github:#{user.id}:#{div(time, 60 * 60_000)}"
     end
   end

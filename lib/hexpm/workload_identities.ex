@@ -200,8 +200,10 @@ defmodule Hexpm.WorkloadIdentities do
   Hex only asks GitHub about the repositories a change adds, since the others
   keep their pinned IDs. A change that removes the environment of a workload
   identity that publishes looks all of them up, to know whether one is public.
-  It returns `{:error, :changed}` when the workload identity changed after
-  `workload_identity` was read.
+
+  `"version"` in the params is the `version/1` the edit form was loaded with.
+  The change returns `{:error, :changed}` when the workload identity changed
+  since then, or since `workload_identity` was read when there's no version.
 
   `:before_lookup` works as for `create/3`.
   """
@@ -210,17 +212,20 @@ defmodule Hexpm.WorkloadIdentities do
     before_lookup = Keyword.get(opts, :before_lookup, fn _calls -> :ok end)
     workload_identity = preload_owner(workload_identity)
     owner = workload_identity.organization || workload_identity.package
+    params = normalize_params(params)
+    expected_version = params["version"] || version(workload_identity)
 
-    with {:ok, provider} <- fetch_provider(workload_identity.provider) do
+    with {:ok, provider} <- fetch_provider(workload_identity.provider),
+         true <- expected_version == version(workload_identity) || {:error, :changed} do
       changeset =
         workload_identity
-        |> WorkloadIdentity.update_changeset(normalize_params(params))
+        |> WorkloadIdentity.update_changeset(params)
         |> check_public_owner(owner, workload_identity.public_packages || [])
         |> check_duplicate(owner)
 
       with {:ok, changeset} <- resolve_ids(changeset, provider, before_lookup) do
         if identity_changed?(workload_identity, changeset),
-          do: update_identity(owner, workload_identity, changeset, audit_data),
+          do: update_identity(owner, workload_identity, changeset, expected_version, audit_data),
           else: {:ok, workload_identity}
       end
     end
@@ -242,6 +247,15 @@ defmodule Hexpm.WorkloadIdentities do
 
   defp configuration_snapshot(workload_identity),
     do: {Map.take(workload_identity, @changeable_fields), repository_set(workload_identity)}
+
+  @doc """
+  The version of a workload identity's configuration, which an edit form
+  carries so a save refuses to overwrite a change made since it was loaded.
+  """
+  def version(%WorkloadIdentity{} = workload_identity) do
+    snapshot = :erlang.term_to_binary(configuration_snapshot(workload_identity), [:deterministic])
+    Base.url_encode64(:crypto.hash(:sha256, snapshot), padding: false)
+  end
 
   # Hex asks GitHub for the IDs once everything else is valid.
   defp resolve_ids(changeset, provider, before_lookup) do
@@ -381,13 +395,15 @@ defmodule Hexpm.WorkloadIdentities do
     end
   end
 
-  defp update_identity(owner, previous, changeset, audit_data) do
+  defp update_identity(owner, previous, changeset, expected_version, audit_data) do
     action = audit_action(owner, :update)
 
     multi =
       Multi.new()
       |> check_owner(owner, audit_data)
-      |> Multi.run(:current, fn repo, _changes -> lock_unchanged(repo, previous) end)
+      |> Multi.run(:current, fn repo, _changes ->
+        lock_unchanged(repo, previous, expected_version)
+      end)
       |> Multi.update(:workload_identity, changeset)
       |> Multi.run(:tokens, fn repo, %{workload_identity: updated} ->
         if revokes_tokens?(previous, updated) do
@@ -415,17 +431,20 @@ defmodule Hexpm.WorkloadIdentities do
     end
   end
 
-  # The change was made to the workload identity as it was read before the
-  # GitHub lookup. Locking its row, and refusing when it differs, keeps a
-  # concurrent change from being overwritten unseen, and keeps the tokens to
-  # revoke, the audit entry and the emails based on what it was.
-  defp lock_unchanged(repo, previous) do
+  # The change was made to the workload identity as the edit form showed it.
+  # Locking its row, and refusing when it changed since, keeps another change
+  # from being overwritten unseen, and keeps the tokens to revoke, the audit
+  # entry and the emails based on what it was. The lock doesn't block the key
+  # share lock a release insert takes on the row.
+  defp lock_unchanged(repo, previous, expected_version) do
     current =
-      repo.one(from(wi in WorkloadIdentity, where: wi.id == ^previous.id, lock: "FOR UPDATE"))
+      repo.one(
+        from(wi in WorkloadIdentity, where: wi.id == ^previous.id, lock: "FOR NO KEY UPDATE")
+      )
 
     cond do
       is_nil(current) -> {:error, :not_found}
-      configuration_snapshot(current) != configuration_snapshot(previous) -> {:error, :changed}
+      version(current) != expected_version -> {:error, :changed}
       true -> {:ok, current}
     end
   end
@@ -463,25 +482,60 @@ defmodule Hexpm.WorkloadIdentities do
 
   defp check_owner(multi, %Organization{}, _audit_data), do: multi
 
+  # Takes the locks in the same order as a change and an owner transfer: the
+  # package's row, then the workload identity's, then its tokens'. The removal,
+  # its audit entry and its emails use the locked row, so they show any change
+  # that committed first.
   def delete(%WorkloadIdentity{} = workload_identity, audit: audit_data) do
     workload_identity = preload_owner(workload_identity)
-    action = audit_action(workload_identity.organization || workload_identity.package, :remove)
+    owner = workload_identity.organization || workload_identity.package
+    action = audit_action(owner, :remove)
 
     multi =
       Multi.new()
+      |> lock_package(owner)
+      |> Multi.run(:current, fn repo, _changes ->
+        query =
+          from(wi in WorkloadIdentity, where: wi.id == ^workload_identity.id, lock: "FOR UPDATE")
+
+        case repo.one(query) do
+          nil ->
+            {:error, :not_found}
+
+          current ->
+            {:ok,
+             %{
+               current
+               | package: workload_identity.package,
+                 organization: workload_identity.organization
+             }}
+        end
+      end)
       |> Multi.update_all(:tokens, revoke_tokens_query([workload_identity.id]), [])
-      |> Multi.delete(:workload_identity, workload_identity)
-      |> audit(audit_data, action, workload_identity)
+      |> Multi.delete(:workload_identity, & &1.current)
+      |> audit(audit_data, action, & &1.current)
 
     case Repo.transaction(multi) do
-      {:ok, %{workload_identity: deleted}} ->
-        notify(:removed, workload_identity, audit_data)
+      {:ok, %{current: current, workload_identity: deleted}} ->
+        notify(:removed, current, audit_data)
         {:ok, deleted}
+
+      {:error, :current, reason, _} ->
+        {:error, reason}
 
       {:error, _op, changeset, _} ->
         {:error, changeset}
     end
   end
+
+  defp lock_package(multi, %Package{} = package) do
+    Multi.run(multi, :package_lock, fn repo, _changes ->
+      repo.one!(from(p in Package, where: p.id == ^package.id, lock: "FOR NO KEY UPDATE"))
+      {:ok, :locked}
+    end)
+  end
+
+  defp lock_package(multi, %Organization{}), do: multi
 
   @doc """
   Revokes the tokens issued to the given workload identities. Their rows outlive the
@@ -1046,9 +1100,10 @@ defmodule Hexpm.WorkloadIdentities do
   end
 
   # A change locks the workload identity's row while it saves and revokes its
-  # tokens. Matching again under a shared lock means a token is either inserted
-  # before a change, which then revokes it, or matched against the changed
-  # workload identity.
+  # tokens. Matching the token's repository, workflow and environment again
+  # under a shared lock means a token is either inserted before a change, which
+  # then revokes it, or refused when the change stopped trusting its workflow.
+  # The packages it covers are checked when the token is used.
   defp lock_still_matching(workload_identity, provider, claims) do
     current =
       Repo.one(

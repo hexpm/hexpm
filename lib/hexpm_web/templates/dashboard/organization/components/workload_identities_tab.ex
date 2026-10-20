@@ -194,6 +194,12 @@ defmodule HexpmWeb.Dashboard.Organization.Components.WorkloadIdentitiesTab do
         >
           <fieldset disabled={not @tfa?} class="flex flex-col gap-5 disabled:opacity-50">
             <input :if={!@editing} type="hidden" name="workload_identity[provider]" value="github" />
+            <input
+              :if={@editing}
+              type="hidden"
+              name="workload_identity[version]"
+              value={@form.params["version"] || Hexpm.WorkloadIdentities.version(@editing)}
+            />
 
             <div class="flex flex-col gap-2">
               <span class="text-small font-medium text-grey-900 dark:text-grey-100">Role</span>
@@ -296,7 +302,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.WorkloadIdentitiesTab do
                     type="hidden"
                     name="workload_identity[covers_private]"
                     value={
-                      if @billing?,
+                      if @billing? or is_nil(@editing),
                         do: "false",
                         else: to_string(checked?(@form[:covers_private].value))
                     }

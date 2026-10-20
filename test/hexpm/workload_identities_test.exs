@@ -958,6 +958,35 @@ defmodule Hexpm.WorkloadIdentitiesTest do
                  package: other_package.name
                )
     end
+
+    test "returns not found for a workload identity removed in the meantime", %{
+      user: user,
+      workload_identity: workload_identity
+    } do
+      assert {:ok, _} = WorkloadIdentities.delete(workload_identity, audit: audit_data(user))
+
+      assert {:error, :not_found} =
+               WorkloadIdentities.delete(workload_identity, audit: audit_data(user))
+    end
+
+    test "audits and emails the workload identity as it is when it's removed", %{
+      user: user,
+      workload_identity: workload_identity
+    } do
+      workload_identity
+      |> Ecto.Changeset.change(workflow: "other.yml")
+      |> Repo.update!()
+
+      assert {:ok, _} = WorkloadIdentities.delete(workload_identity, audit: audit_data(user))
+
+      log = Repo.get_by!(AuditLog, action: "workload_identity.remove")
+      assert log.params["workflow"] == "other.yml"
+
+      assert_email_sent(fn email ->
+        assert email.subject =~ "Workload identity removed from package"
+        assert email.text_body =~ "Workflow: other.yml"
+      end)
+    end
   end
 
   describe "verify_and_mint/2 event filter" do
@@ -2563,6 +2592,76 @@ defmodule Hexpm.WorkloadIdentitiesTest do
       refute_email_sent()
     end
 
+    test "refuses a form loaded before another save, without asking GitHub", %{
+      user: user,
+      workload_identity: workload_identity
+    } do
+      test_pid = self()
+
+      stub(Hexpm.HTTP.Mock, :get, fn url, _headers, _opts ->
+        send(test_pid, {:github, url})
+        {:ok, 404, [], %{}}
+      end)
+
+      # The form was loaded while the workload identity named widget and gadget
+      loaded =
+        workload_identity
+        |> Ecto.Changeset.change()
+        |> Ecto.Changeset.put_embed(:repositories, [
+          trusted("acme/widget"),
+          trusted("acme/gadget", "70001")
+        ])
+        |> Repo.update!()
+
+      stale_version = WorkloadIdentities.version(loaded)
+
+      # Another save removed gadget before the form was submitted
+      current =
+        loaded
+        |> Ecto.Changeset.change()
+        |> Ecto.Changeset.put_embed(:repositories, [trusted("acme/widget")])
+        |> Repo.update!()
+
+      assert {:error, :changed} =
+               WorkloadIdentities.update(
+                 current,
+                 %{
+                   "repositories" => "widget\ngadget",
+                   "workflow" => "release.yml",
+                   "environment" => "release",
+                   "version" => stale_version
+                 },
+                 audit: audit_data(user)
+               )
+
+      refute_received {:github, _url}
+
+      reloaded = Repo.get!(Hexpm.WorkloadIdentities.WorkloadIdentity, workload_identity.id)
+      assert reloaded.repositories == [trusted("acme/widget")]
+      assert reloaded.environment == ""
+      refute Repo.get_by(AuditLog, action: "workload_identity.update")
+      refute_email_sent()
+    end
+
+    test "saves a form loaded with the current version", %{
+      user: user,
+      workload_identity: workload_identity
+    } do
+      assert {:ok, updated} =
+               WorkloadIdentities.update(
+                 workload_identity,
+                 %{
+                   "repositories" => "widget",
+                   "workflow" => "release.yml",
+                   "environment" => "release",
+                   "version" => WorkloadIdentities.version(workload_identity)
+                 },
+                 audit: audit_data(user)
+               )
+
+      assert updated.environment == "release"
+    end
+
     test "refuses a typed ID that differs from the pinned one", %{
       user: user,
       workload_identity: workload_identity
@@ -3221,6 +3320,52 @@ defmodule Hexpm.WorkloadIdentitiesTest do
       end)
 
       refute_email_sent()
+    end
+  end
+
+  describe "version/1" do
+    test "is the same for the same configuration", %{workload_identity: workload_identity} do
+      reloaded = Repo.get!(Hexpm.WorkloadIdentities.WorkloadIdentity, workload_identity.id)
+      assert WorkloadIdentities.version(reloaded) == WorkloadIdentities.version(workload_identity)
+
+      reordered = %{
+        workload_identity
+        | repositories: [trusted("acme/gadget", "1"), trusted("acme/widget")]
+      }
+
+      in_order = %{
+        workload_identity
+        | repositories: [trusted("acme/widget"), trusted("acme/gadget", "1")]
+      }
+
+      assert WorkloadIdentities.version(reordered) == WorkloadIdentities.version(in_order)
+
+      touched = %{workload_identity | updated_at: DateTime.utc_now(), id: workload_identity.id}
+      assert WorkloadIdentities.version(touched) == WorkloadIdentities.version(workload_identity)
+    end
+
+    test "changes with the repositories, workflow, environment and coverage", %{
+      workload_identity: workload_identity
+    } do
+      version = WorkloadIdentities.version(workload_identity)
+
+      changes = [
+        repositories: [trusted("acme/gadget")],
+        repositories: [trusted("acme/widget", "1")],
+        workflow: "publish.yml",
+        environment: "release",
+        covers_private: false,
+        packages: ["foo"],
+        covers_public: true,
+        public_packages: ["bar"]
+      ]
+
+      for {field, value} <- changes do
+        changed = Map.put(workload_identity, field, value)
+
+        refute WorkloadIdentities.version(changed) == version,
+               "the version didn't change with #{field}"
+      end
     end
   end
 

@@ -1209,17 +1209,16 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       path = ~p"/dashboard/orgs/#{organization}/workload-identities"
 
       with :ok <- workload_identity_tfa(conn, organization) do
-        case WorkloadIdentities.get(organization, id) do
-          nil ->
+        with %WorkloadIdentity{} = workload_identity <- WorkloadIdentities.get(organization, id),
+             {:ok, _deleted} <-
+               WorkloadIdentities.delete(workload_identity, audit: audit_data(conn)) do
+          conn
+          |> put_flash(:info, "Workload identity removed.")
+          |> redirect(to: path)
+        else
+          _not_found ->
             conn
             |> put_flash(:error, "The workload identity was not found.")
-            |> redirect(to: path)
-
-          workload_identity ->
-            {:ok, _} = WorkloadIdentities.delete(workload_identity, audit: audit_data(conn))
-
-            conn
-            |> put_flash(:info, "Workload identity removed.")
             |> redirect(to: path)
         end
       end
