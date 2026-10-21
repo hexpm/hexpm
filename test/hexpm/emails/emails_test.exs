@@ -1,8 +1,8 @@
 defmodule Hexpm.EmailsTest do
   use Hexpm.DataCase, async: false
 
-  alias Hexpm.Accounts.Organization
-  alias Hexpm.Accounts.OrganizationInvitation
+  alias Hexpm.Accounts.{Organization, OrganizationInvitation, OrganizationUser, User}
+  alias Hexpm.WorkloadIdentities.{TrustedRepository, WorkloadIdentity}
   alias Hexpm.Emails
   alias HexpmWeb.EmailView.Common
 
@@ -574,7 +574,9 @@ defmodule Hexpm.EmailsTest do
     test "keep an environment with control characters on its own line" do
       workload_identity = %Hexpm.WorkloadIdentities.WorkloadIdentity{
         package: build(:package, name: "cowboy"),
-        repository: "acme/widget",
+        repositories: [
+          %Hexpm.WorkloadIdentities.TrustedRepository{name: "acme/widget", id: "67890"}
+        ],
         workflow: "release.yml",
         environment: @environment
       }
@@ -593,7 +595,9 @@ defmodule Hexpm.EmailsTest do
       workload_identity = %Hexpm.WorkloadIdentities.WorkloadIdentity{
         role: "write",
         repository_owner: "acme",
-        repository: "acme/widget",
+        repositories: [
+          %Hexpm.WorkloadIdentities.TrustedRepository{name: "acme/widget", id: "67890"}
+        ],
         workflow: "release.yml",
         environment: @environment
       }
@@ -611,6 +615,266 @@ defmodule Hexpm.EmailsTest do
             )
           ] do
         refute email.text_body =~ "\nReset your password"
+      end
+    end
+  end
+
+  describe "workload identity details" do
+    test "name every repository of a workload identity" do
+      workload_identity = %WorkloadIdentity{
+        package: build(:package, name: "cowboy"),
+        repositories: trusted(["acme/widget", "acme/gadget"]),
+        workflow: "release.yml",
+        environment: "release"
+      }
+
+      email = Emails.workload_identity_added(workload_identity, [build(:user)], build(:user))
+
+      assert email.text_body =~
+               "GitHub repositories: acme/widget, acme/gadget\nWorkflow: release.yml\nEnvironment: release"
+
+      assert email.html_body =~ "GitHub repositories: acme/widget, acme/gadget"
+    end
+
+    test "name one repository on its own" do
+      workload_identity = %WorkloadIdentity{
+        package: build(:package, name: "cowboy"),
+        repositories: trusted(["acme/widget"]),
+        workflow: "release.yml",
+        environment: ""
+      }
+
+      email = Emails.workload_identity_added(workload_identity, [build(:user)], build(:user))
+
+      assert email.text_body =~ "GitHub repository: acme/widget\nWorkflow: release.yml"
+    end
+
+    test "say an organization workload identity without repositories matches every repository of its owner" do
+      organization = %Organization{name: "acme_org", organization_users: []}
+
+      workload_identity = %WorkloadIdentity{
+        role: "read",
+        repository_owner: "acme",
+        repositories: [],
+        workflow: "",
+        environment: ""
+      }
+
+      email =
+        Emails.organization_workload_identity_added(workload_identity, organization, build(:user))
+
+      assert email.text_body =~
+               "Role: read\nGitHub repositories: any repository owned by acme\nWorkflow: any"
+    end
+  end
+
+  describe "workload identity change emails" do
+    test "tell the package owners what the workload identity trusted before and trusts now" do
+      owner = build(:user)
+
+      previous = %WorkloadIdentity{
+        package: build(:package, name: "cowboy"),
+        repositories: trusted(["acme/widget"]),
+        workflow: "release.yml",
+        environment: ""
+      }
+
+      current = %{
+        previous
+        | repositories: trusted(["acme/widget", "acme/gadget"]),
+          workflow: "publish.yml",
+          environment: "release"
+      }
+
+      email =
+        Emails.workload_identity_changed(
+          previous,
+          current,
+          [owner],
+          build(:user, username: "jane")
+        )
+
+      assert email.private.type == "workload_identity_changed"
+      assert email.subject == "Hex.pm - Workload identity changed on package cowboy"
+      assert Enum.map(email.to, &elem(&1, 1)) == [User.email(owner, :primary)]
+      assert email.text_body =~ "jane changed a workload identity of package cowboy."
+
+      assert email.text_body =~
+               "Before:\nGitHub repository: acme/widget\nWorkflow: release.yml\n\n" <>
+                 "Now:\nGitHub repositories: acme/widget, acme/gadget\nWorkflow: publish.yml\n" <>
+                 "Environment: release"
+
+      assert email.text_body =~ "Anyone who can run these workflows can now publish cowboy."
+      assert email.html_body =~ "Before:"
+      assert email.html_body =~ "GitHub repositories: acme/widget, acme/gadget"
+    end
+
+    test "tell the organization admins what the workload identity trusted and covered before and now" do
+      admin = build(:user)
+      member = build(:user)
+
+      organization = %Organization{
+        name: "acme_org",
+        organization_users: [
+          %OrganizationUser{role: "admin", user: admin},
+          %OrganizationUser{role: "read", user: member}
+        ]
+      }
+
+      previous = %WorkloadIdentity{
+        role: "write",
+        repository_owner: "acme",
+        repositories: trusted(["acme/widget"]),
+        workflow: "release.yml",
+        environment: "release",
+        covers_private: true,
+        packages: nil,
+        covers_public: false,
+        public_packages: nil
+      }
+
+      current = %{
+        previous
+        | repositories: trusted(["acme/widget", "acme/gadget"]),
+          covers_private: false,
+          packages: [],
+          covers_public: true,
+          public_packages: ["cowboy"]
+      }
+
+      email =
+        Emails.organization_workload_identity_changed(
+          previous,
+          current,
+          organization,
+          build(:user, username: "jane")
+        )
+
+      assert email.private.type == "organization_workload_identity_changed"
+      assert email.subject == "Hex.pm - Workload identity changed in organization acme_org"
+      assert Enum.map(email.to, &elem(&1, 1)) == [User.email(admin, :primary)]
+      assert email.text_body =~ "jane changed a workload identity of organization acme_org."
+
+      assert email.text_body =~
+               "Before:\nRole: write\nGitHub repository: acme/widget\nWorkflow: release.yml\n" <>
+                 "Environment: release\nPrivate packages: all\n\n" <>
+                 "Now:\nRole: write\nGitHub repositories: acme/widget, acme/gadget\n" <>
+                 "Workflow: release.yml\nEnvironment: release\nPublic packages: cowboy"
+
+      assert email.text_body =~
+               "Anyone who can run a matching workflow can now publish the public packages listed above"
+    end
+
+    test "tell an owner outside the organization which of their packages it starts, stops and keeps publishing" do
+      owner = build(:user)
+      organization = %Organization{name: "acme_org", organization_users: []}
+
+      previous = %WorkloadIdentity{
+        role: "write",
+        repository_owner: "acme",
+        repositories: trusted(["acme/widget"]),
+        workflow: "release.yml",
+        environment: "release",
+        covers_private: true,
+        packages: ["secret"],
+        covers_public: true,
+        public_packages: ["kept", "stopped", "unrelated"]
+      }
+
+      current = %{
+        previous
+        | repositories: trusted(["acme/gadget"]),
+          public_packages: ["kept", "started", "unrelated"]
+      }
+
+      email =
+        Emails.public_workload_identity_changed(
+          previous,
+          current,
+          organization,
+          owner,
+          %{started: ["started"], stopped: ["stopped"], kept: ["kept"]},
+          build(:user, username: "jane")
+        )
+
+      assert email.private.type == "public_workload_identity_changed"
+
+      assert email.subject ==
+               "Hex.pm - Workload identity of organization acme_org changed for kept, started, stopped"
+
+      assert Enum.map(email.to, &elem(&1, 1)) == [User.email(owner, :primary)]
+
+      assert email.text_body =~
+               "jane changed a workload identity of organization acme_org, " <>
+                 "which is an owner of packages you own."
+
+      assert email.text_body =~ "It can now publish:\nstarted"
+      assert email.text_body =~ "It can no longer publish:\nstopped"
+
+      assert email.text_body =~
+               "It still publishes these, from the changed workflows below:\nkept"
+
+      assert email.text_body =~
+               "Before:\nRole: write\nGitHub repository: acme/widget\nWorkflow: release.yml\n" <>
+                 "Environment: release\nPublic packages: stopped, kept"
+
+      assert email.text_body =~
+               "Now:\nRole: write\nGitHub repository: acme/gadget\nWorkflow: release.yml\n" <>
+                 "Environment: release\nPublic packages: started, kept"
+
+      assert email.text_body =~ "Anyone who can run a matching workflow can publish"
+
+      for section <- [
+            "It can now publish:",
+            "It can no longer publish:",
+            "It still publishes these"
+          ] do
+        assert email.html_body =~ section
+      end
+
+      for body <- [email.text_body, email.html_body] do
+        refute body =~ "secret"
+        refute body =~ "unrelated"
+        refute body =~ "Private packages"
+      end
+    end
+
+    test "leave out what a workload identity trusts now from an owner whose packages it only stops publishing" do
+      organization = %Organization{name: "acme_org", organization_users: []}
+
+      previous = %WorkloadIdentity{
+        role: "write",
+        repository_owner: "acme",
+        repositories: trusted(["acme/widget"]),
+        workflow: "release.yml",
+        environment: "release",
+        covers_private: false,
+        packages: [],
+        covers_public: true,
+        public_packages: ["stopped"]
+      }
+
+      current = %{previous | repositories: trusted(["acme/gadget"]), public_packages: ["other"]}
+
+      email =
+        Emails.public_workload_identity_changed(
+          previous,
+          current,
+          organization,
+          build(:user),
+          %{stopped: ["stopped"]},
+          build(:user)
+        )
+
+      assert email.text_body =~ "It can no longer publish:\nstopped"
+      assert email.text_body =~ "Before:"
+
+      for body <- [email.text_body, email.html_body] do
+        refute body =~ "It can now publish"
+        refute body =~ "It still publishes"
+        refute body =~ "Now:"
+        refute body =~ "acme/gadget"
+        refute body =~ "Anyone who can run"
       end
     end
   end
@@ -673,4 +937,6 @@ defmodule Hexpm.EmailsTest do
       end
     end
   end
+
+  defp trusted(names), do: Enum.map(names, &%TrustedRepository{name: &1, id: "67890"})
 end

@@ -33,6 +33,8 @@ defmodule Hexpm.ConcurrencyCase do
     OutboxEntry,
     Oban.Job,
     AuditLog,
+    Hexpm.OAuth.Token,
+    Hexpm.WorkloadIdentities.WorkloadIdentity,
     PackageOwner,
     Package,
     UserSession,

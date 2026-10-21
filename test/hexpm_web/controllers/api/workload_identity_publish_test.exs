@@ -25,8 +25,9 @@ defmodule HexpmWeb.API.WorkloadIdentityPublishTest do
         package: package,
         repository_owner: "acme",
         repository_owner_id: "12345",
-        repository_id: "67890",
-        repository: "acme/widget",
+        repositories: [
+          %Hexpm.WorkloadIdentities.TrustedRepository{name: "acme/widget", id: "67890"}
+        ],
         workflow: "release.yml"
       )
 
@@ -138,8 +139,7 @@ defmodule HexpmWeb.API.WorkloadIdentityPublishTest do
       package: other,
       repository_owner: tp.repository_owner,
       repository_owner_id: tp.repository_owner_id,
-      repository_id: tp.repository_id,
-      repository: tp.repository,
+      repositories: tp.repositories,
       workflow: tp.workflow
     )
 
@@ -284,7 +284,9 @@ defmodule HexpmWeb.API.WorkloadIdentityPublishTest do
         insert(:organization_workload_identity,
           organization: organization,
           role: "write",
-          repository: "acme/widget",
+          repositories: [
+            %Hexpm.WorkloadIdentities.TrustedRepository{name: "acme/widget", id: "67890"}
+          ],
           workflow: "release.yml"
         )
 
@@ -489,7 +491,9 @@ defmodule HexpmWeb.API.WorkloadIdentityPublishTest do
 
       insert(:organization_workload_identity,
         organization: organization,
-        repository: "acme/widget",
+        repositories: [
+          %Hexpm.WorkloadIdentities.TrustedRepository{name: "acme/widget", id: "67890"}
+        ],
         workflow: "release.yml"
       )
 
@@ -512,7 +516,9 @@ defmodule HexpmWeb.API.WorkloadIdentityPublishTest do
         insert(:organization_workload_identity,
           organization: organization,
           role: "write",
-          repository: "acme/widget",
+          repositories: [
+            %Hexpm.WorkloadIdentities.TrustedRepository{name: "acme/widget", id: "67890"}
+          ],
           workflow: "release.yml",
           covers_private: false,
           packages: [],

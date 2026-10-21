@@ -54,7 +54,7 @@ config :hexpm, secret_scan_notify: false
 
 config :hexpm, HexpmWeb.BasicAuth, schedule_enabled: true
 
-config :hexpm, :workload_identity, audience: "hexpm"
+config :hexpm, :workload_identity, audience: "hexpm", github_lookup_timeout: 15_000
 
 config :hexpm, :organization_sso,
   all_organizations: false,

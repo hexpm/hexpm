@@ -1,0 +1,38 @@
+<h1 style="color: #030913; font-size: 24px; line-height: 32px; font-weight: 600; margin: 0 0 24px 0; text-align: center;">
+  Workload Identity Publishing Your Packages Changed
+</h1>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= PublicWorkloadIdentityChange.message(@username, @organization) %>
+</p>
+
+<%= for {heading, names} <- [{PublicWorkloadIdentityChange.started(), @started}, {PublicWorkloadIdentityChange.stopped(), @stopped}, {PublicWorkloadIdentityChange.kept(), @kept}], names != [] do %>
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= heading %><br>
+  <%= for name <- names do %>
+    <%= name %><br>
+  <% end %>
+</p>
+<% end %>
+
+<%= if @stopped != [] or @kept != [] do %>
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= WorkloadIdentityChange.before() %><br>
+  <%= for line <- OrganizationWorkloadIdentityDetails.lines(@role, @previous, @organization, @previous_coverage) do %>
+    <%= line %><br>
+  <% end %>
+</p>
+<% end %>
+
+<%= if @started != [] or @kept != [] do %>
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= WorkloadIdentityChange.now() %><br>
+  <%= for line <- OrganizationWorkloadIdentityDetails.lines(@role, @current, @organization, @coverage) do %>
+    <%= line %><br>
+  <% end %>
+</p>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= PublicWorkloadIdentityChange.warning(@organization) %>
+</p>
+<% end %>

@@ -2,6 +2,7 @@ defmodule HexpmWeb.PackageOwnerControllerTest do
   use HexpmWeb.ConnCase, async: true
 
   alias Hexpm.Repository.Owners
+  alias Hexpm.WorkloadIdentities.TrustedRepository
 
   setup do
     full_owner = insert(:user)
@@ -109,7 +110,10 @@ defmodule HexpmWeb.PackageOwnerControllerTest do
     } do
       insert(:workload_identity,
         package: package,
-        repository: "acme/widget",
+        repositories: [
+          %TrustedRepository{name: "acme/widget", id: "22"},
+          %TrustedRepository{name: "acme/gadget", id: "33"}
+        ],
         workflow: "release.yml"
       )
 
@@ -122,7 +126,7 @@ defmodule HexpmWeb.PackageOwnerControllerTest do
       assert body =~
                "Removing an owner doesn't change #{package.name}'s workload identities"
 
-      assert body =~ "acme/widget (release.yml)"
+      assert body =~ "acme/widget, acme/gadget (release.yml)"
       assert body =~ ~s(href="/packages/#{package.name}/workload-identities")
     end
 
@@ -134,7 +138,7 @@ defmodule HexpmWeb.PackageOwnerControllerTest do
       insert(:organization_workload_identity,
         organization: organization,
         role: "write",
-        repository: "acme/widget",
+        repositories: [%TrustedRepository{name: "acme/widget", id: "22"}],
         workflow: "release.yml",
         covers_public: true
       )
@@ -142,7 +146,7 @@ defmodule HexpmWeb.PackageOwnerControllerTest do
       insert(:organization_workload_identity,
         organization: organization,
         role: "write",
-        repository: "acme/gadget",
+        repositories: [%TrustedRepository{name: "acme/gadget", id: "33"}],
         workflow: "other.yml",
         covers_public: true,
         public_packages: ["other_package"]

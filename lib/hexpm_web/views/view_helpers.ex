@@ -102,6 +102,37 @@ defmodule HexpmWeb.ViewHelpers do
     ~p"/packages/#{package.repository}/#{package}/owners/#{username}"
   end
 
+  @doc """
+  Names a workload identity's GitHub repositories, or says that it matches
+  every repository of its owner.
+  """
+  def workload_identity_repositories(%{repositories: [], repository_owner: owner}),
+    do: "any repository owned by #{owner}"
+
+  def workload_identity_repositories(%{repositories: repositories}),
+    do: Enum.map_join(repositories, ", ", & &1.name)
+
+  @doc """
+  Names the GitHub repositories of a workload identity recorded in an audit
+  log entry. An entry records either a list of repositories or a single
+  repository, which is empty for every repository of its owner.
+  """
+  def audited_workload_identity_repositories(%{
+        "repositories" => [],
+        "repository_owner" => owner
+      }),
+      do: "any repository owned by #{owner}"
+
+  def audited_workload_identity_repositories(%{"repositories" => repositories})
+      when is_list(repositories),
+      do: Enum.map_join(repositories, ", ", & &1["name"])
+
+  def audited_workload_identity_repositories(%{"repository" => "", "repository_owner" => owner}),
+    do: "any repository owned by #{owner}"
+
+  def audited_workload_identity_repositories(%{"repository" => repository}), do: repository
+  def audited_workload_identity_repositories(_params), do: nil
+
   def path_for_workload_identities(%Package{repository_id: 1} = package) do
     ~p"/packages/#{package}/workload-identities"
   end

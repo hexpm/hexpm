@@ -65,14 +65,29 @@ defmodule Hexpm.Emails do
     |> render_body(:workload_identity_remove)
   end
 
+  def workload_identity_changed(previous, workload_identity, owners, actor) do
+    workload_identity_email(:workload_identity_changed, workload_identity, owners, actor)
+    |> subject("Hex.pm - Workload identity changed on package #{workload_identity.package.name}")
+    |> assign(:previous, trusted_workflows(previous))
+    |> render_body(:workload_identity_change)
+  end
+
   defp workload_identity_email(type, workload_identity, owners, actor) do
     base_email(type)
     |> email_to(owners)
     |> assign(:username, actor.username)
     |> assign(:package, workload_identity.package.name)
-    |> assign(:repository, workload_identity.repository)
-    |> assign(:workflow, workload_identity.workflow)
-    |> assign(:environment, workload_identity.environment)
+    |> assign(:current, trusted_workflows(workload_identity))
+  end
+
+  # The workflows a workload identity trusts, as the details lines show them.
+  defp trusted_workflows(workload_identity) do
+    %{
+      repository_owner: workload_identity.repository_owner,
+      repositories: Enum.map(workload_identity.repositories, & &1.name),
+      workflow: workload_identity.workflow,
+      environment: workload_identity.environment
+    }
   end
 
   def organization_workload_identity_added(workload_identity, organization, actor) do
@@ -95,6 +110,19 @@ defmodule Hexpm.Emails do
     )
     |> subject("Hex.pm - Workload identity removed from organization #{organization.name}")
     |> render_body(:organization_workload_identity_remove)
+  end
+
+  def organization_workload_identity_changed(previous, workload_identity, organization, actor) do
+    organization_workload_identity_email(
+      :organization_workload_identity_changed,
+      workload_identity,
+      organization,
+      actor
+    )
+    |> subject("Hex.pm - Workload identity changed in organization #{organization.name}")
+    |> assign(:previous, trusted_workflows(previous))
+    |> assign(:previous_coverage, Map.take(previous, @coverage_fields))
+    |> render_body(:organization_workload_identity_change)
   end
 
   defp organization_workload_identity_email(type, workload_identity, organization, actor) do
@@ -133,6 +161,41 @@ defmodule Hexpm.Emails do
     |> render_body(:public_workload_identity_remove)
   end
 
+  @doc """
+  Tells an owner of public packages that an organization that also owns them
+  changed a workload identity that publishes some of them. `packages` has the
+  names it starts publishing under `:started`, stops publishing under
+  `:stopped`, and keeps publishing from changed workflows under `:kept`.
+  """
+  def public_workload_identity_changed(
+        previous,
+        workload_identity,
+        organization,
+        owner,
+        packages,
+        actor
+      ) do
+    started = Map.get(packages, :started, [])
+    stopped = Map.get(packages, :stopped, [])
+    kept = Map.get(packages, :kept, [])
+    names = Enum.sort(started ++ stopped ++ kept)
+
+    base_email(:public_workload_identity_changed)
+    |> email_to(owner)
+    |> subject(
+      "Hex.pm - Workload identity of organization #{organization.name} " <>
+        "changed for #{Enum.join(names, ", ")}"
+    )
+    |> assign_organization_workload_identity(workload_identity, organization, actor)
+    |> assign(:coverage, public_coverage(workload_identity, started ++ kept))
+    |> assign(:previous, trusted_workflows(previous))
+    |> assign(:previous_coverage, public_coverage(previous, stopped ++ kept))
+    |> assign(:started, started)
+    |> assign(:stopped, stopped)
+    |> assign(:kept, kept)
+    |> render_body(:public_workload_identity_change)
+  end
+
   # Owners outside the organization only learn about their own packages, not
   # the workload identity's private coverage or the rest of its public list.
   defp public_coverage(workload_identity, packages) do
@@ -149,10 +212,7 @@ defmodule Hexpm.Emails do
     |> assign(:username, actor.username)
     |> assign(:organization, organization.name)
     |> assign(:role, workload_identity.role)
-    |> assign(:repository_owner, workload_identity.repository_owner)
-    |> assign(:repository, workload_identity.repository)
-    |> assign(:workflow, workload_identity.workflow)
-    |> assign(:environment, workload_identity.environment)
+    |> assign(:current, trusted_workflows(workload_identity))
     |> assign(:coverage, Map.take(workload_identity, @coverage_fields))
   end
 

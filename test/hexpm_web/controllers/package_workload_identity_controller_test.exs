@@ -4,6 +4,7 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
   import Mox
 
   alias Hexpm.WorkloadIdentities
+  alias Hexpm.WorkloadIdentities.TrustedRepository
 
   setup :verify_on_exit!
 
@@ -23,6 +24,15 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
     package = Hexpm.Repo.preload(package, :repository)
     %{full_owner: full_owner, maintainer: maintainer, non_owner: non_owner, package: package}
   end
+
+  defp repositories(names) do
+    names
+    |> Enum.with_index(1)
+    |> Enum.map(fn {name, index} -> %TrustedRepository{name: name, id: "#{index}#{index}"} end)
+  end
+
+  defp normalized_text(node),
+    do: node |> LazyHTML.text() |> String.replace(~r/\s+/, " ") |> String.trim()
 
   defp settings_nav(document) do
     document
@@ -80,7 +90,7 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
     end
 
     test "lists existing workload identities", %{full_owner: full_owner, package: package} do
-      insert(:workload_identity, package: package, repository: "acme/widget")
+      insert(:workload_identity, package: package, repositories: repositories(["acme/widget"]))
 
       conn =
         build_conn()
@@ -100,7 +110,7 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
       insert(:organization_workload_identity,
         organization: organization,
         role: "write",
-        repository: "acme/widget",
+        repositories: repositories(["acme/widget"]),
         workflow: "release.yml",
         environment: "release",
         covers_public: true
@@ -109,14 +119,14 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
       insert(:organization_workload_identity,
         organization: organization,
         role: "write",
-        repository: "acme/gadget",
+        repositories: repositories(["acme/gadget"]),
         workflow: "private.yml"
       )
 
       insert(:organization_workload_identity,
         organization: organization,
         role: "write",
-        repository: "acme/listed",
+        repositories: repositories(["acme/listed"]),
         workflow: "listed.yml",
         covers_public: true,
         public_packages: [package.name, "secret_other_package"]
@@ -128,10 +138,22 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
         |> get("/packages/#{package.name}/workload-identities")
         |> html_response(200)
 
-      assert body =~ "Organization workload identities"
-      assert body =~ "acme/widget (release.yml)"
-      assert body =~ "every public package #{organization.name} owns"
-      assert body =~ "acme/listed (listed.yml)"
+      document = LazyHTML.from_document(body)
+      cards = LazyHTML.query(document, ~s(li[id^="organization-workload-identity-"]))
+      assert Enum.count(cards) == 2
+
+      card = fn repository ->
+        cards |> Enum.find(&(LazyHTML.text(&1) =~ repository)) |> normalized_text()
+      end
+
+      assert card.("acme/widget") =~ "Publish #{package.name} Organization #{organization.name}"
+      assert card.("acme/widget") =~ "Manage on #{organization.name}'s page"
+      assert card.("acme/widget") =~ "Workflow release.yml · Environment release"
+
+      assert card.("acme/widget") =~
+               "Publishes #{package.name} while #{organization.name} owns it."
+
+      assert card.("acme/listed") =~ "Workflow listed.yml · Environment any"
       assert body =~ ~s(href="/orgs/#{organization.name}")
       assert body =~ ~s(href="/dashboard/orgs/#{organization.name}/workload-identities")
       assert body =~ "first release is published with a user account or an API key"
@@ -147,7 +169,7 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
       insert(:organization_workload_identity,
         organization: organization,
         role: "write",
-        repository: "acme/widget",
+        repositories: repositories(["acme/widget"]),
         workflow: "release.yml",
         covers_public: true
       )
@@ -167,7 +189,7 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
         |> get("/packages/#{package.name}/workload-identities")
         |> html_response(200)
 
-      refute body =~ "Organization workload identities"
+      refute body =~ "organization-workload-identity-"
       refute body =~ "acme/widget"
     end
 
@@ -180,7 +202,7 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
       insert(:organization_workload_identity,
         organization: organization,
         role: "write",
-        repository: "acme/widget",
+        repositories: repositories(["acme/widget"]),
         workflow: "release.yml",
         covers_public: true
       )
@@ -191,7 +213,7 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
         |> get("/packages/#{package.name}/workload-identities")
         |> html_response(200)
 
-      refute body =~ "Organization workload identities"
+      refute body =~ "organization-workload-identity-"
       refute body =~ "acme/widget"
     end
 
@@ -209,7 +231,7 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
     } do
       full_owner_no_tfa = insert(:user)
       insert(:package_owner, package: package, user: full_owner_no_tfa, level: "full")
-      insert(:workload_identity, package: package, repository: "acme/widget")
+      insert(:workload_identity, package: package, repositories: repositories(["acme/widget"]))
 
       document =
         build_conn()
@@ -221,7 +243,7 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
       assert LazyHTML.text(document) =~ "acme/widget"
 
       assert LazyHTML.text(document) =~
-               "Two-factor authentication is required to add and remove workload identities."
+               "Two-factor authentication is required to add, change and remove workload identities."
 
       refute LazyHTML.text(document) =~ "Only full owners and organization admins"
       assert document |> LazyHTML.query("#add-workload-identity-form") |> Enum.empty?()
@@ -235,7 +257,7 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
       maintainer: maintainer,
       package: package
     } do
-      insert(:workload_identity, package: package, repository: "acme/widget")
+      insert(:workload_identity, package: package, repositories: repositories(["acme/widget"]))
 
       document =
         build_conn()
@@ -247,7 +269,7 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
       assert LazyHTML.text(document) =~ "acme/widget"
 
       assert LazyHTML.text(document) =~
-               "Only full owners and organization admins can add and remove workload identities."
+               "Only full owners and organization admins can add, change and remove workload identities."
 
       assert document |> LazyHTML.query("#add-workload-identity-form") |> Enum.empty?()
 
@@ -353,7 +375,7 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
           "workload_identity" => %{
             "provider" => "github",
             "repository_owner" => "acme",
-            "repository" => "widget",
+            "repositories" => "widget",
             "workflow" => "release.yml"
           }
         })
@@ -362,9 +384,8 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "added"
 
       assert [workload_identity] = WorkloadIdentities.list(package)
-      assert workload_identity.repository == "acme/widget"
+      assert workload_identity.repositories == [%TrustedRepository{name: "acme/widget", id: "22"}]
       assert workload_identity.repository_owner_id == "11"
-      assert workload_identity.repository_id == "22"
     end
 
     test "redirects to /sudo when no sudo mode", %{full_owner: full_owner, package: package} do
@@ -375,7 +396,7 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
           "workload_identity" => %{
             "provider" => "github",
             "repository_owner" => "acme",
-            "repository" => "widget",
+            "repositories" => "widget",
             "workflow" => "release.yml"
           }
         })
@@ -394,7 +415,7 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
           "workload_identity" => %{
             "provider" => "github",
             "repository_owner" => "acme",
-            "repository" => "widget",
+            "repositories" => "widget",
             "workflow" => "release.yml"
           }
         })
@@ -411,14 +432,10 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
       insert(:workload_identity,
         package: package,
         repository_owner: "acme",
-        repository: "acme/widget",
+        repositories: [%TrustedRepository{name: "acme/widget", id: "22"}],
         workflow: "release.yml",
         environment: ""
       )
-
-      expect(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/widget", _, _ ->
-        {:ok, 200, [], %{"id" => 22, "owner" => %{"id" => 11}}}
-      end)
 
       conn =
         build_conn()
@@ -427,12 +444,13 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
           "workload_identity" => %{
             "provider" => "github",
             "repository_owner" => "acme",
-            "repository" => "widget",
+            "repositories" => "widget",
             "workflow" => "release.yml"
           }
         })
 
-      assert html_response(conn, 400) =~ "already configured for this package"
+      assert html_response(conn, 400) =~
+               "already have a workload identity with this workflow and environment"
     end
 
     test "shows the changeset error for an invalid workflow", %{
@@ -446,14 +464,20 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
           "workload_identity" => %{
             "provider" => "github",
             "repository_owner" => "acme",
-            "repository" => "widget",
+            "repositories" => "widget",
             "workflow" => "release"
           }
         })
 
       body = html_response(conn, 400)
       assert body =~ "has invalid format"
-      assert body =~ ~s(value="widget")
+
+      assert body
+             |> LazyHTML.from_document()
+             |> LazyHTML.query("#workload_identity_repositories")
+             |> LazyHTML.text()
+             |> String.trim() == "widget"
+
       refute body =~ "acme/widget"
     end
 
@@ -476,7 +500,7 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
           "workload_identity" => %{
             "provider" => "github",
             "repository_owner" => "missing",
-            "repository" => "widget",
+            "repositories" => "widget",
             "workflow" => "release.yml"
           }
         })
@@ -501,15 +525,21 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
           "workload_identity" => %{
             "provider" => "github",
             "repository_owner" => "acme",
-            "repository" => "widget",
+            "repositories" => "widget",
             "workflow" => "publish.yml"
           }
         })
 
       body = html_response(conn, 400)
-      assert body =~ "is required for a public repository"
+      assert body =~ "is required because acme/widget is public"
       assert body =~ ~s(value="publish.yml")
-      refute body =~ ~s(value="22")
+
+      assert body
+             |> LazyHTML.from_document()
+             |> LazyHTML.query("#workload_identity_repositories")
+             |> LazyHTML.text()
+             |> String.trim() == "widget"
+
       assert WorkloadIdentities.list(package) == []
     end
 
@@ -532,16 +562,19 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
           "workload_identity" => %{
             "provider" => "github",
             "repository_owner" => "acme",
-            "repository" => "private",
-            "workflow" => "release.yml",
-            "repository_id" => "22"
+            "repositories" => "private 22",
+            "workflow" => "release.yml"
           }
         })
 
       assert redirected_to(conn) == "/packages/#{package.name}/workload-identities"
 
-      assert [%{repository_owner_id: "11", repository_id: "22"}] =
-               WorkloadIdentities.list(package)
+      assert [
+               %{
+                 repository_owner_id: "11",
+                 repositories: [%TrustedRepository{name: "acme/private", id: "22"}]
+               }
+             ] = WorkloadIdentities.list(package)
     end
 
     test "shows a changeset error for a repository Hex cannot see without its id", %{
@@ -563,12 +596,14 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
           "workload_identity" => %{
             "provider" => "github",
             "repository_owner" => "acme",
-            "repository" => "private",
+            "repositories" => "private",
             "workflow" => "release.yml"
           }
         })
 
-      assert html_response(conn, 400) =~ "is required when Hex cannot resolve the repository"
+      assert html_response(conn, 400) =~
+               "acme/private needs its repository ID after the name, because Hex can&#39;t see it on GitHub"
+
       assert WorkloadIdentities.list(package) == []
     end
 
@@ -587,14 +622,15 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
           "workload_identity" => %{
             "provider" => "github",
             "repository_owner" => "acme",
-            "repository" => "widget",
-            "workflow" => "release.yml",
-            "repository_id" => "99"
+            "repositories" => "widget 99",
+            "workflow" => "release.yml"
           }
         })
 
       assert redirected_to(conn) == "/packages/#{package.name}/workload-identities"
-      assert [%{repository_id: "22"}] = WorkloadIdentities.list(package)
+
+      assert [%{repositories: [%TrustedRepository{id: "22"}]}] =
+               WorkloadIdentities.list(package)
     end
 
     test "flashes an error when GitHub answers with a server error", %{
@@ -612,7 +648,7 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
           "workload_identity" => %{
             "provider" => "github",
             "repository_owner" => "acme",
-            "repository" => "widget",
+            "repositories" => "widget",
             "workflow" => "release.yml"
           }
         })
@@ -637,7 +673,7 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
           "workload_identity" => %{
             "provider" => "github",
             "repository_owner" => "acme",
-            "repository" => "widget",
+            "repositories" => "widget",
             "workflow" => "release.yml"
           }
         })
@@ -658,7 +694,7 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
           "workload_identity" => %{
             "provider" => "github",
             "repository_owner" => "acme",
-            "repository" => "widget",
+            "repositories" => "widget",
             "workflow" => "release.yml"
           }
         })
@@ -688,7 +724,7 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
           "workload_identity" => %{
             "provider" => "github",
             "repository_owner" => "acme",
-            "repository" => "widget",
+            "repositories" => "widget",
             "workflow" => "release.yml"
           }
         })
@@ -696,6 +732,464 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
       assert redirected_to(conn) == "/packages/#{package.name}/workload-identities"
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "Too many attempts"
       assert WorkloadIdentities.list(package) == []
+    end
+  end
+
+  describe "the list for a manager" do
+    test "shows each workload identity with its repositories and Edit and Remove", %{
+      full_owner: full_owner,
+      package: package
+    } do
+      workload_identity =
+        insert(:workload_identity,
+          package: package,
+          repositories: repositories(["acme/widget", "acme/gadget"]),
+          workflow: "release.yml",
+          environment: "release"
+        )
+
+      document =
+        build_conn()
+        |> test_login(full_owner)
+        |> get("/packages/#{package.name}/workload-identities")
+        |> html_response(200)
+        |> LazyHTML.from_document()
+
+      card = LazyHTML.query(document, "#workload-identity-#{workload_identity.id}")
+
+      assert normalized_text(card) =~
+               "Publish #{package.name} Package Edit acme/widget acme/gadget " <>
+                 "Workflow release.yml · Environment release"
+
+      assert normalized_text(card) =~
+               "Added #{Calendar.strftime(workload_identity.inserted_at, "%-d %b %Y")}"
+
+      assert card
+             |> LazyHTML.query("a[href]")
+             |> LazyHTML.attribute("href") == [
+               "/packages/#{package.name}/workload-identities/#{workload_identity.id}/edit#workload-identity-form"
+             ]
+
+      assert document
+             |> LazyHTML.query("#remove-workload-identity-form-#{workload_identity.id}")
+             |> Enum.count() == 1
+    end
+
+    test "leaves out Edit for a maintainer", %{maintainer: maintainer, package: package} do
+      workload_identity = insert(:workload_identity, package: package)
+
+      body =
+        build_conn()
+        |> test_login(maintainer)
+        |> get("/packages/#{package.name}/workload-identities")
+        |> html_response(200)
+
+      refute body =~ "/workload-identities/#{workload_identity.id}/edit"
+    end
+  end
+
+  describe "GET /packages/:name/workload-identities/:id/edit" do
+    test "carries the version of the workload identity it changes", %{
+      full_owner: full_owner,
+      package: package
+    } do
+      workload_identity =
+        insert(:workload_identity,
+          package: package,
+          repository_owner: "acme",
+          repositories: repositories(["acme/widget"]),
+          workflow: "release.yml"
+        )
+
+      document =
+        build_conn()
+        |> test_login(full_owner)
+        |> get("/packages/#{package.name}/workload-identities/#{workload_identity.id}/edit")
+        |> html_response(200)
+        |> LazyHTML.from_document()
+
+      version =
+        WorkloadIdentities.version(
+          Hexpm.Repo.get!(Hexpm.WorkloadIdentities.WorkloadIdentity, workload_identity.id)
+        )
+
+      assert document
+             |> LazyHTML.query(
+               ~s(#add-workload-identity-form input[name="workload_identity[version]"])
+             )
+             |> LazyHTML.attribute("value") == [version]
+    end
+
+    test "shows a full owner the change form filled in", %{
+      full_owner: full_owner,
+      package: package
+    } do
+      workload_identity =
+        insert(:workload_identity,
+          package: package,
+          repository_owner: "acme",
+          repositories: repositories(["acme/widget", "acme/gadget"]),
+          workflow: "release.yml",
+          environment: "release"
+        )
+
+      document =
+        build_conn()
+        |> test_login(full_owner)
+        |> get("/packages/#{package.name}/workload-identities/#{workload_identity.id}/edit")
+        |> html_response(200)
+        |> LazyHTML.from_document()
+
+      form = LazyHTML.query(document, "#add-workload-identity-form")
+      path = "/packages/#{package.name}/workload-identities/#{workload_identity.id}"
+
+      assert normalized_text(document) =~ "Change workload identity"
+      assert LazyHTML.attribute(form, "action") == [path]
+
+      assert form |> LazyHTML.query(~s(input[name="_method"])) |> LazyHTML.attribute("value") ==
+               ["put"]
+
+      assert form |> LazyHTML.query("#workload_identity_repository_owner") |> Enum.empty?()
+      assert normalized_text(form) =~ "Repository owner acme"
+
+      assert form |> LazyHTML.query("#workload_identity_repositories") |> LazyHTML.text() ==
+               "widget\ngadget"
+
+      assert form |> LazyHTML.query("#workload_identity_workflow") |> LazyHTML.attribute("value") ==
+               ["release.yml"]
+
+      assert form
+             |> LazyHTML.query("#workload_identity_environment")
+             |> LazyHTML.attribute("value") == ["release"]
+
+      assert normalized_text(form) =~ "Cancel Save changes"
+    end
+
+    test "is forbidden for a maintainer", %{maintainer: maintainer, package: package} do
+      workload_identity = insert(:workload_identity, package: package)
+
+      conn =
+        build_conn()
+        |> test_login(maintainer)
+        |> get("/packages/#{package.name}/workload-identities/#{workload_identity.id}/edit")
+
+      assert conn.status == 403
+    end
+
+    test "refuses a full owner without two-factor authentication", %{package: package} do
+      full_owner_no_tfa = insert(:user)
+      insert(:package_owner, package: package, user: full_owner_no_tfa, level: "full")
+      workload_identity = insert(:workload_identity, package: package)
+
+      conn =
+        build_conn()
+        |> test_login(full_owner_no_tfa)
+        |> get("/packages/#{package.name}/workload-identities/#{workload_identity.id}/edit")
+
+      assert conn.status == 403
+    end
+
+    test "returns 404 for an unknown id or another package's", %{
+      full_owner: full_owner,
+      package: package
+    } do
+      other =
+        insert(:package, package_owners: [build(:package_owner, user: full_owner, level: "full")])
+
+      workload_identity = insert(:workload_identity, package: other)
+      conn = test_login(build_conn(), full_owner)
+
+      assert get(conn, "/packages/#{package.name}/workload-identities/999999/edit").status == 404
+
+      assert get(
+               conn,
+               "/packages/#{package.name}/workload-identities/#{workload_identity.id}/edit"
+             ).status == 404
+    end
+
+    test "redirects to /sudo when no sudo mode", %{full_owner: full_owner, package: package} do
+      workload_identity = insert(:workload_identity, package: package)
+
+      conn =
+        build_conn()
+        |> test_login(full_owner, sudo: false)
+        |> get("/packages/#{package.name}/workload-identities/#{workload_identity.id}/edit")
+
+      assert redirected_to(conn) =~ "/sudo"
+    end
+  end
+
+  describe "PUT /packages/:name/workload-identities/:id" do
+    setup %{package: package} do
+      workload_identity =
+        insert(:workload_identity,
+          package: package,
+          repository_owner: "acme",
+          repository_owner_id: "11",
+          repositories: [%TrustedRepository{name: "acme/widget", id: "22"}],
+          workflow: "release.yml"
+        )
+
+      %{workload_identity: workload_identity}
+    end
+
+    defp stub_github(repositories) do
+      stub(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/" <> name, _, _ ->
+        case Map.fetch(repositories, name) do
+          {:ok, id} -> {:ok, 200, [], %{"id" => id, "owner" => %{"id" => 11}}}
+          :error -> {:ok, 404, [], %{}}
+        end
+      end)
+    end
+
+    test "changes the repositories and the workflow", %{
+      full_owner: full_owner,
+      package: package,
+      workload_identity: workload_identity
+    } do
+      stub_github(%{"widget" => 22, "gadget" => 33})
+
+      conn =
+        build_conn()
+        |> test_login(full_owner)
+        |> put("/packages/#{package.name}/workload-identities/#{workload_identity.id}", %{
+          "workload_identity" => %{
+            "repositories" => "widget\ngadget",
+            "workflow" => "publish.yml",
+            "environment" => ""
+          }
+        })
+
+      assert redirected_to(conn) == "/packages/#{package.name}/workload-identities"
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Workload identity saved."
+
+      assert [changed] = WorkloadIdentities.list(package)
+      assert changed.workflow == "publish.yml"
+
+      assert changed.repositories == [
+               %TrustedRepository{name: "acme/widget", id: "22"},
+               %TrustedRepository{name: "acme/gadget", id: "33"}
+             ]
+    end
+
+    test "re-renders the change form with errors", %{
+      full_owner: full_owner,
+      package: package,
+      workload_identity: workload_identity
+    } do
+      conn =
+        build_conn()
+        |> test_login(full_owner)
+        |> put("/packages/#{package.name}/workload-identities/#{workload_identity.id}", %{
+          "workload_identity" => %{"repositories" => "widget", "workflow" => "release"}
+        })
+
+      body = html_response(conn, 400)
+      assert body =~ "has invalid format"
+      assert body =~ "Change workload identity"
+
+      assert body =~
+               ~s(action="/packages/#{package.name}/workload-identities/#{workload_identity.id}")
+
+      assert [%{workflow: "release.yml"}] = WorkloadIdentities.list(package)
+    end
+
+    test "says which repository was renamed or transferred", %{
+      full_owner: full_owner,
+      package: package,
+      workload_identity: workload_identity
+    } do
+      stub(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/gadget", _, _ ->
+        {:ok, 301, [], %{}}
+      end)
+
+      conn =
+        build_conn()
+        |> test_login(full_owner)
+        |> put("/packages/#{package.name}/workload-identities/#{workload_identity.id}", %{
+          "workload_identity" => %{
+            "repositories" => "widget\ngadget",
+            "workflow" => "release.yml"
+          }
+        })
+
+      assert html_response(conn, 400) =~
+               "acme/gadget was renamed or transferred on GitHub. " <>
+                 "Replace it with the repository&#39;s new name"
+
+      assert [%{repositories: [%{name: "acme/widget"}]}] = WorkloadIdentities.list(package)
+    end
+
+    test "sends the owner back to the form when it changed since the form was loaded", %{
+      full_owner: full_owner,
+      package: package,
+      workload_identity: workload_identity
+    } do
+      version =
+        WorkloadIdentities.version(
+          Hexpm.Repo.get!(Hexpm.WorkloadIdentities.WorkloadIdentity, workload_identity.id)
+        )
+
+      workload_identity
+      |> Ecto.Changeset.change(workflow: "other.yml")
+      |> Hexpm.Repo.update!()
+
+      conn =
+        build_conn()
+        |> test_login(full_owner)
+        |> put("/packages/#{package.name}/workload-identities/#{workload_identity.id}", %{
+          "workload_identity" => %{
+            "repositories" => "widget",
+            "workflow" => "publish.yml",
+            "version" => version
+          }
+        })
+
+      assert redirected_to(conn) ==
+               "/packages/#{package.name}/workload-identities/#{workload_identity.id}/edit"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "Someone else changed the workload identity while you were editing it. " <>
+                 "Review it and save again."
+
+      assert [%{workflow: "other.yml"}] = WorkloadIdentities.list(package)
+    end
+
+    test "sends the owner back to the form when someone else changed it meanwhile", %{
+      full_owner: full_owner,
+      package: package,
+      workload_identity: workload_identity
+    } do
+      stub(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/gadget", _, _ ->
+        workload_identity
+        |> Ecto.Changeset.change(workflow: "other.yml")
+        |> Hexpm.Repo.update!()
+
+        {:ok, 200, [], %{"id" => 33, "owner" => %{"id" => 11}}}
+      end)
+
+      conn =
+        build_conn()
+        |> test_login(full_owner)
+        |> put("/packages/#{package.name}/workload-identities/#{workload_identity.id}", %{
+          "workload_identity" => %{
+            "repositories" => "widget\ngadget",
+            "workflow" => "release.yml"
+          }
+        })
+
+      assert redirected_to(conn) ==
+               "/packages/#{package.name}/workload-identities/#{workload_identity.id}/edit"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "Someone else changed the workload identity while you were editing it. " <>
+                 "Review it and save again."
+
+      assert [%{workflow: "other.yml", repositories: [%{name: "acme/widget"}]}] =
+               WorkloadIdentities.list(package)
+    end
+
+    test "returns 404 for another package's workload identity", %{
+      full_owner: full_owner,
+      package: package
+    } do
+      other = insert(:workload_identity)
+
+      conn =
+        build_conn()
+        |> test_login(full_owner)
+        |> put("/packages/#{package.name}/workload-identities/#{other.id}", %{
+          "workload_identity" => %{"repositories" => "widget", "workflow" => "release.yml"}
+        })
+
+      assert response(conn, 404)
+
+      assert Hexpm.Repo.get!(Hexpm.WorkloadIdentities.WorkloadIdentity, other.id).workflow ==
+               other.workflow
+    end
+
+    test "is forbidden for a maintainer", %{
+      maintainer: maintainer,
+      package: package,
+      workload_identity: workload_identity
+    } do
+      conn =
+        build_conn()
+        |> test_login(maintainer)
+        |> put("/packages/#{package.name}/workload-identities/#{workload_identity.id}", %{
+          "workload_identity" => %{"repositories" => "widget", "workflow" => "publish.yml"}
+        })
+
+      assert conn.status == 403
+      assert [%{workflow: "release.yml"}] = WorkloadIdentities.list(package)
+    end
+
+    test "refuses a full owner without two-factor authentication", %{
+      package: package,
+      workload_identity: workload_identity
+    } do
+      full_owner_no_tfa = insert(:user)
+      insert(:package_owner, package: package, user: full_owner_no_tfa, level: "full")
+
+      conn =
+        build_conn()
+        |> test_login(full_owner_no_tfa)
+        |> put("/packages/#{package.name}/workload-identities/#{workload_identity.id}", %{
+          "workload_identity" => %{"repositories" => "widget", "workflow" => "publish.yml"}
+        })
+
+      assert conn.status == 403
+      assert [%{workflow: "release.yml"}] = WorkloadIdentities.list(package)
+    end
+
+    test "returns 404 for an unknown id", %{full_owner: full_owner, package: package} do
+      conn =
+        build_conn()
+        |> test_login(full_owner)
+        |> put("/packages/#{package.name}/workload-identities/999999", %{
+          "workload_identity" => %{"repositories" => "widget", "workflow" => "publish.yml"}
+        })
+
+      assert conn.status == 404
+    end
+
+    test "redirects to /sudo when no sudo mode", %{
+      full_owner: full_owner,
+      package: package,
+      workload_identity: workload_identity
+    } do
+      conn =
+        build_conn()
+        |> test_login(full_owner, sudo: false)
+        |> put("/packages/#{package.name}/workload-identities/#{workload_identity.id}", %{
+          "workload_identity" => %{"repositories" => "widget", "workflow" => "publish.yml"}
+        })
+
+      assert redirected_to(conn) =~ "/sudo"
+      assert [%{workflow: "release.yml"}] = WorkloadIdentities.list(package)
+    end
+
+    test "refuses once the lookup limit is reached and says change", %{
+      full_owner: full_owner,
+      package: package,
+      workload_identity: workload_identity
+    } do
+      PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage)
+      on_exit(fn -> PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage) end)
+      align_to_throttle_bucket(60 * 60_000)
+      for _ <- 1..20, do: HexpmWeb.Plugs.Attack.workload_identity_lookup_throttle(full_owner.id)
+
+      conn =
+        build_conn()
+        |> test_login(full_owner)
+        |> put("/packages/#{package.name}/workload-identities/#{workload_identity.id}", %{
+          "workload_identity" => %{"repositories" => "widget", "workflow" => "publish.yml"}
+        })
+
+      assert redirected_to(conn) == "/packages/#{package.name}/workload-identities"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "Too many attempts to change a workload identity in the last hour. Try again later."
     end
   end
 
@@ -793,7 +1287,7 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
       workload_identity =
         insert(:workload_identity,
           package: package,
-          repository: "acme/widget",
+          repositories: repositories(["acme/widget"]),
           workflow: "release.yml"
         )
 
@@ -814,10 +1308,10 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
         |> html_response(200)
         |> LazyHTML.from_document()
 
-      assert LazyHTML.text(document) =~ "acme/widget (release.yml)"
+      assert normalized_text(document) =~ "acme/widget Workflow release.yml"
 
       assert LazyHTML.text(document) =~
-               "Only full owners and organization admins can add and remove workload identities."
+               "Only full owners and organization admins can add, change and remove workload identities."
 
       assert document |> LazyHTML.query("#add-workload-identity-form") |> Enum.empty?()
 
@@ -861,15 +1355,21 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
           "workload_identity" => %{
             "provider" => "github",
             "repository_owner" => "acme",
-            "repository" => "other",
+            "repositories" => "other",
             "workflow" => "release.yml"
           }
+        })
+
+      changed =
+        put(conn, "/packages/#{package.name}/workload-identities/#{workload_identity.id}", %{
+          "workload_identity" => %{"repositories" => "other", "workflow" => "other.yml"}
         })
 
       removed =
         delete(conn, "/packages/#{package.name}/workload-identities/#{workload_identity.id}")
 
       assert added.status == 403
+      assert changed.status == 403
       assert removed.status == 403
       assert [%{id: id}] = WorkloadIdentities.list(package)
       assert id == workload_identity.id
@@ -906,7 +1406,7 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
           "workload_identity" => %{
             "provider" => "github",
             "repository_owner" => "acme",
-            "repository" => "widget",
+            "repositories" => "widget",
             "workflow" => "release.yml"
           }
         })
@@ -967,21 +1467,21 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
       insert(:organization_workload_identity,
         organization: organization,
         role: "write",
-        repository: "acme/covering",
+        repositories: repositories(["acme/covering"]),
         workflow: "release.yml"
       )
 
       insert(:organization_workload_identity,
         organization: organization,
         role: "write",
-        repository: "acme/excluded",
+        repositories: repositories(["acme/excluded"]),
         workflow: "release.yml",
         packages: ["other"]
       )
 
       insert(:organization_workload_identity,
         organization: organization,
-        repository: "acme/fetching"
+        repositories: repositories(["acme/fetching"])
       )
 
       body =
@@ -991,7 +1491,12 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
         |> html_response(200)
 
       assert body =~ "published by the organization's workload identities"
-      assert body =~ "acme/covering (release.yml)"
+
+      assert body
+             |> LazyHTML.from_document()
+             |> LazyHTML.query(~s(li[id^="organization-workload-identity-"]))
+             |> normalized_text() =~ "Publish #{package.name} acme/covering Workflow release.yml"
+
       refute body =~ "add-workload-identity-form"
       assert body =~ "/dashboard/orgs/#{repository.name}/workload-identities"
       refute body =~ "acme/excluded"
@@ -1026,7 +1531,7 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
       insert(:organization_workload_identity,
         organization: organization,
         role: "write",
-        repository: "acme/covering",
+        repositories: repositories(["acme/covering"]),
         workflow: "release.yml"
       )
 
@@ -1039,7 +1544,7 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
         |> get("/packages/#{repository.name}/#{package.name}/workload-identities")
         |> html_response(200)
 
-      assert body =~ "acme/covering (release.yml)"
+      assert normalized_text(LazyHTML.from_document(body)) =~ "acme/covering Workflow release.yml"
       assert body =~ "/dashboard/orgs/#{repository.name}/workload-identities"
     end
   end

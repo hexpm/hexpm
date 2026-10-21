@@ -22,8 +22,9 @@ defmodule HexpmWeb.API.OAuthControllerWorkloadIdentityTest do
       package: package,
       repository_owner: "acme",
       repository_owner_id: "12345",
-      repository_id: "67890",
-      repository: "acme/widget",
+      repositories: [
+        %Hexpm.WorkloadIdentities.TrustedRepository{name: "acme/widget", id: "67890"}
+      ],
       workflow: "release.yml"
     )
 
@@ -51,6 +52,50 @@ defmodule HexpmWeb.API.OAuthControllerWorkloadIdentityTest do
     assert body["expires_in"] > 0
     assert body["scope"] == "package:hexpm/#{package.name}"
     refute Map.has_key?(body, "refresh_token")
+  end
+
+  test "exchanges an OIDC token from any repository a workload identity names" do
+    user = insert(:user)
+
+    package =
+      insert(:package,
+        package_owners: [build(:package_owner, user: user, level: "full")]
+      )
+
+    insert(:workload_identity,
+      package: package,
+      repository_owner: "acme",
+      repository_owner_id: "12345",
+      repositories: [
+        %Hexpm.WorkloadIdentities.TrustedRepository{name: "acme/widget", id: "67890"},
+        %Hexpm.WorkloadIdentities.TrustedRepository{name: "acme/gadget", id: "67891"}
+      ],
+      workflow: "release.yml"
+    )
+
+    exchange = fn claims ->
+      oidc =
+        claims
+        |> WorkloadIdentityHelpers.github_claims()
+        |> WorkloadIdentityHelpers.sign_oidc_claims()
+
+      build_conn()
+      |> post("/api/oauth/token", mint_params(oidc, "package:hexpm/#{package.name}"))
+    end
+
+    assert json_response(exchange.([]), 200)["scope"] == "package:hexpm/#{package.name}"
+
+    assert json_response(exchange.(repository: "acme/gadget", repository_id: "67891"), 200)[
+             "scope"
+           ] == "package:hexpm/#{package.name}"
+
+    assert json_response(exchange.(repository: "acme/gadget", repository_id: "67890"), 403)[
+             "error"
+           ] == "access_denied"
+
+    assert json_response(exchange.(repository: "acme/other", repository_id: "67892"), 403)[
+             "error"
+           ] == "access_denied"
   end
 
   describe "revoke" do
@@ -302,8 +347,9 @@ defmodule HexpmWeb.API.OAuthControllerWorkloadIdentityTest do
         role: "write",
         repository_owner: "acme",
         repository_owner_id: "12345",
-        repository_id: "67890",
-        repository: "acme/widget",
+        repositories: [
+          %Hexpm.WorkloadIdentities.TrustedRepository{name: "acme/widget", id: "67890"}
+        ],
         workflow: "release.yml",
         covers_private: false,
         packages: [],
@@ -370,7 +416,9 @@ defmodule HexpmWeb.API.OAuthControllerWorkloadIdentityTest do
 
       insert(:organization_workload_identity,
         organization: repository.organization,
-        repository: "acme/widget"
+        repositories: [
+          %Hexpm.WorkloadIdentities.TrustedRepository{name: "acme/widget", id: "67890"}
+        ]
       )
 
       %{repository: repository}
@@ -419,7 +467,9 @@ defmodule HexpmWeb.API.OAuthControllerWorkloadIdentityTest do
       insert(:organization_workload_identity,
         organization: repository.organization,
         role: "write",
-        repository: "acme/widget",
+        repositories: [
+          %Hexpm.WorkloadIdentities.TrustedRepository{name: "acme/widget", id: "67890"}
+        ],
         workflow: "release.yml"
       )
 

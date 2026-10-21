@@ -22,7 +22,13 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   plug :requires_login
 
   plug :workload_identities_enabled
-       when action in [:workload_identities, :create_workload_identity, :delete_workload_identity]
+       when action in [
+              :workload_identities,
+              :create_workload_identity,
+              :edit_workload_identity,
+              :update_workload_identity,
+              :delete_workload_identity
+            ]
 
   plug HexpmWeb.Plugs.Sudo
        when action in [
@@ -52,6 +58,8 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
               :delete_key,
               :workload_identities,
               :create_workload_identity,
+              :edit_workload_identity,
+              :update_workload_identity,
               :delete_workload_identity,
               :show_invoice,
               :pay_invoice,
@@ -1073,16 +1081,14 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   end
 
   defp do_create_workload_identity(conn, organization, params) do
-    path = ~p"/dashboard/orgs/#{organization}/workload-identities"
-
     case WorkloadIdentities.create(organization, params,
            audit: audit_data(conn),
-           before_lookup: fn -> workload_identity_lookup_allowed(conn.assigns.current_user) end
+           before_lookup: &workload_identity_lookup_allowed(conn.assigns.current_user, &1)
          ) do
       {:ok, _workload_identity} ->
         conn
         |> put_flash(:info, "Workload identity added.")
-        |> redirect(to: path)
+        |> redirect(to: ~p"/dashboard/orgs/#{organization}/workload-identities")
 
       {:error, %Ecto.Changeset{} = changeset} ->
         conn
@@ -1095,26 +1101,107 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       {:error, :not_allowed} ->
         conn
         |> put_flash(:error, "This organization can't have workload identities.")
-        |> redirect(to: path)
+        |> redirect(to: ~p"/dashboard/orgs/#{organization}/workload-identities")
 
-      {:error, :rate_limited} ->
+      {:error, reason} ->
+        workload_identity_error(conn, organization, reason, "add")
+    end
+  end
+
+  def edit_workload_identity(conn, %{"dashboard_org" => organization, "id" => id}) do
+    access_organization(conn, organization, "admin", fn organization ->
+      with :ok <- workload_identity_tfa(conn, organization),
+           {:ok, workload_identity} <- fetch_workload_identity(conn, organization, id) do
+        render_index(conn, organization,
+          tab: :workload_identities,
+          workload_identity_editing: workload_identity,
+          workload_identity_changeset: WorkloadIdentity.update_changeset(workload_identity, %{})
+        )
+      end
+    end)
+  end
+
+  def update_workload_identity(conn, %{"dashboard_org" => organization, "id" => id} = params) do
+    access_organization(conn, organization, "admin", fn organization ->
+      with :ok <- workload_identity_tfa(conn, organization),
+           {:ok, workload_identity} <- fetch_workload_identity(conn, organization, id) do
+        do_update_workload_identity(
+          conn,
+          organization,
+          workload_identity,
+          params["workload_identity"] || %{}
+        )
+      end
+    end)
+  end
+
+  defp do_update_workload_identity(conn, organization, workload_identity, params) do
+    case WorkloadIdentities.update(workload_identity, params,
+           audit: audit_data(conn),
+           before_lookup: &workload_identity_lookup_allowed(conn.assigns.current_user, &1)
+         ) do
+      {:ok, _workload_identity} ->
+        conn
+        |> put_flash(:info, "Workload identity saved.")
+        |> redirect(to: ~p"/dashboard/orgs/#{organization}/workload-identities")
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        conn
+        |> put_status(400)
+        |> render_index(organization,
+          tab: :workload_identities,
+          workload_identity_editing: workload_identity,
+          workload_identity_changeset: changeset
+        )
+
+      {:error, :not_found} ->
+        conn
+        |> put_flash(:error, "The workload identity was not found.")
+        |> redirect(to: ~p"/dashboard/orgs/#{organization}/workload-identities")
+
+      {:error, :changed} ->
         conn
         |> put_flash(
           :error,
-          "Too many attempts to add a workload identity in the last hour. Try again later."
+          "Someone else changed the workload identity while you were editing it. Review it and save again."
         )
-        |> redirect(to: path)
+        |> redirect(
+          to: ~p"/dashboard/orgs/#{organization}/workload-identities/#{workload_identity}/edit"
+        )
 
-      {:error, :repository_not_found} ->
-        conn
-        |> put_flash(:error, "The GitHub repository could not be resolved.")
-        |> redirect(to: path)
-
-      {:error, _reason} ->
-        conn
-        |> put_flash(:error, "GitHub could not be reached, try again later.")
-        |> redirect(to: path)
+      {:error, reason} ->
+        workload_identity_error(conn, organization, reason, "change")
     end
+  end
+
+  defp fetch_workload_identity(conn, organization, id) do
+    case WorkloadIdentities.get(organization, id) do
+      nil ->
+        conn
+        |> put_flash(:error, "The workload identity was not found.")
+        |> redirect(to: ~p"/dashboard/orgs/#{organization}/workload-identities")
+
+      workload_identity ->
+        {:ok, %{workload_identity | organization: organization}}
+    end
+  end
+
+  defp workload_identity_error(conn, organization, reason, verb) do
+    message =
+      case reason do
+        :rate_limited ->
+          "Too many attempts to #{verb} a workload identity in the last hour. Try again later."
+
+        :repository_not_found ->
+          "The GitHub repository could not be resolved."
+
+        _reason ->
+          "GitHub could not be reached, try again later."
+      end
+
+    conn
+    |> put_flash(:error, message)
+    |> redirect(to: ~p"/dashboard/orgs/#{organization}/workload-identities")
   end
 
   def delete_workload_identity(conn, %{"dashboard_org" => organization, "id" => id}) do
@@ -1122,17 +1209,16 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       path = ~p"/dashboard/orgs/#{organization}/workload-identities"
 
       with :ok <- workload_identity_tfa(conn, organization) do
-        case WorkloadIdentities.get(organization, id) do
-          nil ->
+        with %WorkloadIdentity{} = workload_identity <- WorkloadIdentities.get(organization, id),
+             {:ok, _deleted} <-
+               WorkloadIdentities.delete(workload_identity, audit: audit_data(conn)) do
+          conn
+          |> put_flash(:info, "Workload identity removed.")
+          |> redirect(to: path)
+        else
+          _not_found ->
             conn
             |> put_flash(:error, "The workload identity was not found.")
-            |> redirect(to: path)
-
-          workload_identity ->
-            {:ok, _} = WorkloadIdentities.delete(workload_identity, audit: audit_data(conn))
-
-            conn
-            |> put_flash(:info, "Workload identity removed.")
             |> redirect(to: path)
         end
       end
@@ -1150,9 +1236,13 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     end
   end
 
-  defp workload_identity_lookup_allowed(user) do
-    case HexpmWeb.Plugs.Attack.workload_identity_lookup_throttle(user.id) do
-      {:allow, _data} -> :ok
+  # Every save counts, and so does every GitHub call its lookup can make.
+  defp workload_identity_lookup_allowed(user, calls) do
+    with {:allow, _data} <- HexpmWeb.Plugs.Attack.workload_identity_lookup_throttle(user.id),
+         {:allow, _data} <-
+           HexpmWeb.Plugs.Attack.workload_identity_github_throttle(user.id, calls) do
+      :ok
+    else
       {:block, _data} -> {:error, :rate_limited}
     end
   end
@@ -1316,6 +1406,16 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         workload_identities: workload_identities,
         workload_identity_changeset:
           opts[:workload_identity_changeset] || workload_identity_changeset(organization),
+        workload_identity_editing: opts[:workload_identity_editing],
+        unowned_public_packages:
+          if(opts[:tab] == :workload_identities,
+            do:
+              Map.new(
+                workload_identities,
+                &{&1.id, WorkloadIdentities.unowned_public_packages(&1)}
+              ),
+            else: %{}
+          ),
         packages: packages,
         invite_user_changeset: opts[:invite_user_changeset] || invite_user_changeset(),
         new_organization_changeset: create_changeset(),

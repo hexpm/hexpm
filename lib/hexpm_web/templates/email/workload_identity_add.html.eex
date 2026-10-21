@@ -7,7 +7,7 @@
 </p>
 
 <p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
-  <%= for line <- WorkloadIdentityDetails.lines(@repository, @workflow, @environment) do %>
+  <%= for line <- WorkloadIdentityDetails.lines(@current) do %>
     <%= line %><br>
   <% end %>
 </p>

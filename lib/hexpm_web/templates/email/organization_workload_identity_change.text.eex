@@ -1,0 +1,9 @@
+<%= OrganizationWorkloadIdentityChange.message(@username, @organization) %>
+
+<%= WorkloadIdentityChange.before() %>
+<%= Enum.join(OrganizationWorkloadIdentityDetails.lines(@role, @previous, @organization, @previous_coverage), "\n") %>
+
+<%= WorkloadIdentityChange.now() %>
+<%= Enum.join(OrganizationWorkloadIdentityDetails.lines(@role, @current, @organization, @coverage), "\n") %>
+
+<%= OrganizationWorkloadIdentityAdd.warning(@role, @organization, @coverage) %>

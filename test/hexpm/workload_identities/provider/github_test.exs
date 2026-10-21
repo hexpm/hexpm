@@ -3,7 +3,7 @@ defmodule Hexpm.WorkloadIdentities.Provider.GitHubTest do
   import Mox
 
   alias Hexpm.WorkloadIdentities.Provider.GitHub
-  alias Hexpm.WorkloadIdentities.WorkloadIdentity
+  alias Hexpm.WorkloadIdentities.{TrustedRepository, WorkloadIdentity}
 
   setup :verify_on_exit!
 
@@ -11,8 +11,7 @@ defmodule Hexpm.WorkloadIdentities.Provider.GitHubTest do
     test "an @ in the workflow filename doesn't pass for the name before it" do
       identity = %WorkloadIdentity{
         repository_owner_id: "123",
-        repository_id: "456",
-        repository: "acme/widget",
+        repositories: [%TrustedRepository{name: "acme/widget", id: "456"}],
         workflow: "release.yml",
         environment: ""
       }
@@ -43,7 +42,7 @@ defmodule Hexpm.WorkloadIdentities.Provider.GitHubTest do
              )
     end
 
-    test "an empty repository matches every repository of the owner only for an organization read workload identity" do
+    test "no repositories match every repository of the owner only for an organization read workload identity" do
       claims = fn repository, repository_id, owner_id ->
         %{
           "repository" => repository,
@@ -56,8 +55,7 @@ defmodule Hexpm.WorkloadIdentities.Provider.GitHubTest do
       identity = %WorkloadIdentity{
         repository_owner: "acme",
         repository_owner_id: "123",
-        repository_id: "",
-        repository: "",
+        repositories: [],
         workflow: "",
         environment: "",
         role: "read",
@@ -91,8 +89,7 @@ defmodule Hexpm.WorkloadIdentities.Provider.GitHubTest do
 
       identity = %WorkloadIdentity{
         repository_owner_id: "123",
-        repository_id: "456",
-        repository: "acme/widget",
+        repositories: [%TrustedRepository{name: "acme/widget", id: "456"}],
         workflow: "",
         environment: "",
         role: "read",
@@ -109,8 +106,7 @@ defmodule Hexpm.WorkloadIdentities.Provider.GitHubTest do
         provider: "github",
         repository_owner: "acme",
         repository_owner_id: "123",
-        repository_id: "456",
-        repository: "acme/widget",
+        repositories: [%TrustedRepository{name: "acme/widget", id: "456"}],
         workflow: "release.yml",
         environment: ""
       }
@@ -128,8 +124,7 @@ defmodule Hexpm.WorkloadIdentities.Provider.GitHubTest do
     test "rejects mismatched repository_owner_id (anti-resurrection)" do
       identity = %WorkloadIdentity{
         repository_owner_id: "123",
-        repository_id: "456",
-        repository: "acme/widget",
+        repositories: [%TrustedRepository{name: "acme/widget", id: "456"}],
         workflow: "release.yml",
         environment: ""
       }
@@ -147,8 +142,7 @@ defmodule Hexpm.WorkloadIdentities.Provider.GitHubTest do
     test "rejects mismatched repository_id" do
       identity = %WorkloadIdentity{
         repository_owner_id: "123",
-        repository_id: "456",
-        repository: "acme/widget",
+        repositories: [%TrustedRepository{name: "acme/widget", id: "456"}],
         workflow: "release.yml",
         environment: ""
       }
@@ -166,8 +160,7 @@ defmodule Hexpm.WorkloadIdentities.Provider.GitHubTest do
     test "rejects wrong repository claim" do
       identity = %WorkloadIdentity{
         repository_owner_id: "123",
-        repository_id: "456",
-        repository: "acme/widget",
+        repositories: [%TrustedRepository{name: "acme/widget", id: "456"}],
         workflow: "release.yml",
         environment: ""
       }
@@ -185,8 +178,7 @@ defmodule Hexpm.WorkloadIdentities.Provider.GitHubTest do
     test "requires environment when configured" do
       identity = %WorkloadIdentity{
         repository_owner_id: "123",
-        repository_id: "456",
-        repository: "acme/widget",
+        repositories: [%TrustedRepository{name: "acme/widget", id: "456"}],
         workflow: "release.yml",
         environment: "production"
       }
@@ -207,8 +199,7 @@ defmodule Hexpm.WorkloadIdentities.Provider.GitHubTest do
     test "uses workflow_ref even when job_workflow_ref points at a reusable workflow" do
       identity = %WorkloadIdentity{
         repository_owner_id: "123",
-        repository_id: "456",
-        repository: "acme/widget",
+        repositories: [%TrustedRepository{name: "acme/widget", id: "456"}],
         workflow: "release.yml",
         environment: ""
       }
@@ -227,8 +218,7 @@ defmodule Hexpm.WorkloadIdentities.Provider.GitHubTest do
     test "rejects reusable workflow basename from another repository" do
       identity = %WorkloadIdentity{
         repository_owner_id: "123",
-        repository_id: "456",
-        repository: "acme/widget",
+        repositories: [%TrustedRepository{name: "acme/widget", id: "456"}],
         workflow: "release.yml",
         environment: ""
       }
@@ -246,8 +236,7 @@ defmodule Hexpm.WorkloadIdentities.Provider.GitHubTest do
     test "matches repository names case-insensitively" do
       identity = %WorkloadIdentity{
         repository_owner_id: "123",
-        repository_id: "456",
-        repository: "acme/widget",
+        repositories: [%TrustedRepository{name: "acme/widget", id: "456"}],
         workflow: "release.yml",
         environment: ""
       }
@@ -265,8 +254,7 @@ defmodule Hexpm.WorkloadIdentities.Provider.GitHubTest do
     test "rejects workflow filename differing only by casing" do
       identity = %WorkloadIdentity{
         repository_owner_id: "123",
-        repository_id: "456",
-        repository: "acme/widget",
+        repositories: [%TrustedRepository{name: "acme/widget", id: "456"}],
         workflow: "release.yml",
         environment: ""
       }
@@ -284,8 +272,7 @@ defmodule Hexpm.WorkloadIdentities.Provider.GitHubTest do
     test "requires an environment on a write workload identity from a public repository" do
       identity = %WorkloadIdentity{
         repository_owner_id: "123",
-        repository_id: "456",
-        repository: "acme/widget",
+        repositories: [%TrustedRepository{name: "acme/widget", id: "456"}],
         workflow: "release.yml",
         environment: ""
       }
@@ -314,8 +301,7 @@ defmodule Hexpm.WorkloadIdentities.Provider.GitHubTest do
     test "matches environment differing only by casing" do
       identity = %WorkloadIdentity{
         repository_owner_id: "123",
-        repository_id: "456",
-        repository: "acme/widget",
+        repositories: [%TrustedRepository{name: "acme/widget", id: "456"}],
         workflow: "release.yml",
         environment: "production"
       }
@@ -334,8 +320,7 @@ defmodule Hexpm.WorkloadIdentities.Provider.GitHubTest do
     test "rejects claims without a usable workflow ref" do
       identity = %WorkloadIdentity{
         repository_owner_id: "123",
-        repository_id: "456",
-        repository: "acme/widget",
+        repositories: [%TrustedRepository{name: "acme/widget", id: "456"}],
         workflow: nil,
         environment: ""
       }
@@ -352,8 +337,7 @@ defmodule Hexpm.WorkloadIdentities.Provider.GitHubTest do
     test "rejects claims without a repository id" do
       identity = %WorkloadIdentity{
         repository_owner_id: "123",
-        repository_id: "456",
-        repository: "acme/widget",
+        repositories: [%TrustedRepository{name: "acme/widget", id: "456"}],
         workflow: "release.yml",
         environment: ""
       }
@@ -365,6 +349,70 @@ defmodule Hexpm.WorkloadIdentities.Provider.GitHubTest do
       }
 
       refute GitHub.match?(identity, claims)
+    end
+  end
+
+  describe "match?/2 with several repositories" do
+    setup do
+      identity = %WorkloadIdentity{
+        repository_owner_id: "123",
+        repositories: [
+          %TrustedRepository{name: "acme/widget", id: "456"},
+          %TrustedRepository{name: "acme/gadget", id: "789"}
+        ],
+        workflow: "release.yml",
+        environment: ""
+      }
+
+      claims = fn repository, repository_id ->
+        %{
+          "repository" => repository,
+          "repository_owner_id" => "123",
+          "repository_id" => repository_id,
+          "workflow_ref" => "#{repository}/.github/workflows/release.yml@refs/heads/main"
+        }
+      end
+
+      %{identity: identity, claims: claims}
+    end
+
+    test "matches any of the repositories", %{identity: identity, claims: claims} do
+      assert GitHub.match?(identity, claims.("acme/widget", "456"))
+      assert GitHub.match?(identity, claims.("acme/gadget", "789"))
+      refute GitHub.match?(identity, claims.("acme/tool", "999"))
+    end
+
+    test "refuses a repository's name with another repository's ID", %{
+      identity: identity,
+      claims: claims
+    } do
+      refute GitHub.match?(identity, claims.("acme/gadget", "456"))
+      refute GitHub.match?(identity, claims.("acme/widget", "789"))
+      refute GitHub.match?(identity, claims.("acme/widget", "999"))
+    end
+
+    test "refuses a repository without a pinned ID", %{identity: identity, claims: claims} do
+      for id <- [nil, ""] do
+        identity = %{identity | repositories: [%TrustedRepository{name: "acme/widget", id: id}]}
+
+        refute GitHub.match?(identity, claims.("acme/widget", "456"))
+        refute GitHub.match?(identity, claims.("acme/widget", ""))
+      end
+    end
+
+    test "no repositories match nothing for a write or package workload identity", %{
+      identity: identity,
+      claims: claims
+    } do
+      refute GitHub.match?(
+               %{identity | repositories: [], role: "write", organization_id: 1},
+               claims.("acme/widget", "456")
+             )
+
+      refute GitHub.match?(
+               %{identity | repositories: [], package_id: 1},
+               claims.("acme/widget", "456")
+             )
     end
   end
 
@@ -387,26 +435,73 @@ defmodule Hexpm.WorkloadIdentities.Provider.GitHubTest do
   end
 
   describe "resolve_immutable_ids/1" do
-    test "resolves owner and repository ids from a single repository lookup" do
-      expect(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/widget",
-                                       _headers,
-                                       _opts ->
-        {:ok, 200, [], %{"id" => 456, "owner" => %{"id" => 123}}}
-      end)
-
-      assert {:ok, %{repository_owner_id: 123, repository_id: 456, public: false}} =
-               GitHub.resolve_immutable_ids(%{repository: "acme/widget"})
+    defp resolve(names, owner \\ "acme") do
+      GitHub.resolve_immutable_ids(%{repository_owner: owner, repositories: names})
     end
 
-    test "says whether the repository is public" do
+    test "resolves the owner and each repository with one lookup each" do
+      expect(Hexpm.HTTP.Mock, :get, 2, fn
+        "https://api.github.com/repos/acme/widget", _headers, _opts ->
+          {:ok, 200, [], %{"id" => 456, "owner" => %{"id" => 123}, "visibility" => "public"}}
+
+        "https://api.github.com/repos/acme/gadget", _headers, _opts ->
+          {:ok, 200, [], %{"id" => 789, "owner" => %{"id" => 123}}}
+      end)
+
+      assert resolve(["acme/widget", "acme/gadget"]) ==
+               {:ok,
+                %{
+                  repository_owner_id: 123,
+                  repositories: %{
+                    "acme/widget" => %{id: 456, public: true},
+                    "acme/gadget" => %{id: 789, public: false}
+                  }
+                }}
+    end
+
+    test "says whether a repository is public" do
       for {visibility, public?} <- [{"public", true}, {"internal", false}, {"private", false}] do
         expect(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/widget", _, _ ->
           {:ok, 200, [], %{"id" => 456, "owner" => %{"id" => 123}, "visibility" => visibility}}
         end)
 
-        assert {:ok, %{public: ^public?}} =
-                 GitHub.resolve_immutable_ids(%{repository: "acme/widget"})
+        assert {:ok, %{repositories: %{"acme/widget" => %{public: ^public?}}}} =
+                 resolve(["acme/widget"])
       end
+    end
+
+    test "marks a repository GitHub redirects as moved" do
+      expect(Hexpm.HTTP.Mock, :get, 2, fn
+        "https://api.github.com/repos/acme/widget", _, _ ->
+          {:ok, 301, [{"location", "https://api.github.com/repositories/456"}], %{}}
+
+        "https://api.github.com/users/acme", _, _ ->
+          {:ok, 200, [], %{"id" => 123}}
+      end)
+
+      assert resolve(["acme/widget"]) ==
+               {:ok,
+                %{
+                  repository_owner_id: 123,
+                  repositories: %{"acme/widget" => %{id: nil, public: false, moved: true}}
+                }}
+    end
+
+    test "uses the pinned owner id instead of the owner's profile" do
+      expect(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/widget", _, _ ->
+        {:ok, 404, [], %{}}
+      end)
+
+      assert GitHub.resolve_immutable_ids(%{
+               repository_owner: "acme",
+               repository_owner_id: "123",
+               repositories: ["acme/widget"]
+             }) ==
+               {:ok,
+                %{
+                  repository_owner_id: "123",
+                  repositories: %{"acme/widget" => %{id: nil, public: false}}
+                }}
     end
 
     test "pins only the owner id for a workload identity that matches every repository" do
@@ -414,11 +509,10 @@ defmodule Hexpm.WorkloadIdentities.Provider.GitHubTest do
         {:ok, 200, [], %{"id" => 123}}
       end)
 
-      assert {:ok, %{repository_owner_id: 123, repository_id: nil}} =
-               GitHub.resolve_immutable_ids(%{repository: "", repository_owner: "acme"})
+      assert resolve([]) == {:ok, %{repository_owner_id: 123, repositories: %{}}}
     end
 
-    test "pins only the owner id for a repository Hex cannot see" do
+    test "resolves a repository Hex cannot see without an ID, and the owner from its profile" do
       expect(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/private", _, _ ->
         {:ok, 404, [], %{}}
       end)
@@ -427,8 +521,43 @@ defmodule Hexpm.WorkloadIdentities.Provider.GitHubTest do
         {:ok, 200, [], %{"id" => 123}}
       end)
 
-      assert {:ok, %{repository_owner_id: 123, repository_id: nil}} =
-               GitHub.resolve_immutable_ids(%{repository: "acme/private"})
+      assert resolve(["acme/private"]) ==
+               {:ok,
+                %{
+                  repository_owner_id: 123,
+                  repositories: %{"acme/private" => %{id: nil, public: false}}
+                }}
+    end
+
+    test "takes the owner id from the repositories Hex can see" do
+      expect(Hexpm.HTTP.Mock, :get, 2, fn
+        "https://api.github.com/repos/acme/widget", _, _ ->
+          {:ok, 200, [], %{"id" => 456, "owner" => %{"id" => 123}}}
+
+        "https://api.github.com/repos/acme/private", _, _ ->
+          {:ok, 404, [], %{}}
+      end)
+
+      assert {:ok,
+              %{
+                repository_owner_id: 123,
+                repositories: %{
+                  "acme/widget" => %{id: 456},
+                  "acme/private" => %{id: nil}
+                }
+              }} = resolve(["acme/widget", "acme/private"])
+    end
+
+    test "refuses repositories that report different owners" do
+      expect(Hexpm.HTTP.Mock, :get, 2, fn
+        "https://api.github.com/repos/acme/widget", _, _ ->
+          {:ok, 200, [], %{"id" => 456, "owner" => %{"id" => 123}}}
+
+        "https://api.github.com/repos/acme/moved", _, _ ->
+          {:ok, 200, [], %{"id" => 789, "owner" => %{"id" => 999}}}
+      end)
+
+      assert resolve(["acme/widget", "acme/moved"]) == {:error, :repository_not_found}
     end
 
     test "maps an unknown owner to repository_not_found" do
@@ -440,8 +569,7 @@ defmodule Hexpm.WorkloadIdentities.Provider.GitHubTest do
         {:ok, 404, [], %{}}
       end)
 
-      assert {:error, :repository_not_found} =
-               GitHub.resolve_immutable_ids(%{repository: "missing/widget"})
+      assert resolve(["missing/widget"], "missing") == {:error, :repository_not_found}
     end
 
     test "maps an owner response without an id to invalid_github_response" do
@@ -453,8 +581,7 @@ defmodule Hexpm.WorkloadIdentities.Provider.GitHubTest do
         {:ok, 200, [], %{"login" => "acme"}}
       end)
 
-      assert {:error, :invalid_github_response} =
-               GitHub.resolve_immutable_ids(%{repository: "acme/private"})
+      assert resolve(["acme/private"]) == {:error, :invalid_github_response}
     end
 
     test "propagates a rate-limited owner lookup" do
@@ -466,8 +593,7 @@ defmodule Hexpm.WorkloadIdentities.Provider.GitHubTest do
         {:ok, 403, [], %{}}
       end)
 
-      assert {:error, {:http_status, 403}} =
-               GitHub.resolve_immutable_ids(%{repository: "acme/private"})
+      assert resolve(["acme/private"]) == {:error, {:http_status, 403}}
     end
 
     test "maps a response without an owner id to invalid_github_response" do
@@ -475,22 +601,64 @@ defmodule Hexpm.WorkloadIdentities.Provider.GitHubTest do
         {:ok, 200, [], %{"id" => 456}}
       end)
 
-      assert {:error, :invalid_github_response} =
-               GitHub.resolve_immutable_ids(%{repository: "acme/widget"})
+      assert resolve(["acme/widget"]) == {:error, :invalid_github_response}
     end
 
-    test "propagates a rate-limited response" do
-      expect(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/widget", _, _ ->
-        {:ok, 403, [], %{}}
+    test "propagates a rate-limited repository lookup" do
+      expect(Hexpm.HTTP.Mock, :get, 2, fn
+        "https://api.github.com/repos/acme/widget", _, _ ->
+          {:ok, 200, [], %{"id" => 456, "owner" => %{"id" => 123}}}
+
+        "https://api.github.com/repos/acme/gadget", _, _ ->
+          {:ok, 403, [], %{}}
       end)
 
-      assert {:error, {:http_status, 403}} =
-               GitHub.resolve_immutable_ids(%{repository: "acme/widget"})
+      assert resolve(["acme/widget", "acme/gadget"]) == {:error, {:http_status, 403}}
     end
 
-    test "rejects a repository that is not owner-qualified without calling GitHub" do
-      assert {:error, :repository_not_found} =
-               GitHub.resolve_immutable_ids(%{repository: "widget"})
+    test "rejects a repository that isn't qualified with the owner without calling GitHub" do
+      assert resolve(["widget"]) == {:error, :repository_not_found}
+      assert resolve(["other/widget"]) == {:error, :repository_not_found}
+      assert resolve(["acme/wid get"]) == {:error, :repository_not_found}
     end
+
+    test "rejects an invalid owner without calling GitHub" do
+      assert resolve([], "ac me") == {:error, :repository_not_found}
+      assert resolve(["acme/widget"], "acme/widget") == {:error, :repository_not_found}
+    end
+  end
+end
+
+defmodule Hexpm.WorkloadIdentities.Provider.GitHubTimeoutTest do
+  # Changes the application environment, so it can't run alongside other tests.
+  use Hexpm.DataCase, async: false
+  import Mox
+
+  alias Hexpm.WorkloadIdentities.Provider.GitHub
+
+  setup :verify_on_exit!
+
+  setup do
+    config = Application.fetch_env!(:hexpm, :workload_identity)
+    on_exit(fn -> Application.put_env(:hexpm, :workload_identity, config) end)
+
+    Application.put_env(
+      :hexpm,
+      :workload_identity,
+      Keyword.put(config, :github_lookup_timeout, 50)
+    )
+  end
+
+  test "returns a timeout when a repository lookup takes too long" do
+    expect(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/widget", _, _ ->
+      Process.sleep(5_000)
+      {:ok, 404, [], %{}}
+    end)
+
+    assert GitHub.resolve_immutable_ids(%{
+             repository_owner: "acme",
+             repositories: ["acme/widget"]
+           }) ==
+             {:error, :timeout}
   end
 end

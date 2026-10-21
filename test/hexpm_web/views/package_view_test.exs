@@ -412,5 +412,43 @@ defmodule HexpmWeb.PackageViewTest do
       assert PackageView.humanize_audit_log_info(audit_log) ==
                "Unretire release 3.7.21"
     end
+
+    test "workload_identity.create, update and remove with params" do
+      params = %{
+        "repositories" => [
+          %{"name" => "acme/widget", "id" => "1"},
+          %{"name" => "acme/gadget", "id" => "2"}
+        ],
+        "workflow" => "release.yml"
+      }
+
+      for {action, message} <- [
+            {"workload_identity.create", "Add workload identity"},
+            {"workload_identity.update", "Change workload identity"},
+            {"workload_identity.remove", "Remove workload identity"}
+          ] do
+        audit_log = build(:audit_log, action: action, params: params)
+
+        assert PackageView.humanize_audit_log_info(audit_log) ==
+                 "#{message} acme/widget, acme/gadget (release.yml)"
+      end
+    end
+
+    test "workload_identity.update with no params" do
+      audit_log = build(:audit_log, action: "workload_identity.update")
+
+      assert PackageView.humanize_audit_log_info(audit_log) == "Change workload identity"
+    end
+
+    test "workload_identity.remove recorded with a single repository" do
+      audit_log =
+        build(:audit_log,
+          action: "workload_identity.remove",
+          params: %{"repository" => "acme/widget", "workflow" => "release.yml"}
+        )
+
+      assert PackageView.humanize_audit_log_info(audit_log) ==
+               "Remove workload identity acme/widget (release.yml)"
+    end
   end
 end
