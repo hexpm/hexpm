@@ -2811,6 +2811,81 @@ defmodule Hexpm.WorkloadIdentitiesTest do
       refute revoked?(token)
     end
 
+    test "emails the owners about a change that trusts workflow runs it didn't", %{
+      user: user,
+      workload_identity: workload_identity
+    } do
+      for {environment, change} <- [
+            {"", %{"repositories" => "widget\ngadget"}},
+            {"", %{"workflow" => "publish.yml"}},
+            {"release", %{"environment" => "staging"}},
+            {"release", %{"environment" => ""}}
+          ] do
+        identity =
+          Hexpm.WorkloadIdentities.WorkloadIdentity
+          |> Repo.get!(workload_identity.id)
+          |> Ecto.Changeset.change(
+            repositories: [trusted("acme/widget")],
+            workflow: "release.yml",
+            environment: environment
+          )
+          |> Repo.update!()
+
+        stub_github(%{"widget" => {67890, "private"}, "gadget" => {70001, "private"}})
+
+        params =
+          Map.merge(
+            %{
+              "repositories" => "widget",
+              "workflow" => "release.yml",
+              "environment" => environment
+            },
+            change
+          )
+
+        assert {:ok, _updated} =
+                 WorkloadIdentities.update(identity, params, audit: audit_data(user))
+
+        assert_email_sent(fn email ->
+          assert email.subject =~ "Workload identity changed on package"
+        end)
+
+        refute_email_sent()
+      end
+    end
+
+    test "audits a change that only narrows it without emailing anyone", %{
+      user: user,
+      package: package,
+      workload_identity: workload_identity
+    } do
+      identity =
+        workload_identity
+        |> Ecto.Changeset.change(
+          repositories: [trusted("acme/widget"), trusted("acme/gadget", "70001")]
+        )
+        |> Repo.update!()
+
+      assert {:ok, token} = mint(repository: "hexpm", package: package.name)
+
+      assert {:ok, updated} =
+               WorkloadIdentities.update(
+                 identity,
+                 %{
+                   "repositories" => "widget",
+                   "workflow" => "release.yml",
+                   "environment" => "release"
+                 },
+                 audit: audit_data(user)
+               )
+
+      assert updated.repositories == [trusted("acme/widget")]
+      assert updated.environment == "release"
+      assert revoked?(token)
+      assert Repo.get_by(AuditLog, action: "workload_identity.update")
+      refute_email_sent()
+    end
+
     test "writes no audit log and sends no email when nothing changes", %{
       user: user,
       workload_identity: workload_identity
@@ -2960,39 +3035,100 @@ defmodule Hexpm.WorkloadIdentitiesTest do
       repository: repository,
       identity: identity
     } do
+      identity =
+        identity
+        |> Ecto.Changeset.change(packages: ["widget"])
+        |> Repo.update!()
+
       WorkloadIdentityHelpers.stub_oidc_discovery()
       assert {:ok, token} = mint(repository: repository.name, package: "widget")
-      stub_github(%{"widget" => {67890, "private"}})
 
       assert {:ok, updated} =
                WorkloadIdentities.update(
                  identity,
-                 organization_params(%{"packages" => "widget"}),
+                 organization_params(%{"packages" => ""}),
                  audit: audit_data(admin)
                )
 
-      assert updated.packages == ["widget"]
+      assert updated.packages == nil
       assert updated.role == "write"
       refute revoked?(token)
 
       log = Repo.get_by!(AuditLog, action: "organization.workload_identity.update")
       assert log.organization_id == organization.id
-      assert log.params["packages"] == ["widget"]
-      assert log.params["previous"]["packages"] == nil
+      assert log.params["packages"] == nil
+      assert log.params["previous"]["packages"] == ["widget"]
       assert log.params["previous"]["public_packages"] == ["owned_one"]
 
       assert_email_sent(fn email ->
         assert email.subject =~ "Workload identity changed in organization #{organization.name}"
         assert email.text_body =~ "#{admin.username} changed a workload identity"
         assert email.text_body =~ "Before:\nRole: write"
-        assert email.text_body =~ "Private packages: all"
         assert email.text_body =~ "Private packages: widget"
+        assert email.text_body =~ "Private packages: all"
 
         assert Enum.sort(Enum.map(email.to, &elem(&1, 1))) ==
                  Enum.sort([
                    Hexpm.Accounts.User.email(admin, :primary),
                    Hexpm.Accounts.User.email(other_admin, :primary)
                  ])
+      end)
+
+      refute_email_sent()
+    end
+
+    test "audits a change that only narrows it without emailing anyone", %{
+      admin: admin,
+      identity: identity
+    } do
+      identity =
+        identity
+        |> Ecto.Changeset.change(
+          repositories: [trusted("acme/widget", "67890"), trusted("acme/gadget", "67891")],
+          public_packages: ["owned_one", "owned_two"]
+        )
+        |> Repo.update!()
+
+      assert {:ok, updated} =
+               WorkloadIdentities.update(
+                 identity,
+                 organization_params(%{
+                   "environment" => "release",
+                   "packages" => "widget",
+                   "public_packages" => "owned_two"
+                 }),
+                 audit: audit_data(admin)
+               )
+
+      assert Enum.map(updated.repositories, & &1.name) == ["acme/widget"]
+      assert updated.environment == "release"
+      assert updated.packages == ["widget"]
+      assert updated.public_packages == ["owned_two"]
+      assert Repo.get_by(AuditLog, action: "organization.workload_identity.update")
+      refute_email_sent()
+    end
+
+    test "doesn't tell the other owners whose public packages it only stops publishing", %{
+      admin: admin,
+      identity: identity
+    } do
+      identity =
+        identity
+        |> Ecto.Changeset.change(
+          packages: ["widget"],
+          public_packages: ["owned_one", "owned_two"]
+        )
+        |> Repo.update!()
+
+      assert {:ok, _updated} =
+               WorkloadIdentities.update(
+                 identity,
+                 organization_params(%{"packages" => "", "public_packages" => "owned_two"}),
+                 audit: audit_data(admin)
+               )
+
+      assert_email_sent(fn email ->
+        assert email.subject =~ "Workload identity changed in organization"
       end)
 
       refute_email_sent()
@@ -3088,10 +3224,15 @@ defmodule Hexpm.WorkloadIdentitiesTest do
       admin: admin,
       identity: identity
     } do
+      identity =
+        identity
+        |> Ecto.Changeset.change(packages: ["private_one"])
+        |> Repo.update!()
+
       assert {:ok, _updated} =
                WorkloadIdentities.update(
                  identity,
-                 organization_params(%{"packages" => "private_one"}),
+                 organization_params(%{"packages" => "private_one private_two"}),
                  audit: audit_data(admin)
                )
 
@@ -3295,7 +3436,7 @@ defmodule Hexpm.WorkloadIdentitiesTest do
       refute revoked?(token)
     end
 
-    test "keeps the tokens and tells no other owner when only the environment's case changes",
+    test "keeps the tokens and emails no one when only the environment's case changes",
          %{admin: admin, repository: repository, identity: identity} do
       identity =
         identity
@@ -3314,11 +3455,6 @@ defmodule Hexpm.WorkloadIdentitiesTest do
 
       assert updated.environment == "RELEASE"
       refute revoked?(token)
-
-      assert_email_sent(fn email ->
-        assert email.subject =~ "Workload identity changed in organization"
-      end)
-
       refute_email_sent()
     end
   end

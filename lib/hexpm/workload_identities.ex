@@ -248,6 +248,9 @@ defmodule Hexpm.WorkloadIdentities do
   defp configuration_snapshot(workload_identity),
     do: {Map.take(workload_identity, @changeable_fields), repository_set(workload_identity)}
 
+  defp repository_set(workload_identity),
+    do: MapSet.new(workload_identity.repositories, &{&1.name, &1.id})
+
   @doc """
   The version of a workload identity's configuration, which an edit form
   carries so a save refuses to overwrite a change made since it was loaded.
@@ -420,7 +423,11 @@ defmodule Hexpm.WorkloadIdentities do
     case Repo.transaction(multi) do
       {:ok, %{workload_identity: updated}} ->
         updated = preload_owner(updated)
-        notify_change(previous, updated, audit_data)
+
+        if widens_trust?(previous, updated) do
+          notify_change(previous, updated, audit_data)
+        end
+
         {:ok, updated}
 
       {:error, :current, reason, _} ->
@@ -451,20 +458,58 @@ defmodule Hexpm.WorkloadIdentities do
 
   defp revokes_tokens?(previous, updated) do
     previous.workflow != updated.workflow or
-      String.downcase(previous.environment || "") != String.downcase(updated.environment || "") or
-      not keeps_repositories?(previous.repositories, updated.repositories)
+      environment(previous) != environment(updated) or
+      not covers_repositories?(updated.repositories, previous.repositories)
   end
 
-  # No repositories match every repository of the owner.
-  defp keeps_repositories?(_previous, []), do: true
-  defp keeps_repositories?([], _updated), do: false
+  # A change is emailed when the workload identity trusts a workflow run or
+  # covers a package it didn't before, the same as adding one is. A change that
+  # only narrows it, such as removing a repository or naming an environment,
+  # is only audited.
+  defp widens_trust?(previous, updated) do
+    widens_runs?(previous, updated) or
+      widens_coverage?(
+        {previous.covers_private, previous.packages},
+        {updated.covers_private, updated.packages}
+      ) or
+      widens_coverage?(
+        {previous.covers_public, previous.public_packages},
+        {updated.covers_public, updated.public_packages}
+      )
+  end
 
-  defp keeps_repositories?(previous, updated) do
+  # An empty workflow or environment matches any.
+  defp widens_runs?(previous, updated) do
+    not covers_repositories?(previous.repositories, updated.repositories) or
+      widens_match?(previous.workflow || "", updated.workflow || "") or
+      widens_match?(environment(previous), environment(updated))
+  end
+
+  defp widens_match?("", _updated), do: false
+  defp widens_match?(previous, updated), do: previous != updated
+
+  # A nil package list covers every package.
+  defp widens_coverage?(_previous, {false, _names}), do: false
+  defp widens_coverage?({false, _names}, {true, _updated_names}), do: true
+  defp widens_coverage?({true, nil}, {true, _updated_names}), do: false
+  defp widens_coverage?({true, _names}, {true, nil}), do: true
+
+  defp widens_coverage?({true, names}, {true, updated_names}),
+    do: not MapSet.subset?(MapSet.new(updated_names), MapSet.new(names))
+
+  # Whether `repositories` match every repository `other` matches. No
+  # repositories match every repository of the owner.
+  defp covers_repositories?([], _other), do: true
+  defp covers_repositories?(_repositories, []), do: false
+
+  defp covers_repositories?(repositories, other) do
     MapSet.subset?(
-      MapSet.new(previous, &{&1.name, &1.id}),
-      MapSet.new(updated, &{&1.name, &1.id})
+      MapSet.new(other, &{&1.name, &1.id}),
+      MapSet.new(repositories, &{&1.name, &1.id})
     )
   end
+
+  defp environment(workload_identity), do: String.downcase(workload_identity.environment || "")
 
   # Ownership was checked before Hex asked GitHub. A transfer in the meantime
   # removed the package's workload identities, so check again under the package row lock
@@ -673,21 +718,23 @@ defmodule Hexpm.WorkloadIdentities do
     end)
   end
 
-  # A change tells the owners of the packages it starts or stops publishing,
-  # and, when it changes which workflows the workload identity trusts, the
-  # owners of the packages it keeps publishing.
+  # A change tells the owners of the packages it starts publishing, and, when
+  # it trusts workflow runs it didn't before, the owners of the packages it
+  # keeps publishing. Their email also names their packages it stops
+  # publishing, but owners whose packages it only stops publishing aren't
+  # emailed.
   defp notify_public_owners_of_change(previous, updated, organization, notified, actor) do
     before = covered_public_packages(previous)
     now = covered_public_packages(updated)
     before_names = MapSet.new(before, & &1.name)
     now_names = MapSet.new(now, & &1.name)
-    trust_changed? = trust_changed?(previous, updated)
+    widens_runs? = widens_runs?(previous, updated)
 
     started_or_kept =
       Enum.flat_map(now, fn package ->
         cond do
           not MapSet.member?(before_names, package.name) -> [{package, :started}]
-          trust_changed? -> [{package, :kept}]
+          widens_runs? -> [{package, :kept}]
           true -> []
         end
       end)
@@ -695,20 +742,13 @@ defmodule Hexpm.WorkloadIdentities do
     stopped = for package <- before, package.name not in now_names, do: {package, :stopped}
 
     each_public_owner(started_or_kept ++ stopped, organization, notified, fn user, packages ->
-      previous
-      |> Emails.public_workload_identity_changed(updated, organization, user, packages, actor)
-      |> Mailer.deliver!()
+      if Map.has_key?(packages, :started) or Map.has_key?(packages, :kept) do
+        previous
+        |> Emails.public_workload_identity_changed(updated, organization, user, packages, actor)
+        |> Mailer.deliver!()
+      end
     end)
   end
-
-  defp trust_changed?(previous, updated) do
-    previous.workflow != updated.workflow or
-      String.downcase(previous.environment || "") != String.downcase(updated.environment || "") or
-      repository_set(previous) != repository_set(updated)
-  end
-
-  defp repository_set(workload_identity),
-    do: MapSet.new(workload_identity.repositories, &{&1.name, &1.id})
 
   # Calls `fun` once for each person who owns some of the packages, other than
   # through the organization or as one of `notified`, with their package names
