@@ -33,7 +33,8 @@ defmodule HexpmWeb.DocsView do
          %{external: true, label: "Tasks", href: "https://gleam.run/command-line-reference/"}
        ]},
       {"Hex",
-       organization_sso_link() ++
+       [%{view: :keys, label: "Keys", href: ~p"/docs/keys"}] ++
+         organization_sso_link() ++
          organization_tfa_link() ++
          workload_identity_link() ++
          [

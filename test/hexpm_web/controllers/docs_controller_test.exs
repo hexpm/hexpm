@@ -158,6 +158,22 @@ defmodule HexpmWeb.DocsControllerTest do
     assert_sso_docs_hidden()
   end
 
+  test "renders the keys guide in the docs navigation" do
+    html =
+      build_conn()
+      |> get("/docs/keys")
+      |> html_response(200)
+
+    document = LazyHTML.from_document(html)
+
+    assert [link] =
+             LazyHTML.query(document, ~s(nav#docs-nav a[href="/docs/keys"])) |> Enum.to_list()
+
+    assert LazyHTML.attribute(link, "class") |> List.first() =~ "bg-blue-50"
+    assert LazyHTML.query(document, "#personal-keys") |> Enum.count() == 1
+    assert LazyHTML.query(document, "#organization-keys") |> Enum.count() == 1
+  end
+
   test "renders the Workload Identity guide in the docs navigation" do
     enable_workload_identity_docs()
 

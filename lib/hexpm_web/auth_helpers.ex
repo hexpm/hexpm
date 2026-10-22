@@ -145,8 +145,9 @@ defmodule HexpmWeb.AuthHelpers do
     end)
   end
 
-  defp verify_permissions?(conn, auth_credential, "package", nil) do
-    Permissions.verify_access?(auth_credential, "package", conn.assigns.package)
+  defp verify_permissions?(conn, auth_credential, domain, nil)
+       when domain in ["package", "package_owners", "publish", "owners"] do
+    Permissions.verify_access?(auth_credential, domain, conn.assigns.package)
   end
 
   defp verify_permissions?(_conn, auth_credential, domain, resource) do
@@ -179,6 +180,7 @@ defmodule HexpmWeb.AuthHelpers do
   defp requires_write_access?(domains) do
     Enum.any?(domains, fn
       {"api", "write"} -> true
+      domain when is_binary(domain) -> domain in Permissions.capability_domains()
       _ -> false
     end)
   end
@@ -607,6 +609,30 @@ defmodule HexpmWeb.AuthHelpers do
 
       true ->
         {:error, :not_found}
+    end
+  end
+
+  @doc """
+  Who may create a key through the API.
+
+  Any member may create an organization key, limited to what their role lets
+  them grant. The public organization answers a read check for anyone, so a key
+  is never created for it, and an organization credential only creates keys for
+  its own organization.
+  """
+  def key_creation_access(%Plug.Conn{} = conn, user_or_organization, _opts \\ []) do
+    organization = conn.assigns.organization
+
+    cond do
+      organization && organization.id == 1 ->
+        {:error, :auth}
+
+      match?(%Organization{}, user_or_organization) and
+          (is_nil(organization) or organization.id != user_or_organization.id) ->
+        {:error, :not_found}
+
+      true ->
+        organization_access(conn, user_or_organization, organization_role: "read")
     end
   end
 
