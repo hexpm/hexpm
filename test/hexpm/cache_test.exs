@@ -51,17 +51,15 @@ defmodule Hexpm.CacheTest do
 
   test "concurrent cold readers run the fun exactly once", %{table: table} do
     counter = :counters.new(1, [])
-    {:ok, gate} = Agent.start_link(fn -> nil end)
 
-    fun = fn ->
-      Agent.get(gate, & &1, :infinity)
-      :counters.add(counter, 1, 1)
-      :counters.get(counter, 1)
-    end
+    fun =
+      gated(fn ->
+        :counters.add(counter, 1, 1)
+        :counters.get(counter, 1)
+      end)
 
     tasks = for _ <- 1..20, do: Task.async(fn -> Cache.fetch(table, :key, fun, :infinity) end)
-    Process.sleep(10)
-    Agent.update(gate, fn _ -> :go end)
+    release_when_waited_on(20)
 
     results = Enum.map(tasks, &Task.await/1)
 
@@ -91,13 +89,12 @@ defmodule Hexpm.CacheTest do
 
   test "an exception reaches every waiting caller and runs the fun once", %{table: table} do
     counter = :counters.new(1, [])
-    {:ok, gate} = Agent.start_link(fn -> nil end)
 
-    fun = fn ->
-      Agent.get(gate, & &1, :infinity)
-      :counters.add(counter, 1, 1)
-      raise "unavailable"
-    end
+    fun =
+      gated(fn ->
+        :counters.add(counter, 1, 1)
+        raise "unavailable"
+      end)
 
     tasks =
       for _ <- 1..5 do
@@ -110,8 +107,7 @@ defmodule Hexpm.CacheTest do
         end)
       end
 
-    Process.sleep(10)
-    Agent.update(gate, fn _ -> :go end)
+    release_when_waited_on(5)
 
     assert Enum.map(tasks, &Task.await/1) == List.duplicate("unavailable", 5)
     assert :counters.get(counter, 1) == 1
@@ -140,6 +136,31 @@ defmodule Hexpm.CacheTest do
 
   test "refresh falls through to fun when cache table is missing" do
     assert Cache.refresh(:no_such_cache, :key, fn -> :fallback end, 60) == :fallback
+  end
+
+  # Only the first run blocks, so a second computation shows up in the count
+  # instead of hanging the test.
+  defp gated(fun) do
+    test = self()
+    first = :atomics.new(1, [])
+
+    fn ->
+      if :atomics.compare_exchange(first, 1, 0, 1) == :ok do
+        send(test, {:computing, self()})
+
+        receive do
+          :go -> :ok
+        end
+      end
+
+      fun.()
+    end
+  end
+
+  defp release_when_waited_on(callers) do
+    assert_receive {:computing, worker}
+    wait_until(fn -> length(elem(Process.info(worker, :monitored_by), 1)) == callers end)
+    send(worker, :go)
   end
 
   defp wait_until(fun, attempts \\ 100) do
