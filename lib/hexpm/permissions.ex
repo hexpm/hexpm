@@ -14,24 +14,42 @@ defmodule Hexpm.Permissions do
 
   # Consolidated scope definitions - single source of truth
   @api_scopes ~w(api api:read api:write)
-  @simple_scopes ~w(repositories)
+  @capability_scopes ~w(publish owners keys members administration)
+  @simple_scopes ~w(repositories) ++ @capability_scopes
   @resource_only_scopes ~w(package repository docs)
   @all_scopes @api_scopes ++ @simple_scopes
+
+  # Scopes whose resource names one package as `organization/name`
+  @package_scopes ~w(package publish owners)
 
   # OAuth clients can register bare resource-only scopes as patterns
   @client_allowed_scopes @all_scopes ++ @resource_only_scopes
 
-  # Legacy domain list for KeyPermission compatibility
-  @legacy_domains ~w(api package repository repositories docs)
+  @domains ~w(api package repository repositories docs) ++ @capability_scopes
 
   # Scopes that name an organization, which both CDN edges verify from the token
   # without reading the database
   @organization_scope_domains ~w(repository docs)
 
   @doc """
-  Returns all valid domains for KeyPermissions (legacy format).
+  Returns all valid domains for KeyPermissions.
   """
-  def valid_domains, do: @legacy_domains
+  def valid_domains, do: @domains
+
+  @doc """
+  The permissions that each authorize one kind of write action. Each one is
+  narrower than `api:write`, which includes all of them.
+  """
+  def capability_domains, do: @capability_scopes
+
+  @doc """
+  Whether a scope or permission is one of the capability permissions, with or
+  without a package.
+  """
+  def capability?(%{domain: domain}), do: domain in @capability_scopes
+
+  def capability?(scope) when is_binary(scope),
+    do: capability?(scope_to_permission(scope))
 
   @doc """
   Returns the list of resource-only scope prefixes (docs, package, repository).
@@ -45,6 +63,7 @@ defmodule Hexpm.Permissions do
   def resource_specific_scope?(scope) when is_binary(scope) do
     case String.split(scope, ":", parts: 2) do
       [base, _resource] when base in @resource_only_scopes -> true
+      [base, _resource] when base in @package_scopes -> true
       _ -> false
     end
   end
@@ -98,7 +117,7 @@ defmodule Hexpm.Permissions do
       ["api", sub] ->
         sub in ["read", "write"]
 
-      ["package", resource] ->
+      [scope_name, resource] when scope_name in @package_scopes ->
         package_resource?(resource)
 
       [scope_name, resource] when scope_name in @resource_only_scopes ->
@@ -137,7 +156,8 @@ defmodule Hexpm.Permissions do
       {domain, nil} ->
         domain
 
-      {domain, resource} when domain in ["package", "repository"] and is_binary(resource) ->
+      {domain, resource}
+      when domain in ["package", "repository", "publish", "owners"] and is_binary(resource) ->
         "#{domain}:#{resource}"
 
       {domain, _} ->
@@ -158,6 +178,8 @@ defmodule Hexpm.Permissions do
   - %{domain: "api", resource: "read"} -> ["api:read"]
   - %{domain: "repository", resource: "acme"} -> ["repository:acme"]
   - %{domain: "repositories"} -> [:all_repositories]
+  - %{domain: "publish", resource: nil} -> ["publish"]
+  - %{domain: "publish", resource: "acme/foo"} -> []
   """
   def permission_to_scopes(%{domain: "api", resource: nil}),
     do: ["api", "api:read", "api:write"]
@@ -171,6 +193,10 @@ defmodule Hexpm.Permissions do
     do: ["repository:#{resource}"]
 
   def permission_to_scopes(%{domain: "repositories"}), do: [:all_repositories]
+
+  def permission_to_scopes(%{domain: domain, resource: nil}) when domain in @capability_scopes,
+    do: [domain]
+
   def permission_to_scopes(_permission), do: []
 
   @doc """
@@ -278,13 +304,38 @@ defmodule Hexpm.Permissions do
         %{scope: "package", is_oauth_scope: true} when resource in [nil, "read"] ->
           true
 
+        # Every capability is write access through the API. No endpoint checks
+        # `api:write` itself, so this only answers `GET /api/auth`.
+        %{domain: domain} when domain in @capability_scopes and resource in [nil, "write"] ->
+          true
+
         _ ->
           false
       end
     end)
   end
 
+  # An explicit `publish` satisfies the package check so that a publish
+  # credential answers `GET /api/auth?domain=package` the way an `api:write`
+  # token does. That is why the owner endpoints check `package_owners` instead
+  # of `package`.
   defp check_access?(permissions, "package", resource) do
+    check_access?(permissions, "package_owners", resource) or
+      holds_capability?(permissions, "publish", resource)
+  end
+
+  defp check_access?(permissions, domain, resource) when domain in ["publish", "owners"] do
+    full_api?(permissions) or holds_capability?(permissions, domain, resource)
+  end
+
+  defp check_access?(permissions, domain, nil)
+       when domain in ["keys", "members", "administration"] do
+    full_api?(permissions) or holds_capability?(permissions, domain, nil)
+  end
+
+  # The package check without `publish`, which is what may change a package's
+  # owners.
+  defp check_access?(permissions, "package_owners", resource) do
     Enum.any?(permissions, fn perm ->
       case perm do
         # OAuth scope-based matching - these are true OAuth scopes
@@ -367,6 +418,26 @@ defmodule Hexpm.Permissions do
   end
 
   defp check_access?(_permissions, _domain, _resource), do: false
+
+  defp holds_capability?(permissions, domain, resource) do
+    Enum.any?(permissions, fn
+      %{domain: ^domain, resource: nil} ->
+        true
+
+      %{domain: ^domain, resource: package_resource} when is_binary(package_resource) ->
+        match?(%Package{}, resource) and match_package_resource?(package_resource, resource)
+
+      _ ->
+        false
+    end)
+  end
+
+  defp full_api?(permissions) do
+    Enum.any?(permissions, fn
+      %{domain: "api", resource: resource} -> resource in [nil, "write"]
+      _ -> false
+    end)
+  end
 
   # Helper functions for resource matching
   defp match_package_resource?(permission_resource, %Package{} = resource) do
@@ -630,6 +701,7 @@ defmodule Hexpm.Permissions do
   def scope_category(scope) when is_binary(scope) do
     case String.split(scope, ":", parts: 2) do
       ["api" | _] -> :api
+      [domain | _] when domain in @capability_scopes -> :api
       ["package" | _] -> :package
       ["repository" | _] -> :repository
       ["repositories"] -> :repository
@@ -704,12 +776,13 @@ defmodule Hexpm.Permissions do
   end
 
   @doc """
-  Checks if the given scopes require write access (api or api:write).
-  Used to determine if 2FA should be required for OAuth authorization.
+  Checks if the given scopes require write access (api, api:write or a
+  capability). Used to determine if 2FA should be required for OAuth
+  authorization.
   """
   def requires_write_access?(scopes) when is_list(scopes) do
     Enum.any?(scopes, fn scope ->
-      scope == "api" || scope == "api:write"
+      scope == "api" || scope == "api:write" || capability?(scope)
     end)
   end
 
@@ -735,11 +808,32 @@ defmodule Hexpm.Permissions do
       "repositories" ->
         "Access to fetch packages from all private repositories you belong to. Does not grant ability to publish packages or modify repository settings."
 
+      "publish" ->
+        "Publish, revert, retire, and unretire releases and publish documentation of the packages you maintain. Cannot change package owners."
+
+      "owners" ->
+        "Add and remove owners of the packages you fully own."
+
+      "keys" ->
+        "Create keys with a subset of these permissions and revoke keys."
+
+      "members" ->
+        "Add and remove members and change their roles in the organizations you administer."
+
+      "administration" ->
+        "Change the number of seats of the organizations you administer."
+
       # Resource-specific scopes
       scope ->
         case String.split(scope, ":", parts: 2) do
           ["package", resource] ->
             "Manage the #{resource} package"
+
+          ["publish", resource] ->
+            "Publish releases and documentation of the #{resource} package"
+
+          ["owners", resource] ->
+            "Add and remove owners of the #{resource} package"
 
           ["repository", resource] ->
             "Access to the #{resource} private repository"

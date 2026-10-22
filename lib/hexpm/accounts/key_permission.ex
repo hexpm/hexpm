@@ -1,7 +1,7 @@
 defmodule Hexpm.Accounts.KeyPermission do
   use Hexpm.Schema
 
-  alias Hexpm.Accounts.OrganizationAuth
+  alias Hexpm.Accounts.{KeyGrantor, OrganizationAuth}
   alias Hexpm.Permissions
 
   @derive {HexpmWeb.Stale, last_modified: nil}
@@ -11,7 +11,7 @@ defmodule Hexpm.Accounts.KeyPermission do
     field :resource, :string
   end
 
-  def changeset(struct, user_or_organization, refusals, params) do
+  def changeset(struct, user_or_organization, grantor, refusals, params) do
     cast(struct, params, ~w(domain resource)a)
     |> validate_inclusion(:domain, Permissions.valid_domains())
     |> validate_user_key_domain(user_or_organization)
@@ -20,6 +20,7 @@ defmodule Hexpm.Accounts.KeyPermission do
     |> validate_resource()
     |> validate_package_resource()
     |> validate_permission(user_or_organization)
+    |> validate_grantable(grantor)
     |> validate_personal_key_reach(refusals)
   end
 
@@ -47,6 +48,7 @@ defmodule Hexpm.Accounts.KeyPermission do
         "package" when is_binary(resource) -> []
         "docs" when is_binary(resource) -> []
         "repositories" when is_nil(resource) -> []
+        domain when domain in ["publish", "owners"] and is_binary(resource) -> []
         _ -> [resource: "invalid resource for given domain"]
       end
     end)
@@ -77,10 +79,23 @@ defmodule Hexpm.Accounts.KeyPermission do
           :error when domain in ["repository", "docs"] ->
             [resource: "you do not have access to this repository"]
 
-          :error when domain == "package" ->
+          :error when domain in ["package", "publish", "owners"] ->
             [resource: "you do not have access to this package"]
         end
       end)
+    else
+      changeset
+    end
+  end
+
+  defp validate_grantable(changeset, nil), do: changeset
+
+  defp validate_grantable(changeset, grantor) do
+    if changeset.valid? do
+      case KeyGrantor.check(grantor, apply_changes(changeset)) do
+        :ok -> changeset
+        {:error, message} -> add_error(changeset, :domain, message)
+      end
     else
       changeset
     end
@@ -119,8 +134,8 @@ defmodule Hexpm.Accounts.KeyPermission do
 
   def organization_reach(%__MODULE__{domain: "package", resource: nil}), do: :every
 
-  def organization_reach(%__MODULE__{domain: "package", resource: resource})
-      when is_binary(resource) do
+  def organization_reach(%__MODULE__{domain: domain, resource: resource})
+      when domain in ["package", "publish", "owners"] and is_binary(resource) do
     case String.split(resource, "/", parts: 2) do
       [organization, _package] -> organization
       [_package] -> nil
@@ -135,7 +150,7 @@ defmodule Hexpm.Accounts.KeyPermission do
   defp normalize_resource(changeset) do
     update_change(changeset, :resource, fn resource ->
       case get_change(changeset, :domain) do
-        "package" ->
+        domain when domain in ["package", "publish", "owners"] ->
           if String.contains?(resource, "/") do
             resource
           else

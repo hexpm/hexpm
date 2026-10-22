@@ -496,10 +496,14 @@ defmodule HexpmWeb.API.OAuthController do
 
   defp expand_and_validate_scopes(scope_string, auth_info)
        when is_binary(scope_string) or is_nil(scope_string) do
-    requested_scopes = String.split(scope_string || "", " ", trim: true)
-
     user_or_org = auth_info.user || auth_info.organization
     api_key = auth_info.auth_credential
+
+    requested_scopes =
+      (scope_string || "")
+      |> String.split(" ", trim: true)
+      |> Enum.flat_map(&translate_api_scope(&1, api_key.permissions))
+      |> Enum.uniq()
 
     # Expand scopes, constraining by API key permissions
     # The expansion itself ensures scopes don't exceed key permissions
@@ -518,6 +522,23 @@ defmodule HexpmWeb.API.OAuthController do
   defp expand_and_validate_scopes(_scope_string, _auth_info) do
     {:error, :invalid_scope, "Invalid scope parameter"}
   end
+
+  # A request for `api` or `api:write` is read as the capabilities a key holds
+  # when it doesn't hold the full API. A key holding the full API gets the
+  # literal scope, and one holding neither is refused.
+  defp translate_api_scope(scope, permissions) when scope in ["api", "api:write"] do
+    held = Enum.flat_map(permissions, &Hexpm.Permissions.permission_to_scopes/1)
+    capabilities = Enum.filter(held, &(&1 in Hexpm.Permissions.capability_domains()))
+
+    cond do
+      Enum.any?(permissions, &(&1.domain == "api" and &1.resource in [nil, "write"])) -> [scope]
+      capabilities == [] -> [scope]
+      "api:read" in held -> ["api:read" | capabilities]
+      true -> capabilities
+    end
+  end
+
+  defp translate_api_scope(scope, _permissions), do: [scope]
 
   defp validate_scopes_against_key(scopes, permissions, user_or_org) do
     allowed_scopes =

@@ -413,4 +413,78 @@ defmodule Hexpm.PermissionsTest do
       end
     end
   end
+
+  describe "capabilities" do
+    setup do
+      repository = %Hexpm.Repository.Repository{name: "acme"}
+      %{package: %Package{name: "foo", repository: repository}}
+    end
+
+    defp key(scopes) do
+      %Hexpm.Accounts.Key{
+        permissions:
+          Enum.map(
+            scopes,
+            &struct(Hexpm.Accounts.KeyPermission, Permissions.scope_to_permission(&1))
+          )
+      }
+    end
+
+    test "each write action is satisfied by its capability or the full API", %{package: package} do
+      for domain <- ~w(keys members administration) do
+        assert Permissions.verify_access?(key([domain]), domain, nil)
+        assert Permissions.verify_access?(key(["api:write"]), domain, nil)
+        assert Permissions.verify_access?(key(["api"]), domain, nil)
+        assert Permissions.verify_access?(%Token{scopes: [domain]}, domain, nil)
+        refute Permissions.verify_access?(key(["api:read", "publish"]), domain, nil)
+      end
+
+      for domain <- ~w(publish owners) do
+        assert Permissions.verify_access?(key([domain]), domain, package)
+        assert Permissions.verify_access?(key(["#{domain}:acme/foo"]), domain, package)
+        refute Permissions.verify_access?(key(["#{domain}:acme/bar"]), domain, package)
+        assert Permissions.verify_access?(%Token{scopes: ["#{domain}:acme/foo"]}, domain, package)
+        assert Permissions.verify_access?(key(["api:write"]), domain, package)
+      end
+    end
+
+    test "publish satisfies package but not package_owners", %{package: package} do
+      assert Permissions.verify_access?(key(["publish"]), "package", package)
+      assert Permissions.verify_access?(key(["publish:acme/foo"]), "package", package)
+      refute Permissions.verify_access?(key(["publish"]), "package_owners", package)
+      refute Permissions.verify_access?(key(["owners"]), "package", package)
+      assert Permissions.verify_access?(key(["package:acme/foo"]), "package_owners", package)
+    end
+
+    test "a key's api:write doesn't answer package", %{package: package} do
+      refute Permissions.verify_access?(key(["api:write"]), "package", package)
+      assert Permissions.verify_access?(%Token{scopes: ["api:write"]}, "package", package)
+    end
+
+    test "every capability answers api write but not api read" do
+      for domain <- Permissions.capability_domains() do
+        assert Permissions.verify_access?(key([domain]), "api", "write")
+        refute Permissions.verify_access?(key([domain]), "api", "read")
+      end
+    end
+
+    test "scopes" do
+      assert :ok = Permissions.validate_scopes(~w(publish owners keys members administration))
+      assert :ok = Permissions.validate_scopes(["publish:acme/foo", "owners:acme/foo"])
+      assert {:error, _} = Permissions.validate_scopes(["publish:foo"])
+      assert {:error, _} = Permissions.validate_scopes(["keys:acme"])
+
+      assert Permissions.permission_to_scopes(%{domain: "publish", resource: nil}) == ["publish"]
+      assert Permissions.permission_to_scopes(%{domain: "publish", resource: "acme/foo"}) == []
+
+      assert Permissions.requires_write_access?(["publish:acme/foo"])
+      assert Permissions.requires_write_access?(["members"])
+      refute Permissions.requires_write_access?(["api:read", "repository:acme"])
+
+      for scope <- ~w(publish owners keys members administration publish:acme/foo owners:acme/foo) do
+        assert is_binary(Permissions.scope_description(scope))
+        assert Permissions.scope_category(scope) == :api
+      end
+    end
+  end
 end

@@ -18,7 +18,7 @@ Open the [keys page](/dashboard/keys) on your dashboard, or the organization's p
 
 ### Step 2. Generate a replacement key
 
-Create a new key on the [keys page](/dashboard/keys), or on the organization's page for an organization key. Scope it to the smallest permission set that the consumer actually needs — see [Permissions](/docs/permissions) for the available scopes. If you only need the key for publishing or for read access to a single repository, do not issue a full-access key.
+Create a new key on the [keys page](/dashboard/keys), or on the organization's page for an organization key. Scope it to the smallest permission set that the consumer actually needs — see [Keys](/docs/keys) for the available scopes. If you only need the key for publishing or for read access to a single repository, do not issue a full-access key.
 
 For locally-stored credentials used by the Mix client, the simplest path is:
 
@@ -53,7 +53,7 @@ Because the key has been revoked, scrubbing it from history is no longer require
 
 ### Step 6. Prevent future leaks
 
-* **Use scoped keys.** A publish-only or read-only key cannot be used to take over your account. See [Permissions](/docs/permissions).
+* **Use scoped keys.** A publish-only or read-only key cannot be used to take over your account. See [Keys](/docs/keys).
 * **Set an expiry on CI keys.** Keys can be issued with an expiration date so a forgotten secret eventually stops working on its own.
 * **Never commit a key.** Use your CI provider's secret store and read the value from an environment variable at runtime. Pre-commit hooks that grep for `hex_[0-9a-f]{40}` are a cheap second line of defense.
 * **Rotate periodically.** A regular rotation cadence makes the impact of a future leak smaller.

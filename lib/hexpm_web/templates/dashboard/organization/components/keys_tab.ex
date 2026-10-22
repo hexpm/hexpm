@@ -16,6 +16,8 @@ defmodule HexpmWeb.Dashboard.Organization.Components.KeysTab do
   attr :keys, :list, required: true
   attr :organization, :map, required: true
   attr :packages, :list, required: true
+  attr :grantor, :any, required: true
+  attr :can_revoke, :boolean, required: true
 
   def keys_tab(assigns) do
     ~H"""
@@ -29,6 +31,8 @@ defmodule HexpmWeb.Dashboard.Organization.Components.KeysTab do
       keys={@keys}
       organization={@organization}
       packages={@packages}
+      grantor={@grantor}
+      can_revoke={@can_revoke}
     />
     """
   end
