@@ -42,7 +42,8 @@ You can also set it with `HEX_POLICY_ENFORCE_LOCK=1` or `mix hex.config policy_e
 
 `mix hex.audit` can write its results as SARIF with `--format sarif --output hex-audit.sarif`. Upload the file to GitHub code scanning and the findings show up in the repository's Security tab and as annotations on the `mix.lock` lines of pull requests. Findings you've acknowledged with `ignore_advisories` or `ignore_retirements` show up as closed alerts. `mix help hex.audit` has a complete GitHub Actions workflow. SARIF output requires OTP 27 or later.
 
-<img src="/images/blog/027_code_scanning.png" srcset="/images/blog/027_code_scanning.png 2x" alt="A Hex advisory shown as a GitHub code scanning alert on mix.lock">
+<img class="blog-img-light" src="/images/blog/027_code_scanning.png" srcset="/images/blog/027_code_scanning.png 2x" alt="A Hex advisory shown as a GitHub code scanning alert on mix.lock">
+<img class="blog-img-dark" src="/images/blog/027_code_scanning_dark.png" srcset="/images/blog/027_code_scanning_dark.png 2x" alt="A Hex advisory shown as a GitHub code scanning alert on mix.lock">
 
 ### Two-factor authentication for organizations
 
