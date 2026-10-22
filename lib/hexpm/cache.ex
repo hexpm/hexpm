@@ -72,8 +72,8 @@ defmodule Hexpm.Cache do
         wait_for(leader, table, key, fun)
 
       [] ->
-        worker =
-          spawn(fn ->
+        {worker, ref} =
+          spawn_monitor(fn ->
             receive do
               :proceed ->
                 result =
@@ -96,8 +96,9 @@ defmodule Hexpm.Cache do
 
         if :ets.insert_new(table, {{:populating, key}, worker}) do
           send(worker, :proceed)
-          wait_for(worker, table, key, fun)
+          await(ref, table, key, fun)
         else
+          Process.demonitor(ref, [:flush])
           send(worker, :abort)
 
           case :ets.lookup(table, {:populating, key}) do
@@ -112,9 +113,9 @@ defmodule Hexpm.Cache do
   # reason, so an error that isn't cached and an exception reach them all
   # without anyone computing again. A leader that was gone before we looked at
   # it has stored its value, or left nothing and this caller computes it.
-  defp wait_for(pid, table, key, fun) do
-    ref = Process.monitor(pid)
+  defp wait_for(pid, table, key, fun), do: await(Process.monitor(pid), table, key, fun)
 
+  defp await(ref, table, key, fun) do
     receive do
       {:DOWN, ^ref, _, _, {:shutdown, {:value, value}}} ->
         value
