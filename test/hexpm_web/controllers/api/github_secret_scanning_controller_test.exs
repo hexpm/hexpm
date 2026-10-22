@@ -116,7 +116,7 @@ defmodule HexpmWeb.API.GitHubSecretScanningControllerTest do
 
       # Keys.create now sends an api_key_created security notification;
       # consume it so it doesn't shadow the key_leaked assertion below.
-      assert_email_sent(subject: ~r/new API key.*created/i)
+      assert_email_sent(subject: ~r/new key.*created/i)
 
       post_alert(
         conn,
@@ -344,7 +344,7 @@ defmodule HexpmWeb.API.GitHubSecretScanningControllerTest do
 
       # Consume the api_key_created security notification sent by Keys.create
       # so the assertion below only covers the revocation flow.
-      assert_email_sent(subject: ~r/new API key.*created/i)
+      assert_email_sent(subject: ~r/new key.*created/i)
 
       conn = post_alert(conn, [alert(key)], ec_priv)
 
@@ -402,8 +402,8 @@ defmodule HexpmWeb.API.GitHubSecretScanningControllerTest do
       stub.()
       {:ok, %{key: key1}} = Keys.create(user, %{"name" => "key1"}, audit: audit_data(user))
       {:ok, %{key: key2}} = Keys.create(user, %{"name" => "key2"}, audit: audit_data(user))
-      assert_email_sent(subject: ~r/new API key.*created/i)
-      assert_email_sent(subject: ~r/new API key.*created/i)
+      assert_email_sent(subject: ~r/new key.*created/i)
+      assert_email_sent(subject: ~r/new key.*created/i)
 
       conn = post_alert(conn, [alert(key1), alert(key2), alert(key1)], ec_priv)
 
@@ -533,7 +533,7 @@ defmodule HexpmWeb.API.GitHubSecretScanningControllerTest do
 
       # Consume the api_key_created security notification sent by Keys.create
       # so the assertion below only covers the revocation flow.
-      assert_email_sent(subject: ~r/new API key.*created/i)
+      assert_email_sent(subject: ~r/new key.*created/i)
 
       # Stamp the key as revoked a day ago using raw SQL to avoid any timing ambiguity
       # between Elixir's DateTime.utc_now() and PostgreSQL's NOW() in the sandbox.

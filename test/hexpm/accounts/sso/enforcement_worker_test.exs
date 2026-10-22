@@ -636,12 +636,12 @@ defmodule Hexpm.Accounts.SSO.EnforcementWorkerTest do
 
       body = entry.email["text_body"]
 
-      assert body =~ "chose not to accept personal API keys"
+      assert body =~ "chose not to accept personal keys"
       assert body =~ "your key #{key.name} no longer reaches"
       assert body =~ "That key itself is untouched"
       assert body =~ "mix hex.user auth"
       assert body =~ "organization key"
-      assert entry.email["subject"] =~ "does not accept personal API keys"
+      assert entry.email["subject"] =~ "does not accept personal keys"
     end
 
     test "goes away with the account it was addressed to", context do

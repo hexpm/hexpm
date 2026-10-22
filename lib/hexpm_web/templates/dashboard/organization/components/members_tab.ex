@@ -599,7 +599,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.MembersTab do
   # A pilot without a required-by date governs nobody it has not been told to,
   # so an exemption there only takes effect once SSO becomes required.
   defp exemption_summary([], true = _requires_sso?) do
-    "Nobody is exempt. Every member authenticates through your provider to reach this organization in a browser or with the CLI. Organization API keys and, unless you block them, personal API keys still reach it without authenticating."
+    "Nobody is exempt. Every member authenticates through your provider to reach this organization in a browser or with the CLI. Organization keys and, unless you block them, personal keys still reach it without authenticating."
   end
 
   defp exemption_summary(exempt, true = _requires_sso?) do
