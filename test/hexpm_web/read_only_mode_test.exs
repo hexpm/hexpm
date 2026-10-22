@@ -227,11 +227,7 @@ defmodule HexpmWeb.ReadOnlyModeTest do
 
     for {content_type, decode} <- [
           {"application/vnd.hex+json", &Jason.decode!/1},
-          {"application/vnd.hex+elixir",
-           fn body ->
-             {:ok, term} = HexpmWeb.ElixirFormat.decode(body)
-             term
-           end},
+          {"application/vnd.hex+elixir", &(&1 |> Code.eval_string() |> elem(0))},
           {"application/vnd.hex+erlang", &:erlang.binary_to_term/1}
         ] do
       conn =
