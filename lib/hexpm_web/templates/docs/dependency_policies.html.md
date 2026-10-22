@@ -26,7 +26,7 @@ Every `mix hex.audit` mode checks the complete lockfile for advisories and retir
 
 Use `--policy-overrides` when every advisory and retirement should remain actionable unless an organization administrator explicitly accepted it. Use `--policy` when the audit should check compliance with the organization's full advisory and retirement policy.
 
-Both policy flags require an active policy and can't be used together. Both fail when a locked package is matched by a Deny override. Project `ignore_advisories` and `ignore_retirements` settings are applied after policy evaluation and can't clear a Deny override. A denied package stays rejected until the policy changes. Policy-accepted and project-ignored findings appear in separate output sections and don't affect the exit status. Audit modes don't check cooldown eligibility or general lockfile validity.
+Both policy flags require an active policy and can't be used together. Both fail when a locked package is matched by a Deny override. Project `ignore_advisories` and `ignore_retirements` settings are applied after policy evaluation and can't clear a Deny override. A denied package stays rejected until the policy changes. Policy-accepted and project-ignored findings appear in separate output sections and don't affect the exit status. `mix hex.audit --format sarif` leaves them out of the report, so GitHub code scanning closes their alerts. Audit modes don't check cooldown eligibility or general lockfile validity.
 
 ### Project controls
 
