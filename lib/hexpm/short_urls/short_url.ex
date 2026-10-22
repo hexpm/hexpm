@@ -24,6 +24,10 @@ defmodule Hexpm.ShortURLs.ShortURL do
   # Bandit refuses request lines over 10,000 bytes, so a longer link would
   # shorten fine and then fail with 414 when followed.
   @max_url_bytes 8192
+  # A submitted link can be longer than its canonical form, which drops
+  # duplicate comparisons and percent-encoding, so it has a few times the room
+  # before it's refused unparsed.
+  @max_link_bytes 4 * @max_url_bytes
   @package_name ~r/\A[a-z][a-z0-9_]*\z/
   @max_package_name_bytes 255
 
@@ -64,6 +68,11 @@ defmodule Hexpm.ShortURLs.ShortURL do
   can't show them.
   """
   def canonical_diff_url(url, existing \\ &Function.identity/1)
+
+  def canonical_diff_url(url, _existing)
+      when is_binary(url) and byte_size(url) > @max_link_bytes do
+    {:error, "must be at most #{@max_link_bytes} bytes"}
+  end
 
   def canonical_diff_url(url, existing) when is_binary(url) do
     uri = URI.parse(url)
