@@ -1,5 +1,5 @@
 <h1 style="color: #030913; font-size: 24px; line-height: 32px; font-weight: 600; margin: 0 0 24px 0; text-align: center;">
-  Personal API Keys And <%= @organization %>
+  Personal Keys And <%= @organization %>
 </h1>
 
 <%= if @revoked != [] or @trimmed != [] do %>

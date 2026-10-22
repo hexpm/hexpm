@@ -510,7 +510,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
       |> get("/dashboard/orgs/#{context.organization.name}/sso")
       |> html_response(200)
 
-    assert html =~ "Personal API keys that reach this organization"
+    assert html =~ "Personal keys that reach this organization"
 
     assert html =~
              "records when it was last used but not what it was used for"
@@ -579,7 +579,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
     assert sso_html =~ "Exempt members."
     refute sso_html =~ "Exempt members ("
     assert sso_html =~ "Billing and this page"
-    assert sso_html =~ "Organization API keys"
+    assert sso_html =~ "Organization keys"
   end
 
   describe "per-member SSO controls on the members tab" do
@@ -790,7 +790,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
       |> html_response(200)
 
     assert html =~ "Nobody is exempt."
-    assert html =~ "Organization API keys and, unless you block them, personal API keys"
+    assert html =~ "Organization keys and, unless you block them, personal keys"
   end
 
   # A member who is not an administrator is told no. Someone outside the

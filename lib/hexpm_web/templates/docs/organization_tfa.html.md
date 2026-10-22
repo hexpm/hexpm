@@ -12,7 +12,7 @@ You can edit the deadline during the transition. After enforcement starts, disab
 
 ### Credentials and automation
 
-The requirement applies to the account. Once 2FA is enabled, browser sessions, Hex client sessions, and personal API keys reach the organization again without further steps. Credentials the organization owns aren't affected by the policy. Access to other organizations follows their own policies.
+The requirement applies to the account. Once 2FA is enabled, browser sessions, Hex client sessions, and personal keys reach the organization again without further steps. Credentials the organization owns aren't affected by the policy. Access to other organizations follows their own policies.
 
 API write operations continue to require a one-time code from members with 2FA enabled, as they do for every account.
 
