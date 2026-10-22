@@ -6,20 +6,18 @@ In Hex 2.6, a dependency policy override can accept a specific advisory, retirem
 
 This release also removes the ways of authenticating to organization repositories that Hex 2.5 deprecated, and hex.pm is starting to phase out user API keys with repository permissions. If you fetch private packages in CI, read [Organization authentication](#organization-authentication) before you upgrade.
 
-Package builds are now reproducible, so the same project files give the same tarball on macOS and Linux, and `mix deps.get` is about twice as fast when there's little or nothing to fetch.
+Package builds are now reproducible, so the same project files give the same tarball on macOS and Linux. `mix deps.get` is also about twice as fast when there's little or nothing to fetch.
 
 ### Dependency policies
 
 [Hex 2.5](/blog/hex-v25-released) added dependency policies, which decide what `mix deps.get` may add to a project. An allow override skips all of the policy's checks for the releases it matches, so before Hex 2.6 accepting one advisory in a policy also accepted every other advisory, retirement and cooldown for those releases. A policy override can now accept a specific advisory, a specific retirement reason or the cooldown for a package, and the policy's other checks still apply to it. Any override can have a comment saying why it's there.
 
-Add them in the policy editor on hex.pm, which finds an advisory by its GHSA or CVE ID. An advisory override accepts the versions the advisory affected when you created the override, so versions the advisory adds later are still rejected. `mix hex.policy show` lists the overrides with their comments. Hex 2.5 ignores the new override types, so on Hex 2.5 the advisory, retirement or cooldown they accept is still enforced.
+Add them in the policy editor on hex.pm, which finds an advisory by its GHSA or CVE ID. An advisory override accepts the versions the advisory affected when you created the override, so versions the advisory adds later are still rejected. `mix hex.policy show` lists the overrides with their comments. Hex 2.5 ignores the new override types and keeps enforcing the advisory, retirement or cooldown they accept.
 
 <img class="blog-img-light" src="/images/blog/027_policy_overrides.png" srcset="/images/blog/027_policy_overrides.png 2x" alt="Deny, advisory, retirement and cooldown overrides with comments in the hex.pm policy editor">
 <img class="blog-img-dark" src="/images/blog/027_policy_overrides_dark.png" srcset="/images/blog/027_policy_overrides_dark.png 2x" alt="Deny, advisory, retirement and cooldown overrides with comments in the hex.pm policy editor">
 
-Packages already in `mix.lock` were never checked against a policy. Hex 2.6 adds two ways to do that.
-
-`mix hex.audit --policy` checks every Hex package in `mix.lock` against the active policy, including its advisory severity threshold, its retirement reasons and its overrides. It fails only for findings the policy rejects, lists the findings the policy accepts in their own sections and prints an override's comment next to each finding it accepted or denied. A locked package that a deny override matches fails the audit even if you've acknowledged its advisories with `ignore_advisories`. If you only want the overrides applied and every other advisory and retirement reported, use `mix hex.audit --policy-overrides` instead. Neither checks the cooldown.
+Packages already in `mix.lock` were never checked against a policy. `mix hex.audit --policy` now checks every Hex package in `mix.lock` against the active policy, including its advisory severity threshold, its retirement reasons and its overrides. It fails only for findings the policy rejects, lists the findings the policy accepts in their own sections and prints an override's comment next to each finding it accepted or denied. A locked package that a deny override matches fails the audit even if you've acknowledged its advisories with `ignore_advisories`. If you only want the overrides applied and every other advisory and retirement reported, use `mix hex.audit --policy-overrides` instead. Neither checks the cooldown.
 
 <img src="/images/blog/027_audit_policy.png" srcset="/images/blog/027_audit_policy.png 2x" alt="mix hex.audit --policy listing rejected, accepted and denied packages">
 
@@ -38,18 +36,18 @@ def project do
 end
 ```
 
-You can also set it with `HEX_POLICY_ENFORCE_LOCK=1` or `mix hex.config policy_enforce_lock true`. Errors caused by a policy now end with the command to run without it, `HEX_POLICY= mix deps.get`, so someone blocked by a policy they didn't write can see how to bypass it. `mix deps.get` and `mix deps.update` have also stopped warning about advisories and retirements of releases that an override in your policy accepts.
+[Dependency policies](/docs/dependency-policies) lists the other ways to enable it. Errors caused by a policy now end with the command to run without it, `HEX_POLICY= mix deps.get`, so someone blocked by a policy they didn't write can see how to bypass it. `mix deps.get` and `mix deps.update` have also stopped warning about advisories and retirements of releases that an override in your policy accepts.
 
-`mix hex.audit` can write its results as SARIF with `--format sarif --output hex-audit.sarif`. Upload the file to GitHub code scanning and the findings show up in the repository's Security tab and as annotations on the `mix.lock` lines of pull requests. Findings you've acknowledged with `ignore_advisories` or `ignore_retirements`, and with `--policy` findings your policy accepts, are left out of the file, so code scanning closes their alerts as fixed. `mix help hex.audit` has a complete GitHub Actions workflow. SARIF output requires OTP 27 or later.
+`mix hex.audit` can write its results as SARIF with `--format sarif --output hex-audit.sarif`. Upload the file to GitHub code scanning and the findings show up in the repository's Security tab and as annotations on the `mix.lock` lines of pull requests. Findings you've acknowledged with `ignore_advisories` or `ignore_retirements` are left out of the file, and so are findings your policy accepts when you run `mix hex.audit --policy`. Code scanning then closes their alerts as fixed. `mix help hex.audit` has a complete GitHub Actions workflow. SARIF output requires OTP 27 or later.
 
 <img class="blog-img-light" src="/images/blog/027_code_scanning.png" srcset="/images/blog/027_code_scanning.png 2x" alt="A Hex advisory shown as a GitHub code scanning alert on mix.lock">
 <img class="blog-img-dark" src="/images/blog/027_code_scanning_dark.png" srcset="/images/blog/027_code_scanning_dark.png 2x" alt="A Hex advisory shown as a GitHub code scanning alert on mix.lock">
 
 ### Two-factor authentication for organizations
 
-Organization admins can now require two-factor authentication for every member. An admin with 2FA enabled sets the requirement on the organization's Members page, either right away or after a transition of 1 to 30 days, and the page shows admins which members have enabled 2FA. Members without 2FA get an email when a transition is scheduled, reminders seven days and one day before the deadline, and an email when they lose access. From the deadline, a member without 2FA can't use the organization's dashboard pages or its API, and can't fetch its private packages and docs once their current token expires, within 30 minutes. They keep their membership and role, and get access back as soon as they enable 2FA. Once the requirement is scheduled, new members have to enable 2FA before they can accept an invitation. Keys owned by the organization aren't affected. See [Organization two-factor authentication](/docs/organization-tfa) for the details.
+Organization admins can now require two-factor authentication for every member. An admin with 2FA enabled sets the requirement on the organization's Members page, either right away or after a transition of 1 to 30 days, and the page shows which members have enabled 2FA. From the deadline, members without 2FA can't use the organization's dashboard pages, API, private packages or docs. They keep their membership and role, and get access back as soon as they enable 2FA. Keys owned by the organization aren't affected. [Organization two-factor authentication](/docs/organization-tfa) covers the emails members get, invitations and the rest of the details.
 
-When `mix deps.get` or `mix deps.update` needs packages from an organization that requires 2FA and your `mix hex.user auth` session doesn't meet the requirement, Hex 2.6 names the organization and asks once whether to authenticate now. If you confirm, it opens hex.pm in your browser, and after you've enabled 2FA and pressed Enter it fetches the organization's packages. If you decline, it warns that the organization's packages won't be available. Earlier Hex versions report the missing access as a missing package or missing permissions.
+When `mix deps.get` or `mix deps.update` needs packages from an organization that requires 2FA and your `mix hex.user auth` session doesn't meet the requirement, Hex 2.6 names the organization and offers to open hex.pm in your browser so you can enable 2FA, then fetches its packages. Earlier Hex versions report the missing access as a missing package or missing permissions.
 
 ### Organization authentication
 
@@ -61,9 +59,7 @@ When `mix deps.get` or `mix deps.update` needs packages from an organization tha
 
 For development, `mix hex.user auth` gives you access to all your organizations. For CI, generate an organization key with `mix hex.organization key ORGANIZATION generate` and pass it to `mix hex.organization auth ORGANIZATION --key KEY`.
 
-With a mirror set with `HEX_MIRROR`, Hex 2.6 fetches organization packages from repo.hex.pm. With a mirror set with `HEX_TRUSTED_MIRROR`, it fetches them through the mirror.
-
-hex.pm is also phasing out user API keys with repository permissions, because organization admins can't see or revoke them. hex.pm no longer creates new ones, so `mix hex.user auth` in Hex 2.3 and earlier and `mix hex.organization auth` without `--key` in Hex 2.5 and most earlier versions stop working, since both create one. When you use an existing key, Hex 2.4 and later print a warning with the date it stops working. On 20 January 2027, 90 days after this release, user keys stop giving access to organization repositories, whatever Hex version you run. Replace them with `mix hex.user auth` or an organization key before then. If `HEX_REPOS_KEY` holds a user key, remove it: from that date hex.pm refuses to exchange it, and every fetch fails, including public packages.
+hex.pm is also phasing out user API keys with repository permissions, because organization admins can't see or revoke them. hex.pm no longer creates new ones. That breaks `mix hex.user auth` in Hex 2.3 and earlier, and `mix hex.organization auth` without `--key` in Hex 2.5 and most earlier versions, because both create one. When you use an existing key, Hex 2.4 and later print a warning with the date it stops working. On 20 January 2027, 90 days after this release, user keys stop giving access to organization repositories, whatever Hex version you run. Replace them with `mix hex.user auth` or an organization key before then. If `HEX_REPOS_KEY` holds a user key, remove it: from that date hex.pm refuses to exchange it, and every fetch fails, including public packages.
 
 On 1 November 2026 hex.pm turns off Basic authentication on the API, as we [announced in July](/blog/deprecating-basic-auth), and stops letting API keys create API keys. From then on `mix hex.organization key ORGANIZATION generate` needs a sign-in with `mix hex.user auth`, with `HEX_API_KEY` unset. You can still create keys on the dashboard.
 
@@ -103,7 +99,7 @@ We measured hex.pm's own project, which has 158 entries in `mix.lock`, on macOS 
 
 One cause was repeated registry lookups. Resolving hex.pm's dependencies asked the registry for package versions 10,006 times, and now asks once per package. A bug since Hex 2.1.0 also meant cached registry files were never revalidated, so every run downloaded all of them again. For hex.pm's project that was 128 requests and 473 KB on every `mix deps.get`. Now all 128 come back as "not modified" without a body, which saves the 473 KB.
 
-Fetching a large package uses less memory. Packages are written to disk as they download instead of being held in memory, and unpacked while other packages are still downloading. In three runs fetching and unpacking rocksdb, a 7.4 MB package, from a local mirror with the default concurrency, peak memory use was 159 to 167 MB, down from 261 to 408 MB. `http_concurrency` (`HEX_HTTP_CONCURRENCY`) now only limits package downloads, and registry files are fetched with four times that limit, 32 by default.
+Fetching a large package uses less memory. Packages are written to disk as they download instead of being held in memory, and unpacked while other packages are still downloading. In three runs fetching and unpacking rocksdb, a 7.4 MB package, from a local mirror with the default concurrency, peak memory use was 159 to 167 MB, down from 261 to 408 MB.
 
 ### Changes on hex.pm
 
