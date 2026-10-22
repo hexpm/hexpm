@@ -2,11 +2,11 @@
 
 <div class="subtitle"><time datetime="2026-10-22T00:00:00Z">22 October, 2026</time> · by Eric Meadows-Jönsson</div>
 
-In Hex 2.6, a dependency policy override can accept a specific advisory, retirement reason or the cooldown for a package while the policy's other checks still apply, and you add these overrides in the policy editor on hex.pm. Policies can also check the packages already in `mix.lock`, in CI or on every `mix deps.get`. On hex.pm, organizations can now require two-factor authentication for their members.
+[Hex 2.5](/blog/hex-v25-released) was about making it harder for a malicious or compromised release to reach your system, with security advisories in your terminal, a release-age cooldown and dependency policies. Hex 2.6 and hex.pm continue that work. Policy overrides can now accept a specific advisory, retirement reason or the cooldown for a package, and policies can check the packages already in `mix.lock`. Organizations can require two-factor authentication, and organization repositories use short-lived tokens instead of keys stored on your machine. Package builds are now reproducible, so you can check a release on hex.pm against its source.
 
-This release also removes the ways of authenticating to organization repositories that Hex 2.5 deprecated, and hex.pm is starting to phase out user API keys with repository permissions. If you fetch private packages in CI, read [Organization authentication](#organization-authentication) before you upgrade.
+This release removes the ways of authenticating to organization repositories that Hex 2.5 deprecated, and hex.pm is starting to phase out user API keys with repository permissions. If you fetch private packages in CI, read [Organization authentication](#organization-authentication) before you upgrade.
 
-Package builds are now reproducible, so the same project files give the same tarball on macOS and Linux. `mix deps.get` is also about twice as fast when there's little or nothing to fetch.
+`mix deps.get` is also about twice as fast when there's little or nothing to fetch. The [security fixes](#security-fixes-since-hex-25) made since Hex 2.5 are listed at the end.
 
 ### Dependency policies
 
@@ -45,13 +45,13 @@ end
 
 ### Two-factor authentication for organizations
 
-Organization admins can now require two-factor authentication for every member. An admin with 2FA enabled sets the requirement on the organization's Members page, either right away or after a transition of 1 to 30 days, and the page shows which members have enabled 2FA. From the deadline, members without 2FA can't use the organization's dashboard pages, API, private packages or docs. They keep their membership and role, and get access back as soon as they enable 2FA. Keys owned by the organization aren't affected. [Organization two-factor authentication](/docs/organization-tfa) covers the emails members get, invitations and the rest of the details.
+Organization admins can now require two-factor authentication for every member, so signing in as one of them takes more than a stolen password. An admin with 2FA enabled sets the requirement on the organization's Members page, either right away or after a transition of 1 to 30 days, and the page shows which members have enabled 2FA. From the deadline, members without 2FA can't use the organization's dashboard pages, API, private packages or docs. They keep their membership and role, and get access back as soon as they enable 2FA. Keys owned by the organization aren't affected. [Organization two-factor authentication](/docs/organization-tfa) covers the emails members get, invitations and the rest of the details.
 
 When `mix deps.get` or `mix deps.update` needs packages from an organization that requires 2FA and your `mix hex.user auth` session doesn't meet the requirement, Hex 2.6 names the organization and offers to open hex.pm in your browser so you can enable 2FA, then fetches its packages. Earlier Hex versions report the missing access as a missing package or missing permissions.
 
 ### Organization authentication
 
-[Hex 2.5](/blog/hex-v25-released) deprecated `mix hex.organization auth` without `--key`, and authenticating to organization repositories with keys stored on your machine or read from `HEX_REPOS_KEY`. Hex 2.6 drops support for all three:
+A key stored in `~/.hex/hex.config` or set in `HEX_REPOS_KEY` works until someone revokes it, and so does any copy of it. For organization repositories, Hex 2.6 only stores a token that expires within 30 minutes. [Hex 2.5](/blog/hex-v25-released) deprecated `mix hex.organization auth` without `--key`, and authenticating to organization repositories with keys stored on your machine or read from `HEX_REPOS_KEY`. Hex 2.6 drops support for all three:
 
   * `mix hex.organization auth ORGANIZATION` requires `--key`. It exchanges the key for a short-lived token and stores only the token, which Hex uses for about 25 minutes and doesn't refresh, so in CI run it right before fetching dependencies.
   * Keys that earlier Hex versions stored in `~/.hex/hex.config` are no longer used for organization repositories.
@@ -65,7 +65,7 @@ On 1 November 2026 hex.pm turns off Basic authentication on the API, as we [anno
 
 ### Secret scanning
 
-hex.pm scans published packages for leaked credentials, such as cloud provider keys and API tokens for services like GitHub, Slack and Stripe. When it finds one, it emails the package owners, the admins of an organization that owns the package and the publisher, so they can rotate the credential. The release isn't blocked or marked publicly, and hex.pm only stores a fingerprint and a masked preview of what it found.
+Anyone can download a published package, including any credentials packaged by mistake. hex.pm now scans published packages for leaked credentials, such as cloud provider keys and API tokens for services like GitHub, Slack and Stripe. When it finds one, it emails the package owners, the admins of an organization that owns the package and the publisher, so they can rotate the credential. The release isn't blocked or marked publicly, and hex.pm only stores a fingerprint and a masked preview of what it found.
 
 If your package ships secret-like values on purpose, such as test fixtures, Hex 2.6 lets you exclude those paths with the `:secret_scan` package option. Earlier Hex versions leave the option out of the package.
 
@@ -80,9 +80,9 @@ API keys created on hex.pm now start with `hex_` and end with a checksum. The ne
 
 ### Reproducible package builds
 
-Building the same project on two machines could give two different tarballs. The order files were listed on disk, the umask, how the file system reported permissions and Unicode file names, VM flags like `+fnl` and the zlib that OTP was linked against all ended up in the package. Hex 2.6 builds identical packages from identical project files, whether you publish from macOS or Linux and whichever Elixir and OTP versions you run.
+To check that a release on hex.pm was built from the source it claims, you have to build the same package yourself and compare. Until now, building the same project on two machines could give two different tarballs. The order files were listed on disk, the umask, how the file system reported permissions and Unicode file names, VM flags like `+fnl` and the zlib that OTP was linked against all ended up in the package. Hex 2.6 builds identical packages from identical project files, whether you publish from macOS or Linux and whichever Elixir and OTP versions you run.
 
-That makes it possible to check a release on hex.pm against its source. Check out the commit the release was built from, install the Hex version recorded in the package's `build_env` metadata with `mix local.hex VERSION`, run `mix hex.build`, and compare the package checksum it prints with the checksum on the release's hex.pm page. The checksum still depends on the Hex version, so packages now record the Hex version that built them in the `build_env` field of their metadata. `mix hex.package fetch PACKAGE VERSION --unpack` puts the metadata in `hex_metadata.config`.
+To verify one, check out the commit the release was built from, install the Hex version recorded in the package's `build_env` metadata with `mix local.hex VERSION`, run `mix hex.build`, and compare the package checksum it prints with the checksum on the release's hex.pm page. The checksum still depends on the Hex version, so packages now record the Hex version that built them in the `build_env` field of their metadata. `mix hex.package fetch PACKAGE VERSION --unpack` puts the metadata in `hex_metadata.config`.
 
 This only works for packages built with Hex 2.6 or later. It also assumes your `mix.exs` gives the same package configuration each time, so a version or file list computed from git or environment variables has to come out the same on the second build. Docs tarballs aren't covered.
 
@@ -112,6 +112,23 @@ Every package page has a Report package link for reporting vulnerabilities, malw
 Adding someone to an organization by username now sends them an invitation, and they only join if they accept it on their dashboard. Members can make their membership public in their profile settings, and it then shows on their profile and on the organization's Members tab. Every membership starts private.
 
 We're testing single sign-on for organizations and Workload Identity, and each will get its own announcement when it's available to everyone. With single sign-on, organizations sign their members in through their identity provider and can provision members with SCIM. Workload Identity lets a GitHub Actions job exchange its OIDC token for a short-lived hex.pm token to publish packages and fetch private packages, without storing an API key.
+
+### Security fixes since Hex 2.5
+
+Hex 2.5.2 and hex_core 0.20.0, released on 12 October, fixed eight vulnerabilities. Hex 2.6 includes all of these fixes. Peter Ullrich found seven of them, and Zach Daniel reported the terminal escape sequence injection.
+
+  * [CVE-2026-96612](https://github.com/hexpm/hex/security/advisories/GHSA-2vjj-c5hr-6xc3) (high): path traversal through dependency app names.
+  * [CVE-2026-105668](https://github.com/hexpm/hex/security/advisories/GHSA-pqhp-5x9x-69h7) (high): the release-age cooldown was lifted for a whole package when the locked release was retired.
+  * [CVE-2026-105280](https://github.com/hexpm/hex/security/advisories/GHSA-98jr-23pm-vj7c) (medium): `mix hex.package fetch` wrote unverified package tarballs to standard output.
+  * [CVE-2026-103503](https://github.com/hexpm/hex/security/advisories/GHSA-rw8q-hg7m-cxgr) (medium): Hex trusted its bundled CA certificates even when `cacerts_path` was set.
+  * [CVE-2026-103502](https://github.com/hexpm/hex_core/security/advisories/GHSA-p26c-h8c2-rwqj) (medium): hex_core's default HTTP adapter didn't verify TLS certificates on OTP 24 and 25.
+  * [CVE-2026-96618](https://github.com/hexpm/hex/security/advisories/GHSA-gf42-pg2f-63jp) (low): oversized or compressed responses from an untrusted mirror could exhaust memory and disk.
+  * [CVE-2026-105274](https://github.com/hexpm/hex_core/security/advisories/GHSA-7c4r-cgf9-9jmq) (low): hex_core decompressed registry and API responses without a size limit. rebar3 3.27.3 also has the fix.
+  * [CVE-2026-81856](https://github.com/hexpm/hex/security/advisories/GHSA-fpmj-3cxg-p766) (low): terminal escape sequences in server responses weren't neutralized.
+
+Hex 2.5.4, released on 20 October, stopped trusting three emSign root certificates, which Mozilla removed from its root store. The private keys of eight eMudhra intermediate CAs that chain to one of them were compromised.
+
+hex.pm fixed three vulnerabilities on the server, so you don't need to do anything for them. [CVE-2026-75542](https://github.com/hexpm/hexpm/security/advisories/GHSA-rfx8-w654-8cpr) (high) and [CVE-2026-75554](https://github.com/hexpm/hexpm/security/advisories/GHSA-24ww-j3f4-p49c) (low) are described in [Private package authorization vulnerabilities](/blog/private-package-authorization-vulnerabilities). In [CVE-2026-86698](https://github.com/hexpm/hexpm/security/advisories/GHSA-vmw7-7g2w-gw2f) (low), found by Peter Ullrich, the CDN accepted refresh tokens as credentials for private repositories.
 
 ### Other changes
 
