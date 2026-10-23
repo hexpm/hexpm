@@ -161,6 +161,29 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
       refute body =~ "secret_other_package"
     end
 
+    test "leaves out organization workload identities of an organization that only maintains it",
+         %{full_owner: full_owner, package: package} do
+      organization = insert(:organization)
+      insert(:package_owner, package: package, user: organization.user, level: "maintainer")
+
+      insert(:organization_workload_identity,
+        organization: organization,
+        role: "write",
+        repositories: repositories(["acme/widget"]),
+        workflow: "release.yml",
+        covers_public: true
+      )
+
+      body =
+        build_conn()
+        |> test_login(full_owner)
+        |> get("/packages/#{package.name}/workload-identities")
+        |> html_response(200)
+
+      refute body =~ "organization-workload-identity-"
+      refute body =~ "acme/widget"
+    end
+
     test "leaves out organization workload identities of organizations without the feature flag",
          %{full_owner: full_owner, package: package} do
       organization = insert(:organization)

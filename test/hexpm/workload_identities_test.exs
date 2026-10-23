@@ -1674,7 +1674,7 @@ defmodule Hexpm.WorkloadIdentitiesTest do
                        %{organization_id: ^organization_id, package_id: nil}}
     end
 
-    test "matches an organization that owns the package as a maintainer", %{
+    test "refuses an organization that owns the package as a maintainer", %{
       organization: organization
     } do
       package =
@@ -1682,7 +1682,7 @@ defmodule Hexpm.WorkloadIdentitiesTest do
           package_owners: [build(:package_owner, user: organization.user, level: "maintainer")]
         )
 
-      assert {:ok, _token} = mint_public(package.name)
+      assert {:error, :no_matching_identity} = mint_public(package.name)
     end
 
     test "refuses a public package the organization doesn't own" do
@@ -2199,6 +2199,28 @@ defmodule Hexpm.WorkloadIdentitiesTest do
       assert errors_on(changeset)[:public_packages] ==
                "must be public packages the organization owns, " <>
                  "not " <> Enum.join(Enum.sort([someone_elses.name, "new_package"]), ", ")
+
+      assert WorkloadIdentities.list(organization) == []
+    end
+
+    test "refuses a public package the organization only maintains", %{
+      admin: admin,
+      organization: organization
+    } do
+      maintained =
+        insert(:package,
+          package_owners: [build(:package_owner, user: organization.user, level: "maintainer")]
+        )
+
+      assert {:error, changeset} =
+               WorkloadIdentities.create(
+                 organization,
+                 public_params(%{"public_packages" => maintained.name}),
+                 audit: audit_data(admin)
+               )
+
+      assert errors_on(changeset)[:public_packages] ==
+               "must be public packages the organization owns, not #{maintained.name}"
 
       assert WorkloadIdentities.list(organization) == []
     end
@@ -3511,6 +3533,11 @@ defmodule Hexpm.WorkloadIdentitiesTest do
 
       owned =
         insert(:package,
+          package_owners: [build(:package_owner, user: organization.user, level: "full")]
+        )
+
+      maintained =
+        insert(:package,
           package_owners: [build(:package_owner, user: organization.user, level: "maintainer")]
         )
 
@@ -3523,10 +3550,11 @@ defmodule Hexpm.WorkloadIdentitiesTest do
           role: "write",
           workflow: "release.yml",
           covers_public: true,
-          public_packages: [owned.name, someone_elses.name, "missing"]
+          public_packages: [owned.name, maintained.name, someone_elses.name, "missing"]
         )
 
       assert WorkloadIdentities.unowned_public_packages(identity) == [
+               maintained.name,
                someone_elses.name,
                "missing"
              ]
