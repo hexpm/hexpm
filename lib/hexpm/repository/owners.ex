@@ -221,6 +221,9 @@ defmodule Hexpm.Repository.Owners do
           !owner ->
             {:error, :not_owner}
 
+          User.organization?(user) and level != "full" ->
+            {:error, :organization_level}
+
           owner.level == "full" and level != "full" and last_full_owner?(owners) ->
             {:error, :last_full_owner}
 

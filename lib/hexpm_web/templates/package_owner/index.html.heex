@@ -51,6 +51,7 @@
 
               <%= if @manage? and length(@owners) > 1 do %>
                 <.icon_button
+                  :if={not Hexpm.Accounts.User.organization?(owner.user)}
                   icon="pencil-square"
                   variant="default"
                   aria-label={"Edit role for #{owner.user.username}"}
@@ -78,7 +79,12 @@
 
     <%!-- Edit role + Remove modals (one per owner, only when more than one) --%>
     <%= for owner <- @owners, @manage?, length(@owners) > 1 do %>
-      <.modal id={"edit-role-#{owner.user.id}"} title="Change role" max_width="md">
+      <.modal
+        :if={not Hexpm.Accounts.User.organization?(owner.user)}
+        id={"edit-role-#{owner.user.id}"}
+        title="Change role"
+        max_width="md"
+      >
         <.sudo_form
           current_user={@current_user}
           action={HexpmWeb.ViewHelpers.path_for_owner(@package, owner.user.username)}

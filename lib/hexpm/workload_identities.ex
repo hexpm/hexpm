@@ -19,8 +19,9 @@ defmodule Hexpm.WorkloadIdentities do
   @mint_expires_in 15 * 60
 
   # An organization workload identity publishes a public package its
-  # organization owns at the level an organization key needs to publish it.
-  @public_owner_level "maintainer"
+  # organization is a full owner of, the level a user needs to add a workload
+  # identity to the package.
+  @public_owner_level "full"
 
   @doc """
   Whether workload identities are on for anyone, which shows the docs and
@@ -74,8 +75,7 @@ defmodule Hexpm.WorkloadIdentities do
 
   @doc """
   Whether an organization workload identity publishes a public package now,
-  which needs its organization to own the package at the level an
-  organization key needs to publish it.
+  which needs its organization to be a full owner of the package.
   """
   def publishes_public?(
         %WorkloadIdentity{organization_id: organization_id} = workload_identity,
