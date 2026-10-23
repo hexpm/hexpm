@@ -19,6 +19,7 @@ import { SearchInputSync } from "./hooks/search_input_sync";
 import { ToggleGroup } from "./hooks/toggle_group";
 import { RuleToggle } from "./hooks/rule_toggle";
 import { OverrideList } from "./hooks/override_list";
+import { PolicyExceptionList } from "./hooks/policy_exception_list";
 import { PrivateRepoTabs } from "./hooks/private_repo_tabs";
 import { PolicyDirtyState } from "./hooks/policy_dirty_state";
 import LineHighlight from "./hooks/line_highlight";
@@ -48,6 +49,7 @@ let Hooks = {
   ToggleGroup,
   RuleToggle,
   OverrideList,
+  PolicyExceptionList,
   PrivateRepoTabs,
   PolicyDirtyState,
   LineHighlight,
