@@ -149,7 +149,8 @@ defmodule HexpmWeb.PackageController do
           all_versions: Enum.map(releases, & &1.version),
           page: page,
           per_page: per_page,
-          releases_total_count: total_count
+          releases_total_count: total_count,
+          can_retire?: can_retire?(package, conn.assigns.current_user)
         ] ++
           PackageLayoutAssigns.for_package(conn, package,
             releases: releases,
@@ -242,6 +243,9 @@ defmodule HexpmWeb.PackageController do
         not_found(conn)
     end
   end
+
+  defp can_retire?(_package, nil = _user), do: false
+  defp can_retire?(package, user), do: Packages.owner_with_access?(package, user, "maintainer")
 
   defp matching_release(releases, version) do
     Enum.find(releases, &(to_string(&1.version) == version))

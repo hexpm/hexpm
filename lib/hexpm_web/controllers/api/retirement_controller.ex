@@ -14,7 +14,7 @@ defmodule HexpmWeb.API.RetirementController do
              audit: audit_data(conn),
              replace: replace? in [true, "true"]
            ) do
-        :ok ->
+        {:ok, _count} ->
           conn
           |> api_cache(:private)
           |> send_resp(204, "")

@@ -10,6 +10,8 @@ defmodule Hexpm.Repository.ReleaseRetirement do
 
   @reasons ~w(other invalid security deprecated renamed)
 
+  def reasons, do: @reasons
+
   def changeset(meta, params) do
     cast(meta, params, ~w(reason message)a)
     |> validate_required(~w(reason)a)

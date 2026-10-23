@@ -336,6 +336,11 @@ defmodule HexpmWeb.Router do
     get "/packages/:name/versions", PackageController, :versions
     get "/packages/:name/advisories", PackageController, :advisories
     get "/packages/:name/:version/dependencies", PackageController, :dependencies
+    get "/packages/:name/versions/retire", ReleaseRetirementController, :show_all
+    post "/packages/:name/versions/retire", ReleaseRetirementController, :create_all
+    get "/packages/:name/:version/retire", ReleaseRetirementController, :show
+    post "/packages/:name/:version/retire", ReleaseRetirementController, :create
+    delete "/packages/:name/:version/retire", ReleaseRetirementController, :delete
 
     # Before `:show`, whose `/packages/:repository/:name/:version` would match these.
     for kind <- Hexpm.Docs.Files.kinds(), kind != :readme do
@@ -377,6 +382,11 @@ defmodule HexpmWeb.Router do
     get "/packages/:repository/:name/versions", PackageController, :versions
     get "/packages/:repository/:name/advisories", PackageController, :advisories
     get "/packages/:repository/:name/:version/dependencies", PackageController, :dependencies
+    get "/packages/:repository/:name/versions/retire", ReleaseRetirementController, :show_all
+    post "/packages/:repository/:name/versions/retire", ReleaseRetirementController, :create_all
+    get "/packages/:repository/:name/:version/retire", ReleaseRetirementController, :show
+    post "/packages/:repository/:name/:version/retire", ReleaseRetirementController, :create
+    delete "/packages/:repository/:name/:version/retire", ReleaseRetirementController, :delete
     get "/packages/:repository/:name/:version/raw/*filename", PreviewRawController, :show
 
     get "/packages/:repository/:name/:version/readme-image/*filename",
