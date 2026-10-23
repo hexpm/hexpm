@@ -34,7 +34,7 @@ Hex clients display "2FA enrollment required" or "SSO authentication required", 
 
 ### Notifications
 
-Scheduling enforcement notifies every member. Members with outstanding enrollment receive reminders seven days and one day before enforcement. Stages already elapsed when scheduling are skipped. After the deadline, members without 2FA receive suspension notices and administrators receive a summary.
+Scheduling a transition emails the members who haven't enabled 2FA. They get reminders seven days and one day before the deadline, unless the transition is too short for that reminder. Immediate enforcement sends no transition notice. After the deadline, members without 2FA get a suspension notice, and administrators get a summary that lists the suspended members.
 
 Notification deduplication uses the policy revision, recipient, and stage. Policy changes, enrollment, and membership removal cancel obsolete queued notices. Notices already being delivered may still arrive. Policy changes and queued notifications are recorded in the audit log. Enforcement doesn't wait for a notification to be delivered or for a background job to run.
 
