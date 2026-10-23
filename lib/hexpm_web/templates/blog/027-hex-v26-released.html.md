@@ -1,6 +1,6 @@
 ## Hex v2.6 released
 
-<div class="subtitle"><time datetime="2026-10-22T00:00:00Z">22 October, 2026</time> · by Eric Meadows-Jönsson</div>
+<div class="subtitle"><time datetime="2026-10-23T00:00:00Z">23 October, 2026</time> · by Eric Meadows-Jönsson</div>
 
 [Hex 2.5](/blog/hex-v25-released) was about making it harder for a malicious or compromised release to reach your system, with security advisories in your terminal, a release-age cooldown and dependency policies. Hex 2.6 and hex.pm continue that work. Policy overrides can now accept a specific advisory, retirement reason or the cooldown for a package, and policies can check the packages already in `mix.lock`. Organizations can require two-factor authentication, and organization repositories use short-lived tokens instead of keys stored on your machine. Package builds are now reproducible, so you can check a release on hex.pm against its source.
 
@@ -61,7 +61,7 @@ These no longer give access to organization repositories:
   * Keys that earlier Hex versions stored in `~/.hex/hex.config`.
   * `HEX_REPOS_KEY`. It still authenticates to the hexpm repository and to mirrors set with `HEX_TRUSTED_MIRROR`.
 
-hex.pm is also phasing out user API keys with repository permissions, because organization admins can't see or revoke them. hex.pm no longer creates them, so `mix hex.user auth` and `mix hex.organization auth` don't work on older Hex versions that create one. On 20 January 2027, 90 days after this release, existing user keys stop giving access to organization repositories, whatever Hex version you run. Replace them with `mix hex.user auth` or an organization key before then. If `HEX_REPOS_KEY` holds a user key, remove it: from that date hex.pm refuses to exchange it, and every fetch fails, including public packages.
+hex.pm is also phasing out user API keys with repository permissions, because organization admins can't see or revoke them. hex.pm no longer creates them, so `mix hex.user auth` and `mix hex.organization auth` don't work on older Hex versions that create one. On 21 January 2027, 90 days after this release, existing user keys stop giving access to organization repositories, whatever Hex version you run. Replace them with `mix hex.user auth` or an organization key before then. If `HEX_REPOS_KEY` holds a user key, remove it: from that date hex.pm refuses to exchange it, and every fetch fails, including public packages.
 
 On 1 November 2026 hex.pm turns off Basic authentication on the API, as we [announced in July](/blog/deprecating-basic-auth), and stops letting API keys create API keys. From then on `mix hex.organization key ORGANIZATION generate` needs a sign-in with `mix hex.user auth`, with `HEX_API_KEY` unset. You can still create keys on the dashboard.
 
