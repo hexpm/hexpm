@@ -21,7 +21,6 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyManagementCard do
   alias Hexpm.Accounts.KeyPermission
 
   attr :keys, :list, required: true
-  attr :organizations, :list, required: true
   attr :packages, :list, required: true
   attr :key_changeset, :map, required: true
   attr :current_user, :map, required: true
@@ -100,7 +99,6 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyManagementCard do
       form={@form}
       current_user={@current_user}
       create_key_path={@create_key_path}
-      organizations={@organizations}
       packages={@packages}
       organization={assigns[:organization]}
     />

@@ -898,7 +898,14 @@ defmodule HexpmWeb.SSOEnforcementTest do
 
   describe "the edge check at /api/auth" do
     test "refuses a personal key the day enforcement starts, before any sweep", context do
-      secret = key_for(context.member, repository_permission(context))
+      secret =
+        insert(:key,
+          user: context.member,
+          permissions: [
+            build(:key_permission, domain: "repository", resource: context.organization.name)
+          ]
+        ).user_secret
+
       require_sso(context)
 
       conn =
@@ -1599,13 +1606,11 @@ defmodule HexpmWeb.SSOEnforcementTest do
       require_sso(context)
 
       shapes = [
-        %{"domain" => "repository", "resource" => context.organization.name},
         %{"domain" => "docs", "resource" => context.organization.name},
         %{
           "domain" => "package",
           "resource" => "#{context.organization.name}/#{context.package.name}"
-        },
-        %{"domain" => "repositories"}
+        }
       ]
 
       for shape <- shapes do
@@ -1631,9 +1636,7 @@ defmodule HexpmWeb.SSOEnforcementTest do
                  context.member,
                  %{
                    name: "allowed",
-                   permissions: [
-                     %{"domain" => "repository", "resource" => context.organization.name}
-                   ]
+                   permissions: [%{"domain" => "docs", "resource" => context.organization.name}]
                  },
                  audit: audit_data(context.member)
                )
@@ -1649,7 +1652,7 @@ defmodule HexpmWeb.SSOEnforcementTest do
                  context.member,
                  %{
                    name: "other",
-                   permissions: [%{"domain" => "repository", "resource" => other.name}]
+                   permissions: [%{"domain" => "docs", "resource" => other.name}]
                  },
                  audit: audit_data(context.member)
                )

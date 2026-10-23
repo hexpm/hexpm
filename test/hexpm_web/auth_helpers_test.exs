@@ -231,7 +231,10 @@ defmodule HexpmWeb.AuthHelpersTest do
   test "an API key sent on its own without the permission keeps the 401", %{user: user} do
     conn =
       build_conn()
-      |> put_req_header("authorization", key_for(user, [%{domain: "repositories"}]))
+      |> put_req_header(
+        "authorization",
+        insert(:key, user: user, permissions: [build(:key_permission, domain: "repositories")]).user_secret
+      )
       |> get("/api/users/me")
 
     assert json_response(conn, 401)["message"] == "key not authorized for this action"
