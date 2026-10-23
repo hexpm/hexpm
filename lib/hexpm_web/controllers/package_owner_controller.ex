@@ -101,6 +101,11 @@ defmodule HexpmWeb.PackageOwnerController do
           |> put_flash(:error, "#{username} is not an owner of this package.")
           |> redirect(to: ViewHelpers.path_for_owners(package))
 
+        {:error, :organization_level} ->
+          conn
+          |> put_flash(:error, "Organizations can only be full owners.")
+          |> redirect(to: ViewHelpers.path_for_owners(package))
+
         {:error, :last_full_owner} ->
           conn
           |> put_flash(:error, "Cannot demote the last full owner of a package.")

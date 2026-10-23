@@ -70,6 +70,41 @@ defmodule Hexpm.Accounts.OrganizationsTest do
     end
   end
 
+  describe "create_from_user/2" do
+    # Usernames may hold hyphens, organization names may not.
+    defp convertible_user,
+      do: insert(:user, username: "converted_#{System.unique_integer([:positive])}")
+
+    test "refuses an account that owns a package below full" do
+      user = convertible_user()
+      insert(:package, package_owners: [build(:package_owner, user: user, level: "full")])
+
+      maintained =
+        insert(:package, package_owners: [build(:package_owner, user: user, level: "maintainer")])
+
+      maintained_name = maintained.name
+
+      assert {:error, :package_owners, [{"hexpm", ^maintained_name}], _changes} =
+               Organizations.create_from_user(user, insert(:user))
+
+      assert is_nil(Repo.get!(Hexpm.Accounts.User, user.id).organization_id)
+      refute Repo.get_by(Hexpm.Accounts.Organization, name: user.username)
+    end
+
+    test "converts an account that only owns packages as a full owner" do
+      user = convertible_user()
+
+      package =
+        insert(:package, package_owners: [build(:package_owner, user: user, level: "full")])
+
+      assert {:ok, %{organization: organization}} =
+               Organizations.create_from_user(user, insert(:user))
+
+      assert Repo.get!(Hexpm.Accounts.User, user.id).organization_id == organization.id
+      assert Repo.get_by!(PackageOwner, package_id: package.id, user_id: user.id).level == "full"
+    end
+  end
+
   describe "create/3 with reserved username" do
     test "rejects an organization name in reserved_usernames" do
       Repo.insert!(%Hexpm.Accounts.ReservedUsername{name: "graveyard"})

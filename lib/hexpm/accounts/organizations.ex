@@ -139,9 +139,22 @@ defmodule Hexpm.Accounts.Organizations do
     end
   end
 
+  @doc """
+  Turns a user's account into an organization, with `admin_user` as its admin.
+
+  Organizations only own packages as full owners, so an account that owns a
+  package at a lower level is refused with
+  `{:error, :package_owners, [{repository, package}], _}`.
+  """
   def create_from_user(organization_user, admin_user) do
     multi =
       Multi.new()
+      |> Multi.run(:package_owners, fn repo, _changes ->
+        case repo.all(below_full_ownerships(organization_user)) do
+          [] -> {:ok, []}
+          packages -> {:error, packages}
+        end
+      end)
       |> Multi.insert(:organization, Organization.build_from_user(organization_user))
       |> Multi.insert(:repository, fn %{organization: organization} ->
         %Repository{name: organization.name, organization_id: organization.id}
@@ -165,6 +178,16 @@ defmodule Hexpm.Accounts.Organizations do
       {:error, _, _, _} = error ->
         error
     end
+  end
+
+  defp below_full_ownerships(user) do
+    from(po in PackageOwner,
+      join: p in assoc(po, :package),
+      join: r in assoc(p, :repository),
+      where: po.user_id == ^user.id and po.level != "full",
+      order_by: [r.name, p.name],
+      select: {r.name, p.name}
+    )
   end
 
   @doc """

@@ -191,7 +191,8 @@ defmodule HexpmWeb.PackageOwnerControllerTest do
         |> html_response(200)
         |> LazyHTML.from_document()
 
-      assert controls(document) == %{add: 1, edit: 2, remove: 2}
+      assert controls(document) == %{add: 1, edit: 1, remove: 2}
+      assert document |> LazyHTML.query("#edit-role-#{organization.user.id}") |> Enum.empty?()
       refute LazyHTML.text(document) =~ "Only full owners and organization admins"
     end
 
@@ -527,6 +528,25 @@ defmodule HexpmWeb.PackageOwnerControllerTest do
         })
 
       assert conn.status == 403
+    end
+
+    test "refuses to demote an organization", %{full_owner: full_owner, package: package} do
+      organization = insert(:organization)
+      insert(:package_owner, package: package, user: organization.user, level: "full")
+
+      conn =
+        build_conn()
+        |> test_login(full_owner, sudo: true)
+        |> put("/packages/#{package.name}/owners/#{organization.name}", %{
+          "level" => "maintainer"
+        })
+
+      assert redirected_to(conn) == "/packages/#{package.name}/owners"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "Organizations can only be full owners."
+
+      assert Owners.get(package, organization.user).level == "full"
     end
   end
 
