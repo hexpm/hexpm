@@ -143,6 +143,29 @@ defmodule Hexpm.Repository.Package do
     )
   end
 
+  # The public repository's organization is left out, since it would make its
+  # members members of every public package.
+  def organization_memberships(package, user) do
+    owning_organizations =
+      from(
+        po in PackageOwner,
+        join: u in assoc(po, :user),
+        where: po.package_id == ^package.id and not is_nil(u.organization_id),
+        select: u.organization_id
+      )
+
+    from(
+      ou in OrganizationUser,
+      join: organization in assoc(ou, :organization),
+      where: ou.user_id == ^user.id,
+      where:
+        ou.organization_id in subquery(owning_organizations) or
+          (ou.organization_id == ^package.repository.organization_id and
+             ^(package.repository.id != 1)),
+      preload: [organization: organization]
+    )
+  end
+
   def all(repositories, page, count, search, sort, fields) do
     if view = download_view(sort) do
       # Ordering by downloads cannot use an index, since the key lives in the

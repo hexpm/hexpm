@@ -236,34 +236,43 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
     assert OrganizationAuth.check(org, c.admin) == {:error, :tfa_required}
   end
 
-  test "enrollment is required for direct addition and an invitation remains pending" do
-    c = context()
-    user = insert(:user)
-    {:ok, _} = configure(c, %{"enforcement" => "transition", "grace_days" => "14"})
+  for recipient <- [:account, :email] do
+    test "enrollment is required to accept an #{recipient} invitation and it remains pending" do
+      c = context()
+      user = insert(:user)
+      {:ok, _} = configure(c, %{"enforcement" => "transition", "grace_days" => "14"})
 
-    assert {:error, :tfa_enrollment_required} =
-             Organizations.add_member(c.organization, user, %{"role" => "read"},
-               audit: audit_data(c.admin)
-             )
+      {:ok, invitation} =
+        case unquote(recipient) do
+          :account ->
+            OrganizationInvitations.invite_user(
+              c.organization,
+              user,
+              %{"role" => "read"},
+              c.admin,
+              audit: audit_data(c.admin)
+            )
 
-    {:ok, invitation} =
-      OrganizationInvitations.invite(
-        c.organization,
-        %{"email" => hd(user.emails).email, "role" => "read"},
-        c.admin,
-        audit: audit_data(c.admin)
-      )
+          :email ->
+            OrganizationInvitations.invite(
+              c.organization,
+              %{"email" => hd(user.emails).email, "role" => "read"},
+              c.admin,
+              audit: audit_data(c.admin)
+            )
+        end
 
-    invitation = Repo.preload(invitation, :organization)
+      invitation = Repo.preload(invitation, :organization)
 
-    assert {:error, :tfa_enrollment_required} =
-             OrganizationInvitations.accept(invitation, user, audit: audit_data(user))
+      assert {:error, :tfa_enrollment_required} =
+               OrganizationInvitations.accept(invitation, user, audit: audit_data(user))
 
-    assert Repo.get!(Hexpm.Accounts.OrganizationInvitation, invitation.id).accepted_at == nil
-    assert Hexpm.Accounts.Seats.used(c.organization) == 2
-    user = enroll(user)
-    assert {:ok, _} = OrganizationInvitations.accept(invitation, user, audit: audit_data(user))
-    assert Hexpm.Accounts.Seats.used(c.organization) == 3
+      assert Repo.get!(Hexpm.Accounts.OrganizationInvitation, invitation.id).accepted_at == nil
+      assert Hexpm.Accounts.Seats.used(c.organization) == 2
+      user = enroll(user)
+      assert {:ok, _} = OrganizationInvitations.accept(invitation, user, audit: audit_data(user))
+      assert Hexpm.Accounts.Seats.used(c.organization) == 3
+    end
   end
 
   test "transition blocks disabling 2FA and removal of the last eligible administrator" do
@@ -326,7 +335,7 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
     assert {:error, :key, changeset, _} =
              Hexpm.Accounts.Keys.create(
                c.member,
-               %{name: "refused", permissions: [%{domain: "repository", resource: org.name}]},
+               %{name: "refused", permissions: [%{domain: "docs", resource: org.name}]},
                audit: audit_data(c.member)
              )
 
@@ -661,13 +670,16 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
       user = insert(:user)
       secret = Hexpm.Accounts.TFA.generate_secret()
 
+      {:ok, invitation} =
+        OrganizationInvitations.invite_user(c.organization, user, %{"role" => "read"}, c.admin,
+          audit: audit_data(c.admin)
+        )
+
+      invitation = Repo.preload(invitation, :organization)
+
       [admitted, enrolled] =
         race([
-          fn ->
-            Organizations.add_member(c.organization, user, %{"role" => "read"},
-              audit: audit_data(c.admin)
-            )
-          end,
+          fn -> OrganizationInvitations.accept(invitation, user, audit: audit_data(user)) end,
           fn ->
             Users.tfa_enable(user, secret, Hexpm.Accounts.TFA.time_based_token(secret),
               audit: audit_data(user)
@@ -736,10 +748,7 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
     assert {:error, :tfa_enrollment_required} =
              OrganizationInvitations.accept(invitation, user, audit: audit_data(user))
 
-    assert {:ok, _} =
-             Organizations.add_member(org, insert(:user_with_tfa), %{"role" => "read"},
-               audit: audit_data(c.admin)
-             )
+    insert(:organization_user, organization: org, user: insert(:user_with_tfa))
 
     user = enroll(user)
 

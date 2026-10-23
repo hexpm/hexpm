@@ -5,7 +5,7 @@ defmodule HexpmWeb.PackageOwnerController do
 
   plug :requires_login
   plug :fetch_package
-  plug :requires_full_owner
+  plug :authorize_settings
   plug HexpmWeb.Plugs.Sudo
 
   def index(conn, _params) do
@@ -17,7 +17,8 @@ defmodule HexpmWeb.PackageOwnerController do
       [
         title: "Manage owners – #{package.name}",
         container: "container",
-        workload_identities: Owners.workload_identities(package)
+        workload_identities: Owners.workload_identities(package),
+        organization_workload_identities: Owners.organization_workload_identities(package)
       ] ++ PackageLayoutAssigns.for_package(conn, package)
     )
   end
@@ -67,6 +68,11 @@ defmodule HexpmWeb.PackageOwnerController do
           |> put_flash(:error, "Cannot demote the last full owner of a package.")
           |> redirect(to: ViewHelpers.path_for_owners(package))
 
+        {:error, :not_full_owner} ->
+          conn
+          |> put_flash(:error, "You must be a full owner of this package.")
+          |> redirect(to: ViewHelpers.path_for_owners(package))
+
         {:error, changeset} ->
           conn
           |> put_flash(:error, changeset_error_to_string(changeset))
@@ -95,9 +101,19 @@ defmodule HexpmWeb.PackageOwnerController do
           |> put_flash(:error, "#{username} is not an owner of this package.")
           |> redirect(to: ViewHelpers.path_for_owners(package))
 
+        {:error, :organization_level} ->
+          conn
+          |> put_flash(:error, "Organizations can only be full owners.")
+          |> redirect(to: ViewHelpers.path_for_owners(package))
+
         {:error, :last_full_owner} ->
           conn
           |> put_flash(:error, "Cannot demote the last full owner of a package.")
+          |> redirect(to: ViewHelpers.path_for_owners(package))
+
+        {:error, :not_full_owner} ->
+          conn
+          |> put_flash(:error, "You must be a full owner of this package.")
           |> redirect(to: ViewHelpers.path_for_owners(package))
 
         {:error, changeset} ->
@@ -136,6 +152,11 @@ defmodule HexpmWeb.PackageOwnerController do
         {:error, :not_owner} ->
           conn
           |> put_flash(:error, "#{username} is not an owner of this package.")
+          |> redirect(to: ViewHelpers.path_for_owners(package))
+
+        {:error, :not_full_owner} ->
+          conn
+          |> put_flash(:error, "You must be a full owner of this package.")
           |> redirect(to: ViewHelpers.path_for_owners(package))
       end
     end
@@ -176,19 +197,21 @@ defmodule HexpmWeb.PackageOwnerController do
   # package in the public repository is the public one. Ownership of a public
   # package can come from a governed organization, so it is enforced here where
   # the owners are resolved.
-  defp requires_full_owner(conn, _opts) do
-    package = conn.assigns.package
-    current_user = conn.assigns.current_user
+  defp authorize_settings(conn, _opts) do
+    case {RepositoryAccess.package_settings(conn, conn.assigns.package), action_name(conn)} do
+      {{:ok, :manage}, _action} ->
+        assign(conn, :manage?, true)
 
-    if current_user && Packages.owner_with_access?(package, current_user, "full") do
-      case SSOEnforcement.check_package(conn, package, current_user, "full") do
-        :ok -> conn
-        {:error, refusal, organization} -> SSOEnforcement.refuse(conn, refusal, organization)
-      end
-    else
-      conn
-      |> render_error(403, message: "You must be a full owner of this package")
-      |> halt()
+      {{:ok, :view}, :index} ->
+        assign(conn, :manage?, false)
+
+      {{:error, refusal, organization}, _action} ->
+        SSOEnforcement.refuse(conn, refusal, organization)
+
+      _ ->
+        conn
+        |> render_error(403, message: "You must be a full owner of this package")
+        |> halt()
     end
   end
 

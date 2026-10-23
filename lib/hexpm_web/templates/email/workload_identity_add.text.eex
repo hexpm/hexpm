@@ -1,5 +1,5 @@
 <%= WorkloadIdentityAdd.message(@username, @package) %>
 
-<%= Enum.join(WorkloadIdentityDetails.lines(@repository, @workflow, @environment), "\n") %>
+<%= Enum.join(WorkloadIdentityDetails.lines(@current), "\n") %>
 
 <%= WorkloadIdentityAdd.warning(@package) %>

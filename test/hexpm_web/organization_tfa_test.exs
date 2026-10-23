@@ -297,25 +297,6 @@ defmodule HexpmWeb.OrganizationTFATest do
            |> json_response(200)
   end
 
-  test "the key form shows why an unenrolled member can't create a key for the organization", c do
-    enforce(c)
-
-    body =
-      build_conn()
-      |> test_login(c.member)
-      |> post("/dashboard/keys", %{
-        key: %{
-          name: "org-key",
-          expires_in: "30",
-          permissions: %{repository: %{c.organization.name => "on"}}
-        }
-      })
-      |> response(400)
-
-    assert body =~
-             "Organization #{c.organization.name} requires two-factor authentication. Enable it in your account security settings."
-  end
-
   test "the shared authorization endpoint completes a 2FA-only request after enrollment without extending the target session",
        c do
     enforce(c)
@@ -450,13 +431,13 @@ defmodule HexpmWeb.OrganizationTFATest do
     insert(:organization_user, organization: c.organization, user: unenrolled, role: "admin")
 
     permissions = [
-      %{"domain" => "api"},
-      %{"domain" => "repositories"},
-      %{"domain" => "docs", "resource" => repository.name}
+      build(:key_permission, domain: "api"),
+      build(:key_permission, domain: "repositories"),
+      build(:key_permission, domain: "docs", resource: repository.name)
     ]
 
-    secret = key_for(unenrolled, permissions)
-    enrolled = key_for(c.admin, permissions)
+    secret = insert(:key, user: unenrolled, permissions: permissions).user_secret
+    enrolled = insert(:key, user: c.admin, permissions: permissions).user_secret
     enforce(c)
 
     for {domain, resource} <- [

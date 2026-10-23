@@ -78,4 +78,116 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCardTest do
 
     assert any =~ "Added the workload identity for any repository owned by acme (read) to acme"
   end
+
+  test "describes organization workload identities with several repositories and their changes" do
+    stub(Hexpm.Geo.Mock, :lookup_country, fn _ -> nil end)
+
+    params = %{
+      "repository_owner" => "acme",
+      "repositories" => [
+        %{"name" => "acme/widget", "id" => "1"},
+        %{"name" => "acme/gadget", "id" => "2"}
+      ],
+      "role" => "write",
+      "organization" => %{"name" => "acme"}
+    }
+
+    html =
+      render_component(&AuditLogCard.audit_log_card/1,
+        audit_logs: [
+          login_log(%{action: "organization.workload_identity.add", params: params}),
+          login_log(%{action: "organization.workload_identity.update", params: params}),
+          login_log(%{action: "organization.workload_identity.remove", params: params})
+        ]
+      )
+
+    assert html =~ "Added the workload identity acme/widget, acme/gadget (write) to acme"
+    assert html =~ "Changed the workload identity acme/widget, acme/gadget (write) in acme"
+    assert html =~ "Removed the workload identity acme/widget, acme/gadget (write) from acme"
+
+    any =
+      render_component(&AuditLogCard.audit_log_card/1,
+        audit_logs: [
+          login_log(%{
+            action: "organization.workload_identity.update",
+            params: %{params | "repositories" => [], "role" => "read"}
+          })
+        ]
+      )
+
+    assert any =~ "Changed the workload identity for any repository owned by acme (read) in acme"
+  end
+
+  test "describes membership visibility changes" do
+    stub(Hexpm.Geo.Mock, :lookup_country, fn _ -> nil end)
+
+    params = %{
+      "organization" => %{"name" => "acme"},
+      "user" => %{"username" => "jane"},
+      "public" => true
+    }
+
+    html =
+      render_component(&AuditLogCard.audit_log_card/1,
+        audit_logs: [
+          login_log(%{action: "organization.member.visibility", params: params}),
+          login_log(%{
+            action: "organization.member.visibility",
+            params: %{params | "public" => false}
+          })
+        ]
+      )
+
+    assert html =~ "Listed jane on the public profile of acme"
+    assert html =~ "Removed jane from the public profile of acme"
+  end
+
+  test "describes invitations to accounts and to addresses" do
+    stub(Hexpm.Geo.Mock, :lookup_country, fn _ -> nil end)
+
+    organization = %{"name" => "acme"}
+
+    user_invitation = %{
+      "organization" => organization,
+      "invitation" => %{
+        "id" => 1,
+        "email" => nil,
+        "role" => "read",
+        "user" => %{"id" => 2, "username" => "jane"}
+      }
+    }
+
+    email_invitation = %{
+      "organization" => organization,
+      "invitation" => %{"id" => 3, "email" => "jane@example.com", "role" => "read"}
+    }
+
+    html =
+      render_component(&AuditLogCard.audit_log_card/1,
+        audit_logs: [
+          login_log(%{action: "organization.invitation.create", params: user_invitation}),
+          login_log(%{action: "organization.invitation.revoke", params: user_invitation}),
+          login_log(%{action: "organization.invitation.decline", params: user_invitation}),
+          login_log(%{action: "organization.invitation.restore", params: user_invitation}),
+          login_log(%{action: "organization.invitation.block", params: user_invitation}),
+          login_log(%{action: "organization.invitation.unblock", params: user_invitation}),
+          login_log(%{
+            action: "organization.invitation.accept",
+            params: put_in(user_invitation, ["invitation", "user"], nil)
+          }),
+          login_log(%{action: "organization.invitation.create", params: email_invitation}),
+          login_log(%{action: "organization.invitation.accept", params: email_invitation})
+        ]
+      )
+
+    assert html =~ "Invited jane to acme"
+    assert html =~ "Revoked the invitation for jane to acme"
+    assert html =~ "Declined the invitation to acme"
+    assert html =~ "Restored the invitation to acme"
+    assert html =~ "Blocked invitations from acme"
+    assert html =~ "Unblocked invitations from acme"
+    assert html =~ "Accepted the invitation to acme"
+    assert html =~ "Invited jane@example.com to acme"
+    assert html =~ "Accepted the invitation for jane@example.com to acme"
+  end
 end

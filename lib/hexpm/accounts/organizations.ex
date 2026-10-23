@@ -13,6 +13,23 @@ defmodule Hexpm.Accounts.Organizations do
     |> Repo.preload(preload)
   end
 
+  @doc """
+  The organizations the user chose to list publicly, ordered by name. A
+  deactivated account lists none, as organizations' profiles leave it out.
+  """
+  def public_by_user(user) do
+    from(organization in Organization,
+      join: organization_user in assoc(organization, :organization_users),
+      join: user in assoc(organization_user, :user),
+      where: organization_user.user_id == ^user.id,
+      where: organization_user.public,
+      where: is_nil(user.deactivated_at),
+      order_by: organization.name,
+      preload: [user: :emails]
+    )
+    |> Repo.all()
+  end
+
   def all_members(organization, preload \\ []) do
     from(organization_user in assoc(organization, :organization_users),
       join: user in assoc(organization_user, :user),
@@ -20,6 +37,43 @@ defmodule Hexpm.Accounts.Organizations do
     )
     |> Repo.all()
     |> Repo.preload(preload)
+  end
+
+  @doc "The account's memberships with their organizations, ordered by organization name."
+  def memberships(user) do
+    from(organization_user in OrganizationUser,
+      join: organization in assoc(organization_user, :organization),
+      where: organization_user.user_id == ^user.id,
+      order_by: organization.name,
+      preload: [organization: organization]
+    )
+    |> Repo.all()
+  end
+
+  @doc """
+  The members who chose to be listed on the organization's public profile,
+  leaving out accounts whose own profile isn't public.
+  """
+  def public_members(organization) do
+    from(user in User,
+      join: organization_user in assoc(user, :organization_users),
+      where: organization_user.organization_id == ^organization.id,
+      where: organization_user.public,
+      where: is_nil(user.deactivated_at),
+      order_by: user.username,
+      preload: :emails
+    )
+    |> Repo.all()
+    |> Enum.filter(&User.public_profile?/1)
+  end
+
+  @doc """
+  Whether the organization's profile lists this membership, with the same
+  rules as `public_members/1`. The membership's user must be loaded with its
+  emails.
+  """
+  def listed_on_profile?(%OrganizationUser{public: public, user: user}) do
+    public and is_nil(user.deactivated_at) and User.public_profile?(user)
   end
 
   def all_admin_notifiable_emails(opts \\ []) do
@@ -85,9 +139,22 @@ defmodule Hexpm.Accounts.Organizations do
     end
   end
 
+  @doc """
+  Turns a user's account into an organization, with `admin_user` as its admin.
+
+  Organizations only own packages as full owners, so an account that owns a
+  package at a lower level is refused with
+  `{:error, :package_owners, [{repository, package}], _}`.
+  """
   def create_from_user(organization_user, admin_user) do
     multi =
       Multi.new()
+      |> Multi.run(:package_owners, fn repo, _changes ->
+        case repo.all(below_full_ownerships(organization_user)) do
+          [] -> {:ok, []}
+          packages -> {:error, packages}
+        end
+      end)
       |> Multi.insert(:organization, Organization.build_from_user(organization_user))
       |> Multi.insert(:repository, fn %{organization: organization} ->
         %Repository{name: organization.name, organization_id: organization.id}
@@ -111,6 +178,16 @@ defmodule Hexpm.Accounts.Organizations do
       {:error, _, _, _} = error ->
         error
     end
+  end
+
+  defp below_full_ownerships(user) do
+    from(po in PackageOwner,
+      join: p in assoc(po, :package),
+      join: r in assoc(p, :repository),
+      where: po.user_id == ^user.id and po.level != "full",
+      order_by: [r.name, p.name],
+      select: {r.name, p.name}
+    )
   end
 
   @doc """
@@ -294,45 +371,6 @@ defmodule Hexpm.Accounts.Organizations do
     Repo.update(User.to_organization(user, organization))
   end
 
-  def add_member(_organization, %User{organization_id: id}, _params, _opts) when is_integer(id) do
-    {:error, :organization_user}
-  end
-
-  def add_member(organization, %User{organization_id: nil} = user, params, audit: audit_data) do
-    if User.verified_primary_email?(user) do
-      insert_member(organization, user, params, audit_data)
-    else
-      {:error, :unverified_primary_email}
-    end
-  end
-
-  defp insert_member(organization, user, params, audit_data) do
-    multi =
-      Multi.new()
-      |> Hexpm.Accounts.OrganizationTFA.admit(organization, user)
-      |> Seats.claim(:seats, organization)
-      |> Multi.insert(:organization_user, fn _changes ->
-        organization_user = %OrganizationUser{organization_id: organization.id, user_id: user.id}
-        Organization.add_member(organization_user, params)
-      end)
-      |> audit(audit_data, "organization.member.add", {organization, user})
-
-    case Repo.transaction(multi) do
-      {:ok, result} ->
-        send_invite_email(organization, user)
-        {:ok, result.organization_user}
-
-      {:error, :tfa_admission, reason, _} ->
-        {:error, reason}
-
-      {:error, :seats, reason, _} ->
-        {:error, reason}
-
-      {:error, :organization_user, changeset, _} ->
-        {:error, changeset}
-    end
-  end
-
   def remove_member(_organization, nil = _user, audit: _audit_data) do
     :ok
   end
@@ -401,6 +439,50 @@ defmodule Hexpm.Accounts.Organizations do
     end
   end
 
+  @doc """
+  Lists or unlists `user`'s own membership on the user's and organization's
+  public profiles.
+  """
+  def change_visibility(organization, user, params, audit: audit_data) do
+    case Repo.get_by(OrganizationUser, organization_id: organization.id, user_id: user.id) do
+      nil ->
+        {:error, :not_member}
+
+      organization_user ->
+        organization_user
+        |> OrganizationUser.visibility_changeset(params)
+        |> update_visibility(organization, user, audit_data)
+    end
+  end
+
+  # Saving the setting it already has changes nothing and records nothing. A
+  # membership removed since it was read surfaces as a stale entry, which is
+  # the same answer as never having been a member.
+  defp update_visibility(%Ecto.Changeset{valid?: true, changes: changes} = changeset, _, _, _)
+       when changes == %{} do
+    {:ok, changeset.data}
+  end
+
+  defp update_visibility(changeset, organization, user, audit_data) do
+    Multi.new()
+    |> Multi.update(:organization_user, changeset, stale_error_field: :removed)
+    |> audit(
+      audit_data,
+      "organization.member.visibility",
+      &{organization, user, &1.organization_user.public}
+    )
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{organization_user: organization_user}} ->
+        {:ok, organization_user}
+
+      {:error, :organization_user, changeset, _changes} ->
+        if Keyword.has_key?(changeset.errors, :removed),
+          do: {:error, :not_member},
+          else: {:error, changeset}
+    end
+  end
+
   defp member_to_change(organization, user) do
     organization_users = Repo.all(assoc(organization, :organization_users))
     organization_user = Enum.find(organization_users, &(&1.user_id == user.id))
@@ -425,15 +507,11 @@ defmodule Hexpm.Accounts.Organizations do
     end)
   end
 
-  defp send_invite_email(organization, user) do
-    send_member_added_email(organization, user)
-  end
-
   @doc """
-  Tells someone they were added to an organization. Every path that creates a
-  membership without the person asking for it sends this, including
-  provisioning. Queued rather than delivered, so a caller can send it inside
-  the transaction that creates the membership.
+  Tells someone they were added to an organization. Provisioning is the one
+  path that creates a membership without the person accepting an invitation,
+  and it sends this. Queued rather than delivered, so a caller can send it
+  inside the transaction that creates the membership.
   """
   def send_member_added_email(organization, user) do
     if OptionalEmails.allowed?(user, :organization_invite) do

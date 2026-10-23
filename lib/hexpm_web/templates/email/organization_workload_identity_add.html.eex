@@ -7,11 +7,11 @@
 </p>
 
 <p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
-  <%= for line <- OrganizationWorkloadIdentityDetails.lines(@role, @repository_owner, @repository, @workflow, @environment, @packages) do %>
+  <%= for line <- OrganizationWorkloadIdentityDetails.lines(@role, @current, @organization, @coverage) do %>
     <%= line %><br>
   <% end %>
 </p>
 
 <p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
-  <%= OrganizationWorkloadIdentityAdd.warning(@role, @organization, @packages) %>
+  <%= OrganizationWorkloadIdentityAdd.warning(@role, @organization, @coverage) %>
 </p>

@@ -387,7 +387,7 @@ defmodule HexpmWeb.SSOEnforcementTest do
         conn
         |> put_req_header("referer", "http://localhost:5000" <> members_path)
         |> post("/dashboard/orgs/#{context.organization.name}", %{
-          "action" => "add_member",
+          "action" => "invite_user",
           "organization_user" => %{"username" => context.member.username, "role" => "read"}
         })
 
@@ -403,7 +403,7 @@ defmodule HexpmWeb.SSOEnforcementTest do
 
       conn =
         post(conn, "/dashboard/orgs/#{context.organization.name}", %{
-          "action" => "add_member",
+          "action" => "invite_user",
           "organization_user" => %{"username" => context.member.username, "role" => "read"}
         })
 
@@ -806,6 +806,31 @@ defmodule HexpmWeb.SSOEnforcementTest do
       assert html_response(conn, 200) =~ "Current owners"
     end
 
+    test "sends a governed member off the owners page", context do
+      require_sso(context)
+      {conn, _session} = login(context.member)
+
+      path = "/packages/#{context.public_package.name}/owners"
+      conn = get(conn, path)
+
+      assert redirected_to(conn) ==
+               "/organizations/#{context.organization.name}/authenticate?return=" <>
+                 URI.encode_www_form(path)
+    end
+
+    test "shows a member who has authenticated the owners page without the controls", context do
+      require_sso(context)
+      {conn, session} = login(context.member)
+      authenticate(context, context.member, session)
+
+      body =
+        conn
+        |> get("/packages/#{context.public_package.name}/owners")
+        |> html_response(200)
+
+      assert body =~ "Only full owners and organization admins can add, change and remove owners."
+    end
+
     test "refuses the package domain at /api/auth for a governed member", context do
       require_sso(context)
       token = oauth_token(context.member, ["api:write"])
@@ -873,7 +898,14 @@ defmodule HexpmWeb.SSOEnforcementTest do
 
   describe "the edge check at /api/auth" do
     test "refuses a personal key the day enforcement starts, before any sweep", context do
-      secret = key_for(context.member, repository_permission(context))
+      secret =
+        insert(:key,
+          user: context.member,
+          permissions: [
+            build(:key_permission, domain: "repository", resource: context.organization.name)
+          ]
+        ).user_secret
+
       require_sso(context)
 
       conn =
@@ -1574,13 +1606,11 @@ defmodule HexpmWeb.SSOEnforcementTest do
       require_sso(context)
 
       shapes = [
-        %{"domain" => "repository", "resource" => context.organization.name},
         %{"domain" => "docs", "resource" => context.organization.name},
         %{
           "domain" => "package",
           "resource" => "#{context.organization.name}/#{context.package.name}"
-        },
-        %{"domain" => "repositories"}
+        }
       ]
 
       for shape <- shapes do
@@ -1606,9 +1636,7 @@ defmodule HexpmWeb.SSOEnforcementTest do
                  context.member,
                  %{
                    name: "allowed",
-                   permissions: [
-                     %{"domain" => "repository", "resource" => context.organization.name}
-                   ]
+                   permissions: [%{"domain" => "docs", "resource" => context.organization.name}]
                  },
                  audit: audit_data(context.member)
                )
@@ -1624,7 +1652,7 @@ defmodule HexpmWeb.SSOEnforcementTest do
                  context.member,
                  %{
                    name: "other",
-                   permissions: [%{"domain" => "repository", "resource" => other.name}]
+                   permissions: [%{"domain" => "docs", "resource" => other.name}]
                  },
                  audit: audit_data(context.member)
                )
@@ -1776,6 +1804,23 @@ defmodule HexpmWeb.SSOEnforcementTest do
 
       refute context.repository.name in names.()
       assert "hexpm" in names.()
+    end
+
+    test "send a governed member at their provider to list themselves, not to unlist", context do
+      require_sso(context)
+      {conn, _session} = login(context.member)
+      path = "/dashboard/profile/organizations/#{context.organization.name}"
+
+      listed = post(conn, path, %{"organization_user" => %{"public" => "true"}})
+
+      assert redirected_to(listed) =~
+               "/organizations/#{context.organization.name}/authenticate"
+
+      assert Hexpm.Accounts.Organizations.public_members(context.organization) == []
+
+      unlisted = post(conn, path, %{"organization_user" => %{"public" => "false"}})
+
+      assert redirected_to(unlisted) == "/dashboard/profile"
     end
   end
 

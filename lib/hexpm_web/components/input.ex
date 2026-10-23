@@ -226,6 +226,7 @@ defmodule HexpmWeb.Components.Input do
   attr :label_class, :string, default: ""
   attr :name, :string, default: nil
   attr :options, :list, required: true, doc: "List of {label, value} tuples for select options"
+  attr :disabled_options, :list, default: [], doc: "Values of the options that can't be selected"
   attr :prompt, :string, default: nil, doc: "Optional prompt text for the first option"
   attr :required, :boolean, default: false
   attr :rest, :global, include: ~w(disabled multiple)
@@ -290,7 +291,11 @@ defmodule HexpmWeb.Components.Input do
         >
           <option :if={@prompt} value="">{@prompt}</option>
           <%= for {label, value} <- @options do %>
-            <option value={value} selected={to_string(@value) == to_string(value)}>
+            <option
+              value={value}
+              selected={to_string(@value) == to_string(value)}
+              disabled={value in @disabled_options}
+            >
               {label}
             </option>
           <% end %>

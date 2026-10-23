@@ -139,16 +139,36 @@ defmodule Hexpm.Utils do
     page |> max(1) |> min(max_page)
   end
 
+  @bigint_min -9_223_372_036_854_775_808
+  @bigint_max 9_223_372_036_854_775_807
+
   def safe_int(nil), do: nil
 
+  # Clamped to a Postgres bigint. Parsing takes time superlinear in the number
+  # of digits, so a number with more significant digits than any bigint is
+  # clamped unparsed. The quantifiers are possessive, so matching is linear.
   def safe_int(string) when is_binary(string) do
-    case Integer.parse(string) do
-      {int, ""} -> int
-      _ -> nil
+    case Regex.run(~r/\A([+-]?)(?=[0-9])0*+([0-9]*+)\z/, string, capture: :all_but_first) do
+      nil ->
+        nil
+
+      [_sign, ""] ->
+        0
+
+      [sign, digits] when byte_size(digits) <= 19 ->
+        clamp_bigint(String.to_integer(sign <> digits))
+
+      ["-", _digits] ->
+        @bigint_min
+
+      [_sign, _digits] ->
+        @bigint_max
     end
   end
 
   def safe_int(_), do: nil
+
+  defp clamp_bigint(int), do: int |> max(@bigint_min) |> min(@bigint_max)
 
   @doc """
   Cuts a string down to at most `max` bytes without leaving a partial UTF-8
@@ -176,9 +196,18 @@ defmodule Hexpm.Utils do
     end
   end
 
+  @max_search_size 1000
+
   def parse_search(nil), do: nil
   def parse_search(""), do: nil
-  def parse_search(search) when is_binary(search), do: String.trim(search)
+
+  def parse_search(search) when is_binary(search) do
+    search
+    |> String.trim_leading()
+    |> truncate_bytes(@max_search_size)
+    |> String.trim_trailing()
+  end
+
   def parse_search(_), do: nil
 
   @doc """
@@ -353,7 +382,8 @@ defmodule Hexpm.Utils do
   end
 
   def paginate(query, page, count) when is_integer(page) and page > 0 do
-    offset = (page - 1) * count
+    # Postgres takes no offset past a bigint, and no table has that many rows.
+    offset = min((page - 1) * count, @bigint_max)
 
     from(
       var in query,

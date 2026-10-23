@@ -5,6 +5,12 @@ defmodule HexpmWeb.Router do
 
   @accepted_formats ~w(json elixir erlang)
 
+  pipeline :accepts_json do
+    plug :accepts, ["json"]
+    plug HexpmWeb.Plugs.Attack
+    plug HexpmWeb.Plugs.ReadOnly
+  end
+
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
@@ -76,6 +82,20 @@ defmodule HexpmWeb.Router do
     plug HexpmWeb.Plugs.Attack
     plug Corsica, origins: "*", allow_methods: ["HEAD", "GET"]
     plug :default_repository
+  end
+
+  # The OAuth endpoints authenticate the client and the grant from the request
+  # body, so a refused credential in the Authorization header, which a client
+  # renewing it may still send, doesn't refuse the request.
+  pipeline :oauth do
+    plug :accepts, @accepted_formats
+
+    plug HexpmWeb.Plugs.ReadOnly
+
+    plug :user_agent
+    plug :optional_authenticate
+    plug HexpmWeb.Plugs.Attack
+    plug Corsica, origins: "*", allow_methods: ["HEAD", "GET"]
   end
 
   pipeline :varsel do
@@ -240,6 +260,7 @@ defmodule HexpmWeb.Router do
     get "/users/:username/stats", UserController, :stats
 
     get "/orgs/:username", UserController, :show
+    get "/orgs/:username/members", UserController, :members
 
     get "/docs", DocsController, :index
     get "/docs/usage", DocsController, :usage
@@ -258,6 +279,7 @@ defmodule HexpmWeb.Router do
     get "/docs/faq", DocsController, :faq
     get "/docs/mirrors", DocsController, :mirrors
     get "/docs/public-keys", DocsController, :public_keys
+    get "/docs/leaked-keys", DocsController, :leaked_keys
     get "/docs/self-hosting", DocsController, :self_hosting
 
     get "/policies/codeofconduct", PolicyController, :coc
@@ -300,6 +322,12 @@ defmodule HexpmWeb.Router do
     delete "/packages/:name/owners/:username", PackageOwnerController, :delete
     get "/packages/:name/workload-identities", PackageWorkloadIdentityController, :index
     post "/packages/:name/workload-identities", PackageWorkloadIdentityController, :create
+
+    get "/packages/:name/workload-identities/:id/edit",
+        PackageWorkloadIdentityController,
+        :edit
+
+    put "/packages/:name/workload-identities/:id", PackageWorkloadIdentityController, :update
     delete "/packages/:name/workload-identities/:id", PackageWorkloadIdentityController, :delete
     get "/packages/:name", PackageController, :show
     get "/packages/:name/audit-logs", PackageController, :audit_logs
@@ -332,6 +360,14 @@ defmodule HexpmWeb.Router do
          PackageWorkloadIdentityController,
          :create
 
+    get "/packages/:repository/:name/workload-identities/:id/edit",
+        PackageWorkloadIdentityController,
+        :edit
+
+    put "/packages/:repository/:name/workload-identities/:id",
+        PackageWorkloadIdentityController,
+        :update
+
     delete "/packages/:repository/:name/workload-identities/:id",
            PackageWorkloadIdentityController,
            :delete
@@ -361,6 +397,8 @@ defmodule HexpmWeb.Router do
     get "/profile", ProfileController, :index
     post "/profile", ProfileController, :update
 
+    post "/profile/organizations/:organization", ProfileController, :update_membership_visibility
+
     get "/security", SecurityController, :index, as: :dashboard_security
 
     post "/security/change-password", SecurityController, :change_password,
@@ -388,6 +426,13 @@ defmodule HexpmWeb.Router do
 
     post "/security/verify-tfa-code", SecurityController, :verify_tfa_code,
       as: :dashboard_security
+
+    get "/invitations", InvitationController, :index
+    post "/invitations/:id/accept", InvitationController, :accept
+    post "/invitations/:id/decline", InvitationController, :decline
+    post "/invitations/:id/restore", InvitationController, :restore
+    post "/invitations/:id/block", InvitationController, :block
+    post "/invitations/blocks/:id/unblock", InvitationController, :unblock
 
     get "/email", EmailController, :index
     post "/email", EmailController, :create
@@ -460,6 +505,14 @@ defmodule HexpmWeb.Router do
          OrganizationController,
          :create_workload_identity
 
+    get "/orgs/:dashboard_org/workload-identities/:id/edit",
+        OrganizationController,
+        :edit_workload_identity
+
+    put "/orgs/:dashboard_org/workload-identities/:id",
+        OrganizationController,
+        :update_workload_identity
+
     delete "/orgs/:dashboard_org/workload-identities/:id",
            OrganizationController,
            :delete_workload_identity
@@ -478,6 +531,10 @@ defmodule HexpmWeb.Router do
     get "/orgs/:dashboard_org/policies/version-suggestions",
         OrganizationController,
         :policy_version_suggestions
+
+    get "/orgs/:dashboard_org/policies/advisory-suggestions",
+        OrganizationController,
+        :policy_advisory_suggestions
 
     post "/orgs/:dashboard_org/policies", OrganizationController, :create_policy
     get "/orgs/:dashboard_org/policies/:name", OrganizationController, :edit_policy
@@ -511,6 +568,15 @@ defmodule HexpmWeb.Router do
     get "/hexsearch.xml", OpenSearchController, :opensearch
     get "/installs/hex.ez", InstallController, :archive
     get "/feeds/blog.xml", FeedsController, :blog
+  end
+
+  # GitHub secret scanning alert endpoint — no auth, exempt from Plugs.Attack
+  # throttling per the partner program agreement. Signature verification is
+  # handled in the controller.
+  scope "/api/github", HexpmWeb.API, as: :api_github do
+    pipe_through [:accepts_json]
+
+    post "/secret-scanning", GitHubSecretScanningController, :create
   end
 
   scope "/api", HexpmWeb.API, as: :api do
@@ -586,11 +652,16 @@ defmodule HexpmWeb.Router do
     post "/short_url", ShortURLController, :create
     get "/auth", AuthController, :show
 
+    post "/oauth/organization_authorization", SSOAuthorizationController, :create
+  end
+
+  scope "/api", HexpmWeb.API, as: :api do
+    pipe_through :oauth
+
     post "/oauth/token", OAuthController, :token
     post "/oauth/device_authorization", OAuthController, :device_authorization
     post "/oauth/revoke", OAuthController, :revoke
     post "/oauth/revoke_by_hash", OAuthController, :revoke_by_hash
-    post "/oauth/organization_authorization", SSOAuthorizationController, :create
 
     get "/oidc/audience", OIDCController, :audience
   end

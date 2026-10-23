@@ -164,6 +164,7 @@ defmodule HexpmWeb.DiffLiveTest do
 
     render_hook(view, "load-gap", %{"start" => "0", "last" => "6"})
     render_hook(view, "load-gap", %{"start" => "invalid", "last" => "6"})
+    render_hook(view, "load-gap", %{"start" => String.duplicate("7", 2_000_000), "last" => "6"})
     render_hook(view, "load-gap", %{})
 
     assert has_element?(view, "#diff-4-container")
@@ -545,6 +546,25 @@ defmodule HexpmWeb.DiffLiveTest do
 
     render_submit(view, "view-diff", %{"versions" => %{"from" => "3.0.0", "to" => "4.0.0"}})
     assert_redirect(view, "/diff/#{package.name}/3.0.0..4.0.0?w=1")
+  end
+
+  test "selector ignores a version the package doesn't have", %{package: package} do
+    {:ok, request} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "2.0.0", [])
+    put_ready_cache(request, 0)
+    {:ok, view, _html} = live(build_conn(), "/diff/#{package.name}/1.0.0..2.0.0")
+
+    render_submit(view, "view-diff", %{"versions" => %{"from" => "9.0.0", "to" => "2.0.0"}})
+    refute_redirected(view)
+  end
+
+  test "file filter keeps at most 255 bytes of the query", %{package: package} do
+    {:ok, request} = Hexpm.Diff.prepare("hexpm", package.name, "1.0.0", "2.0.0", [])
+    put_ready_cache(request, 2)
+    {:ok, view, _html} = live(build_conn(), "/diff/#{package.name}/1.0.0..2.0.0")
+
+    html = render_hook(view, "filter_files", %{"query" => String.duplicate("a", 300)})
+    assert html =~ ~s(value="#{String.duplicate("a", 255)}")
+    refute html =~ String.duplicate("a", 256)
   end
 
   test "selector rejects a crafted identical pair", %{package: package} do

@@ -20,6 +20,10 @@ defmodule HexpmWeb.Plugs.Attack do
     allow(conn.remote_ip == {127, 0, 0, 1})
   end
 
+  rule "allow github secret scanning", conn do
+    allow(conn.request_path == "/api/github/secret-scanning")
+  end
+
   rule "allow addresses", conn do
     BlockAddress.try_reload()
     allow(BlockAddress.allowed?(ip_string(conn.remote_ip)))
@@ -499,6 +503,36 @@ defmodule HexpmWeb.Plugs.Attack do
       limit: 20,
       period: 60 * 60_000
     )
+  end
+
+  # Hex's GitHub API calls share one OAuth app's hourly limit, so every user
+  # gets a share of the calls that looking up workload identity repositories
+  # makes. Counted in the database, so the share holds across pods.
+  def workload_identity_github_throttle(user_id, calls, opts \\ [])
+
+  def workload_identity_github_throttle(_user_id, 0, _opts), do: {:allow, nil}
+
+  # A lookup is only charged when all its calls fit, so a refused save doesn't
+  # use up calls it never made.
+  def workload_identity_github_throttle(user_id, calls, opts) do
+    throttle = fn increment ->
+      timed_throttle(
+        {:workload_identity_github, user_id},
+        time: opts[:time] || System.system_time(:millisecond),
+        increment: increment,
+        storage: @database_storage,
+        limit: 100,
+        period: 60 * 60_000
+      )
+    end
+
+    case throttle.(0) do
+      {:allow, {:throttle, data} = throttle_data} ->
+        if data[:remaining] >= calls, do: throttle.(calls), else: {:block, throttle_data}
+
+      blocked ->
+        blocked
+    end
   end
 
   def account_delete_request_throttle(user_id, opts \\ []) do

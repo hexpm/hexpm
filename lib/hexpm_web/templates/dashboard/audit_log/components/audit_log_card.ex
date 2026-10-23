@@ -357,6 +357,34 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCard do
   end
 
   defp humanize_action(%AuditLog{
+         action: "organization.member.visibility",
+         params: %{
+           "user" => %{"username" => username},
+           "public" => true,
+           "organization" => %{"name" => org}
+         }
+       }) do
+    "Listed #{username} on the public profile of #{org}"
+  end
+
+  defp humanize_action(%AuditLog{
+         action: "organization.member.visibility",
+         params: %{"user" => %{"username" => username}, "organization" => %{"name" => org}}
+       }) do
+    "Removed #{username} from the public profile of #{org}"
+  end
+
+  defp humanize_action(%AuditLog{
+         action: "organization.invitation.create",
+         params: %{
+           "invitation" => %{"user" => %{"username" => username}},
+           "organization" => %{"name" => org}
+         }
+       }) do
+    "Invited #{username} to #{org}"
+  end
+
+  defp humanize_action(%AuditLog{
          action: "organization.invitation.create",
          params: %{"invitation" => %{"email" => email}, "organization" => %{"name" => org}}
        }) do
@@ -366,8 +394,54 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCard do
   defp humanize_action(%AuditLog{
          action: "organization.invitation.accept",
          params: %{"invitation" => %{"email" => email}, "organization" => %{"name" => org}}
-       }) do
+       })
+       when is_binary(email) do
     "Accepted the invitation for #{email} to #{org}"
+  end
+
+  defp humanize_action(%AuditLog{
+         action: "organization.invitation.accept",
+         params: %{"organization" => %{"name" => org}}
+       }) do
+    "Accepted the invitation to #{org}"
+  end
+
+  defp humanize_action(%AuditLog{
+         action: "organization.invitation.restore",
+         params: %{"organization" => %{"name" => org}}
+       }) do
+    "Restored the invitation to #{org}"
+  end
+
+  defp humanize_action(%AuditLog{
+         action: "organization.invitation.block",
+         params: %{"organization" => %{"name" => org}}
+       }) do
+    "Blocked invitations from #{org}"
+  end
+
+  defp humanize_action(%AuditLog{
+         action: "organization.invitation.unblock",
+         params: %{"organization" => %{"name" => org}}
+       }) do
+    "Unblocked invitations from #{org}"
+  end
+
+  defp humanize_action(%AuditLog{
+         action: "organization.invitation.decline",
+         params: %{"organization" => %{"name" => org}}
+       }) do
+    "Declined the invitation to #{org}"
+  end
+
+  defp humanize_action(%AuditLog{
+         action: "organization.invitation.revoke",
+         params: %{
+           "invitation" => %{"user" => %{"username" => username}},
+           "organization" => %{"name" => org}
+         }
+       }) do
+    "Revoked the invitation for #{username} to #{org}"
   end
 
   defp humanize_action(%AuditLog{
@@ -382,6 +456,13 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCard do
          params: %{"role" => role, "organization" => %{"name" => org}} = params
        }) do
     "Added the workload identity #{workload_identity_repository(params)} (#{role}) to #{org}"
+  end
+
+  defp humanize_action(%AuditLog{
+         action: "organization.workload_identity.update",
+         params: %{"role" => role, "organization" => %{"name" => org}} = params
+       }) do
+    "Changed the workload identity #{workload_identity_repository(params)} (#{role}) in #{org}"
   end
 
   defp humanize_action(%AuditLog{
@@ -689,8 +770,10 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCard do
     |> String.capitalize()
   end
 
-  defp workload_identity_repository(%{"repository" => "", "repository_owner" => owner}),
-    do: "for any repository owned by #{owner}"
-
-  defp workload_identity_repository(%{"repository" => repository}), do: repository
+  defp workload_identity_repository(params) do
+    case HexpmWeb.ViewHelpers.audited_workload_identity_repositories(params) do
+      "any repository owned by " <> _ = any -> "for #{any}"
+      repositories -> repositories
+    end
+  end
 end

@@ -10,6 +10,9 @@ defmodule HexpmWeb.API.OAuthController do
 
   @jwt_bearer_grant_type "urn:ietf:params:oauth:grant-type:jwt-bearer"
 
+  # RFC 6749 section 5.1: a response carrying tokens must not be stored
+  plug :put_no_store when action == :token
+
   defp safe_param(params, key), do: safe_string(params[key])
 
   @doc """
@@ -248,6 +251,7 @@ defmodule HexpmWeb.API.OAuthController do
          {:ok, api_key_secret} <- validate_api_key_secret(safe_param(params, "client_secret")),
          {:ok, auth_info} <- authenticate_api_key(api_key_secret, conn),
          {:ok, scopes} <- expand_and_validate_scopes(params["scope"], auth_info) do
+      conn = maybe_warn_user_repository_key(conn, auth_info.auth_credential, scopes)
       usage_info = build_usage_info(conn)
 
       # Determine user or organization from the API key
@@ -385,10 +389,21 @@ defmodule HexpmWeb.API.OAuthController do
     {:error, :invalid_scope, "Expected a single package or repository scope"}
   end
 
+  # A GitHub Actions OIDC token is about 1 KB. Refusing anything over this
+  # before decoding it keeps a large body from costing a decode and a
+  # signature check.
+  @max_assertion_bytes 16_384
+
   defp fetch_assertion(params) do
     case safe_param(params, "assertion") do
-      nil -> {:error, :invalid_request, "Missing assertion"}
-      assertion -> {:ok, assertion}
+      nil ->
+        {:error, :invalid_request, "Missing assertion"}
+
+      assertion when byte_size(assertion) > @max_assertion_bytes ->
+        {:error, :invalid_request, "Assertion is larger than #{@max_assertion_bytes} bytes"}
+
+      assertion ->
+        {:ok, assertion}
     end
   end
 
@@ -431,6 +446,19 @@ defmodule HexpmWeb.API.OAuthController do
   end
 
   defp jwt_bearer_error(_reason), do: {:server_error, "Failed to mint token"}
+
+  defp maybe_warn_user_repository_key(conn, %Key{} = key, scopes) do
+    repository_scope? =
+      Enum.any?(scopes, &(&1 == "repositories" or String.starts_with?(&1, "repository:")))
+
+    if repository_scope? and Key.user_repository_key?(key) do
+      put_user_repository_key_warning(conn)
+    else
+      conn
+    end
+  end
+
+  defp maybe_warn_user_repository_key(conn, _auth_credential, _scopes), do: conn
 
   defp validate_client_supports_grant(client, grant_type) do
     if Clients.supports_grant_type?(client, grant_type) do
@@ -706,6 +734,12 @@ defmodule HexpmWeb.API.OAuthController do
     end)
   end
 
+  defp put_no_store(conn, _opts) do
+    conn
+    |> put_resp_header("cache-control", "no-store")
+    |> put_resp_header("pragma", "no-cache")
+  end
+
   defp render_oauth_error(conn, error_type, description) do
     status = error_status(error_type)
 
@@ -715,7 +749,9 @@ defmodule HexpmWeb.API.OAuthController do
   end
 
   defp error_status(:invalid_request), do: 400
-  defp error_status(:invalid_client), do: 401
+  # RFC 6749 section 5.2: 401 is for a client that authenticated with the
+  # Authorization header, and hexpm's clients authenticate in the request body
+  defp error_status(:invalid_client), do: 400
   defp error_status(:invalid_grant), do: 400
   defp error_status(:unauthorized_client), do: 400
   defp error_status(:unsupported_grant_type), do: 400

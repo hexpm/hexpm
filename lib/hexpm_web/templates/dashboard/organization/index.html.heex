@@ -30,7 +30,7 @@
             />
           <% :members -> %>
             <.members_tab
-              add_member_changeset={@add_member_changeset}
+              invite_user_changeset={@invite_user_changeset}
               current_user={@current_user}
               invitations={@invitations}
               invite_changeset={@invite_changeset}
@@ -55,7 +55,9 @@
             <.workload_identities_tab
               changeset={@workload_identity_changeset}
               current_user={@current_user}
+              editing={@workload_identity_editing}
               organization={@organization}
+              unowned_public_packages={@unowned_public_packages}
               workload_identities={@workload_identities}
             />
           <% :packages -> %>

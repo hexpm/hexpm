@@ -100,6 +100,15 @@ defmodule Hexpm.Repository.Packages do
     Repo.all(Package.owner_organizations(package, user, level))
   end
 
+  @doc """
+  The user's memberships, in any role, of the organizations that own this
+  package and of a private package's own organization, with the organization
+  loaded.
+  """
+  def organization_memberships(package, user) do
+    Repo.all(Package.organization_memberships(package, user))
+  end
+
   def preload(package) do
     package = Repo.preload(package, [:downloads, :releases])
     update_in(package.releases, &Release.sort/1)

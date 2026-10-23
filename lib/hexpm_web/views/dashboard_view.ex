@@ -23,6 +23,7 @@ defmodule HexpmWeb.DashboardView do
       profile: {"Profile", ~p"/dashboard/profile"},
       security: {"Security", ~p"/dashboard/security"},
       email: {"Emails", ~p"/dashboard/email"},
+      invitations: {"Invitations", ~p"/dashboard/invitations"},
       keys: {"Keys", ~p"/dashboard/keys"},
       sessions: {"Sessions", ~p"/dashboard/sessions"},
       audit_logs: {"Recent Activities", ~p"/dashboard/audit-logs"},
@@ -45,6 +46,11 @@ defmodule HexpmWeb.DashboardView do
     icon(:heroicon, "envelope", class: "w-5 h-5 #{color}")
   end
 
+  defp icon_for_setting(:invitations, selected?) do
+    color = if selected?, do: "text-purple-600", else: "text-grey-600"
+    icon(:heroicon, "envelope", class: "w-5 h-5 #{color}")
+  end
+
   defp icon_for_setting(:keys, selected?) do
     color = if selected?, do: "text-purple-600", else: "text-grey-600"
     icon(:heroicon, "key", class: "w-5 h-5 #{color}")
@@ -63,6 +69,10 @@ defmodule HexpmWeb.DashboardView do
   defp icon_for_setting(:delete_account, selected?) do
     color = if selected?, do: "text-purple-600", else: "text-grey-600"
     icon(:heroicon, "trash", class: "w-5 h-5 #{color}")
+  end
+
+  defp pending_invitations(user) do
+    OrganizationInvitations.all_pending_for_user(user)
   end
 
   defp selected_setting(conn, id) do
@@ -119,11 +129,15 @@ defmodule HexpmWeb.DashboardView do
   end
 
   def humanize_audit_log_info(%AuditLog{action: "workload_identity.create", params: params}) do
-    "Add workload identity #{params["repository"]} (#{params["workflow"]}) on package #{params["package"]["name"]}"
+    "Add workload identity #{HexpmWeb.ViewHelpers.audited_workload_identity_repositories(params)} (#{params["workflow"]}) on package #{params["package"]["name"]}"
+  end
+
+  def humanize_audit_log_info(%AuditLog{action: "workload_identity.update", params: params}) do
+    "Change workload identity #{HexpmWeb.ViewHelpers.audited_workload_identity_repositories(params)} (#{params["workflow"]}) on package #{params["package"]["name"]}"
   end
 
   def humanize_audit_log_info(%AuditLog{action: "workload_identity.remove", params: params}) do
-    "Remove workload identity #{params["repository"]} (#{params["workflow"]}) from package #{params["package"]["name"]}"
+    "Remove workload identity #{HexpmWeb.ViewHelpers.audited_workload_identity_repositories(params)} (#{params["workflow"]}) from package #{params["package"]["name"]}"
   end
 
   def humanize_audit_log_info(%AuditLog{action: "release.publish", params: params}) do

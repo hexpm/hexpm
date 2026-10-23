@@ -91,6 +91,26 @@ defmodule Hexpm.ShortURLs.ShortURLTest do
                {:error, "must be at most 8192 bytes"}
     end
 
+    test "refuses a link longer than 32768 bytes before decoding it" do
+      url = "https://hex.pm/diffs?diffs[]=ecto:1.0.0:2.0.0&" <> String.duplicate("=&", 16_370)
+
+      assert byte_size(url) == 32_786
+      assert ShortURL.canonical_diff_url(url) == {:error, "must be at most 32768 bytes"}
+    end
+
+    test "accepts a link longer than 8192 bytes whose canonical form is shorter" do
+      comparison = "ecto:1.0.0-#{String.duplicate("a", 50)}:2.0.0"
+
+      url =
+        "https://hex.pm/diffs?" <>
+          Enum.map_join(1..150, "&", fn _ -> "diffs[]=" <> comparison end)
+
+      assert byte_size(url) > 8192
+
+      assert ShortURL.canonical_diff_url(url) ==
+               {:ok, "https://hex.pm/diffs?diffs[]=" <> comparison, ["ecto"]}
+    end
+
     test "rejects a link without a query" do
       assert ShortURL.canonical_diff_url("https://hex.pm/diffs") ==
                {:error, "must contain at least one comparison"}

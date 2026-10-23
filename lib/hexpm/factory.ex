@@ -51,6 +51,7 @@ defmodule Hexpm.Factory do
       secret_first: first,
       secret_second: second,
       user_secret: user_secret,
+      token_format: "v2",
       permissions: [build(:key_permission, domain: "api")],
       user: nil,
       organization: nil
@@ -66,7 +67,7 @@ defmodule Hexpm.Factory do
   end
 
   def organization_factory() do
-    name = Fake.sequence(:package)
+    name = organization_name()
 
     %Hexpm.Accounts.Organization{
       name: name,
@@ -84,7 +85,7 @@ defmodule Hexpm.Factory do
   end
 
   def repository_factory() do
-    name = Fake.sequence(:package)
+    name = organization_name()
 
     %Hexpm.Repository.Repository{
       name: name,
@@ -122,6 +123,7 @@ defmodule Hexpm.Factory do
       email: Fake.sequence(:email),
       role: "read",
       token_hash: :crypto.hash(:sha256, Fake.sequence(:username)),
+      sent_at: DateTime.utc_now(),
       expires_at:
         DateTime.add(
           DateTime.utc_now(),
@@ -291,8 +293,9 @@ defmodule Hexpm.Factory do
       issuer: Hexpm.WorkloadIdentities.WorkloadIdentity.github_issuer(),
       repository_owner: "acme",
       repository_owner_id: "12345",
-      repository_id: "67890",
-      repository: "acme/widget-#{n}",
+      repositories: [
+        %Hexpm.WorkloadIdentities.TrustedRepository{name: "acme/widget-#{n}", id: "67890"}
+      ],
       workflow: "release-#{n}.yml",
       environment: ""
     }
@@ -308,8 +311,9 @@ defmodule Hexpm.Factory do
       issuer: Hexpm.WorkloadIdentities.WorkloadIdentity.github_issuer(),
       repository_owner: "acme",
       repository_owner_id: "12345",
-      repository_id: "67890",
-      repository: "acme/widget-#{n}",
+      repositories: [
+        %Hexpm.WorkloadIdentities.TrustedRepository{name: "acme/widget-#{n}", id: "67890"}
+      ],
       workflow: "",
       environment: ""
     }
@@ -369,5 +373,13 @@ defmodule Hexpm.Factory do
         }
       ]
     }
+  end
+
+  # Organization names and usernames need 3 characters, and some package names have 2.
+  defp organization_name() do
+    case Fake.sequence(:package) do
+      name when byte_size(name) >= 3 -> name
+      _name -> organization_name()
+    end
   end
 end

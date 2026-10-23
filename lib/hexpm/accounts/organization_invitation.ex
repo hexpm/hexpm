@@ -11,11 +11,14 @@ defmodule Hexpm.Accounts.OrganizationInvitation do
     field :role, :string
     field :token_hash, :binary, redact: true
     field :raw_token, :string, virtual: true, redact: true
+    field :sent_at, :utc_datetime_usec
     field :expires_at, :utc_datetime_usec
     field :accepted_at, :utc_datetime_usec
     field :revoked_at, :utc_datetime_usec
+    field :declined_at, :utc_datetime_usec
 
     belongs_to :organization, Organization
+    belongs_to :user, User
     belongs_to :invited_by_user, User
     belongs_to :accepted_by_user, User
 
@@ -40,10 +43,29 @@ defmodule Hexpm.Accounts.OrganizationInvitation do
     |> update_change(:email, &normalize_email/1)
     |> validate_length(:email, count: :bytes, max: 255)
     |> validate_format(:email, Email.format(), message: "is not a valid email")
+    |> put_change(:sent_at, DateTime.utc_now())
     |> validate_inclusion(:role, @roles)
     |> unique_constraint(:token_hash)
     |> unique_constraint(:email,
       name: :organization_invitations_pending_index,
+      message: "has already been invited"
+    )
+  end
+
+  @doc """
+  An invitation to one Hex account. Only that account can accept it, so it has
+  no token and no address: the mail goes to the account's primary address and
+  points at its dashboard.
+  """
+  def user_changeset(invitation, attrs) do
+    invitation
+    |> cast(attrs, [:organization_id, :invited_by_user_id, :user_id, :role, :expires_at])
+    |> validate_required([:organization_id, :user_id, :role, :expires_at])
+    |> put_change(:sent_at, DateTime.utc_now())
+    |> validate_inclusion(:role, @roles)
+    |> unique_constraint(:user_id,
+      name: :organization_invitations_pending_user_index,
+      error_key: :username,
       message: "has already been invited"
     )
   end
@@ -54,6 +76,8 @@ defmodule Hexpm.Accounts.OrganizationInvitation do
     |> put_change(:invited_by_user_id, invited_by && invited_by.id)
     |> put_change(:token_hash, token_hash)
     |> put_change(:expires_at, expires_at)
+    |> put_change(:declined_at, nil)
+    |> put_change(:sent_at, DateTime.utc_now())
     |> validate_inclusion(:role, @roles)
   end
 
@@ -65,12 +89,20 @@ defmodule Hexpm.Accounts.OrganizationInvitation do
     change(invitation, revoked_at: now)
   end
 
+  def decline_changeset(invitation, now) do
+    change(invitation, declined_at: now)
+  end
+
+  def restore_changeset(invitation) do
+    change(invitation, declined_at: nil)
+  end
+
   def normalize_email(email) when is_binary(email) do
     email |> String.trim() |> String.downcase()
   end
 
   def pending?(%__MODULE__{} = invitation, now) do
     is_nil(invitation.accepted_at) and is_nil(invitation.revoked_at) and
-      DateTime.compare(invitation.expires_at, now) == :gt
+      is_nil(invitation.declined_at) and DateTime.compare(invitation.expires_at, now) == :gt
   end
 end

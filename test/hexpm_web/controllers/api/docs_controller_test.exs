@@ -334,6 +334,38 @@ defmodule HexpmWeb.API.DocsControllerTest do
     end
   end
 
+  test "a read-only key gets the same answer for a private release whether it exists or not",
+       %{user: user} do
+    repository = insert(:repository)
+    package = insert(:package, repository_id: repository.id)
+    insert(:release, package: package, version: "1.0.0", has_docs: true)
+    key = key_for(user, [%{domain: "api", resource: "read"}])
+    base = "/api/repos/#{repository.name}/packages"
+
+    paths = [
+      "#{base}/#{package.name}/releases/1.0.0/docs",
+      "#{base}/#{package.name}/releases/2.0.0/docs",
+      "#{base}/no_such_package/releases/1.0.0/docs"
+    ]
+
+    requests = [&get/2, &post(&1, &2, "docs"), &delete/2]
+
+    for request <- requests do
+      responses =
+        for path <- paths do
+          conn =
+            build_conn()
+            |> put_req_header("content-type", "application/octet-stream")
+            |> put_req_header("authorization", key)
+            |> request.(path)
+
+          {conn.status, conn.resp_body}
+        end
+
+      assert [response, response, response] = responses
+    end
+  end
+
   defp publish_docs(user, %Package{name: name}, version, files) do
     body = create_tarball(files)
 

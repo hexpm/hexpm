@@ -8,6 +8,7 @@ defmodule HexpmWeb.AuthHelpers do
   alias Hexpm.SecurityLog
   alias Hexpm.Repository.{Package, Packages, PackageOwner, Repository}
   alias Hexpm.OAuth.Token
+  alias Hexpm.WorkloadIdentities
   alias Hexpm.WorkloadIdentities.WorkloadIdentity
   alias HexpmWeb.BasicAuth
   alias HexpmWeb.Plugs.Attack
@@ -222,10 +223,10 @@ defmodule HexpmWeb.AuthHelpers do
         unauthorized(conn, "missing authentication information")
 
       {:error, :invalid} ->
-        unauthorized(conn, "invalid authentication information")
+        basic_unauthorized(conn, "invalid authentication information")
 
       {:error, :password} ->
-        unauthorized(conn, "invalid username and password combination")
+        basic_unauthorized(conn, "invalid username and password combination")
 
       {:error, :basic_auth_disabled} ->
         conn
@@ -236,7 +237,10 @@ defmodule HexpmWeb.AuthHelpers do
         )
 
       {:error, :key} ->
-        unauthorized(conn, "invalid API key")
+        key_unauthorized(conn, "invalid API key")
+
+      {:error, :invalid_token} ->
+        invalid_token(conn, "invalid or expired access token")
 
       {:error, :blocked} ->
         forbidden(conn, "Blocked")
@@ -247,10 +251,22 @@ defmodule HexpmWeb.AuthHelpers do
         )
 
       {:error, :revoked_key} ->
-        unauthorized(conn, "API key revoked")
+        key_unauthorized(conn, "API key revoked")
 
+      # RFC 6750 section 3.1: a Bearer token that verifies but lacks the
+      # scope gets a 403, which tells the client the token isn't invalid,
+      # it doesn't grant this request
       {:error, :domain} ->
-        unauthorized(conn, "key not authorized for this action")
+        if bearer_request?(conn) do
+          conn
+          |> put_resp_header(
+            "www-authenticate",
+            ~s(Bearer realm="hex", error="insufficient_scope")
+          )
+          |> render_error(403, message: "insufficient scope for this action")
+        else
+          unauthorized(conn, "key not authorized for this action")
+        end
 
       {:error, :totp_required} ->
         conn
@@ -287,6 +303,8 @@ defmodule HexpmWeb.AuthHelpers do
     end
   end
 
+  @token_prefix Hexpm.Accounts.Key.token_prefix()
+
   def authenticate(conn) do
     authenticate_at(conn, DateTime.utc_now())
   end
@@ -294,9 +312,17 @@ defmodule HexpmWeb.AuthHelpers do
   def authenticate_at(conn, now) do
     case get_req_header(conn, "authorization") do
       ["Basic " <> credentials] -> credentials |> basic_auth(conn, now) |> report(:basic)
-      ["Bearer " <> token] -> token |> oauth_token_auth(conn) |> report(:bearer)
-      [key] -> key |> key_auth(conn) |> report(:key)
+      ["Bearer " <> token] -> token |> bearer_auth(conn) |> report(:bearer)
+      [key] -> key |> String.trim() |> key_auth(conn) |> report(:key)
       _ -> {:error, :missing}
+    end
+  end
+
+  defp bearer_auth(token, conn) do
+    if String.starts_with?(token, @token_prefix) do
+      key_auth(token, conn)
+    else
+      oauth_token_auth(token, conn)
     end
   end
 
@@ -346,7 +372,7 @@ defmodule HexpmWeb.AuthHelpers do
 
       {:error, reason} ->
         SecurityLog.auth_failure(conn, :oauth_token, reason)
-        {:error, :key}
+        {:error, :invalid_token}
     end
   end
 
@@ -373,10 +399,42 @@ defmodule HexpmWeb.AuthHelpers do
     }
   end
 
+  # A 401 must name a scheme the client can authenticate with (RFC 9110
+  # section 11.6.1). Without an error code this is the RFC 6750 section 3
+  # challenge for a request that carries no Bearer token.
   def unauthorized(conn, reason) do
     conn
-    |> put_resp_header("www-authenticate", "Basic realm=hex")
+    |> put_resp_header("www-authenticate", ~s(Bearer realm="hex"))
     |> render_error(401, message: reason)
+  end
+
+  defp basic_unauthorized(conn, reason) do
+    conn
+    |> put_resp_header("www-authenticate", ~s(Basic realm="hex"))
+    |> render_error(401, message: reason)
+  end
+
+  # RFC 6750 section 3.1: a Bearer token that is expired, revoked or doesn't
+  # verify, which the client can replace and retry with
+  defp invalid_token(conn, reason) do
+    conn
+    |> put_resp_header("www-authenticate", ~s(Bearer realm="hex", error="invalid_token"))
+    |> render_error(401, message: reason)
+  end
+
+  # An API key sent with the Bearer scheme is a Bearer token, so it's refused
+  # the way RFC 6750 refuses one. A key sent on its own isn't, and keeps the
+  # plain 401.
+  defp key_unauthorized(conn, reason) do
+    if bearer_request?(conn) do
+      invalid_token(conn, reason)
+    else
+      unauthorized(conn, reason)
+    end
+  end
+
+  defp bearer_request?(conn) do
+    match?(["Bearer " <> _], get_req_header(conn, "authorization"))
   end
 
   def forbidden(conn, reason) do
@@ -422,6 +480,7 @@ defmodule HexpmWeb.AuthHelpers do
     cond do
       workload_identity.package_id == package.id -> :ok
       organization_publishes?(workload_identity, repository, package.name) -> :ok
+      WorkloadIdentities.publishes_public?(workload_identity, package) -> :ok
       repository.id == 1 -> {:error, :auth}
       true -> {:error, :not_found}
     end
@@ -507,12 +566,12 @@ defmodule HexpmWeb.AuthHelpers do
   end
 
   defp organization_publishes?(
-         %WorkloadIdentity{organization_id: organization_id, role: "write", packages: packages},
+         %WorkloadIdentity{organization_id: organization_id} = workload_identity,
          %Repository{id: repository_id, organization_id: organization_id},
          name
        )
-       when not is_nil(organization_id) and repository_id != 1 and is_binary(name) do
-    is_nil(packages) or name in packages
+       when not is_nil(organization_id) and repository_id != 1 do
+    WorkloadIdentity.covers_private_package?(workload_identity, name)
   end
 
   defp organization_publishes?(_workload_identity, _repository, _name), do: false

@@ -124,6 +124,8 @@ defmodule Hexpm.Accounts.AuditLog do
     }
   end
 
+  # An organization's workload identity acts for the organization, wherever
+  # the package it publishes is.
   def build(
         %{user: %Hexpm.WorkloadIdentities.WorkloadIdentity{id: workload_identity_id}} = audit_data,
         action,
@@ -136,8 +138,8 @@ defmodule Hexpm.Accounts.AuditLog do
     %AuditLog{
       user_id: nil,
       organization_id:
-        params[:organization][:id] || params[:package][:organization_id] ||
-          params[:organization_id],
+        audit_data.user.organization_id || params[:organization][:id] ||
+          params[:package][:organization_id] || params[:organization_id],
       user_data: %{workload_identity_id: workload_identity_id, grant_type: "workload_identity"},
       key_data: serialize_key(key),
       key: key,
@@ -312,6 +314,12 @@ defmodule Hexpm.Accounts.AuditLog do
   defp extract_params("organization.workload_identity.remove", workload_identity),
     do: serialize(workload_identity)
 
+  defp extract_params("workload_identity.update", {previous, workload_identity}),
+    do: serialize_workload_identity_change(previous, workload_identity)
+
+  defp extract_params("organization.workload_identity.update", {previous, workload_identity}),
+    do: serialize_workload_identity_change(previous, workload_identity)
+
   defp extract_params("password.add", _), do: %{}
   defp extract_params("password.remove", _), do: %{}
   defp extract_params("organization.create", organization), do: serialize(organization)
@@ -330,6 +338,9 @@ defmodule Hexpm.Accounts.AuditLog do
   defp extract_params("organization.member.role", {organization, user, role}),
     do: %{organization: serialize(organization), user: serialize(user), role: role}
 
+  defp extract_params("organization.member.visibility", {organization, user, public?}),
+    do: %{organization: serialize(organization), user: serialize(user), public: public?}
+
   defp extract_params(action, {organization, %OrganizationDomain{} = domain})
        when action in [
               "organization.domain.add",
@@ -340,15 +351,24 @@ defmodule Hexpm.Accounts.AuditLog do
     %{organization: serialize(organization), domain: domain.domain}
   end
 
+  defp extract_params(action, {organization, %User{} = user})
+       when action in ["organization.invitation.block", "organization.invitation.unblock"] do
+    %{organization: serialize(organization), user: serialize(user)}
+  end
+
   defp extract_params(action, {organization, %OrganizationInvitation{} = invitation})
        when action in [
               "organization.invitation.create",
               "organization.invitation.accept",
+              "organization.invitation.decline",
+              "organization.invitation.restore",
               "organization.invitation.revoke"
             ] do
     %{
       organization: serialize(organization),
-      invitation: %{id: invitation.id, email: invitation.email, role: invitation.role}
+      invitation:
+        %{id: invitation.id, email: invitation.email, role: invitation.role}
+        |> put_invitee(invitation)
     }
   end
 
@@ -524,6 +544,7 @@ defmodule Hexpm.Accounts.AuditLog do
   defp serialize(%Hexpm.WorkloadIdentities.WorkloadIdentity{} = workload_identity) do
     workload_identity
     |> do_serialize()
+    |> Map.update!(:repositories, &Enum.map(&1, fn r -> %{name: r.name, id: r.id} end))
     |> Map.put(:package, serialize_if_loaded(workload_identity.package))
     |> Map.put(:organization, serialize_if_loaded(workload_identity.organization))
   end
@@ -531,8 +552,34 @@ defmodule Hexpm.Accounts.AuditLog do
   defp serialize(nil), do: nil
   defp serialize(schema), do: do_serialize(schema)
 
+  # A change records the workload identity as it is now, and under
+  # `:previous` what it trusted and covered before.
+  defp serialize_workload_identity_change(previous, workload_identity) do
+    previous =
+      previous
+      |> serialize()
+      |> Map.take([
+        :repositories,
+        :workflow,
+        :environment,
+        :covers_private,
+        :packages,
+        :covers_public,
+        :public_packages
+      ])
+
+    workload_identity
+    |> serialize()
+    |> Map.put(:previous, previous)
+  end
+
   defp serialize_if_loaded(%Ecto.Association.NotLoaded{}), do: nil
   defp serialize_if_loaded(assoc), do: serialize(assoc)
+
+  defp put_invitee(params, %OrganizationInvitation{user: %User{} = user}),
+    do: Map.put(params, :user, %{id: user.id, username: user.username})
+
+  defp put_invitee(params, %OrganizationInvitation{}), do: params
 
   defp do_serialize(schema), do: Map.take(schema, fields(schema))
 
@@ -545,10 +592,18 @@ defmodule Hexpm.Accounts.AuditLog do
       cooldown: repository_policy.cooldown,
       advisory_min_severity: repository_policy.advisory_min_severity,
       retirement_reasons: repository_policy.retirement_reasons,
-      overrides:
-        Enum.map(repository_policy.overrides, fn override ->
-          %{action: override.action, package: override.package, requirement: override.requirement}
-        end)
+      overrides: Enum.map(repository_policy.overrides, &serialize_policy_override/1)
+    }
+  end
+
+  defp serialize_policy_override(override) do
+    %{
+      action: override.action,
+      package: override.package,
+      requirement: override.requirement,
+      advisory_id: override.advisory_id,
+      retirement_reason: override.retirement_reason,
+      comment: override.comment
     }
   end
 
@@ -575,11 +630,14 @@ defmodule Hexpm.Accounts.AuditLog do
       :provider,
       :issuer,
       :repository_owner,
-      :repository,
+      :repositories,
       :workflow,
       :environment,
       :role,
+      :covers_private,
       :packages,
+      :covers_public,
+      :public_packages,
       :package_id,
       :organization_id
     ]

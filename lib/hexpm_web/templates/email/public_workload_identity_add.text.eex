@@ -1,0 +1,7 @@
+<%= PublicWorkloadIdentityAdd.message(@username, @organization) %>
+
+<%= Enum.join(@public_packages_covered, "\n") %>
+
+<%= Enum.join(OrganizationWorkloadIdentityDetails.lines(@role, @current, @organization, @coverage), "\n") %>
+
+<%= PublicWorkloadIdentityAdd.warning(@organization) %>

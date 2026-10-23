@@ -4,6 +4,8 @@ defmodule Hexpm.Emails do
   alias HexpmWeb.EmailView.{Common, PackageSearchDisabled}
   alias Hexpm.Accounts.{Email, Organization, User}
 
+  @coverage_fields [:covers_private, :packages, :covers_public, :public_packages]
+
   @doc """
   The types the builders tag their mail with. Each builder tags its mail with
   its own name, and every public function here other than `render_body`,
@@ -16,22 +18,32 @@ defmodule Hexpm.Emails do
         do: Atom.to_string(name)
   end
 
-  def owner_added(package, owners, owner) do
+  @doc """
+  `started` are the new owner organization's workload identities that publish
+  the package since the change.
+  """
+  def owner_added(package, owners, owner, started) do
     base_email(:owner_added)
     |> email_to(owners)
     |> subject("Hex.pm - Owner added to package #{package.name}")
     |> assign(:username, owner.username)
     |> assign(:package, package.name)
+    |> assign(:started, started)
     |> render_body(:owner_add)
   end
 
-  def owner_removed(package, owners, owner, workload_identities) do
+  @doc """
+  `workload_identities` are the package's own, which keep publishing it, and
+  `stopped` the organization workload identities that no longer do.
+  """
+  def owner_removed(package, owners, owner, workload_identities, stopped) do
     base_email(:owner_removed)
     |> email_to(owners)
     |> subject("Hex.pm - Owner removed from package #{package.name}")
     |> assign(:username, owner.username)
     |> assign(:package, package.name)
     |> assign(:workload_identities, workload_identities)
+    |> assign(:stopped, stopped)
     |> assign(
       :workload_identities_url,
       HexpmWeb.EmailView.email_url(HexpmWeb.ViewHelpers.path_for_workload_identities(package))
@@ -53,14 +65,29 @@ defmodule Hexpm.Emails do
     |> render_body(:workload_identity_remove)
   end
 
+  def workload_identity_changed(previous, workload_identity, owners, actor) do
+    workload_identity_email(:workload_identity_changed, workload_identity, owners, actor)
+    |> subject("Hex.pm - Workload identity changed on package #{workload_identity.package.name}")
+    |> assign(:previous, trusted_workflows(previous))
+    |> render_body(:workload_identity_change)
+  end
+
   defp workload_identity_email(type, workload_identity, owners, actor) do
     base_email(type)
     |> email_to(owners)
     |> assign(:username, actor.username)
     |> assign(:package, workload_identity.package.name)
-    |> assign(:repository, workload_identity.repository)
-    |> assign(:workflow, workload_identity.workflow)
-    |> assign(:environment, workload_identity.environment)
+    |> assign(:current, trusted_workflows(workload_identity))
+  end
+
+  # The workflows a workload identity trusts, as the details lines show them.
+  defp trusted_workflows(workload_identity) do
+    %{
+      repository_owner: workload_identity.repository_owner,
+      repositories: Enum.map(workload_identity.repositories, & &1.name),
+      workflow: workload_identity.workflow,
+      environment: workload_identity.environment
+    }
   end
 
   def organization_workload_identity_added(workload_identity, organization, actor) do
@@ -85,17 +112,108 @@ defmodule Hexpm.Emails do
     |> render_body(:organization_workload_identity_remove)
   end
 
+  def organization_workload_identity_changed(previous, workload_identity, organization, actor) do
+    organization_workload_identity_email(
+      :organization_workload_identity_changed,
+      workload_identity,
+      organization,
+      actor
+    )
+    |> subject("Hex.pm - Workload identity changed in organization #{organization.name}")
+    |> assign(:previous, trusted_workflows(previous))
+    |> assign(:previous_coverage, Map.take(previous, @coverage_fields))
+    |> render_body(:organization_workload_identity_change)
+  end
+
   defp organization_workload_identity_email(type, workload_identity, organization, actor) do
     base_email(type)
     |> email_to(organization)
+    |> assign_organization_workload_identity(workload_identity, organization, actor)
+  end
+
+  @doc """
+  Tells an owner of public packages that an organization that also owns them
+  added a workload identity that publishes them.
+  """
+  def public_workload_identity_added(workload_identity, organization, owner, packages, actor) do
+    base_email(:public_workload_identity_added)
+    |> email_to(owner)
+    |> subject(
+      "Hex.pm - Workload identity of organization #{organization.name} " <>
+        "can publish #{Enum.join(packages, ", ")}"
+    )
+    |> assign_organization_workload_identity(workload_identity, organization, actor)
+    |> assign(:coverage, public_coverage(workload_identity, packages))
+    |> assign(:public_packages_covered, packages)
+    |> render_body(:public_workload_identity_add)
+  end
+
+  def public_workload_identity_removed(workload_identity, organization, owner, packages, actor) do
+    base_email(:public_workload_identity_removed)
+    |> email_to(owner)
+    |> subject(
+      "Hex.pm - Workload identity of organization #{organization.name} " <>
+        "can no longer publish #{Enum.join(packages, ", ")}"
+    )
+    |> assign_organization_workload_identity(workload_identity, organization, actor)
+    |> assign(:coverage, public_coverage(workload_identity, packages))
+    |> assign(:public_packages_covered, packages)
+    |> render_body(:public_workload_identity_remove)
+  end
+
+  @doc """
+  Tells an owner of public packages that an organization that also owns them
+  changed a workload identity that publishes some of them. `packages` has the
+  names it starts publishing under `:started`, stops publishing under
+  `:stopped`, and keeps publishing from changed workflows under `:kept`.
+  """
+  def public_workload_identity_changed(
+        previous,
+        workload_identity,
+        organization,
+        owner,
+        packages,
+        actor
+      ) do
+    started = Map.get(packages, :started, [])
+    stopped = Map.get(packages, :stopped, [])
+    kept = Map.get(packages, :kept, [])
+    names = Enum.sort(started ++ stopped ++ kept)
+
+    base_email(:public_workload_identity_changed)
+    |> email_to(owner)
+    |> subject(
+      "Hex.pm - Workload identity of organization #{organization.name} " <>
+        "changed for #{Enum.join(names, ", ")}"
+    )
+    |> assign_organization_workload_identity(workload_identity, organization, actor)
+    |> assign(:coverage, public_coverage(workload_identity, started ++ kept))
+    |> assign(:previous, trusted_workflows(previous))
+    |> assign(:previous_coverage, public_coverage(previous, stopped ++ kept))
+    |> assign(:started, started)
+    |> assign(:stopped, stopped)
+    |> assign(:kept, kept)
+    |> render_body(:public_workload_identity_change)
+  end
+
+  # Owners outside the organization only learn about their own packages, not
+  # the workload identity's private coverage or the rest of its public list.
+  defp public_coverage(workload_identity, packages) do
+    %{
+      covers_private: false,
+      packages: [],
+      covers_public: true,
+      public_packages: workload_identity.public_packages && packages
+    }
+  end
+
+  defp assign_organization_workload_identity(email, workload_identity, organization, actor) do
+    email
     |> assign(:username, actor.username)
     |> assign(:organization, organization.name)
     |> assign(:role, workload_identity.role)
-    |> assign(:repository_owner, workload_identity.repository_owner)
-    |> assign(:repository, workload_identity.repository)
-    |> assign(:workflow, workload_identity.workflow)
-    |> assign(:environment, workload_identity.environment)
-    |> assign(:packages, workload_identity.packages)
+    |> assign(:current, trusted_workflows(workload_identity))
+    |> assign(:coverage, Map.take(workload_identity, @coverage_fields))
   end
 
   def verification(user, email) do
@@ -214,6 +332,26 @@ defmodule Hexpm.Emails do
     |> render_body(:tfa_recovery_rotated)
   end
 
+  def key_leaked(user_or_org, key, url \\ nil) do
+    base_email(:key_leaked)
+    |> email_to(user_or_org)
+    |> subject("Hex.pm - API key #{key.name} was found in a public repository and revoked")
+    |> assign(:username, display_name(user_or_org))
+    |> assign(:key_name, key.name)
+    |> assign(:keys_url, HexpmWeb.EmailView.keys_url(user_or_org))
+    |> assign(:found_url, safe_url(url))
+    |> render_body(:key_leaked)
+  end
+
+  defp safe_url(nil), do: nil
+
+  defp safe_url(url) when is_binary(url) do
+    case URI.parse(url) do
+      %URI{scheme: s} when s in ["http", "https"] -> url
+      _ -> nil
+    end
+  end
+
   def email_added(user, new_email) do
     base_email(:email_added)
     |> email_to(user)
@@ -305,6 +443,19 @@ defmodule Hexpm.Emails do
     |> assign(:token, invitation.raw_token)
     |> assign(:expires_at, invitation.expires_at)
     |> render_body(:organization_invitation)
+  end
+
+  def organization_user_invitation(invitation) do
+    base_email(:organization_user_invitation)
+    |> email_to(invitation.user)
+    |> subject(
+      "Hex.pm - You have been invited to the #{invitation.organization.name} organization"
+    )
+    |> assign(:organization, invitation.organization.name)
+    |> assign(:role, invitation.role)
+    |> assign(:username, invitation.user.username)
+    |> assign(:expires_at, invitation.expires_at)
+    |> render_body(:organization_user_invitation)
   end
 
   def sso_identity_linked(organization, username, recipients) do

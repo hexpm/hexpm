@@ -604,7 +604,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         |> post("/api/publish", create_tar(meta))
 
       assert conn.status == 401
-      assert get_resp_header(conn, "www-authenticate") == ["Basic realm=hex"]
+      assert get_resp_header(conn, "www-authenticate") == [~s(Bearer realm="hex")]
     end
 
     test "update package authorizes", %{package: package} do
@@ -617,7 +617,7 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         |> post("/api/publish", create_tar(meta))
 
       assert conn.status == 401
-      assert get_resp_header(conn, "www-authenticate") == ["Basic realm=hex"]
+      assert get_resp_header(conn, "www-authenticate") == [~s(Bearer realm="hex")]
     end
 
     test "organization owned package", %{user: user, organization: organization} do
@@ -1718,6 +1718,36 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       assert Hexpm.Repo.get_by(assoc(package, :releases), version: "0.0.1")
     end
 
+    test "a read-only key gets the same answer whether the release exists or not", %{
+      user: user,
+      repository: repository
+    } do
+      package = insert(:package, repository_id: repository.id)
+      insert(:release, package: package, version: "0.0.1")
+      key = key_for(user, [%{domain: "api", resource: "read"}])
+      base = "/api/repos/#{repository.name}/packages"
+
+      paths = [
+        "#{base}/#{package.name}/releases/0.0.1",
+        "#{base}/#{package.name}/releases/0.0.2",
+        "#{base}/no_such_package/releases/0.0.1"
+      ]
+
+      responses =
+        for path <- paths do
+          conn =
+            build_conn()
+            |> put_req_header("authorization", key)
+            |> delete(path)
+
+          {conn.status, conn.resp_body}
+        end
+
+      assert [response, response, response] = responses
+
+      assert Hexpm.Repo.get_by(assoc(package, :releases), version: "0.0.1")
+    end
+
     test "organization needs to have active billing", %{user: user} do
       repository = insert(:repository, organization: build(:organization, billing_active: false))
       insert(:organization_user, organization: repository.organization, user: user, role: "write")
@@ -2214,9 +2244,13 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
         |> put_req_header("authorization", "Bearer #{read_token.access_token}")
         |> post("/api/packages/#{meta.name}/releases", create_tar(meta))
 
-      result = json_response(conn, 401)
+      result = json_response(conn, 403)
       # Should fail with domain error, not TOTP error
-      assert result["message"] == "key not authorized for this action"
+      assert result["message"] == "insufficient scope for this action"
+
+      assert get_resp_header(conn, "www-authenticate") == [
+               ~s(Bearer realm="hex", error="insufficient_scope")
+             ]
     end
 
     test "write operation with API key (not OAuth) doesn't require TOTP", %{

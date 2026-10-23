@@ -25,8 +25,9 @@ defmodule HexpmWeb.API.WorkloadIdentityPublishTest do
         package: package,
         repository_owner: "acme",
         repository_owner_id: "12345",
-        repository_id: "67890",
-        repository: "acme/widget",
+        repositories: [
+          %Hexpm.WorkloadIdentities.TrustedRepository{name: "acme/widget", id: "67890"}
+        ],
         workflow: "release.yml"
       )
 
@@ -50,6 +51,33 @@ defmodule HexpmWeb.API.WorkloadIdentityPublishTest do
              )
 
     token
+  end
+
+  # A token for a scope the exchange no longer grants, as one minted before a
+  # change would be.
+  defp workload_identity_token(workload_identity, scope) do
+    {:ok, access_token, jti} =
+      Hexpm.OAuth.JWT.generate_access_token(
+        to_string(workload_identity.id),
+        "workload_identity",
+        [scope],
+        expires_in: 900
+      )
+
+    Hexpm.Repo.insert!(
+      Hexpm.OAuth.Token.build(%{
+        jti: jti,
+        access_token: access_token,
+        scopes: [scope],
+        granted_scopes: [scope],
+        expires_at: DateTime.add(DateTime.utc_now(), 900, :second),
+        grant_type: "workload_identity",
+        grant_reference: "oidc-#{jti}",
+        workload_identity_id: workload_identity.id
+      })
+    )
+
+    %{access_token: access_token}
   end
 
   defp publish_release(token, package, version \\ "1.0.0") do
@@ -111,8 +139,7 @@ defmodule HexpmWeb.API.WorkloadIdentityPublishTest do
       package: other,
       repository_owner: tp.repository_owner,
       repository_owner_id: tp.repository_owner_id,
-      repository_id: tp.repository_id,
-      repository: tp.repository,
+      repositories: tp.repositories,
       workflow: tp.workflow
     )
 
@@ -151,7 +178,7 @@ defmodule HexpmWeb.API.WorkloadIdentityPublishTest do
       |> put_req_header("authorization", "Bearer #{token.access_token}")
       |> post("/api/publish", create_tar(meta))
 
-    assert json_response(conn, 401)["message"] =~ "not authorized"
+    assert json_response(conn, 403)["message"] =~ "insufficient scope"
   end
 
   test "minted token cannot create a brand-new package", %{package: package} do
@@ -257,7 +284,9 @@ defmodule HexpmWeb.API.WorkloadIdentityPublishTest do
         insert(:organization_workload_identity,
           organization: organization,
           role: "write",
-          repository: "acme/widget",
+          repositories: [
+            %Hexpm.WorkloadIdentities.TrustedRepository{name: "acme/widget", id: "67890"}
+          ],
           workflow: "release.yml"
         )
 
@@ -338,7 +367,7 @@ defmodule HexpmWeb.API.WorkloadIdentityPublishTest do
     } do
       token = mint(repository: repository.name, package: "new_package")
 
-      assert json_response(publish(token, repository, "other_package"), 401)
+      assert json_response(publish(token, repository, "other_package"), 403)
       refute Hexpm.Repo.get_by(Package, repository_id: repository.id, name: "other_package")
     end
 
@@ -372,7 +401,7 @@ defmodule HexpmWeb.API.WorkloadIdentityPublishTest do
       other = insert(:repository)
       token = mint(repository: repository.name, package: "new_package")
 
-      assert json_response(publish(token, other, "new_package"), 401)
+      assert json_response(publish(token, other, "new_package"), 403)
       refute Hexpm.Repo.get_by(Package, repository_id: other.id, name: "new_package")
     end
 
@@ -406,11 +435,39 @@ defmodule HexpmWeb.API.WorkloadIdentityPublishTest do
       assert publish(token, repository, package.name).status == 403
     end
 
+    test "is refused at publish once private coverage is turned off", %{
+      repository: repository,
+      org_package: package,
+      org_publisher: tp,
+      user: user
+    } do
+      insert(:release, package: package, version: "1.0.0", publisher: user)
+      token = mint(repository: repository.name, package: package.name)
+
+      tp
+      |> Ecto.Changeset.change(covers_private: false, packages: [], covers_public: true)
+      |> Hexpm.Repo.update!()
+
+      assert json_response(publish(token, repository, package.name, "1.0.1"), 404)
+
+      docs =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", "Bearer #{token.access_token}")
+        |> post(
+          "/api/repos/#{repository.name}/packages/#{package.name}/releases/1.0.0/docs",
+          create_docs_tar([{"index.html", "docs"}])
+        )
+
+      assert docs.status == 404
+      refute Hexpm.Repo.get_by!(Release, package_id: package.id, version: "1.0.0").has_docs
+    end
+
     test "a repository token can't publish", %{repository: repository, org_package: package} do
       token = mint(repository: repository.name)
 
-      assert json_response(publish(token, repository, package.name), 401)
-      assert json_response(publish(token, repository, "new_package"), 401)
+      assert json_response(publish(token, repository, package.name), 403)
+      assert json_response(publish(token, repository, "new_package"), 403)
     end
 
     test "a repository token can't call the API", %{repository: repository} do
@@ -434,12 +491,297 @@ defmodule HexpmWeb.API.WorkloadIdentityPublishTest do
 
       insert(:organization_workload_identity,
         organization: organization,
-        repository: "acme/widget",
+        repositories: [
+          %Hexpm.WorkloadIdentities.TrustedRepository{name: "acme/widget", id: "67890"}
+        ],
         workflow: "release.yml"
       )
 
       token = mint(repository: repository.name)
-      assert json_response(publish(token, repository, package.name), 401)
+      assert json_response(publish(token, repository, package.name), 403)
+    end
+  end
+
+  describe "organization workload identity for public packages" do
+    setup do
+      organization = insert(:organization)
+
+      owned =
+        insert(:package,
+          package_owners: [build(:package_owner, user: organization.user, level: "full")],
+          meta: build(:package_metadata, description: "original")
+        )
+
+      identity =
+        insert(:organization_workload_identity,
+          organization: organization,
+          role: "write",
+          repositories: [
+            %Hexpm.WorkloadIdentities.TrustedRepository{name: "acme/widget", id: "67890"}
+          ],
+          workflow: "release.yml",
+          covers_private: false,
+          packages: [],
+          covers_public: true
+        )
+
+      %{public_organization: organization, owned: owned, public_identity: identity}
+    end
+
+    defp mint_public(name) do
+      WorkloadIdentityHelpers.github_claims()
+      |> WorkloadIdentityHelpers.sign_oidc_claims()
+      |> Hexpm.WorkloadIdentities.verify_and_mint(repository: "hexpm", package: name)
+      |> then(fn {:ok, token} -> token end)
+    end
+
+    defp publish_public(token, name, version \\ "1.0.0") do
+      meta = %{name: name, version: version, description: "from CI"}
+
+      build_conn()
+      |> put_req_header("content-type", "application/octet-stream")
+      |> put_req_header("authorization", "Bearer #{token.access_token}")
+      |> post("/api/publish", create_tar(meta))
+    end
+
+    test "publishes a release of a public package the organization owns", %{
+      public_organization: organization,
+      owned: owned,
+      public_identity: identity
+    } do
+      token = mint_public(owned.name)
+
+      result = json_response(publish_public(token, owned.name), 201)
+      assert is_nil(result["publisher"])
+      assert result["oidc_claims"]["repository"] == "acme/widget"
+
+      release = Hexpm.Repo.get_by!(Release, package_id: owned.id)
+      assert release.workload_identity_id == identity.id
+      assert release.publisher_id == nil
+
+      log = Hexpm.Repo.get_by!(AuditLog, action: "release.publish")
+      assert log.user_data["workload_identity_id"] == identity.id
+      assert log.organization_id == organization.id
+    end
+
+    test "is refused at publish once the organization stops owning the package", %{
+      owned: owned
+    } do
+      token = mint_public(owned.name)
+
+      Hexpm.Repo.delete_all(
+        from(po in Hexpm.Repository.PackageOwner, where: po.package_id == ^owned.id)
+      )
+
+      insert(:package_owner, package: owned, user: insert(:user))
+
+      assert json_response(publish_public(token, owned.name), 403)
+      refute Hexpm.Repo.get_by(Release, package_id: owned.id)
+    end
+
+    test "is refused at publish once the public list stops covering the package", %{
+      owned: owned,
+      public_identity: identity
+    } do
+      token = mint_public(owned.name)
+
+      identity
+      |> Ecto.Changeset.change(public_packages: ["other_package"])
+      |> Hexpm.Repo.update!()
+
+      assert json_response(publish_public(token, owned.name), 403)
+    end
+
+    test "is refused at publish once public coverage is turned off", %{
+      owned: owned,
+      public_identity: identity
+    } do
+      token = mint_public(owned.name)
+
+      identity
+      |> Ecto.Changeset.change(covers_private: true, packages: nil, covers_public: false)
+      |> Hexpm.Repo.update!()
+
+      assert json_response(publish_public(token, owned.name), 403)
+    end
+
+    test "can't create a public package, even one the public list names", %{
+      owned: owned,
+      public_identity: identity
+    } do
+      identity =
+        identity
+        |> Ecto.Changeset.change(public_packages: [owned.name, "new_public_package"])
+        |> Hexpm.Repo.update!()
+
+      assert {:error, :package_not_found} =
+               WorkloadIdentityHelpers.github_claims()
+               |> WorkloadIdentityHelpers.sign_oidc_claims()
+               |> Hexpm.WorkloadIdentities.verify_and_mint(
+                 repository: "hexpm",
+                 package: "new_public_package"
+               )
+
+      token = mint_public(owned.name)
+      assert json_response(publish_public(token, "new_public_package"), 403)
+
+      scoped_token = workload_identity_token(identity, "package:hexpm/new_public_package")
+      assert json_response(publish_public(scoped_token, "new_public_package"), 403)
+
+      refute Hexpm.Repo.get_by(Package, repository_id: 1, name: "new_public_package")
+    end
+
+    test "publishes through the package releases endpoint", %{owned: owned} do
+      token = mint_public(owned.name)
+      meta = %{name: owned.name, version: "1.0.0", description: "from CI"}
+
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", "Bearer #{token.access_token}")
+        |> post("/api/packages/#{owned.name}/releases", create_tar(meta))
+
+      assert json_response(conn, 201)
+      assert Hexpm.Repo.get_by(Release, package_id: owned.id)
+    end
+
+    test "publishes docs of a public package the organization owns", %{
+      owned: owned,
+      user: user
+    } do
+      insert(:release, package: owned, version: "1.0.0", publisher: user)
+      token = mint_public(owned.name)
+
+      docs = fn ->
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", "Bearer #{token.access_token}")
+        |> post(
+          "/api/packages/#{owned.name}/releases/1.0.0/docs",
+          create_docs_tar([{"index.html", "docs"}])
+        )
+      end
+
+      assert docs.().status == 201
+
+      Hexpm.Repo.delete_all(
+        from(po in Hexpm.Repository.PackageOwner, where: po.package_id == ^owned.id)
+      )
+
+      insert(:package_owner, package: owned, user: insert(:user))
+
+      assert docs.().status == 403
+    end
+
+    test "publishes without active billing", %{
+      public_organization: organization,
+      owned: owned
+    } do
+      token = mint_public(owned.name)
+
+      organization
+      |> Ecto.Changeset.change(billing_active: false)
+      |> Hexpm.Repo.update!()
+
+      assert json_response(publish_public(token, owned.name), 201)
+    end
+
+    test "a token for one public package can't publish another the organization owns", %{
+      public_organization: organization,
+      owned: owned
+    } do
+      other_owned =
+        insert(:package,
+          package_owners: [build(:package_owner, user: organization.user, level: "full")]
+        )
+
+      token = mint_public(owned.name)
+
+      assert json_response(publish_public(token, other_owned.name), 403)["message"] =~
+               "insufficient scope"
+
+      refute Hexpm.Repo.get_by(Release, package_id: other_owned.id)
+    end
+
+    test "with private coverage too, publishes public packages and fetches nothing without active billing",
+         %{public_organization: organization, owned: owned, public_identity: identity} do
+      repository = insert(:repository, organization: organization, name: organization.name)
+
+      identity
+      |> Ecto.Changeset.change(covers_private: true, packages: nil)
+      |> Hexpm.Repo.update!()
+
+      organization
+      |> Ecto.Changeset.change(billing_active: false)
+      |> Hexpm.Repo.update!()
+
+      assert {:error, :billing_inactive} =
+               WorkloadIdentityHelpers.github_claims()
+               |> WorkloadIdentityHelpers.sign_oidc_claims()
+               |> Hexpm.WorkloadIdentities.verify_and_mint(repository: repository.name)
+
+      token = mint_public(owned.name)
+      assert json_response(publish_public(token, owned.name), 201)
+    end
+
+    test "can't publish into the organization's repository without private coverage", %{
+      public_organization: organization,
+      owned: owned
+    } do
+      repository = insert(:repository, organization: organization, name: organization.name)
+      token = mint_public(owned.name)
+      meta = %{name: "private_package", version: "1.0.0", description: "from CI"}
+
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", "Bearer #{token.access_token}")
+        |> post("/api/repos/#{repository.name}/publish", create_tar(meta))
+
+      assert conn.status == 403
+      refute Hexpm.Repo.get_by(Package, repository_id: repository.id, name: "private_package")
+    end
+  end
+
+  describe "a token for another package" do
+    test "gets the same answer for a private release whether it exists or not", %{
+      package: package
+    } do
+      repository = insert(:repository)
+      private_package = insert(:package, repository_id: repository.id)
+      insert(:release, package: private_package, version: "1.0.0", has_docs: true)
+      token = mint_token(package)
+      base = "/api/repos/#{repository.name}/packages"
+
+      paths = [
+        "#{base}/#{private_package.name}/releases/1.0.0",
+        "#{base}/#{private_package.name}/releases/2.0.0",
+        "#{base}/no_such_package/releases/1.0.0"
+      ]
+
+      requests = [
+        &get(&1, &2 <> "/docs"),
+        &post(&1, &2 <> "/docs", "docs"),
+        &delete(&1, &2 <> "/docs"),
+        &delete(&1, &2)
+      ]
+
+      for request <- requests do
+        assert [response, response, response] =
+                 for(path <- paths, do: send_request(token, request, path))
+
+        assert {403, _body} = response
+      end
+    end
+
+    defp send_request(token, request, path) do
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", "Bearer #{token.access_token}")
+        |> request.(path)
+
+      {conn.status, conn.resp_body}
     end
   end
 end

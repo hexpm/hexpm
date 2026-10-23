@@ -21,8 +21,9 @@ defmodule Hexpm.Accounts.AuthWorkloadIdentityTest do
       package: package,
       repository_owner: "acme",
       repository_owner_id: "12345",
-      repository_id: "67890",
-      repository: "acme/widget",
+      repositories: [
+        %Hexpm.WorkloadIdentities.TrustedRepository{name: "acme/widget", id: "67890"}
+      ],
       workflow: "release.yml"
     )
 

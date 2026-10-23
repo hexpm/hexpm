@@ -101,6 +101,43 @@ defmodule HexpmWeb.TestControllerTest do
     assert json_response(conn, 400)["error"] == "User not found"
   end
 
+  test "POST /api/key creates a user key with repository permissions" do
+    user = insert(:user)
+    organization = insert(:organization)
+
+    conn =
+      json_post(build_conn(), "/api/key", %{
+        "username" => user.username,
+        "name" => "ci",
+        "permissions" => [%{"domain" => "repository", "resource" => organization.name}]
+      })
+
+    assert %{"name" => "ci", "secret" => secret} = json_response(conn, 201)
+    assert is_binary(secret)
+
+    key = Hexpm.Repo.one!(Hexpm.Accounts.Key.get(user, "ci"))
+    resource = organization.name
+
+    assert [%Hexpm.Accounts.KeyPermission{domain: "repository", resource: ^resource}] =
+             key.permissions
+  end
+
+  test "POST /api/key keeps the other permissions of a key with repository permissions" do
+    user = insert(:user)
+
+    conn =
+      json_post(build_conn(), "/api/key", %{
+        "username" => user.username,
+        "name" => "dev",
+        "permissions" => [%{"domain" => "api"}, %{"domain" => "repositories"}]
+      })
+
+    assert json_response(conn, 201)
+
+    key = Hexpm.Repo.one!(Hexpm.Accounts.Key.get(user, "dev"))
+    assert Enum.map(key.permissions, & &1.domain) == ["api", "repositories"]
+  end
+
   test "POST /api/repo creates organization and returns 204" do
     user = insert(:user)
     org_name = "org_" <> Fake.sequence(:package)

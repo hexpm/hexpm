@@ -482,19 +482,18 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
   test "lists the personal keys that reach the organization on the SSO tab", context do
     insert(:organization_sso_connection, organization: context.organization)
 
-    Hexpm.Accounts.Keys.create(
-      context.member,
-      %{
-        name: "laptop",
-        permissions: [%{"domain" => "repository", "resource" => context.organization.name}]
-      },
-      audit: audit_data(context.member)
+    insert(:key,
+      user: context.member,
+      name: "laptop",
+      permissions: [
+        build(:key_permission, domain: "repository", resource: context.organization.name)
+      ]
     )
 
-    Hexpm.Accounts.Keys.create(
-      context.member,
-      %{name: "everything", permissions: [%{"domain" => "repositories"}]},
-      audit: audit_data(context.member)
+    insert(:key,
+      user: context.member,
+      name: "everything",
+      permissions: [build(:key_permission, domain: "repositories")]
     )
 
     # `api:write` plus membership publishes and changes owners, so this key

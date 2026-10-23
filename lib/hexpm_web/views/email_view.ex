@@ -10,6 +10,9 @@ defmodule HexpmWeb.EmailView do
     Phoenix.VerifiedRoutes.unverified_url(email_uri(), path)
   end
 
+  def keys_url(%User{}), do: email_url(~p"/dashboard/keys")
+  def keys_url(%Organization{} = organization), do: email_url(~p"/dashboard/orgs/#{organization}")
+
   defmodule Common do
     import Phoenix.HTML, only: [html_escape: 1, safe_to_string: 1]
 
@@ -177,6 +180,11 @@ defmodule HexpmWeb.EmailView do
     def message(username, package) do
       "#{username} has been added as an owner to package #{package}."
     end
+
+    def started(package) do
+      "These workload identities of your organization now publish #{package}, so anyone " <>
+        "who can run these workflows on GitHub can publish it:"
+    end
   end
 
   defmodule OwnerRemove do
@@ -190,8 +198,19 @@ defmodule HexpmWeb.EmailView do
         "with access to the repositories:"
     end
 
+    def stopped(username, package) do
+      "These workload identities of organization #{username} no longer publish #{package}:"
+    end
+
     def review(url, format) do
       "Review them at #{Common.link(url, url, format)}."
+    end
+  end
+
+  defmodule OrganizationWorkloadIdentityLine do
+    def line(workload_identity) do
+      "#{HexpmWeb.ViewHelpers.workload_identity_repositories(workload_identity)} " <>
+        "(#{workload_identity.workflow}), organization #{workload_identity.organization.name}"
     end
   end
 
@@ -212,13 +231,32 @@ defmodule HexpmWeb.EmailView do
     end
   end
 
+  defmodule WorkloadIdentityChange do
+    def message(username, package) do
+      "#{username} changed a workload identity of package #{package}."
+    end
+
+    def before, do: "Before:"
+    def now, do: "Now:"
+
+    def warning(package) do
+      "Anyone who can run these workflows can now publish #{package}. " <>
+        "If you did not expect this change, remove the workload identity and review the package owners."
+    end
+  end
+
   defmodule WorkloadIdentityDetails do
-    def lines(repository, workflow, environment) do
+    def lines(%{repositories: repositories, workflow: workflow, environment: environment}) do
       [
-        "GitHub repository: #{repository}",
+        repositories_line(repositories),
         "Workflow: #{workflow}"
       ] ++ environment_line(environment)
     end
+
+    def repositories_line([repository]), do: "GitHub repository: #{repository}"
+
+    def repositories_line(repositories),
+      do: "GitHub repositories: #{Enum.join(repositories, ", ")}"
 
     def environment_line(environment) when environment in [nil, ""], do: []
 
@@ -231,21 +269,39 @@ defmodule HexpmWeb.EmailView do
       "#{username} added a workload identity to organization #{organization}."
     end
 
-    def warning(role, organization, packages) do
-      "Anyone who can run a matching workflow can now #{reach(role, organization, packages)}. " <>
+    def warning(role, organization, coverage) do
+      "Anyone who can run a matching workflow can now #{reach(role, organization, coverage)}. " <>
         "If you did not expect this change, remove the workload identity and review the organization's admins."
     end
 
-    defp reach("read", organization, _packages),
+    defp reach("read", organization, _coverage),
       do: "fetch every package in the #{organization} repository"
 
-    defp reach("write", organization, nil),
+    defp reach("write", organization, coverage) do
+      [private_reach(organization, coverage), public_reach(organization, coverage)]
+      |> Enum.reject(&is_nil/1)
+      |> Enum.join(", and ")
+    end
+
+    defp private_reach(_organization, %{covers_private: false}), do: nil
+
+    defp private_reach(organization, %{packages: nil}),
       do: "fetch, publish and create every package in the #{organization} repository"
 
-    defp reach("write", organization, _packages),
+    defp private_reach(organization, _coverage),
       do:
-        "fetch every package in the #{organization} repository, " <>
-          "and publish and create the packages listed above"
+        "fetch every package in the #{organization} repository " <>
+          "and publish and create the private packages listed above"
+
+    defp public_reach(_organization, %{covers_public: false}), do: nil
+
+    defp public_reach(organization, %{public_packages: nil}),
+      do:
+        "publish every public package #{organization} owns, " <>
+          "including packages it becomes an owner of later"
+
+    defp public_reach(organization, _coverage),
+      do: "publish the public packages listed above while #{organization} owns them"
   end
 
   defmodule OrganizationWorkloadIdentityRemove do
@@ -254,23 +310,86 @@ defmodule HexpmWeb.EmailView do
     end
   end
 
+  defmodule OrganizationWorkloadIdentityChange do
+    def message(username, organization) do
+      "#{username} changed a workload identity of organization #{organization}."
+    end
+  end
+
   defmodule OrganizationWorkloadIdentityDetails do
-    def lines(role, owner, repository, workflow, environment, packages) do
+    def lines(role, workflows, organization, coverage) do
       [
         "Role: #{role}",
-        "GitHub repository: #{repository_label(owner, repository)}",
-        "Workflow: #{if workflow in [nil, ""], do: "any", else: workflow}"
+        repositories_line(workflows),
+        "Workflow: #{if workflows.workflow in [nil, ""], do: "any", else: workflows.workflow}"
       ] ++
-        WorkloadIdentityDetails.environment_line(environment) ++
-        packages_line(role, packages)
+        WorkloadIdentityDetails.environment_line(workflows.environment) ++
+        coverage_lines(role, organization, coverage)
     end
 
-    defp repository_label(owner, ""), do: "any repository owned by #{owner}"
-    defp repository_label(_owner, repository), do: repository
+    defp repositories_line(%{repositories: [], repository_owner: owner}),
+      do: "GitHub repositories: any repository owned by #{owner}"
 
-    defp packages_line("write", nil), do: ["Packages: all"]
-    defp packages_line("write", packages), do: ["Packages: #{Enum.join(packages, ", ")}"]
-    defp packages_line(_role, _packages), do: []
+    defp repositories_line(%{repositories: repositories}),
+      do: WorkloadIdentityDetails.repositories_line(repositories)
+
+    defp coverage_lines("write", organization, coverage) do
+      private_line(coverage) ++ public_line(organization, coverage)
+    end
+
+    defp coverage_lines(_role, _organization, _coverage), do: []
+
+    defp private_line(%{covers_private: false}), do: []
+    defp private_line(%{packages: nil}), do: ["Private packages: all"]
+
+    defp private_line(%{packages: packages}),
+      do: ["Private packages: #{Enum.join(packages, ", ")}"]
+
+    defp public_line(_organization, %{covers_public: false}), do: []
+
+    defp public_line(organization, %{public_packages: nil}),
+      do: ["Public packages: all packages #{organization} owns"]
+
+    defp public_line(_organization, %{public_packages: packages}),
+      do: ["Public packages: #{Enum.join(packages, ", ")}"]
+  end
+
+  defmodule PublicWorkloadIdentityAdd do
+    def message(username, organization) do
+      "#{username} added a workload identity to organization #{organization}. " <>
+        "#{organization} is an owner of these packages, so the workload identity can publish them:"
+    end
+
+    def warning(organization) do
+      "Anyone who can run a matching workflow can now publish these packages. " <>
+        "If you did not expect this change, ask the admins of #{organization} about it, " <>
+        "or remove #{organization} as an owner of the packages."
+    end
+  end
+
+  defmodule PublicWorkloadIdentityRemove do
+    def message(username, organization) do
+      "#{username} removed a workload identity from organization #{organization}. " <>
+        "It could publish these packages, which #{organization} is an owner of:"
+    end
+  end
+
+  defmodule PublicWorkloadIdentityChange do
+    def message(username, organization) do
+      "#{username} changed a workload identity of organization #{organization}, " <>
+        "which is an owner of packages you own."
+    end
+
+    def started, do: "It can now publish:"
+    def stopped, do: "It can no longer publish:"
+    def kept, do: "It still publishes these, from the changed workflows below:"
+
+    def warning(organization) do
+      "Anyone who can run a matching workflow can publish the packages it can now publish " <>
+        "or still publishes. " <>
+        "If you did not expect this change, ask the admins of #{organization} about it, " <>
+        "or remove #{organization} as an owner of the packages."
+    end
   end
 
   defmodule Verification do
@@ -907,6 +1026,29 @@ defmodule HexpmWeb.EmailView do
     def ignore_notice() do
       "If you were not expecting this invitation you can ignore this email and nothing will happen."
     end
+
+    defp article("admin"), do: "an"
+    defp article(_role), do: "a"
+  end
+
+  defmodule OrganizationUserInvitation do
+    def intro(organization, username, role) do
+      "Your Hex.pm account #{username} has been invited to join the #{organization} organization as #{article(role)} #{role} member."
+    end
+
+    def review(url, :html) do
+      "You join the organization only if you accept. You can accept or decline the invitation on #{Common.link(url, "your dashboard", :html)}."
+    end
+
+    def review(url, :text) do
+      "You join the organization only if you accept. You can accept or decline the invitation on your dashboard:\n\n#{url}"
+    end
+
+    def decline_notice() do
+      "You can decline this invitation or block future invitations from this organization on your dashboard. You can undo a decline before the invitation expires and remove a block at any time."
+    end
+
+    defdelegate expiry(expires_at), to: OrganizationInvitation
 
     defp article("admin"), do: "an"
     defp article(_role), do: "a"

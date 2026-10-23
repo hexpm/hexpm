@@ -59,6 +59,43 @@ defmodule Hexpm.UtilsTest do
       assert Utils.safe_int(%{"page" => "707"}) == nil
       assert Utils.safe_int(707) == nil
     end
+
+    test "clamps to a bigint" do
+      max = 9_223_372_036_854_775_807
+      min = -9_223_372_036_854_775_808
+
+      assert Utils.safe_int("+707") == 707
+      assert Utils.safe_int("-0707") == -707
+      assert Utils.safe_int("9223372036854775807") == max
+      assert Utils.safe_int("9223372036854775808") == max
+      assert Utils.safe_int("-9223372036854775809") == min
+      assert Utils.safe_int(String.duplicate("7", 1_000_000)) == max
+      assert Utils.safe_int("-" <> String.duplicate("7", 1_000_000)) == min
+      assert Utils.safe_int(String.duplicate("7", 1_000_000) <> "x") == nil
+      assert Utils.safe_int("000000000000000000002") == 2
+      assert Utils.safe_int("-000000000000000000005") == -5
+      assert Utils.safe_int(String.duplicate("0", 1_000_000) <> "7") == 7
+      assert Utils.safe_int(String.duplicate("0", 1_000_000)) == 0
+      assert Utils.safe_int("0") == 0
+      assert Utils.safe_int("-0") == 0
+      assert Utils.safe_int("-") == nil
+      assert Utils.safe_int("") == nil
+    end
+  end
+
+  describe "parse_search/1" do
+    test "trims the search" do
+      assert Utils.parse_search("  phoenix ") == "phoenix"
+      assert Utils.parse_search("") == nil
+      assert Utils.parse_search(nil) == nil
+    end
+
+    test "caps the search at 1,000 bytes" do
+      assert Utils.parse_search(String.duplicate("a", 1_500)) == String.duplicate("a", 1_000)
+      assert Utils.parse_search(String.duplicate("a", 999) <> "é") == String.duplicate("a", 999)
+      assert Utils.parse_search(String.duplicate("a ", 600)) == String.duplicate("a ", 499) <> "a"
+      assert Utils.parse_search(String.duplicate(" ", 1_000) <> "phoenix") == "phoenix"
+    end
   end
 
   describe "safe_date/1" do

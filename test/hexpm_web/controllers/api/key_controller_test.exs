@@ -172,21 +172,23 @@ defmodule HexpmWeb.API.KeyControllerTest do
       assert body["message"] == "missing authentication information"
     end
 
-    test "create repository key", c do
+    test "create user repository key is not allowed", c do
       body = %{
         name: "macbook",
         permissions: [%{domain: "repository", resource: c.organization.name}]
       }
 
-      build_conn()
-      |> put_req_header("content-type", "application/json")
-      |> test_oauth_login(c.eric)
-      |> post("/api/keys", body)
-      |> json_response(201)
+      result =
+        build_conn()
+        |> put_req_header("content-type", "application/json")
+        |> test_oauth_login(c.eric)
+        |> post("/api/keys", body)
+        |> json_response(422)
 
-      key = Repo.one!(Key.get(c.eric, "macbook"))
-      repo_name = c.organization.name
-      assert [%KeyPermission{domain: "repository", resource: ^repo_name}] = key.permissions
+      assert result["errors"]["permissions"]["domain"] ==
+               "user keys cannot have repository permissions, generate an organization key instead"
+
+      refute Repo.one(Key.get(c.eric, "macbook"))
     end
 
     test "an API key cannot create a key", c do
@@ -227,6 +229,26 @@ defmodule HexpmWeb.API.KeyControllerTest do
 
       assert json_response(conn, 403)["message"] =~ "API keys cannot create API keys"
       refute Repo.one(Key.get(c.eric, "macbook"))
+    end
+
+    test "create organization repository key", c do
+      admin = insert(:user_with_tfa)
+      insert(:organization_user, organization: c.organization, user: admin, role: "admin")
+
+      body = %{
+        name: "macbook",
+        permissions: [%{domain: "repository", resource: c.organization.name}]
+      }
+
+      build_conn()
+      |> put_req_header("content-type", "application/json")
+      |> test_oauth_login(admin)
+      |> post("/api/orgs/#{c.organization.name}/keys", body)
+      |> json_response(201)
+
+      key = Repo.one!(Key.get(c.organization, "macbook"))
+      repo_name = c.organization.name
+      assert [%KeyPermission{domain: "repository", resource: ^repo_name}] = key.permissions
     end
 
     test "create repository key for unknown repository is not allowed", c do
@@ -285,17 +307,20 @@ defmodule HexpmWeb.API.KeyControllerTest do
       refute Repo.one(Key.get(c.eric, "expired"))
     end
 
-    test "create repositories key", c do
+    test "create user repositories key is not allowed", c do
       body = %{name: "macbook", permissions: [%{domain: "repositories"}]}
 
-      build_conn()
-      |> put_req_header("content-type", "application/json")
-      |> test_oauth_login(c.eric)
-      |> post("/api/keys", body)
-      |> json_response(201)
+      result =
+        build_conn()
+        |> put_req_header("content-type", "application/json")
+        |> test_oauth_login(c.eric)
+        |> post("/api/keys", body)
+        |> json_response(422)
 
-      key = Repo.one!(Key.get(c.eric, "macbook"))
-      assert [%KeyPermission{domain: "repositories", resource: nil}] = key.permissions
+      assert result["errors"]["permissions"]["domain"] ==
+               "user keys cannot have repository permissions, generate an organization key instead"
+
+      refute Repo.one(Key.get(c.eric, "macbook"))
     end
 
     test "create repositories key with resource returns 422", c do
@@ -359,6 +384,51 @@ defmodule HexpmWeb.API.KeyControllerTest do
         |> json_response(200)
 
       assert [%{"authing_key" => false}] = keys
+    end
+  end
+
+  describe "POST /api/keys (token format)" do
+    test "new key has hex_ prefixed secret and v2 token_format", c do
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/json")
+        |> test_oauth_login(c.eric)
+        |> post("/api/keys", %{name: "mykey"})
+
+      assert conn.status == 201
+      body = json_response(conn, 201)
+      assert String.starts_with?(body["secret"], "hex_")
+      assert body["token_format"] == "v2"
+    end
+
+    test "v2 key authenticates with Bearer hex_ prefix", c do
+      key = Key.build(c.eric, %{name: "ci"}) |> Repo.insert!()
+      assert String.starts_with?(key.user_secret, "hex_")
+
+      build_conn()
+      |> put_req_header("authorization", "Bearer " <> key.user_secret)
+      |> get("/api/keys")
+      |> json_response(200)
+    end
+
+    test "whitespace in raw token header is trimmed", c do
+      key = Key.build(c.eric, %{name: "ci"}) |> Repo.insert!()
+
+      build_conn()
+      |> put_req_header("authorization", " " <> key.user_secret <> " ")
+      |> get("/api/keys")
+      |> json_response(200)
+    end
+
+    test "hex_ key with a wrong checksum is refused as an invalid key" do
+      bad_key = "hex_" <> String.duplicate("a", 40)
+
+      for header <- [bad_key, "Bearer " <> bad_key] do
+        build_conn()
+        |> put_req_header("authorization", header)
+        |> get("/api/keys")
+        |> json_response(401)
+      end
     end
   end
 

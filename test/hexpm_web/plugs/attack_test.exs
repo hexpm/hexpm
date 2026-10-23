@@ -362,6 +362,14 @@ defmodule HexpmWeb.Plugs.AttackTest do
       assert get_resp_header(conn, "x-ratelimit-remaining") == []
     end
 
+    test "doesn't limit requests to the GitHub secret scanning endpoint" do
+      Enum.each(1..150, fn _ ->
+        conn = request_path("/api/github/secret-scanning", {8, 8, 8, 8})
+        assert conn.status == 200
+        assert get_resp_header(conn, "x-ratelimit-remaining") == []
+      end)
+    end
+
     test "doesn't limit requests from service accounts", %{user: user} do
       Hexpm.BlockAddress.reload()
       user = Hexpm.Repo.update!(Ecto.Changeset.change(user, service: true))
@@ -597,6 +605,84 @@ defmodule HexpmWeb.Plugs.AttackTest do
     end
   end
 
+  describe "workload identity GitHub throttle" do
+    test "allows 100 GitHub calls an hour and counts each call", %{user: user} do
+      time = System.system_time(:millisecond)
+
+      assert {:allow, {:throttle, data}} =
+               Attack.workload_identity_github_throttle(user.id, 60, time: time)
+
+      assert data[:limit] == 100
+      assert data[:remaining] == 40
+
+      assert {:allow, {:throttle, data}} =
+               Attack.workload_identity_github_throttle(user.id, 40, time: time)
+
+      assert data[:remaining] == 0
+
+      assert {:block, _data} = Attack.workload_identity_github_throttle(user.id, 1, time: time)
+    end
+
+    test "blocks a lookup whose calls would pass the limit", %{user: user} do
+      time = System.system_time(:millisecond)
+
+      assert {:allow, _data} = Attack.workload_identity_github_throttle(user.id, 99, time: time)
+      assert {:block, _data} = Attack.workload_identity_github_throttle(user.id, 2, time: time)
+    end
+
+    test "keeps each user's calls apart", %{user: user} do
+      other = insert(:user)
+      time = System.system_time(:millisecond)
+
+      assert {:allow, _data} = Attack.workload_identity_github_throttle(user.id, 100, time: time)
+      assert {:block, _data} = Attack.workload_identity_github_throttle(user.id, 1, time: time)
+      assert {:allow, _data} = Attack.workload_identity_github_throttle(other.id, 1, time: time)
+    end
+
+    test "always allows a lookup without GitHub calls", %{user: user} do
+      time = System.system_time(:millisecond)
+
+      assert {:block, _data} = Attack.workload_identity_github_throttle(user.id, 101, time: time)
+      assert {:allow, nil} = Attack.workload_identity_github_throttle(user.id, 0, time: time)
+    end
+
+    test "starts a new count in the next hour", %{user: user} do
+      time = System.system_time(:millisecond)
+
+      assert {:block, _data} = Attack.workload_identity_github_throttle(user.id, 101, time: time)
+
+      assert {:allow, {:throttle, data}} =
+               Attack.workload_identity_github_throttle(user.id, 1, time: time + 60 * 60_000)
+
+      assert data[:remaining] == 99
+    end
+
+    test "doesn't charge a lookup that's refused", %{user: user} do
+      time = System.system_time(:millisecond)
+
+      assert {:allow, _data} = Attack.workload_identity_github_throttle(user.id, 60, time: time)
+      assert {:block, _data} = Attack.workload_identity_github_throttle(user.id, 51, time: time)
+
+      assert {:allow, {:throttle, data}} =
+               Attack.workload_identity_github_throttle(user.id, 1, time: time)
+
+      assert data[:remaining] == 39
+    end
+
+    test "keeps its count across pods", %{user: user} do
+      time = System.system_time(:millisecond)
+
+      assert {:allow, _data} = Attack.workload_identity_github_throttle(user.id, 100, time: time)
+
+      PlugAttack.Storage.Ets.clean(HexpmWeb.Plugs.Attack.Storage)
+
+      assert {:block, _data} = Attack.workload_identity_github_throttle(user.id, 1, time: time)
+
+      assert [%Hexpm.RateLimit{key: key, count: 100}] = Hexpm.Repo.all(Hexpm.RateLimit)
+      assert key == "workload_identity_github:#{user.id}:#{div(time, 60 * 60_000)}"
+    end
+  end
+
   describe "tfa throttle" do
     test "allows 2FA requests when limit is not exceeded" do
       result = HexpmWeb.Plugs.Attack.tfa_ip_throttle({5, 5, 5, 5})
@@ -649,7 +735,11 @@ defmodule HexpmWeb.Plugs.AttackTest do
   end
 
   defp request_ip(remote_ip) do
-    conn(:get, "/api/")
+    request_path("/api/", remote_ip)
+  end
+
+  defp request_path(path, remote_ip) do
+    conn(:get, path)
     |> Map.put(:remote_ip, remote_ip)
     |> assign(:current_user, nil)
     |> assign(:current_organization, nil)

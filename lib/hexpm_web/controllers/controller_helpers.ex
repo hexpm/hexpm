@@ -31,6 +31,36 @@ defmodule HexpmWeb.ControllerHelpers do
     cache(conn, control, vary)
   end
 
+  def put_user_repository_key_warning(conn) do
+    if crashes_on_hex_message?(conn) do
+      conn
+    else
+      date = Application.fetch_env!(:hexpm, :user_repository_keys_disable_date)
+
+      message =
+        "User API keys with repository permissions are deprecated and will stop working on " <>
+          "#{date}. Use mix hex.user auth for development or an organization key " <>
+          "(mix hex.organization key ORGANIZATION generate) for CI"
+
+      put_resp_header(conn, "x-hex-message", ~s("#{message}";level=warn))
+    end
+  end
+
+  # Hex 2.1 and 2.2 send `Hex/VERSION`, later versions send `hex/VERSION` after
+  # the hex_core version.
+  @hex_user_agent_version ~r{(?:^|[\s(])hex/(\d+\.\d+\.\d+[0-9A-Za-z.+-]*)}i
+
+  # Hex 2.1.0 to 2.4.x crash on any response with an x-hex-message header.
+  defp crashes_on_hex_message?(conn) do
+    with [user_agent | _] <- get_req_header(conn, "user-agent"),
+         [_, version] <- Regex.run(@hex_user_agent_version, user_agent),
+         {:ok, version} <- Version.parse(version) do
+      Version.compare(version, "2.1.0") != :lt and Version.compare(version, "2.5.0") == :lt
+    else
+      _ -> false
+    end
+  end
+
   def permanent_redirect(conn, path, query_string \\ nil) do
     query_string = if is_nil(query_string), do: conn.query_string, else: query_string
     query = if query_string == "", do: "", else: "?#{query_string}"
@@ -286,27 +316,15 @@ defmodule HexpmWeb.ControllerHelpers do
     |> assign(:organization, repository && repository.organization)
   end
 
-  def fetch_release(conn, _opts) do
-    case Version.parse(conn.params["version"]) do
-      {:ok, version} ->
-        repository = Repositories.get(conn.params["repository"], [:organization])
-        package = repository && Packages.get(repository, conn.params["name"])
-        release = package && Releases.get(package, version)
-
-        if release do
-          conn
-          |> assign(:repository, repository)
-          |> assign(:package, package)
-          |> assign(:release, release)
-          |> assign(:organization, repository && repository.organization)
-        else
-          conn
-          |> not_found()
-          |> halt()
-        end
-
-      :error ->
-        render_error(conn, 400, message: "invalid version: #{conn.params["version"]}")
+  # Runs after authorization, so a caller that may not see the repository gets
+  # the same answer for a release that exists and one that doesn't.
+  def require_release(conn, _opts) do
+    if conn.assigns.release do
+      conn
+    else
+      conn
+      |> not_found()
+      |> halt()
     end
   end
 

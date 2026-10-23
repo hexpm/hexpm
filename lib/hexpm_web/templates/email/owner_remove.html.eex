@@ -6,6 +6,18 @@
   <%= OwnerRemove.message(@username, @package) %>
 </p>
 
+<%= if @stopped != [] do %>
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= OwnerRemove.stopped(@username, @package) %>
+</p>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= for workload_identity <- @stopped do %>
+    <%= HexpmWeb.ViewHelpers.workload_identity_repositories(workload_identity) %> (<%= workload_identity.workflow %>)<br>
+  <% end %>
+</p>
+<% end %>
+
 <%= if @workload_identities != [] do %>
 <p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
   <%= OwnerRemove.workload_identities(@package) %>
@@ -13,7 +25,7 @@
 
 <p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
   <%= for workload_identity <- @workload_identities do %>
-    <%= workload_identity.repository %> (<%= workload_identity.workflow %>)<br>
+    <%= HexpmWeb.ViewHelpers.workload_identity_repositories(workload_identity) %> (<%= workload_identity.workflow %>)<br>
   <% end %>
 </p>
 

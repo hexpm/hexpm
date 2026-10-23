@@ -21,7 +21,6 @@ defmodule HexpmWeb.Components.PackageLayout do
   import HexpmWeb.Components.Provenance
 
   alias Hexpm.Docs.Files
-  alias Hexpm.Repository.Owners
   alias Hexpm.Security.Advisories
   alias Hexpm.WorkloadIdentities
   alias HexpmWeb.ViewHelpers
@@ -38,6 +37,7 @@ defmodule HexpmWeb.Components.PackageLayout do
   attr :current_release, :map, required: true
   attr :versions_count, :integer, required: true
   attr :owners, :list, required: true
+  attr :settings_access, :atom, required: true
   attr :downloads, :map, required: true
   attr :daily_graph, :list, required: true
   attr :docs_html_url, :string, required: true
@@ -90,7 +90,7 @@ defmodule HexpmWeb.Components.PackageLayout do
         assigns.current_release && Enum.count(assigns.current_release.requirements || [])
       )
 
-    settings_sections = if settings_tab?(assigns), do: settings_sections(assigns), else: []
+    settings_sections = if assigns.settings_access, do: settings_sections(assigns), else: []
     tabs = package_tabs(assigns, settings_sections)
     mobile_entries = mobile_entries(tabs, assigns)
 
@@ -527,13 +527,12 @@ defmodule HexpmWeb.Components.PackageLayout do
 
                 <%!-- Owners Card --%>
                 <%= if @owners != [] do %>
-                  <% is_full_owner = Owners.full_owner?(@owners, @current_user) %>
                   <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-5">
                     <div class="flex items-center justify-between mb-4">
                       <h3 class="text-grey-700 dark:text-grey-100 text-lg font-semibold">
                         Owners
                       </h3>
-                      <%= if is_full_owner do %>
+                      <%= if @settings_access == :manage do %>
                         <a
                           href={ViewHelpers.path_for_owners(@package)}
                           class="text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 transition-colors"
@@ -652,15 +651,6 @@ defmodule HexpmWeb.Components.PackageLayout do
         path: files_path(assigns)
       }
     ]
-  end
-
-  # A package owner row of the member's own is one way to reach the settings pages
-  # and organization ownership is another, which leaves no row to find here. The
-  # controller has already decided, so being on a settings page is enough: without
-  # this the layout finds no active tab and the page it was asked for raises.
-  defp settings_tab?(assigns) do
-    assigns.active_tab in @settings_tabs or
-      Owners.full_owner?(assigns.owners, assigns.current_user)
   end
 
   defp settings_tab(_assigns, []), do: []

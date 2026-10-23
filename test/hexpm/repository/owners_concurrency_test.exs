@@ -2,7 +2,7 @@ defmodule Hexpm.Repository.OwnersConcurrencyTest do
   use Hexpm.DataCase
   import Hexpm.ConcurrencyCase
 
-  alias Hexpm.Repository.{Owners, PackageOwner}
+  alias Hexpm.Repository.{Owners, Package, PackageOwner}
 
   # Each of these fails if Owners stops taking the package lock before its
   # last-owner checks: both racers read two owners and both succeed.
@@ -48,6 +48,49 @@ defmodule Hexpm.Repository.OwnersConcurrencyTest do
       assert Enum.count(results, &match?({:ok, %PackageOwner{}}, &1)) == 1
       assert Enum.count(results, &(&1 == {:error, :last_full_owner})) == 1
       assert Enum.count(owners(context.package), &(&1.level == "full")) == 1
+    end)
+  end
+
+  test "an owner removed while their transfer waits on the lock can't take the package" do
+    committed(&build_context/0, fn %{package: package, first: first, second: second} ->
+      parent = self()
+
+      # Holds the lock the way Owners.remove does, with first's row already
+      # deleted, until the transfer is waiting on it.
+      removal =
+        unboxed_task(fn ->
+          Repo.transaction(fn ->
+            Repo.one!(from(p in Package, where: p.id == ^package.id, lock: "FOR NO KEY UPDATE"))
+
+            Repo.delete_all(
+              from(owner in PackageOwner,
+                where: owner.package_id == ^package.id and owner.user_id == ^first.id
+              )
+            )
+
+            send(parent, :removed)
+
+            receive do
+              :commit -> :ok
+            end
+          end)
+        end)
+
+      assert_receive :removed, 15_000
+
+      # Authorized while first was still a full owner.
+      transfer =
+        unboxed_task(fn ->
+          Owners.add(package, first, %{"transfer" => true}, audit: audit_data(first))
+        end)
+
+      assert await_lock_wait() == :waiting
+      send(removal.pid, :commit)
+      Task.await(removal, 15_000)
+
+      assert Task.await(transfer, 15_000) == {:error, :not_full_owner}
+      assert [%{user_id: user_id}] = owners(package)
+      assert user_id == second.id
     end)
   end
 

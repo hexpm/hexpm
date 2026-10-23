@@ -84,6 +84,7 @@ defmodule HexpmWeb.PackageLayoutAssigns do
       current_release: current_release,
       versions_count: Enum.count(releases),
       owners: owners,
+      settings_access: settings_access(package, current_user, owners),
       downloads: if(sidebar?, do: Downloads.package(package), else: %{}),
       daily_graph: if(sidebar?, do: daily_graph(graph_release || package), else: []),
       graph_release: graph_release,
@@ -98,6 +99,26 @@ defmodule HexpmWeb.PackageLayoutAssigns do
     ]
 
     [{:package_layout, Map.new(layout)} | layout]
+  end
+
+  # What `HexpmWeb.RepositoryAccess.package_settings/2` lets the user do on the
+  # settings pages. An admin of an organization that owns the package, or of a
+  # private package's organization, is a full owner.
+  defp settings_access(_package, nil = _current_user, _owners), do: nil
+
+  defp settings_access(package, current_user, owners) do
+    if Owners.full_owner?(owners, current_user) do
+      :manage
+    else
+      memberships = Packages.organization_memberships(package, current_user)
+
+      cond do
+        Enum.any?(memberships, &(&1.role == "admin")) -> :manage
+        memberships != [] -> :view
+        Enum.any?(owners, &(&1.user_id == current_user.id)) -> :view
+        true -> nil
+      end
+    end
   end
 
   defp doc_kinds(nil), do: %{}
@@ -118,7 +139,9 @@ defmodule HexpmWeb.PackageLayoutAssigns do
   end
 
   defp daily_graph(package_or_release) do
-    last_day = Hexpm.Cache.fetch(:last_download_day, &Downloads.last_day/0) || Date.utc_today()
+    last_day =
+      Hexpm.Cache.fetch(:last_download_day, &Downloads.last_day/0, 3600) || Date.utc_today()
+
     start_day = Date.add(last_day, -30)
 
     by_day =

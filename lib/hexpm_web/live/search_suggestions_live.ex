@@ -77,7 +77,8 @@ defmodule HexpmWeb.SearchSuggestionsLive do
   def handle_event("submit", %{"search" => term}, socket) do
     case socket.assigns.active && Enum.at(socket.assigns.items, socket.assigns.active) do
       nil ->
-        to = ~p"/packages?#{[search: term, sort: "recent_downloads"]}"
+        search = Hexpm.Utils.parse_search(term) || ""
+        to = ~p"/packages?#{[search: search, sort: "recent_downloads"]}"
         {:noreply, push_navigate(socket, to: to)}
 
       item ->

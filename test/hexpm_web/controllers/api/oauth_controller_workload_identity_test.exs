@@ -22,8 +22,9 @@ defmodule HexpmWeb.API.OAuthControllerWorkloadIdentityTest do
       package: package,
       repository_owner: "acme",
       repository_owner_id: "12345",
-      repository_id: "67890",
-      repository: "acme/widget",
+      repositories: [
+        %Hexpm.WorkloadIdentities.TrustedRepository{name: "acme/widget", id: "67890"}
+      ],
       workflow: "release.yml"
     )
 
@@ -51,6 +52,50 @@ defmodule HexpmWeb.API.OAuthControllerWorkloadIdentityTest do
     assert body["expires_in"] > 0
     assert body["scope"] == "package:hexpm/#{package.name}"
     refute Map.has_key?(body, "refresh_token")
+  end
+
+  test "exchanges an OIDC token from any repository a workload identity names" do
+    user = insert(:user)
+
+    package =
+      insert(:package,
+        package_owners: [build(:package_owner, user: user, level: "full")]
+      )
+
+    insert(:workload_identity,
+      package: package,
+      repository_owner: "acme",
+      repository_owner_id: "12345",
+      repositories: [
+        %Hexpm.WorkloadIdentities.TrustedRepository{name: "acme/widget", id: "67890"},
+        %Hexpm.WorkloadIdentities.TrustedRepository{name: "acme/gadget", id: "67891"}
+      ],
+      workflow: "release.yml"
+    )
+
+    exchange = fn claims ->
+      oidc =
+        claims
+        |> WorkloadIdentityHelpers.github_claims()
+        |> WorkloadIdentityHelpers.sign_oidc_claims()
+
+      build_conn()
+      |> post("/api/oauth/token", mint_params(oidc, "package:hexpm/#{package.name}"))
+    end
+
+    assert json_response(exchange.([]), 200)["scope"] == "package:hexpm/#{package.name}"
+
+    assert json_response(exchange.(repository: "acme/gadget", repository_id: "67891"), 200)[
+             "scope"
+           ] == "package:hexpm/#{package.name}"
+
+    assert json_response(exchange.(repository: "acme/gadget", repository_id: "67890"), 403)[
+             "error"
+           ] == "access_denied"
+
+    assert json_response(exchange.(repository: "acme/other", repository_id: "67892"), 403)[
+             "error"
+           ] == "access_denied"
   end
 
   describe "revoke" do
@@ -87,6 +132,20 @@ defmodule HexpmWeb.API.OAuthControllerWorkloadIdentityTest do
 
     body = json_response(conn, 400)
     assert body["error"] == "invalid_request"
+  end
+
+  test "rejects an assertion over 16 KB before verifying it", %{package: package} do
+    scope = "package:hexpm/#{package.name}"
+    padded = &Map.put(WorkloadIdentityHelpers.github_claims(), "padding", &1)
+
+    small = WorkloadIdentityHelpers.sign_oidc_claims(padded.("a"))
+    assert json_response(post(build_conn(), "/api/oauth/token", mint_params(small, scope)), 200)
+
+    large = WorkloadIdentityHelpers.sign_oidc_claims(padded.(String.duplicate("a", 16_384)))
+
+    body = json_response(post(build_conn(), "/api/oauth/token", mint_params(large, scope)), 400)
+    assert body["error"] == "invalid_request"
+    assert body["error_description"] == "Assertion is larger than 16384 bytes"
   end
 
   test "rejects a scope that does not name exactly one package", _context do
@@ -269,6 +328,41 @@ defmodule HexpmWeb.API.OAuthControllerWorkloadIdentityTest do
     assert json_response(conn, 403)["error"] == "access_denied"
   end
 
+  test "answers a name no public package has the same whether an organization's identity names it" do
+    exchange = fn name ->
+      oidc = WorkloadIdentityHelpers.sign_oidc_claims(WorkloadIdentityHelpers.github_claims())
+
+      conn =
+        build_conn()
+        |> post("/api/oauth/token", mint_params(oidc, "package:hexpm/#{name}"))
+
+      {conn.status, json_response(conn, conn.status)}
+    end
+
+    answer = exchange.("ghost_package")
+
+    for public_packages <- [nil, ["ghost_package"]] do
+      insert(:organization_workload_identity,
+        organization: insert(:organization),
+        role: "write",
+        repository_owner: "acme",
+        repository_owner_id: "12345",
+        repositories: [
+          %Hexpm.WorkloadIdentities.TrustedRepository{name: "acme/widget", id: "67890"}
+        ],
+        workflow: "release.yml",
+        covers_private: false,
+        packages: [],
+        covers_public: true,
+        public_packages: public_packages
+      )
+    end
+
+    assert {403, %{"error" => "access_denied"}} = answer
+    assert exchange.("ghost_package") == answer
+    assert exchange.("other_ghost_package") == answer
+  end
+
   test "rejects replayed tokens", %{package: package} do
     oidc = WorkloadIdentityHelpers.sign_oidc_claims(WorkloadIdentityHelpers.github_claims())
     params = mint_params(oidc, "package:hexpm/#{package.name}")
@@ -322,7 +416,9 @@ defmodule HexpmWeb.API.OAuthControllerWorkloadIdentityTest do
 
       insert(:organization_workload_identity,
         organization: repository.organization,
-        repository: "acme/widget"
+        repositories: [
+          %Hexpm.WorkloadIdentities.TrustedRepository{name: "acme/widget", id: "67890"}
+        ]
       )
 
       %{repository: repository}
@@ -371,7 +467,9 @@ defmodule HexpmWeb.API.OAuthControllerWorkloadIdentityTest do
       insert(:organization_workload_identity,
         organization: repository.organization,
         role: "write",
-        repository: "acme/widget",
+        repositories: [
+          %Hexpm.WorkloadIdentities.TrustedRepository{name: "acme/widget", id: "67890"}
+        ],
         workflow: "release.yml"
       )
 

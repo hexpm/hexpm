@@ -1,6 +1,7 @@
 defmodule Hexpm.OAuth.DeviceCodes do
   use Hexpm.Context
 
+  alias Hexpm.Accounts.User
   alias Hexpm.OAuth.{DeviceCode, Token, Tokens}
   alias Hexpm.Permissions
   alias Hexpm.UserSessions
@@ -247,6 +248,9 @@ defmodule Hexpm.OAuth.DeviceCodes do
           {:error, :no_token} ->
             {:error, :invalid_grant, "No token found for authorized device"}
 
+          {:error, :deactivated} ->
+            {:error, :invalid_grant, "Account has been deactivated"}
+
           {:error, _reason} ->
             {:error, :server_error, "Failed to issue token"}
         end
@@ -361,6 +365,11 @@ defmodule Hexpm.OAuth.DeviceCodes do
     case get_device_token(device_code_record) do
       nil ->
         {:error, :no_token}
+
+      # The account can be deactivated after it authorized the device, and the
+      # authorization code and refresh grants don't issue tokens for one either
+      %Token{user: %User{deactivated_at: %DateTime{}}} ->
+        {:error, :deactivated}
 
       old_token ->
         new_token_changeset = rotation_changeset(old_token)

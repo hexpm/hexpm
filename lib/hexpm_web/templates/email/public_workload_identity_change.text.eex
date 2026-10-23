@@ -1,0 +1,13 @@
+<%= PublicWorkloadIdentityChange.message(@username, @organization) %>
+<%= for {heading, names} <- [{PublicWorkloadIdentityChange.started(), @started}, {PublicWorkloadIdentityChange.stopped(), @stopped}, {PublicWorkloadIdentityChange.kept(), @kept}], names != [] do %>
+<%= heading %>
+<%= Enum.join(names, "\n") %>
+<% end %><%= if @stopped != [] or @kept != [] do %>
+<%= WorkloadIdentityChange.before() %>
+<%= Enum.join(OrganizationWorkloadIdentityDetails.lines(@role, @previous, @organization, @previous_coverage), "\n") %>
+<% end %><%= if @started != [] or @kept != [] do %>
+<%= WorkloadIdentityChange.now() %>
+<%= Enum.join(OrganizationWorkloadIdentityDetails.lines(@role, @current, @organization, @coverage), "\n") %>
+
+<%= PublicWorkloadIdentityChange.warning(@organization) %>
+<% end %>
