@@ -27,6 +27,15 @@ defmodule HexpmWeb.Dashboard.KeyController do
     end
   end
 
+  def delete_all(conn, _params) do
+    user = conn.assigns.current_user
+    {:ok, _} = Keys.revoke_all(user, audit: audit_data(conn))
+
+    conn
+    |> put_flash(:info, "All keys were revoked successfully.")
+    |> redirect(to: ~p"/dashboard/keys")
+  end
+
   def create(conn, params) do
     user = conn.assigns.current_user
     key_params = params["key"] |> munge_permissions() |> munge_expiry()
@@ -62,6 +71,7 @@ defmodule HexpmWeb.Dashboard.KeyController do
       keys: keys,
       packages: packages,
       delete_key_path: ~p"/dashboard/keys",
+      delete_all_keys_path: ~p"/dashboard/keys/all",
       create_key_path: ~p"/dashboard/keys",
       key_changeset: changeset,
       generated_key: generated_key

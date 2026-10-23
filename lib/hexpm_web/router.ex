@@ -498,6 +498,7 @@ defmodule HexpmWeb.Router do
     post "/orgs/:dashboard_org/change-plan", OrganizationController, :change_plan
     post "/orgs/:dashboard_org/keys", OrganizationController, :create_key
     delete "/orgs/:dashboard_org/keys", OrganizationController, :delete_key
+    delete "/orgs/:dashboard_org/keys/all", OrganizationController, :delete_all_keys
 
     get "/orgs/:dashboard_org/workload-identities", OrganizationController, :workload_identities
 
@@ -543,6 +544,7 @@ defmodule HexpmWeb.Router do
 
     get "/keys", KeyController, :index
     delete "/keys", KeyController, :delete
+    delete "/keys/all", KeyController, :delete_all
     post "/keys", KeyController, :create
 
     get "/sessions", SessionController, :index

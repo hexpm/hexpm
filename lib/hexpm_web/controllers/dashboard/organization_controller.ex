@@ -57,6 +57,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
               :change_plan,
               :create_key,
               :delete_key,
+              :delete_all_keys,
               :workload_identities,
               :create_workload_identity,
               :edit_workload_identity,
@@ -1083,6 +1084,16 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     end)
   end
 
+  def delete_all_keys(conn, %{"dashboard_org" => organization}) do
+    access_organization(conn, organization, "write", fn organization ->
+      {:ok, _} = Keys.revoke_all(organization, audit: audit_data(conn))
+
+      conn
+      |> put_flash(:info, "All keys were revoked successfully.")
+      |> redirect(to: ~p"/dashboard/orgs/#{organization}/keys")
+    end)
+  end
+
   def workload_identities(conn, %{"dashboard_org" => organization}) do
     access_organization(conn, organization, "read", fn organization ->
       render_index(conn, organization, tab: :workload_identities)
@@ -1390,6 +1401,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
          else: []
 
     delete_key_path = ~p"/dashboard/orgs/#{organization}/keys"
+    delete_all_keys_path = ~p"/dashboard/orgs/#{organization}/keys/all"
     create_key_path = ~p"/dashboard/orgs/#{organization}/keys"
     packages = packages_assign(organization, opts[:tab])
     policy_action = opts[:policy_action]
@@ -1417,6 +1429,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         params: opts[:params],
         errors: opts[:errors],
         delete_key_path: delete_key_path,
+        delete_all_keys_path: delete_all_keys_path,
         create_key_path: create_key_path,
         generated_key: opts[:generated_key],
         key_changeset: opts[:key_changeset] || key_changeset(),
