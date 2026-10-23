@@ -67,7 +67,7 @@ config :hexpm, :varsel,
   audience: "https://cna.erlef.org/api/hex/reports",
   erasure_url: "https://cna.erlef.org/api/hex/erasures"
 
-config :hexpm, :user_repository_keys_disable_date, ~D[2026-12-31]
+config :hexpm, :user_repository_keys_disable_date, ~D[2027-01-21]
 
 config :hexpm, ecto_repos: [Hexpm.RepoBase]
 
