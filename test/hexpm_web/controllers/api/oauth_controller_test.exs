@@ -2070,6 +2070,30 @@ defmodule HexpmWeb.API.OAuthControllerTest do
              ]
     end
 
+    test "user key with repository permissions does not warn Hex 2.4", %{
+      client: client,
+      user: user
+    } do
+      key =
+        insert(:key, user: user, permissions: [build(:key_permission, domain: "repositories")])
+
+      conn =
+        build_conn()
+        |> put_req_header(
+          "user-agent",
+          "hex_core/0.11.0 hex/2.4.2 (elixir/1.18.4) (OTP/27) (erts/15.2)"
+        )
+        |> post(~p"/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => key.user_secret,
+          "scope" => "repositories"
+        })
+
+      assert json_response(conn, 200)
+      assert get_resp_header(conn, "x-hex-message") == []
+    end
+
     test "organization key does not warn about deprecation", %{client: client} do
       org = insert(:organization)
 

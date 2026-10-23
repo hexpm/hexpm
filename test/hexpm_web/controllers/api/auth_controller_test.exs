@@ -548,6 +548,47 @@ defmodule HexpmWeb.API.AuthControllerTest do
       assert message =~ ";level=warn"
     end
 
+    test "user repository key does not warn Hex 2.1 to 2.4", %{
+      user_repo_key: key,
+      owned_org: owned_org
+    } do
+      for user_agent <- [
+            "Hex/2.1.1 (Elixir/1.15.7) (OTP/26.2)",
+            "hex_core/0.11.0 hex/2.4.2 (elixir/1.18.4) (OTP/27) (erts/15.2)",
+            "hex_core/0.20.0 hex/2.5.0-dev (elixir/1.19.5) (OTP/28) (erts/16.0)"
+          ] do
+        conn =
+          build_conn()
+          |> put_req_header("user-agent", user_agent)
+          |> put_req_header("authorization", key.user_secret)
+          |> get("/api/auth", domain: "repository", resource: owned_org.name)
+
+        assert conn.status == 200
+        assert get_resp_header(conn, "x-hex-message") == [], user_agent
+      end
+    end
+
+    test "user repository key warns Hex 2.0 and 2.5 or later", %{
+      user_repo_key: key,
+      owned_org: owned_org
+    } do
+      for user_agent <- [
+            "Hex/2.0.6 (Elixir/1.14.5) (OTP/25.3)",
+            "hex_core/0.20.0 hex/2.5.0 (elixir/1.19.5) (OTP/28) (erts/16.0)",
+            "hex_core/0.21.1 hex/2.6.0 (elixir/1.20.4) (OTP/29) (erts/17.1) (CI)"
+          ] do
+        conn =
+          build_conn()
+          |> put_req_header("user-agent", user_agent)
+          |> put_req_header("authorization", key.user_secret)
+          |> get("/api/auth", domain: "repository", resource: owned_org.name)
+
+        assert conn.status == 200
+        assert [message] = get_resp_header(conn, "x-hex-message"), user_agent
+        assert message =~ "User API keys with repository permissions are deprecated"
+      end
+    end
+
     test "user key does not warn for api domain", %{user_full_key: key} do
       conn =
         build_conn()
