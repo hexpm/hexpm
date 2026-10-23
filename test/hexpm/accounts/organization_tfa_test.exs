@@ -335,7 +335,7 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
     assert {:error, :key, changeset, _} =
              Hexpm.Accounts.Keys.create(
                c.member,
-               %{name: "refused", permissions: [%{domain: "repository", resource: org.name}]},
+               %{name: "refused", permissions: [%{domain: "docs", resource: org.name}]},
                audit: audit_data(c.member)
              )
 

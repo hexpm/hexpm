@@ -527,7 +527,7 @@ defmodule HexpmWeb.API.AuthControllerTest do
         |> put_req_header("authorization", key.user_secret)
         |> get("/api/auth", domain: "repository", resource: owned_org.name)
 
-      assert conn.status == 204
+      assert conn.status == 200
 
       assert get_resp_header(conn, "x-hex-message") == [
                "\"User API keys with repository permissions are deprecated and will stop " <>
@@ -542,7 +542,7 @@ defmodule HexpmWeb.API.AuthControllerTest do
         |> put_req_header("authorization", key.user_secret)
         |> get("/api/auth", domain: "repositories")
 
-      assert conn.status == 204
+      assert conn.status == 200
       assert [message] = get_resp_header(conn, "x-hex-message")
       assert message =~ "User API keys with repository permissions are deprecated"
       assert message =~ ";level=warn"
@@ -554,7 +554,7 @@ defmodule HexpmWeb.API.AuthControllerTest do
         |> put_req_header("authorization", key.user_secret)
         |> get("/api/auth", domain: "api")
 
-      assert conn.status == 204
+      assert conn.status == 200
       assert get_resp_header(conn, "x-hex-message") == []
     end
 
@@ -567,7 +567,7 @@ defmodule HexpmWeb.API.AuthControllerTest do
         |> put_req_header("authorization", key.user_secret)
         |> get("/api/auth", domain: "repository", resource: owned_org.name)
 
-      assert conn.status == 204
+      assert conn.status == 200
       assert get_resp_header(conn, "x-hex-message") == []
     end
 

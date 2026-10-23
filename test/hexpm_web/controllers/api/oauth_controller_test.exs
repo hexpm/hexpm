@@ -1803,11 +1803,11 @@ defmodule HexpmWeb.API.OAuthControllerTest do
     } do
       other = insert(:organization)
 
-      {:ok, %{key: key}} =
-        Hexpm.Accounts.Keys.create(
-          user,
-          %{name: "all_repos", permissions: [%{domain: "repositories"}]},
-          audit: audit_data(user)
+      key =
+        insert(:key,
+          user: user,
+          name: "all_repos",
+          permissions: [build(:key_permission, domain: "repositories")]
         )
 
       conn =
@@ -1852,11 +1852,11 @@ defmodule HexpmWeb.API.OAuthControllerTest do
       org = insert(:organization)
       insert(:organization_user, organization: org, user: user)
 
-      {:ok, %{key: key}} =
-        Hexpm.Accounts.Keys.create(
-          user,
-          %{name: "all_repos", permissions: [%{domain: "repositories"}]},
-          audit: audit_data(user)
+      key =
+        insert(:key,
+          user: user,
+          name: "all_repos",
+          permissions: [build(:key_permission, domain: "repositories")]
         )
 
       conn =

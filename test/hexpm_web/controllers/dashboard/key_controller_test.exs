@@ -32,13 +32,7 @@ defmodule HexpmWeb.Dashboard.KeyControllerTest do
       assert redirected_to(conn) == "/login?return=%2Fdashboard%2Fkeys"
     end
 
-    test "sorts keys, organizations, and packages by name", c do
-      zulu_organization = insert(:organization, name: "zulu_org")
-      alpha_organization = insert(:organization, name: "alpha_org")
-
-      insert(:organization_user, organization: zulu_organization, user: c.user)
-      insert(:organization_user, organization: alpha_organization, user: c.user)
-
+    test "sorts keys and packages by name", c do
       insert(:package,
         name: "zulu_package",
         package_owners: [build(:package_owner, user: c.user)]
@@ -64,24 +58,12 @@ defmodule HexpmWeb.Dashboard.KeyControllerTest do
         |> LazyHTML.query("table tbody tr td:first-child span")
         |> Enum.map(&(&1 |> LazyHTML.text() |> String.trim()))
 
-      organization_inputs =
-        document
-        |> LazyHTML.query(
-          ~s(#repositories-permission-group input[name^="key[permissions][repository]"])
-        )
-        |> Enum.map(&(LazyHTML.attribute(&1, "name") |> List.first()))
-
       package_inputs =
         document
         |> LazyHTML.query(~s(#generate-key-modal input[name^="key[permissions][package]"]))
         |> Enum.map(&(LazyHTML.attribute(&1, "name") |> List.first()))
 
       assert key_names == ["alpha_key", "zulu_key"]
-
-      assert organization_inputs == [
-               "key[permissions][repository][alpha_org]",
-               "key[permissions][repository][zulu_org]"
-             ]
 
       assert package_inputs == [
                "key[permissions][package][alpha_package]",
