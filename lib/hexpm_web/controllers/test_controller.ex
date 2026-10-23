@@ -3,7 +3,7 @@ defmodule HexpmWeb.TestController do
 
   import HexpmWeb.RequestHelpers, only: [build_usage_info: 1]
 
-  alias Hexpm.Accounts.{KeyPermission, Users}
+  alias Hexpm.Accounts.{Key, KeyPermission, Users}
   alias Hexpm.OAuth.{Client, DeviceCode, DeviceCodes, Tokens}
   alias Hexpm.Repo
   import Ecto.Query
@@ -84,7 +84,7 @@ defmodule HexpmWeb.TestController do
 
   # Hex's test suites authenticate with user keys that have repository
   # permissions. hex.pm no longer creates those but accepts the ones that exist,
-  # so the key is created without them and they're added afterwards.
+  # so they're added to the key after its permissions are validated.
   defp create_key(user, params, opts) do
     {repository_permissions, permissions} =
       params["permissions"]
@@ -92,30 +92,28 @@ defmodule HexpmWeb.TestController do
       |> Enum.split_with(&(&1["domain"] in ["repository", "repositories"]))
 
     if repository_permissions == [] do
-      unwrap_key(Keys.create(user, params, opts))
-    else
-      with {:ok, key} <-
-             unwrap_key(Keys.create(user, %{params | "permissions" => permissions}, opts)) do
-        kept = if permissions == [], do: [], else: key.permissions
-
-        added =
-          Enum.map(repository_permissions, fn permission ->
-            %KeyPermission{domain: permission["domain"], resource: permission["resource"]}
-          end)
-
-        key =
-          key
-          |> Ecto.Changeset.change()
-          |> Ecto.Changeset.put_embed(:permissions, kept ++ added)
-          |> Repo.update!()
-
-        {:ok, key}
+      case Keys.create(user, params, opts) do
+        {:ok, %{key: key}} -> {:ok, key}
+        {:error, :key, changeset, _} -> {:error, changeset}
       end
+    else
+      user
+      |> Key.build(%{params | "permissions" => permissions})
+      |> put_repository_permissions(repository_permissions, permissions)
+      |> Repo.insert()
     end
   end
 
-  defp unwrap_key({:ok, %{key: key}}), do: {:ok, key}
-  defp unwrap_key({:error, :key, changeset, _}), do: {:error, changeset}
+  defp put_repository_permissions(changeset, repository_permissions, permissions) do
+    kept = if permissions == [], do: [], else: Ecto.Changeset.get_change(changeset, :permissions)
+
+    added =
+      Enum.map(repository_permissions, fn permission ->
+        %KeyPermission{domain: permission["domain"], resource: permission["resource"]}
+      end)
+
+    Ecto.Changeset.put_embed(changeset, :permissions, kept ++ added)
+  end
 
   def repo(conn, params) do
     {:ok, organization} =
