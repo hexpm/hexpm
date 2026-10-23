@@ -39,9 +39,7 @@ defmodule HexpmWeb.Live.InitAssigns do
   # connected without a token can never gain one and needs no refreshing.
   defp attach_refresh(socket, %{"session_token" => _} = session) do
     socket
-    |> attach_hook(:refresh_auth_params, :handle_params, fn _params, _uri, socket ->
-      {:cont, refresh(socket, session)}
-    end)
+    |> attach_params_refresh(session)
     |> attach_hook(:refresh_auth_event, :handle_event, fn _event, _params, socket ->
       {:cont, refresh(socket, session)}
     end)
@@ -51,6 +49,16 @@ defmodule HexpmWeb.Live.InitAssigns do
   end
 
   defp attach_refresh(socket, _session), do: socket
+
+  # A view rendered into a page with `live_render` isn't mounted at the router
+  # and never gets `handle_params`.
+  defp attach_params_refresh(%{router: nil} = socket, _session), do: socket
+
+  defp attach_params_refresh(socket, session) do
+    attach_hook(socket, :refresh_auth_params, :handle_params, fn _params, _uri, socket ->
+      {:cont, refresh(socket, session)}
+    end)
+  end
 
   # The disconnected render's handle_params runs right after mount resolved, so
   # only a connected socket resolves again.

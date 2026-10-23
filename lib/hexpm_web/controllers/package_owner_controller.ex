@@ -26,58 +26,100 @@ defmodule HexpmWeb.PackageOwnerController do
   def create(conn, %{"username" => username} = params) do
     package = conn.assigns.package
     user = Users.get_by_username(username, [:emails, :organization])
+    mode = user && add_mode(params, user)
 
-    if is_nil(user) do
-      conn
-      |> put_flash(:error, "User \"#{username}\" not found.")
-      |> redirect(to: ViewHelpers.path_for_owners(package))
-    else
-      case Owners.add(package, user, params, audit: audit_data(conn)) do
-        {:ok, _} ->
-          conn
-          |> put_flash(:info, "#{username} added as owner.")
-          |> redirect(to: ViewHelpers.path_for_owners(package))
+    cond do
+      is_nil(user) ->
+        conn
+        |> put_flash(:error, "User \"#{username}\" not found.")
+        |> redirect(to: ViewHelpers.path_for_owners(package))
 
-        {:error, :not_member} ->
-          conn
-          |> put_flash(:error, "#{username} is not a member of this repository.")
-          |> redirect(to: ViewHelpers.path_for_owners(package))
+      mode == :stale ->
+        conn
+        |> put_flash(
+          :error,
+          "The form was submitted before it finished updating. Check it and submit it again."
+        )
+        |> redirect(to: ViewHelpers.path_for_owners(package))
 
-        {:error, :unverified_primary_email} ->
-          conn
-          |> put_flash(:error, "#{username} has not verified their primary email.")
-          |> redirect(to: ViewHelpers.path_for_owners(package))
+      true ->
+        create_owner(conn, package, user, username, params, mode == :transfer)
+    end
+  end
 
-        {:error, :not_organization_transfer} ->
-          conn
-          |> put_flash(:error, "#{username} is an organization — use a transfer to add it.")
-          |> redirect(to: ViewHelpers.path_for_owners(package))
+  # The form shows the transfer warning for the user in `transfer_to`, and its
+  # disabled role select sends no level. A request that doesn't match what the
+  # form showed was submitted before the form caught up with an edit.
+  defp add_mode(%{"transfer_to" => transfer_to} = params, user) do
+    if transfer_to == user.username and (User.organization?(user) or params["transfer"] == "true"),
+      do: :transfer,
+      else: :stale
+  end
 
-        {:error, :organization_level} ->
-          conn
-          |> put_flash(:error, "Organizations must be added as full owners.")
-          |> redirect(to: ViewHelpers.path_for_owners(package))
+  defp add_mode(%{"transfer" => "true"}, _user), do: :stale
+  defp add_mode(_params, _user), do: :add
 
-        {:error, :organization_user_conflict} ->
-          conn
-          |> put_flash(:error, "#{username} conflicts with an existing organization owner.")
-          |> redirect(to: ViewHelpers.path_for_owners(package))
+  # The only owner of a package has to be a full owner.
+  defp create_owner(conn, package, user, username, params, transfer?) do
+    params =
+      if transfer?,
+        do: Map.merge(params, %{"transfer" => true, "level" => "full"}),
+        else: Map.put(params, "transfer", false)
 
-        {:error, :last_full_owner} ->
-          conn
-          |> put_flash(:error, "Cannot demote the last full owner of a package.")
-          |> redirect(to: ViewHelpers.path_for_owners(package))
+    case Owners.add(package, user, params, audit: audit_data(conn)) do
+      {:ok, _} when transfer? ->
+        conn
+        |> put_flash(:info, "#{package.name} transferred to #{user.username}.")
+        |> redirect(to: redirect_after_transfer(conn, package))
 
-        {:error, :not_full_owner} ->
-          conn
-          |> put_flash(:error, "You must be a full owner of this package.")
-          |> redirect(to: ViewHelpers.path_for_owners(package))
+      {:ok, _} ->
+        conn
+        |> put_flash(:info, "#{username} added as owner.")
+        |> redirect(to: ViewHelpers.path_for_owners(package))
 
-        {:error, changeset} ->
-          conn
-          |> put_flash(:error, changeset_error_to_string(changeset))
-          |> redirect(to: ViewHelpers.path_for_owners(package))
-      end
+      {:error, :not_member} ->
+        conn
+        |> put_flash(:error, "#{username} is not a member of this repository.")
+        |> redirect(to: ViewHelpers.path_for_owners(package))
+
+      {:error, :unverified_primary_email} ->
+        conn
+        |> put_flash(:error, "#{username} has not verified their primary email.")
+        |> redirect(to: ViewHelpers.path_for_owners(package))
+
+      {:error, :not_organization_transfer} ->
+        conn
+        |> put_flash(
+          :error,
+          "Adding the organization #{username} transfers #{package.name} to it. " <>
+            "Confirm the transfer to add it."
+        )
+        |> redirect(to: ViewHelpers.path_for_owners(package))
+
+      {:error, :organization_level} ->
+        conn
+        |> put_flash(:error, "Organizations must be added as full owners.")
+        |> redirect(to: ViewHelpers.path_for_owners(package))
+
+      {:error, :organization_user_conflict} ->
+        conn
+        |> put_flash(:error, "#{username} conflicts with an existing organization owner.")
+        |> redirect(to: ViewHelpers.path_for_owners(package))
+
+      {:error, :last_full_owner} ->
+        conn
+        |> put_flash(:error, "Cannot demote the last full owner of a package.")
+        |> redirect(to: ViewHelpers.path_for_owners(package))
+
+      {:error, :not_full_owner} ->
+        conn
+        |> put_flash(:error, "You must be a full owner of this package.")
+        |> redirect(to: ViewHelpers.path_for_owners(package))
+
+      {:error, changeset} ->
+        conn
+        |> put_flash(:error, changeset_error_to_string(changeset))
+        |> redirect(to: ViewHelpers.path_for_owners(package))
     end
   end
 
@@ -169,6 +211,13 @@ defmodule HexpmWeb.PackageOwnerController do
       ViewHelpers.path_for_package(package)
     else
       ViewHelpers.path_for_owners(package)
+    end
+  end
+
+  defp redirect_after_transfer(conn, package) do
+    case RepositoryAccess.package_settings(conn, package) do
+      {:ok, _access} -> ViewHelpers.path_for_owners(package)
+      _refused -> ViewHelpers.path_for_package(package)
     end
   end
 
