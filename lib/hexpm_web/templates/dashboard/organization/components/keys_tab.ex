@@ -9,6 +9,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.KeysTab do
 
   attr :current_user, :map, required: true
   attr :create_key_path, :string, required: true
+  attr :delete_all_keys_path, :string, required: true
   attr :delete_key_path, :string, required: true
   attr :generated_key, :map, default: nil
   attr :key_changeset, :any, required: true
@@ -21,6 +22,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.KeysTab do
     <.key_management_card
       create_key_path={@create_key_path}
       current_user={@current_user}
+      delete_all_keys_path={@delete_all_keys_path}
       delete_key_path={@delete_key_path}
       generated_key={@generated_key}
       key_changeset={@key_changeset}

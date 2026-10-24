@@ -1,7 +1,15 @@
 defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
   use HexpmWeb.ConnCase, async: true
+  import Swoosh.TestAssertions
 
-  alias Hexpm.Accounts.{AuditLogs, Organization, OrganizationInvitations, Organizations, Users}
+  alias Hexpm.Accounts.{
+    AuditLogs,
+    Key,
+    Organization,
+    OrganizationInvitations,
+    Organizations,
+    Users
+  }
 
   defp mock_customer(organization) do
     stub(Hexpm.Billing.Mock, :get, fn token, _opts ->
@@ -2330,6 +2338,70 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
 
       assert response(conn, 400)
       assert Phoenix.Flash.get(conn.assigns.flash, :error) == "The key computer was not found."
+    end
+  end
+
+  describe "DELETE /dashboard/orgs/:dashboard_org/keys/all" do
+    test "revokes all of the organization's keys", c do
+      insert(:organization_user, organization: c.organization, user: c.user, role: "write")
+      key_a = insert(:key, organization: c.organization, name: "ci")
+      key_b = insert(:key, organization: c.organization, name: "deploy")
+      user_key = insert(:key, user: c.user, name: "computer")
+      other_organization_key = insert(:key, organization: insert(:organization), name: "ci")
+
+      conn =
+        build_conn()
+        |> test_login(c.user)
+        |> delete("/dashboard/orgs/#{c.organization.name}/keys/all")
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{c.organization.name}/keys"
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) == "All keys were revoked successfully."
+
+      assert Key.revoked?(Repo.get!(Key, key_a.id))
+      assert Key.revoked?(Repo.get!(Key, key_b.id))
+      refute Key.revoked?(Repo.get!(Key, user_key.id))
+      refute Key.revoked?(Repo.get!(Key, other_organization_key.id))
+
+      organization = Repo.preload(c.organization, organization_users: [user: :emails])
+      assert_email_sent(Hexpm.Emails.api_keys_all_revoked(organization))
+    end
+
+    test "requires write access", c do
+      insert(:organization_user, organization: c.organization, user: c.user, role: "read")
+      key = insert(:key, organization: c.organization, name: "ci")
+
+      conn =
+        build_conn()
+        |> test_login(c.user)
+        |> delete("/dashboard/orgs/#{c.organization.name}/keys/all")
+
+      assert response(conn, 400) =~ "You do not have permission for this action."
+      refute Key.revoked?(Repo.get!(Key, key.id))
+    end
+
+    test "redirects to sudo when not in sudo mode", c do
+      insert(:organization_user, organization: c.organization, user: c.user, role: "admin")
+      key = insert(:key, organization: c.organization, name: "ci")
+
+      conn =
+        build_conn()
+        |> test_login(c.user, sudo: false)
+        |> delete("/dashboard/orgs/#{c.organization.name}/keys/all")
+
+      assert redirected_to(conn) == "/sudo"
+      refute Key.revoked?(Repo.get!(Key, key.id))
+    end
+
+    test "returns 404 for non-members", c do
+      key = insert(:key, organization: c.organization, name: "ci")
+
+      conn =
+        build_conn()
+        |> test_login(c.user)
+        |> delete("/dashboard/orgs/#{c.organization.name}/keys/all")
+
+      assert response(conn, 404)
+      refute Key.revoked?(Repo.get!(Key, key.id))
     end
   end
 

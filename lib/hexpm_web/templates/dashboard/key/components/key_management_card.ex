@@ -15,6 +15,7 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyManagementCard do
   import HexpmWeb.ViewHelpers, only: [pretty_date: 1, pretty_date: 2, pretty_datetime: 1]
   import HexpmWeb.ViewIcons, only: [icon: 3]
   import HexpmWeb.Dashboard.Key.Components.RevokeKeyModal
+  import HexpmWeb.Dashboard.Key.Components.RevokeAllKeysModal
   import HexpmWeb.Dashboard.Key.Components.GenerateKeyModal
   import HexpmWeb.Dashboard.Key.Components.KeyGeneratedModal
 
@@ -26,6 +27,7 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyManagementCard do
   attr :current_user, :map, required: true
   attr :create_key_path, :string, required: true
   attr :delete_key_path, :string, required: true
+  attr :delete_all_keys_path, :string, required: true
   attr :generated_key, :map, default: nil
   attr :organization, :map, default: nil
 
@@ -35,11 +37,24 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyManagementCard do
     ~H"""
     <div class="bg-white dark:bg-grey-800 rounded-lg shadow-sm border border-grey-200 dark:border-grey-700 p-8">
       <%!-- Header --%>
-      <div class="mb-6">
-        <h2 class="text-xl font-semibold text-grey-900 dark:text-white mb-2">Keys</h2>
-        <p class="text-sm text-grey-500 dark:text-grey-300">
-          Keys are used to authenticate and authorize clients to interact with the Hex API and repository.
-        </p>
+      <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 class="text-xl font-semibold text-grey-900 dark:text-white mb-2">Keys</h2>
+          <p class="text-sm text-grey-500 dark:text-grey-300">
+            Keys are used to authenticate and authorize clients to interact with the Hex API and repository.
+          </p>
+        </div>
+
+        <.button
+          :if={@keys != []}
+          variant="danger-outline"
+          size="sm"
+          phx-click={show_modal("revoke-all-keys-modal")}
+          id="revoke-all-keys-button"
+          class="flex-shrink-0 self-start"
+        >
+          Revoke All Keys
+        </.button>
       </div>
 
       <%!-- Keys Table --%>
@@ -75,6 +90,12 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyManagementCard do
             delete_key_path={@delete_key_path}
           />
         <% end %>
+
+        <.revoke_all_keys_modal
+          keys={@keys}
+          current_user={@current_user}
+          delete_all_keys_path={@delete_all_keys_path}
+        />
       <% end %>
 
       <%!-- Generate New Key Button --%>
