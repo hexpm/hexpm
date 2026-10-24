@@ -71,7 +71,7 @@ defmodule Hexpm.EmailsTest do
 
       assert email.subject == "Hex.pm - The packages of acme will be deleted on March 1, 2027"
       assert email.text_body =~ "scheduled for deletion on March 1, 2027"
-      assert email.text_body =~ "The organization, its members and its API keys stay."
+      assert email.text_body =~ "The organization, its members and its keys stay."
       assert email.html_body =~ "/dashboard/orgs/acme/billing"
 
       email =
@@ -88,7 +88,7 @@ defmodule Hexpm.EmailsTest do
 
       email = Emails.organization_data_deleted("acme", ["a@example.com"])
       assert email.subject == "Hex.pm - The packages of acme have been deleted"
-      assert email.text_body =~ "The organization, its members and its API keys are still there."
+      assert email.text_body =~ "The organization, its members and its keys are still there."
       assert email.text_body =~ "/dashboard/orgs/acme/billing"
     end
   end

@@ -309,8 +309,12 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       assert response(conn, 200) =~ "Keys"
     end
 
-    test "returns 400 for read-only members", %{user: user, organization: organization} do
+    test "shows read-only members the keys without revoking", %{
+      user: user,
+      organization: organization
+    } do
       insert(:organization_user, organization: organization, user: user, role: "read")
+      insert(:key, organization: organization, name: "ci")
       mock_customer(organization)
 
       conn =
@@ -318,7 +322,10 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         |> test_login(user)
         |> get("/dashboard/orgs/#{organization.name}/keys")
 
-      assert response(conn, 400)
+      body = response(conn, 200)
+      assert body =~ "ci"
+      refute body =~ "Revoke key"
+      assert body =~ "Requires admin"
     end
 
     test "shows generated key name after key creation", %{user: user, organization: organization} do

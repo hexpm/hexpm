@@ -533,21 +533,21 @@ defmodule HexpmWeb.Dashboard.AuditLog.Components.AuditLogCard do
          action: "sso.key.revoke",
          params: %{"key" => %{"name" => name}, "organization" => %{"name" => org}}
        }) do
-    "Removed #{org} access from the API key #{name} because #{org} requires SSO"
+    "Removed #{org} access from the key #{name} because #{org} requires SSO"
   end
 
   defp humanize_action(%AuditLog{
          action: "sso.key.blocked",
          params: %{"key" => %{"name" => name}, "organization" => %{"name" => org}}
        }) do
-    "Refused the API key #{name} for #{org} because #{org} requires SSO"
+    "Refused the key #{name} for #{org} because #{org} requires SSO"
   end
 
   defp humanize_action(%AuditLog{
          action: "sso.key.notice_undeliverable",
          params: %{"organization" => %{"name" => org}}
        }) do
-    "Could not tell this member that #{org} turns their API keys away, because their account has no verified email address"
+    "Could not tell this member that #{org} turns their keys away, because their account has no verified email address"
   end
 
   defp humanize_action(%AuditLog{

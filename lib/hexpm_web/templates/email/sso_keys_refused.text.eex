@@ -1,4 +1,4 @@
-Personal API Keys And <%= @organization %>
+Personal Keys And <%= @organization %>
 
 <%= if @revoked != [] or @trimmed != [] do %><%= SSOKeysRefused.removed(@organization, @revoked, @trimmed) %>
 

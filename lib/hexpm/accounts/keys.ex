@@ -39,12 +39,14 @@ defmodule Hexpm.Accounts.Keys do
 
   @doc """
   Whether a key reaches this organization, by naming it, by covering every
-  repository or package, or by carrying an `api` permission.
+  repository or package, or by carrying an `api` permission or a capability that
+  names no package.
   """
   def reaches_organization?(%Key{} = key, %Organization{} = organization) do
     Enum.any?(key.permissions, fn permission ->
       KeyPermission.organization_reach(permission) in [:every, organization.name] or
-        permission.domain == "api"
+        permission.domain == "api" or
+        (Hexpm.Permissions.capability?(permission) and is_nil(permission.resource))
     end)
   end
 
@@ -83,9 +85,21 @@ defmodule Hexpm.Accounts.Keys do
     |> Key.associate_owner(user_or_organization)
   end
 
-  def create(user_or_organization, params, audit: audit_data) do
+  @doc """
+  Creates a key owned by `user_or_organization`. The `grantor` option is a
+  `Hexpm.Accounts.KeyGrantor` naming who creates it, which decides the
+  permissions it may be given. Without one the owner creates the key itself.
+  """
+  def create(user_or_organization, params, opts) do
+    audit_data = Keyword.fetch!(opts, :audit)
+
+    grantor =
+      Keyword.get_lazy(opts, :grantor, fn ->
+        KeyGrantor.new(user_or_organization, user_or_organization, nil)
+      end)
+
     Multi.new()
-    |> Multi.insert(:key, Key.build(user_or_organization, params))
+    |> Multi.insert(:key, Key.build(user_or_organization, grantor, params))
     |> audit(audit_data, "key.generate", fn %{key: key} -> key end)
     |> Repo.transaction()
     |> tap(fn
@@ -99,7 +113,7 @@ defmodule Hexpm.Accounts.Keys do
         :ok
     end)
     |> maybe_retry_for_unique_name(fn ->
-      create(user_or_organization, params, audit: audit_data)
+      create(user_or_organization, params, opts)
     end)
   end
 

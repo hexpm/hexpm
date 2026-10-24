@@ -133,7 +133,7 @@ defmodule HexpmWeb.DocsControllerTest do
       |> get("/docs/leaked-keys")
       |> html_response(200)
 
-    assert html =~ "Leaked API keys"
+    assert html =~ "Leaked keys"
     assert html =~ "What Hex.pm did automatically"
 
     document = LazyHTML.from_document(html)
@@ -142,7 +142,7 @@ defmodule HexpmWeb.DocsControllerTest do
              LazyHTML.query(document, ~s(#docs-nav a[href="/docs/leaked-keys"]))
              |> Enum.to_list()
 
-    assert LazyHTML.text(link) =~ "Leaked API keys"
+    assert LazyHTML.text(link) =~ "Leaked keys"
     assert [class] = LazyHTML.attribute(link, "class")
     assert class =~ "bg-blue-50"
   end
@@ -156,6 +156,22 @@ defmodule HexpmWeb.DocsControllerTest do
     put_feature_flag(:organization_sso, mode: :beta, beta_organizations: [])
 
     assert_sso_docs_hidden()
+  end
+
+  test "renders the keys guide in the docs navigation" do
+    html =
+      build_conn()
+      |> get("/docs/keys")
+      |> html_response(200)
+
+    document = LazyHTML.from_document(html)
+
+    assert [link] =
+             LazyHTML.query(document, ~s(nav#docs-nav a[href="/docs/keys"])) |> Enum.to_list()
+
+    assert LazyHTML.attribute(link, "class") |> List.first() =~ "bg-blue-50"
+    assert LazyHTML.query(document, "#personal-keys") |> Enum.count() == 1
+    assert LazyHTML.query(document, "#organization-keys") |> Enum.count() == 1
   end
 
   test "renders the Workload Identity guide in the docs navigation" do

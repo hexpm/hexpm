@@ -50,7 +50,6 @@ Run the following command on your local machine:
 
 ```nohighlight
 $ mix hex.organization key acme generate
-Passphrase: ...
 126d49fb3014bd26457471ebae97c625
 ```
 
@@ -62,4 +61,6 @@ Copy the returned hash and authenticate with it on your build server:
 $ mix hex.organization auth acme --key 126d49fb3014bd26457471ebae97c625
 ```
 
-An organization key authenticates as the organization rather than as a person, so it keeps working when the organization requires [single sign-on](/docs/organization-sso). A personal API key does not, unless the organization chose to allow one. For automation, generate an organization key.
+An organization key authenticates as the organization rather than as a person, so it keeps working when the organization requires [single sign-on](/docs/organization-sso). A personal key does not, unless the organization chose to allow one. For automation, generate an organization key.
+
+See [keys](/docs/keys#organization-keys) for the permissions an organization key can have and which roles can grant them.

@@ -94,6 +94,17 @@ defmodule HexpmWeb.DocsController do
     )
   end
 
+  def keys(conn, _params) do
+    render(
+      conn,
+      "layout.html",
+      view: "keys.html",
+      view_name: :keys,
+      title: "Keys",
+      container: "flex-1 flex flex-col"
+    )
+  end
+
   def dependency_policies(conn, _params) do
     render(
       conn,

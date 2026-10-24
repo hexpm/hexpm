@@ -5,16 +5,16 @@ defmodule HexpmWeb.API.KeyController do
 
   plug :authorize,
        [
-         domains: [{"api", "write"}],
+         domains: ["keys"],
          allow_unconfirmed: true,
-         fun: {AuthHelpers, :organization_access, [organization_role: "write"]},
+         fun: {AuthHelpers, :key_creation_access},
          authentication: :required
        ]
        when action == :create
 
   plug :authorize,
        [
-         domains: [{"api", "write"}],
+         domains: ["keys"],
          fun: {AuthHelpers, :organization_access, [organization_role: "write"]},
          authentication: :required
        ]
@@ -59,8 +59,10 @@ defmodule HexpmWeb.API.KeyController do
   def create(conn, params) do
     user_or_organization = conn.assigns.organization || conn.assigns.current_user
     authing_key = authing_key(conn)
+    principal = conn.assigns.current_user || conn.assigns.current_organization
+    grantor = KeyGrantor.new(user_or_organization, principal, conn.assigns.auth_credential)
 
-    case Keys.create(user_or_organization, params, audit: audit_data(conn)) do
+    case Keys.create(user_or_organization, params, audit: audit_data(conn), grantor: grantor) do
       {:ok, %{key: key}} ->
         location = ~p"/api/keys/#{key}"
 

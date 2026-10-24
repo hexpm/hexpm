@@ -81,8 +81,12 @@ defmodule Hexpm.OAuth.Clients do
     end)
   end
 
+  # A client allowed `api:write` may ask for any narrower write scope, and one
+  # allowed `api` for anything `api` covers.
   defp api_scope_allowed_by_full_api?(scope, allowed_scopes) do
-    scope in ["api:read", "api:write"] and "api" in allowed_scopes
+    (scope in ["api:read", "api:write"] and "api" in allowed_scopes) or
+      (Permissions.capability?(scope) and Permissions.validate_scopes([scope]) == :ok and
+         Enum.any?(allowed_scopes, &(&1 in ["api", "api:write"])))
   end
 
   # Check if a resource-specific scope (e.g., "docs:acme") is allowed
