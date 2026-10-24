@@ -1,6 +1,8 @@
 defmodule HexpmWeb.AuthControllerTest do
   use HexpmWeb.ConnCase
 
+  import Swoosh.TestAssertions
+
   alias Hexpm.Accounts.{Users, UserProviders}
 
   setup do
@@ -44,11 +46,24 @@ defmodule HexpmWeb.AuthControllerTest do
       assert pending_oauth[:provider] == "github"
       assert pending_oauth[:provider_uid] == "12345"
       assert pending_oauth[:provider_email] == email
+      assert pending_oauth[:provider_email_verified] == true
       assert pending_oauth[:provider_name] == name
       assert pending_oauth[:provider_nickname] == username
 
       # User should NOT be created yet
       refute Users.get(username)
+    end
+
+    test "records an address GitHub reports as unverified" do
+      email = Hexpm.Fake.sequence(:email)
+
+      conn =
+        build_conn()
+        |> mock_github_auth_success("12347", email, email_verified: false)
+        |> HexpmWeb.AuthController.callback(%{})
+
+      assert redirected_to(conn) == "/auth/complete-signup"
+      assert get_session(conn, "pending_oauth")[:provider_email_verified] == false
     end
 
     test "stores OAuth data for user with empty nickname" do
@@ -504,6 +519,7 @@ defmodule HexpmWeb.AuthControllerTest do
             "provider" => "github",
             "provider_uid" => "12345",
             "provider_email" => email,
+            "provider_email_verified" => true,
             "provider_name" => name,
             "provider_nickname" => username
           }
@@ -533,6 +549,39 @@ defmodule HexpmWeb.AuthControllerTest do
       assert user_provider
       assert user_provider.provider_email == email
       assert user_provider.user_id == user.id
+    end
+
+    test "keeps an address GitHub hasn't verified unverified and sends a verification email" do
+      email = Hexpm.Fake.sequence(:email)
+      chosen_username = Hexpm.Fake.sequence(:username)
+
+      conn =
+        build_conn()
+        |> Plug.Test.init_test_session(%{
+          "pending_oauth" => %{
+            "at" => NaiveDateTime.to_iso8601(NaiveDateTime.utc_now()),
+            "provider" => "github",
+            "provider_uid" => "12348",
+            "provider_email" => email,
+            "provider_email_verified" => false,
+            "provider_name" => Hexpm.Fake.sequence(:full_name),
+            "provider_nickname" => Hexpm.Fake.sequence(:username)
+          }
+        })
+        |> post("/auth/complete-signup", %{"user" => %{"username" => chosen_username}})
+
+      assert redirected_to(conn) == "/users/#{chosen_username}"
+      assert Phoenix.Flash.get(conn.assigns.flash, "info") =~ "verification email"
+
+      user = Users.get(chosen_username, [:emails])
+      [user_email] = user.emails
+      refute user_email.verified
+      refute Users.get_email(email)
+
+      assert_email_sent(fn sent ->
+        sent.subject == "Hex.pm - Email verification" and
+          Enum.any?(sent.to, fn {_name, address} -> address == email end)
+      end)
     end
 
     test "shows validation error when username is taken" do
