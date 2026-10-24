@@ -65,6 +65,15 @@ defmodule HexpmWeb.ReleaseRetirementControllerTest do
         |> html_response(200)
 
       assert html =~ "Retire #{package.name} 1.0.0"
+      assert [_form] = query(html, ~s(#retire-form[phx-hook="ConfirmModal"][data-show-modal]))
+
+      assert [confirm] =
+               query(
+                 html,
+                 ~s(#retire-confirm button[type="submit"][form="retire-form"][data-confirmed])
+               )
+
+      assert confirm |> LazyHTML.text() |> String.trim() == "Retire version"
 
       assert [_form] =
                query(html, ~s(#retire-form[action="/packages/#{package.name}/1.0.0/retire"]))
@@ -93,7 +102,17 @@ defmodule HexpmWeb.ReleaseRetirementControllerTest do
 
       assert [_selected] = query(html, ~s(#retirement_reason option[value="security"][selected]))
       assert [_message] = query(html, ~s(#retirement_message[value="See CVE-2026-0001"]))
-      assert [_form] = query(html, "#unretire-form")
+      assert [_form] = query(html, "#unretire-confirm #unretire-form")
+      assert [_button] = query(html, ~s(#release-unretire button[type="button"][phx-click]))
+      assert [] = query(html, "#release-unretire form")
+
+      assert [confirm] =
+               query(
+                 html,
+                 ~s(#retire-confirm button[type="submit"][form="retire-form"][data-confirmed])
+               )
+
+      assert confirm |> LazyHTML.text() |> String.trim() == "Save changes"
     end
 
     test "asks a maintainer without 2FA to enable it", %{package: package} do
@@ -432,6 +451,14 @@ defmodule HexpmWeb.ReleaseRetirementControllerTest do
 
       assert [_checkbox] =
                query(html, ~s{input#retire_all_replace[name="replace"]:not([checked])})
+
+      assert [_form] = query(html, ~s(#retire-all-form[phx-hook="ConfirmModal"][data-show-modal]))
+
+      assert [_confirm] =
+               query(
+                 html,
+                 ~s(#retire-all-confirm button[type="submit"][form="retire-all-form"][data-confirmed])
+               )
     end
 
     test "leaves out the replace option when no version is retired", %{maintainer: maintainer} do

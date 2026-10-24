@@ -37,6 +37,8 @@
         action={ViewHelpers.path_for_retire_all(@package)}
         id="retire-all-form"
         class="px-6 py-4 flex flex-col gap-4"
+        phx-hook="ConfirmModal"
+        data-show-modal={show_modal("retire-all-confirm")}
       >
         <.select_input
           field={form[:reason]}
@@ -84,5 +86,24 @@
         </div>
       </.sudo_form>
     </div>
+
+    <.modal
+      :if={@tfa?}
+      id="retire-all-confirm"
+      title={"Retire all versions of #{@package.name}?"}
+      max_width="md"
+    >
+      <p class="text-sm text-grey-600 dark:text-grey-300">
+        Everyone who depends on {@package.name} sees the reason and message. Undoing it means unretiring each version on its own.
+      </p>
+      <:footer>
+        <.button type="button" variant="secondary" phx-click={hide_modal("retire-all-confirm")}>
+          Cancel
+        </.button>
+        <.button type="submit" variant="primary" form="retire-all-form" data-confirmed>
+          Retire all versions
+        </.button>
+      </:footer>
+    </.modal>
   </:inner_content>
 </.package_layout>

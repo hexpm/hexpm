@@ -35,6 +35,8 @@
           action={ViewHelpers.path_for_retirement(@package, @release)}
           id="retire-form"
           class="px-6 py-4 flex flex-col gap-4"
+          phx-hook="ConfirmModal"
+          data-show-modal={show_modal("retire-confirm")}
         >
           <.select_input
             field={form[:reason]}
@@ -79,16 +81,67 @@
             Hex stops marking {@release.version} as retired and no longer shows the reason and message.
           </p>
         </div>
+        <.button
+          type="button"
+          variant="outline"
+          class="shrink-0"
+          phx-click={show_modal("unretire-confirm")}
+        >
+          Unretire version
+        </.button>
+      </div>
+    </div>
+
+    <.modal
+      :if={@tfa?}
+      id="retire-confirm"
+      title={
+        if @release.retirement,
+          do: "Change the retirement of #{@package.name} #{@release.version}?",
+          else: "Retire #{@package.name} #{@release.version}?"
+      }
+      max_width="md"
+    >
+      <p class="text-sm text-grey-600 dark:text-grey-300">
+        <%= if @release.retirement do %>
+          Everyone who depends on {@package.name} {@release.version} sees the new reason and message.
+        <% else %>
+          Everyone who depends on {@package.name} {@release.version} sees the reason and message. You can unretire it later.
+        <% end %>
+      </p>
+      <:footer>
+        <.button type="button" variant="secondary" phx-click={hide_modal("retire-confirm")}>
+          Cancel
+        </.button>
+        <.button type="submit" variant="primary" form="retire-form" data-confirmed>
+          {if @release.retirement, do: "Save changes", else: "Retire version"}
+        </.button>
+      </:footer>
+    </.modal>
+
+    <.modal
+      :if={@release.retirement && @tfa?}
+      id="unretire-confirm"
+      title={"Unretire #{@package.name} #{@release.version}?"}
+      max_width="md"
+    >
+      <p class="text-sm text-grey-600 dark:text-grey-300">
+        Hex stops marking {@release.version} as retired and no longer shows the reason and message.
+      </p>
+      <:footer>
+        <.button type="button" variant="secondary" phx-click={hide_modal("unretire-confirm")}>
+          Cancel
+        </.button>
         <.sudo_form
           current_user={@current_user}
           action={ViewHelpers.path_for_retirement(@package, @release)}
           method="delete"
           id="unretire-form"
-          class="shrink-0"
+          class="m-0"
         >
-          <.button type="submit" variant="outline">Unretire version</.button>
+          <.button type="submit" variant="primary">Unretire version</.button>
         </.sudo_form>
-      </div>
-    </div>
+      </:footer>
+    </.modal>
   </:inner_content>
 </.package_layout>
