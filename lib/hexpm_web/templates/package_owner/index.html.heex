@@ -7,10 +7,7 @@
         <%= if @manage? do %>
           {Phoenix.Component.live_render(@conn, HexpmWeb.PackageOwnerLive.AddOwner,
             id: "add-owner-live",
-            session: %{
-              "package_id" => @package.id,
-              "current_user_id" => @current_user.id
-            }
+            session: %{"package_id" => @package.id}
           )}
         <% end %>
       </div>

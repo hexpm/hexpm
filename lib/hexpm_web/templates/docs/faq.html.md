@@ -18,7 +18,7 @@ Security vulnerabilities should be disclosed to [security@hex.pm](mailto:securit
 For security reasons, your username cannot be changed. However, if you would like to adopt a new
 username we recommend [creating a new account](/signup).
 
-You can transfer ownership of your packages using the [`mix hex.owner`](https://hexdocs.pm/hex/Mix.Tasks.Hex.Owner.html) task.
+You can transfer ownership of your packages on each package's Owners tab or using the [`mix hex.owner`](https://hexdocs.pm/hex/Mix.Tasks.Hex.Owner.html) task.
 
 #### Password security
 
@@ -70,7 +70,13 @@ reserved and can never be reused by users.
 #### Can I transfer ownership of a package?
 
 Yes, if you would like to reassign ownership of a package to a different user or to another
-username, you can use the [`mix hex.owner`](https://hexdocs.pm/hex/Mix.Tasks.Hex.Owner.html) task.
+username, add the new owner on the package's Owners tab with "Transfer ownership" checked, or use
+the [`mix hex.owner transfer`](https://hexdocs.pm/hex/Mix.Tasks.Hex.Owner.html) task. A transfer
+makes the new owner the package's only owner and removes the package's workload identities. It
+can't be undone.
+
+A private package belongs to its organization and can't be transferred. Members of the
+organization can be added as its owners.
 
 #### How should I name my packages?
 
@@ -108,7 +114,7 @@ Your selection: _
 ```
 
 You can also transfer ownership to an organization after the package has been published by
-running:
+adding the organization as an owner on the package's Owners tab, or by running:
 
 [`mix hex.owner transfer PACKAGE ORGANIZATION`](https://hexdocs.pm/hex/Mix.Tasks.Hex.Owner.html)
 

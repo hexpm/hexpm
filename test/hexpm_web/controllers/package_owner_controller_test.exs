@@ -436,6 +436,191 @@ defmodule HexpmWeb.PackageOwnerControllerTest do
     end
   end
 
+  describe "POST /packages/:name/owners (transfer)" do
+    test "transfers the package to the organization the form confirmed", %{
+      full_owner: full_owner,
+      maintainer: maintainer,
+      package: package
+    } do
+      organization = insert(:organization)
+
+      conn =
+        build_conn()
+        |> test_login(full_owner, sudo: true)
+        |> post("/packages/#{package.name}/owners", %{
+          "username" => organization.name,
+          "transfer_to" => organization.name,
+          "package_name" => package.name
+        })
+
+      assert redirected_to(conn) == "/packages/#{package.name}"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) ==
+               "#{package.name} transferred to #{organization.name}."
+
+      assert [%{user_id: user_id, level: "full"}] = Owners.all(package)
+      assert user_id == organization.user.id
+      refute Owners.get(package, full_owner)
+      refute Owners.get(package, maintainer)
+      assert Hexpm.Repo.get_by(Hexpm.Accounts.AuditLog, action: "owner.transfer")
+    end
+
+    test "transfers the package to a user the form confirmed as a full owner", %{
+      full_owner: full_owner,
+      maintainer: maintainer,
+      non_owner: non_owner,
+      package: package
+    } do
+      conn =
+        build_conn()
+        |> test_login(full_owner, sudo: true)
+        |> post("/packages/#{package.name}/owners", %{
+          "username" => non_owner.username,
+          "level" => "maintainer",
+          "transfer" => "true",
+          "transfer_to" => non_owner.username,
+          "package_name" => package.name
+        })
+
+      assert redirected_to(conn) == "/packages/#{package.name}"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) ==
+               "#{package.name} transferred to #{non_owner.username}."
+
+      assert [%{user_id: user_id, level: "full"}] = Owners.all(package)
+      assert user_id == non_owner.id
+      refute Owners.get(package, full_owner)
+      refute Owners.get(package, maintainer)
+    end
+
+    test "transferring to yourself removes the other owners", %{
+      full_owner: full_owner,
+      package: package
+    } do
+      conn =
+        build_conn()
+        |> test_login(full_owner, sudo: true)
+        |> post("/packages/#{package.name}/owners", %{
+          "username" => full_owner.username,
+          "transfer" => "true",
+          "transfer_to" => full_owner.username,
+          "package_name" => package.name
+        })
+
+      assert redirected_to(conn) == "/packages/#{package.name}/owners"
+      assert [%{user_id: user_id, level: "full"}] = Owners.all(package)
+      assert user_id == full_owner.id
+    end
+
+    test "an admin of the organization stays on the owners page", %{package: package} do
+      organization = insert(:organization)
+      admin = insert(:user)
+      insert(:package_owner, package: package, user: admin, level: "full")
+      insert(:organization_user, organization: organization, user: admin, role: "admin")
+
+      conn =
+        build_conn()
+        |> test_login(admin, sudo: true)
+        |> post("/packages/#{package.name}/owners", %{
+          "username" => organization.name,
+          "transfer_to" => organization.name,
+          "package_name" => package.name
+        })
+
+      assert redirected_to(conn) == "/packages/#{package.name}/owners"
+      assert [%{user_id: user_id}] = Owners.all(package)
+      assert user_id == organization.user.id
+    end
+
+    test "refuses an organization without the transfer confirmation", %{
+      full_owner: full_owner,
+      package: package
+    } do
+      organization = insert(:organization)
+
+      conn =
+        build_conn()
+        |> test_login(full_owner, sudo: true)
+        |> post("/packages/#{package.name}/owners", %{"username" => organization.name})
+
+      assert redirected_to(conn) == "/packages/#{package.name}/owners"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "Adding the organization #{organization.name} transfers #{package.name} to it. " <>
+                 "Confirm the transfer to add it."
+
+      assert length(Owners.all(package)) == 2
+      refute Owners.get(package, organization.user)
+    end
+
+    test "refuses a transfer without the package name typed", %{
+      full_owner: full_owner,
+      maintainer: maintainer,
+      package: package
+    } do
+      organization = insert(:organization)
+
+      for params <- [%{}, %{"package_name" => "#{package.name}x"}] do
+        conn =
+          build_conn()
+          |> test_login(full_owner, sudo: true)
+          |> post(
+            "/packages/#{package.name}/owners",
+            Map.merge(params, %{
+              "username" => organization.name,
+              "transfer_to" => organization.name
+            })
+          )
+
+        assert redirected_to(conn) == "/packages/#{package.name}/owners"
+
+        assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+                 "Type #{package.name} to confirm the transfer."
+      end
+
+      assert Owners.get(package, full_owner).level == "full"
+      assert Owners.get(package, maintainer).level == "maintainer"
+      refute Owners.get(package, organization.user)
+    end
+
+    # Each request is what the form posts when it's submitted between an edit
+    # and the form updating: the username changed after an organization's
+    # transfer warning, Transfer ownership unticked, and Transfer ownership
+    # ticked.
+    test "refuses a form submitted before it caught up with an edit", %{
+      full_owner: full_owner,
+      maintainer: maintainer,
+      non_owner: non_owner,
+      package: package
+    } do
+      organization = insert(:organization)
+
+      for params <- [
+            %{"transfer_to" => organization.name},
+            %{"transfer_to" => non_owner.username},
+            %{"transfer" => "true", "level" => "maintainer"}
+          ] do
+        conn =
+          build_conn()
+          |> test_login(full_owner, sudo: true)
+          |> post(
+            "/packages/#{package.name}/owners",
+            Map.put(params, "username", non_owner.username)
+          )
+
+        assert redirected_to(conn) == "/packages/#{package.name}/owners"
+
+        assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+                 "The form was submitted before it finished updating. Check it and submit it again."
+      end
+
+      assert Owners.get(package, full_owner).level == "full"
+      assert Owners.get(package, maintainer).level == "maintainer"
+      refute Owners.get(package, non_owner)
+      refute Hexpm.Repo.get_by(Hexpm.Accounts.AuditLog, action: "owner.transfer")
+    end
+  end
+
   describe "PUT /packages/:name/owners/:username (role change)" do
     test "full owner with sudo changes role", %{
       full_owner: full_owner,
@@ -697,6 +882,35 @@ defmodule HexpmWeb.PackageOwnerControllerTest do
         |> get("/packages/no-such-organization/#{package.name}/owners")
 
       assert conn.status == 404
+    end
+
+    test "can't be transferred, also to a member", %{
+      organization: organization,
+      repository: repository,
+      full_owner: full_owner,
+      package: package
+    } do
+      member = insert(:user)
+      insert(:organization_user, organization: organization, user: member, role: "read")
+
+      conn =
+        build_conn()
+        |> test_login(full_owner, sudo: true)
+        |> post("/packages/#{repository.name}/#{package.name}/owners", %{
+          "username" => member.username,
+          "transfer" => "true",
+          "transfer_to" => member.username,
+          "package_name" => package.name
+        })
+
+      assert redirected_to(conn) == "/packages/#{repository.name}/#{package.name}/owners"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "#{package.name} is part of the #{repository.name} organization, " <>
+                 "so it can't be transferred."
+
+      assert [%{user_id: user_id}] = Owners.all(package)
+      assert user_id == full_owner.id
     end
 
     test "an organization admin who owns nothing directly manages the owners", %{

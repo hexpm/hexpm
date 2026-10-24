@@ -636,6 +636,32 @@ defmodule HexpmWeb.API.OwnerControllerTest do
       assert Hexpm.Repo.aggregate(assoc(package, :owners), :count) == 2
     end
 
+    test "cannot transfer a private package", %{
+      user1: user1,
+      user2: user2,
+      repository: repository,
+      repository_package: package
+    } do
+      insert(:organization_user, organization: repository.organization, user: user1)
+      insert(:organization_user, organization: repository.organization, user: user2)
+
+      body =
+        build_conn()
+        |> put_req_header("authorization", key_for(user1))
+        |> put(
+          "/api/repos/#{repository.name}/packages/#{package.name}/owners/#{user2.username}",
+          %{"level" => "full", "transfer" => true}
+        )
+        |> json_response(422)
+
+      assert body["errors"]["username"] ==
+               "private packages belong to their organization and cannot be transferred"
+
+      assert [owner] = assoc(package, :owners) |> Hexpm.Repo.all()
+      assert owner.id == user1.id
+      refute Hexpm.Repo.get_by(AuditLog, action: "owner.transfer")
+    end
+
     test "add package owner using admin permission and without package owner", %{
       user2: user2,
       repository: repository,
