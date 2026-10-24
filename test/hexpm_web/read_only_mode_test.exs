@@ -50,15 +50,13 @@ defmodule HexpmWeb.ReadOnlyModeTest do
 
   test "hold mode parks API writes and completes them when writes resume" do
     Ecto.Adapters.SQL.Sandbox.mode(Hexpm.RepoBase, {:shared, self()})
-    user = insert(:user)
-    key = insert(:key, user: user)
+    user = insert(:user_with_tfa)
+    conn = test_oauth_login(build_conn(), user)
     WriteMode.configure!(:hold)
 
     task =
       Task.async(fn ->
-        build_conn()
-        |> put_req_header("authorization", key.user_secret)
-        |> post("/api/keys", %{name: "held-key"})
+        post(conn, "/api/keys", %{name: "held-key"})
       end)
 
     assert nil == Task.yield(task, 300)

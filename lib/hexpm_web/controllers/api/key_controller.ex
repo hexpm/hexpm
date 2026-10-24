@@ -1,7 +1,11 @@
 defmodule HexpmWeb.API.KeyController do
   use HexpmWeb, :controller
 
+  alias Hexpm.OAuth.Token
+
   plug :fetch_organization
+
+  plug :refuse_key_credential when action == :create
 
   plug :authorize,
        [
@@ -58,7 +62,6 @@ defmodule HexpmWeb.API.KeyController do
 
   def create(conn, params) do
     user_or_organization = conn.assigns.organization || conn.assigns.current_user
-    authing_key = authing_key(conn)
 
     case Keys.create(user_or_organization, params, audit: audit_data(conn)) do
       {:ok, %{key: key}} ->
@@ -68,7 +71,7 @@ defmodule HexpmWeb.API.KeyController do
         |> put_resp_header("location", location)
         |> api_cache(:private)
         |> put_status(201)
-        |> render(:show, key: key, authing_key: authing_key)
+        |> render(:show, key: key, authing_key: nil)
 
       {:error, :key, changeset, _} ->
         validation_failed(conn, changeset)
@@ -103,6 +106,32 @@ defmodule HexpmWeb.API.KeyController do
 
   defp authing_key(%{assigns: %{auth_credential: %Key{} = key}}), do: key
   defp authing_key(_conn), do: nil
+
+  # Keys only come from a sign-in, so revoking a key leaves behind no key it
+  # created. A client credentials token was exchanged for a key and counts as one.
+  defp refuse_key_credential(conn, _opts) do
+    case conn.assigns.auth_credential do
+      %Key{} -> refuse_key_credential(conn)
+      %Token{grant_type: "client_credentials"} -> refuse_key_credential(conn)
+      _credential -> conn
+    end
+  end
+
+  defp refuse_key_credential(%{assigns: %{organization: %Organization{} = organization}} = conn) do
+    forbidden(
+      conn,
+      "API keys cannot create API keys, create the key on " <>
+        url(~p"/dashboard/orgs/#{organization}") <>
+        " or with mix hex.organization key #{organization.name} generate after mix hex.user auth"
+    )
+  end
+
+  defp refuse_key_credential(conn) do
+    forbidden(
+      conn,
+      "API keys cannot create API keys, create the key on " <> url(~p"/dashboard/keys")
+    )
+  end
 
   defp require_organization_path(conn, _opts) do
     if conn.assigns.current_organization && !conn.assigns.organization do
