@@ -356,7 +356,7 @@ defmodule Hexpm.Repository.Releases do
       RegistryWorker.enqueue_package(package)
     end)
     |> Repo.transaction(timeout: @publish_timeout)
-    |> retire_result()
+    |> retire_all_result()
   end
 
   def unretire(package, release, audit: audit_data) do
@@ -391,6 +391,10 @@ defmodule Hexpm.Repository.Releases do
   defp retire_result({:ok, _changes}), do: :ok
 
   defp retire_result(result), do: result
+
+  defp retire_all_result({:ok, %{releases: releases}}), do: {:ok, length(releases)}
+
+  defp retire_all_result(result), do: result
 
   defp validate_retirement(params) do
     changeset = Release.retire(%Release{}, params)

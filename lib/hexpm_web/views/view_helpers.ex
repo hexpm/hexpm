@@ -52,6 +52,22 @@ defmodule HexpmWeb.ViewHelpers do
     ~p"/packages/#{package.repository}/#{package}/versions"
   end
 
+  def path_for_retire_all(%Package{repository_id: 1} = package) do
+    ~p"/packages/#{package}/versions/retire"
+  end
+
+  def path_for_retire_all(%Package{} = package) do
+    ~p"/packages/#{package.repository}/#{package}/versions/retire"
+  end
+
+  def path_for_retirement(%Package{repository_id: 1} = package, release) do
+    ~p"/packages/#{package}/#{release}/retire"
+  end
+
+  def path_for_retirement(%Package{} = package, release) do
+    ~p"/packages/#{package.repository}/#{package}/#{release}/retire"
+  end
+
   # The release URL itself renders the readme.
   def path_for_doc(%Package{} = package, release, :readme),
     do: path_for_release(package, release)

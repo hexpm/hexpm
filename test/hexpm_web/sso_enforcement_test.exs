@@ -120,6 +120,18 @@ defmodule HexpmWeb.SSOEnforcementTest do
                  URI.encode_www_form(path)
     end
 
+    test "send a governed member off the retire page too", context do
+      require_sso(context)
+      {conn, _session} = login(enable_tfa(context.member))
+
+      path = "/packages/#{context.repository.name}/#{context.package.name}/1.0.0/retire"
+      conn = get(conn, path)
+
+      assert redirected_to(conn) ==
+               "/organizations/#{context.organization.name}/authenticate?return=" <>
+                 URI.encode_www_form(path)
+    end
+
     test "leave the public repository alone", context do
       require_sso(context)
       public = insert(:package)
@@ -816,6 +828,60 @@ defmodule HexpmWeb.SSOEnforcementTest do
       assert redirected_to(conn) ==
                "/organizations/#{context.organization.name}/authenticate?return=" <>
                  URI.encode_www_form(path)
+    end
+
+    test "sends a governed member off the retire page", context do
+      require_sso(context)
+      {conn, _session} = login(enable_tfa(context.member))
+
+      path = "/packages/#{context.public_package.name}/1.0.0/retire"
+      conn = get(conn, path)
+
+      assert redirected_to(conn) ==
+               "/organizations/#{context.organization.name}/authenticate?return=" <>
+                 URI.encode_www_form(path)
+    end
+
+    test "refuses retiring a release on the web from a session with no organization access",
+         context do
+      require_sso(context)
+      {conn, _session} = login(enable_tfa(context.member))
+
+      path = "/packages/#{context.public_package.name}/1.0.0/retire"
+
+      conn =
+        post(conn, path, %{"retirement" => %{"reason" => "security", "message" => "Message"}})
+
+      assert redirected_to(conn) =~ "/organizations/#{context.organization.name}/authenticate"
+      refute Hexpm.Repository.Releases.get(context.public_package, "1.0.0").retirement
+    end
+
+    test "refuses retiring every release on the web from a session with no organization access",
+         context do
+      require_sso(context)
+      {conn, _session} = login(enable_tfa(context.member))
+
+      path = "/packages/#{context.public_package.name}/versions/retire"
+
+      conn =
+        post(conn, path, %{"retirement" => %{"reason" => "security", "message" => "Message"}})
+
+      assert redirected_to(conn) =~ "/organizations/#{context.organization.name}/authenticate"
+      refute Hexpm.Repository.Releases.get(context.public_package, "1.0.0").retirement
+    end
+
+    test "retires a release on the web once the member has authenticated", context do
+      require_sso(context)
+      {conn, session} = login(enable_tfa(context.member))
+      authenticate(context, context.member, session)
+
+      path = "/packages/#{context.public_package.name}/1.0.0/retire"
+
+      conn =
+        post(conn, path, %{"retirement" => %{"reason" => "security", "message" => "Message"}})
+
+      assert redirected_to(conn) == "/packages/#{context.public_package.name}/versions"
+      assert Hexpm.Repository.Releases.get(context.public_package, "1.0.0").retirement
     end
 
     test "shows a member who has authenticated the owners page without the controls", context do

@@ -13,6 +13,7 @@ import { SubmitOnce } from "./hooks/submit_once";
 import { AutoSubmit } from "./hooks/auto_submit";
 import { NavigateOnChange } from "./hooks/navigate_on_change";
 import { ConfirmSubmit } from "./hooks/confirm_submit";
+import { ConfirmModal } from "./hooks/confirm_modal";
 import { initializeTheme, syncReadmeFrameTheme, resolveTheme } from "./theme";
 import { SearchShortcut } from "./hooks/search_shortcut";
 import { SearchInputSync } from "./hooks/search_input_sync";
@@ -44,6 +45,7 @@ let Hooks = {
   AutoSubmit,
   NavigateOnChange,
   ConfirmSubmit,
+  ConfirmModal,
   SearchShortcut,
   SearchInputSync,
   ToggleGroup,
