@@ -96,12 +96,25 @@ defmodule HexpmWeb.AuthController do
               provider,
               provider_uid,
               auth.info.email,
+              email_verified?(auth),
               auth.info.name,
               auth.info.nickname
             )
         end
     end
   end
+
+  # GitHub lists every address on the account, the public profile address
+  # included, each with whether it has been verified.
+  defp email_verified?(%Ueberauth.Auth{
+         info: %{email: email},
+         extra: %{raw_info: %{user: %{"emails" => emails}}}
+       })
+       when is_binary(email) and is_list(emails) do
+    Enum.any?(emails, &(&1["email"] == email and &1["verified"] == true))
+  end
+
+  defp email_verified?(_auth), do: false
 
   defp handle_existing_user_login(conn, user) do
     {conn, return} = pop_return_path(conn)
@@ -123,6 +136,7 @@ defmodule HexpmWeb.AuthController do
          provider,
          provider_uid,
          provider_email,
+         provider_email_verified,
          provider_name,
          provider_nickname
        ) do
@@ -135,6 +149,7 @@ defmodule HexpmWeb.AuthController do
           provider,
           provider_uid,
           provider_email,
+          provider_email_verified,
           provider_name,
           provider_nickname
         )
@@ -202,6 +217,7 @@ defmodule HexpmWeb.AuthController do
          provider,
          provider_uid,
          provider_email,
+         provider_email_verified,
          provider_name,
          provider_nickname
        ) do
@@ -211,6 +227,7 @@ defmodule HexpmWeb.AuthController do
       provider: provider,
       provider_uid: provider_uid,
       provider_email: provider_email,
+      provider_email_verified: provider_email_verified,
       provider_name: provider_name,
       provider_nickname: provider_nickname
     })
@@ -262,6 +279,7 @@ defmodule HexpmWeb.AuthController do
     provider = oauth_data["provider"]
     provider_uid = oauth_data["provider_uid"]
     provider_email = oauth_data["provider_email"]
+    provider_email_verified = oauth_data["provider_email_verified"] == true
     provider_name = oauth_data["provider_name"]
 
     case Users.add_from_oauth_with_provider(
@@ -271,16 +289,23 @@ defmodule HexpmWeb.AuthController do
            provider,
            provider_uid,
            audit: audit_data(conn),
-           confirmed?: true
+           confirmed?: provider_email_verified
          ) do
       {:ok, user} ->
         {conn, return} = pop_return_path(conn)
+
+        flash =
+          if provider_email_verified do
+            "Account created successfully!"
+          else
+            "Account created successfully! A verification email has been sent to #{provider_email}."
+          end
 
         conn
         |> delete_session("pending_oauth")
         |> start_session_internal(user)
         |> HexpmWeb.Plugs.Sudo.set_sudo_authenticated()
-        |> put_flash(:info, "Account created successfully!")
+        |> put_flash(:info, flash)
         |> redirect(to: return || ~p"/users/#{user}")
 
       {:error, changeset} ->
