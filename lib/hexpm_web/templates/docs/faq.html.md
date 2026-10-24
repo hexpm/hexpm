@@ -72,7 +72,11 @@ reserved and can never be reused by users.
 Yes, if you would like to reassign ownership of a package to a different user or to another
 username, add the new owner on the package's Owners tab with "Transfer ownership" checked, or use
 the [`mix hex.owner transfer`](https://hexdocs.pm/hex/Mix.Tasks.Hex.Owner.html) task. A transfer
-makes the new owner the package's only owner and removes the package's workload identities.
+makes the new owner the package's only owner and removes the package's workload identities. It
+can't be undone.
+
+A private package belongs to its organization and can't be transferred. Members of the
+organization can be added as its owners.
 
 #### How should I name my packages?
 

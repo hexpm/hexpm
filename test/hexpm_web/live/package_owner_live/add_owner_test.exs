@@ -186,6 +186,10 @@ defmodule HexpmWeb.PackageOwnerLive.AddOwnerTest do
 
       refute submit_button_disabled?(html)
 
+      assert document |> LazyHTML.query("#add-owner-transfer-irreversible") |> text() ==
+               "This can't be undone. After the transfer you no longer have any " <>
+                 "ownership access to #{package.name}."
+
       warning = document |> LazyHTML.query("#add-owner-transfer") |> text()
 
       assert warning =~
@@ -212,6 +216,41 @@ defmodule HexpmWeb.PackageOwnerLive.AddOwnerTest do
                  "#{owning_organization.name}: acme/owning-identity (publish.yml)"
 
       refute warning =~ "acme/target-identity"
+    end
+
+    test "says a member of the new organization keeps access through it", %{
+      conn: conn,
+      session: session,
+      package: package,
+      current_user: current_user,
+      organization: organization
+    } do
+      insert(:organization_user, organization: organization, user: current_user, role: "write")
+      {:ok, view, _html} = live_isolated(conn, AddOwner, session: session)
+
+      assert view
+             |> form("#add-owner-form", username: organization.name)
+             |> render_change()
+             |> LazyHTML.from_fragment()
+             |> LazyHTML.query("#add-owner-transfer-irreversible")
+             |> text() ==
+               "This can't be undone. After the transfer you only have access to " <>
+                 "#{package.name} through your membership of #{organization.name}."
+    end
+
+    test "transferring to yourself only says it can't be undone", %{
+      conn: conn,
+      session: session,
+      current_user: current_user
+    } do
+      {:ok, view, _html} = live_isolated(conn, AddOwner, session: session)
+
+      assert view
+             |> form("#add-owner-form", username: current_user.username, transfer: "true")
+             |> render_change()
+             |> LazyHTML.from_fragment()
+             |> LazyHTML.query("#add-owner-transfer-irreversible")
+             |> text() == "This can't be undone."
     end
 
     test "already owning the package is not listed as removed", %{
@@ -398,32 +437,103 @@ defmodule HexpmWeb.PackageOwnerLive.AddOwnerTest do
     end
   end
 
-  test "refuses an organization for a private package", %{
-    conn: conn,
-    current_user: current_user
-  } do
-    repository = insert(:repository)
+  describe "a private package" do
+    setup %{current_user: current_user} do
+      repository = insert(:repository)
 
-    insert(:organization_user,
-      organization: repository.organization,
-      user: current_user,
-      role: "admin"
-    )
+      insert(:organization_user,
+        organization: repository.organization,
+        user: current_user,
+        role: "admin"
+      )
 
-    package = insert(:package, repository_id: repository.id)
-    organization = insert(:organization)
-    session = %{"package_id" => package.id}
+      package = insert(:package, repository_id: repository.id)
 
-    {:ok, view, _html} = live_isolated(conn, AddOwner, session: session)
+      %{
+        repository: repository,
+        package: package,
+        session: %{"package_id" => package.id}
+      }
+    end
 
-    html =
-      view
-      |> form("#add-owner-form", username: organization.name, level: "maintainer")
-      |> render_change()
+    test "can't be transferred", %{
+      conn: conn,
+      session: session,
+      package: package,
+      repository: repository
+    } do
+      {:ok, _view, html} = live_isolated(conn, AddOwner, session: session)
+      document = LazyHTML.from_fragment(html)
 
-    assert html =~ "is an organization. Organizations can only own public packages."
-    refute html =~ ~s(name="transfer_to")
-    assert submit_button_disabled?(html)
+      assert document |> LazyHTML.query("#add-owner-transfer-checkbox") |> Enum.empty?()
+
+      assert document |> LazyHTML.query("#add-owner-private-note") |> text() ==
+               "#{package.name} is part of the #{repository.name} organization, " <>
+                 "so it can't be transferred. Only members of #{repository.name} can own it."
+    end
+
+    test "refuses an organization", %{
+      conn: conn,
+      session: session,
+      package: package,
+      repository: repository
+    } do
+      organization = insert(:organization)
+      {:ok, view, _html} = live_isolated(conn, AddOwner, session: session)
+
+      html =
+        view
+        |> form("#add-owner-form", username: organization.name, level: "maintainer")
+        |> render_change()
+
+      assert html =~
+               "is an organization. Only members of #{repository.name} can own #{package.name}."
+
+      refute html =~ ~s(name="transfer_to")
+      assert submit_button_disabled?(html)
+    end
+
+    test "refuses a user who isn't a member", %{
+      conn: conn,
+      session: session,
+      package: package,
+      repository: repository
+    } do
+      outsider = insert(:user)
+      {:ok, view, _html} = live_isolated(conn, AddOwner, session: session)
+
+      html =
+        view
+        |> form("#add-owner-form", username: outsider.username, level: "maintainer")
+        |> render_change()
+
+      assert html |> LazyHTML.from_fragment() |> LazyHTML.query("#add-owner-modal") |> text() =~
+               "isn't a member of #{repository.name}. " <>
+                 "Only members of #{repository.name} can own #{package.name}."
+
+      assert submit_button_disabled?(html)
+    end
+
+    test "adds a member without a transfer", %{
+      conn: conn,
+      session: session,
+      repository: repository
+    } do
+      member = insert(:user)
+      insert(:organization_user, organization: repository.organization, user: member)
+      {:ok, view, _html} = live_isolated(conn, AddOwner, session: session)
+
+      html =
+        render_change(view, "lookup", %{
+          "username" => member.username,
+          "level" => "maintainer",
+          "transfer" => "true"
+        })
+
+      assert html =~ ~s(href="/users/#{member.username}")
+      refute html =~ ~s(name="transfer_to")
+      refute submit_button_disabled?(html)
+    end
   end
 
   test "shows nothing to someone who doesn't manage the package", %{session: session} do

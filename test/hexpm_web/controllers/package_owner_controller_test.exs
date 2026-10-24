@@ -884,6 +884,35 @@ defmodule HexpmWeb.PackageOwnerControllerTest do
       assert conn.status == 404
     end
 
+    test "can't be transferred, also to a member", %{
+      organization: organization,
+      repository: repository,
+      full_owner: full_owner,
+      package: package
+    } do
+      member = insert(:user)
+      insert(:organization_user, organization: organization, user: member, role: "read")
+
+      conn =
+        build_conn()
+        |> test_login(full_owner, sudo: true)
+        |> post("/packages/#{repository.name}/#{package.name}/owners", %{
+          "username" => member.username,
+          "transfer" => "true",
+          "transfer_to" => member.username,
+          "package_name" => package.name
+        })
+
+      assert redirected_to(conn) == "/packages/#{repository.name}/#{package.name}/owners"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "#{package.name} is part of the #{repository.name} organization, " <>
+                 "so it can't be transferred."
+
+      assert [%{user_id: user_id}] = Owners.all(package)
+      assert user_id == full_owner.id
+    end
+
     test "an organization admin who owns nothing directly manages the owners", %{
       organization: organization,
       repository: repository,

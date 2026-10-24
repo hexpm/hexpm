@@ -92,6 +92,15 @@ defmodule HexpmWeb.PackageOwnerController do
         |> put_flash(:error, "#{username} has not verified their primary email.")
         |> redirect(to: ViewHelpers.path_for_owners(package))
 
+      {:error, :private_transfer} ->
+        conn
+        |> put_flash(
+          :error,
+          "#{package.name} is part of the #{package.repository.name} organization, " <>
+            "so it can't be transferred."
+        )
+        |> redirect(to: ViewHelpers.path_for_owners(package))
+
       {:error, :not_organization_transfer} ->
         conn
         |> put_flash(

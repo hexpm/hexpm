@@ -54,9 +54,10 @@ defmodule HexpmWeb.PackageOwnerLive.AddOwner do
   defp handle_managed("back", _params, socket), do: assign(socket, :confirming, false)
 
   defp lookup(socket, params) do
+    package = socket.assigns.package
     username = String.trim(params["username"] || "")
     level = params["level"] || socket.assigns.level
-    transfer = params["transfer"] == "true"
+    transfer = params["transfer"] == "true" and public?(package)
 
     looked_up =
       cond do
@@ -72,10 +73,20 @@ defmodule HexpmWeb.PackageOwnerLive.AddOwner do
               :not_found
 
             %User{organization_id: nil} = user ->
-              if User.verified_primary_email?(user), do: user, else: :unverified
+              cond do
+                not public?(package) and
+                    not Organizations.access?(package.repository.organization, user, "read") ->
+                  :not_member
+
+                not User.verified_primary_email?(user) ->
+                  :unverified
+
+                true ->
+                  user
+              end
 
             user ->
-              if socket.assigns.package.repository_id == 1, do: user, else: :organization
+              if public?(package), do: user, else: :organization
           end
       end
 
@@ -108,6 +119,7 @@ defmodule HexpmWeb.PackageOwnerLive.AddOwner do
 
     assign(socket,
       transfer_to: transfer_to,
+      actor_access: actor_access(transfer_to, socket.assigns.current_user),
       removed_owners: Enum.reject(Owners.all(package, :user), &(&1.user_id == transfer_to.id)),
       workload_identities: Owners.workload_identities(package),
       stopped_workload_identities:
@@ -117,6 +129,17 @@ defmodule HexpmWeb.PackageOwnerLive.AddOwner do
         )
     )
   end
+
+  # What the acting user still has once the package is transferred.
+  defp actor_access(%User{id: id}, %User{id: id}), do: :self
+
+  defp actor_access(%User{organization: %Organization{} = organization}, current_user) do
+    if Organizations.access?(organization, current_user, "read"), do: :member, else: :none
+  end
+
+  defp actor_access(_transfer_to, _current_user), do: :none
+
+  defp public?(package), do: package.repository_id == 1
 
   @impl true
   def render(%{manage?: false} = assigns) do
@@ -203,7 +226,18 @@ defmodule HexpmWeb.PackageOwnerLive.AddOwner do
               </div>
             </div>
 
-            <label class="flex items-start gap-3 cursor-pointer has-[:disabled]:cursor-not-allowed">
+            <p
+              :if={not public?(@package)}
+              id="add-owner-private-note"
+              class="text-xs text-grey-500 dark:text-grey-300"
+            >
+              {@package.name} is part of the {@package.repository.name} organization, so it can't be transferred. Only members of {@package.repository.name} can own it.
+            </p>
+
+            <label
+              :if={public?(@package)}
+              class="flex items-start gap-3 cursor-pointer has-[:disabled]:cursor-not-allowed"
+            >
               <input
                 type="checkbox"
                 id="add-owner-transfer-checkbox"
@@ -316,7 +350,16 @@ defmodule HexpmWeb.PackageOwnerLive.AddOwner do
     ~H"""
     <p class="text-sm text-red-600 dark:text-red-400">
       <span class="font-medium">{@username}</span>
-      is an organization. Organizations can only own public packages.
+      is an organization. Only members of {@package.repository.name} can own {@package.name}.
+    </p>
+    """
+  end
+
+  defp render_preview(%{looked_up_user: :not_member} = assigns) do
+    ~H"""
+    <p class="text-sm text-red-600 dark:text-red-400">
+      <span class="font-medium">{@username}</span>
+      isn't a member of {@package.repository.name}. Only members of {@package.repository.name} can own {@package.name}.
     </p>
     """
   end
@@ -367,6 +410,9 @@ defmodule HexpmWeb.PackageOwnerLive.AddOwner do
       id="add-owner-transfer"
       class="rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 p-4 space-y-2 text-sm text-amber-900 dark:text-amber-100"
     >
+      <p id="add-owner-transfer-irreversible" class="font-semibold">
+        This can't be undone. {actor_access_text(assigns)}
+      </p>
       <p>
         {if User.organization?(@transfer_to),
           do: "Adding an organization transfers the package to it. "}{@transfer_to.username} becomes the only owner of {@package.name}.
@@ -400,6 +446,16 @@ defmodule HexpmWeb.PackageOwnerLive.AddOwner do
     </div>
     """
   end
+
+  defp actor_access_text(%{actor_access: :none} = assigns),
+    do: "After the transfer you no longer have any ownership access to #{assigns.package.name}."
+
+  defp actor_access_text(%{actor_access: :member} = assigns),
+    do:
+      "After the transfer you only have access to #{assigns.package.name} " <>
+        "through your membership of #{assigns.transfer_to.username}."
+
+  defp actor_access_text(%{actor_access: :self}), do: nil
 
   defp organization?(%User{} = user), do: User.organization?(user)
   defp organization?(_looked_up_user), do: false

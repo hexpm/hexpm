@@ -25,6 +25,26 @@ defmodule Hexpm.Repository.OwnersTest do
       assert Owners.get(package, user).level == "full"
     end
 
+    test "refuses to transfer a private package, also to a member", %{owner: owner} do
+      repository = insert(:repository)
+      member = insert(:user)
+      insert(:organization_user, organization: repository.organization, user: owner)
+      insert(:organization_user, organization: repository.organization, user: member)
+
+      package =
+        insert(:package,
+          repository_id: repository.id,
+          package_owners: [build(:package_owner, user: owner, level: "full")]
+        )
+        |> Repo.preload(repository: :organization)
+
+      assert {:error, :private_transfer} =
+               Owners.add(package, member, %{"transfer" => true}, audit: audit_data(owner))
+
+      assert [%{user_id: user_id}] = Owners.all(package)
+      assert user_id == owner.id
+    end
+
     test "refuses a user whose primary email is unverified", %{owner: owner, package: package} do
       user = insert(:user, emails: [build(:email, verified: false)])
 
