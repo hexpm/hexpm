@@ -180,6 +180,10 @@ defmodule HexpmWeb.PackageOwnerLive.AddOwnerTest do
       assert document |> LazyHTML.query(~s(button[type="submit"])) |> text() ==
                "Transfer to #{organization.name}"
 
+      assert document
+             |> LazyHTML.query("#add-owner-form")
+             |> LazyHTML.attribute("phx-submit") == ["confirm_transfer"]
+
       refute submit_button_disabled?(html)
 
       warning = document |> LazyHTML.query("#add-owner-transfer") |> text()
@@ -298,6 +302,74 @@ defmodule HexpmWeb.PackageOwnerLive.AddOwnerTest do
              |> LazyHTML.attribute("value") == ["maintainer"]
 
       assert document |> LazyHTML.query(~s(button[type="submit"])) |> text() == "Add as owner"
+      assert document |> LazyHTML.query("#add-owner-form[phx-submit]") |> Enum.empty?()
+    end
+
+    test "Transfer to <name> asks for the package name before posting", %{
+      conn: conn,
+      session: session,
+      package: package,
+      organization: organization
+    } do
+      {:ok, view, _html} = live_isolated(conn, AddOwner, session: session)
+
+      view
+      |> form("#add-owner-form", username: organization.name)
+      |> render_change()
+
+      document =
+        view
+        |> form("#add-owner-form")
+        |> render_submit()
+        |> LazyHTML.from_fragment()
+
+      assert document |> LazyHTML.query("#add-owner-modal-title") |> text() ==
+               "Transfer #{package.name} to #{organization.name}?"
+
+      assert [input] = document |> LazyHTML.query("#add-owner-confirm-package") |> Enum.to_list()
+      assert LazyHTML.attribute(input, "name") == ["package_name"]
+      assert LazyHTML.attribute(input, "pattern") == [package.name]
+      assert LazyHTML.attribute(input, "required") != []
+
+      assert document
+             |> LazyHTML.query(~s(input[type="hidden"][name="transfer_to"]))
+             |> LazyHTML.attribute("value") == [organization.name]
+
+      assert document |> LazyHTML.query("#add-owner-transfer") |> Enum.count() == 1
+      assert document |> LazyHTML.query("#add-owner-form[phx-submit]") |> Enum.empty?()
+
+      assert document |> LazyHTML.query(~s(button[type="submit"])) |> text() ==
+               "Transfer #{package.name}"
+
+      # Typing the package name doesn't leave the confirm step.
+      assert render_change(view, "lookup", %{"package_name" => package.name}) =~
+               ~s(id="add-owner-confirm-package")
+    end
+
+    test "Back leaves the confirm step", %{
+      conn: conn,
+      session: session,
+      organization: organization
+    } do
+      {:ok, view, _html} = live_isolated(conn, AddOwner, session: session)
+
+      view
+      |> form("#add-owner-form", username: organization.name)
+      |> render_change()
+
+      view |> form("#add-owner-form") |> render_submit()
+
+      document =
+        view
+        |> element("button", "Back")
+        |> render_click()
+        |> LazyHTML.from_fragment()
+
+      assert document |> LazyHTML.query("#add-owner-confirm-package") |> Enum.empty?()
+      assert document |> LazyHTML.query("#add-owner-modal-title") |> text() == "Add owner"
+
+      assert document |> LazyHTML.query(~s(button[type="submit"])) |> text() ==
+               "Transfer to #{organization.name}"
     end
 
     test "leaves transfer mode when the username changes to a user", %{

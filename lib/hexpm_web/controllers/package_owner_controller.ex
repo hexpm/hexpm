@@ -42,6 +42,11 @@ defmodule HexpmWeb.PackageOwnerController do
         )
         |> redirect(to: ViewHelpers.path_for_owners(package))
 
+      mode == :transfer and params["package_name"] != package.name ->
+        conn
+        |> put_flash(:error, "Type #{package.name} to confirm the transfer.")
+        |> redirect(to: ViewHelpers.path_for_owners(package))
+
       true ->
         create_owner(conn, package, user, username, params, mode == :transfer)
     end

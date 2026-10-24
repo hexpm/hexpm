@@ -449,7 +449,8 @@ defmodule HexpmWeb.PackageOwnerControllerTest do
         |> test_login(full_owner, sudo: true)
         |> post("/packages/#{package.name}/owners", %{
           "username" => organization.name,
-          "transfer_to" => organization.name
+          "transfer_to" => organization.name,
+          "package_name" => package.name
         })
 
       assert redirected_to(conn) == "/packages/#{package.name}"
@@ -477,7 +478,8 @@ defmodule HexpmWeb.PackageOwnerControllerTest do
           "username" => non_owner.username,
           "level" => "maintainer",
           "transfer" => "true",
-          "transfer_to" => non_owner.username
+          "transfer_to" => non_owner.username,
+          "package_name" => package.name
         })
 
       assert redirected_to(conn) == "/packages/#{package.name}"
@@ -501,7 +503,8 @@ defmodule HexpmWeb.PackageOwnerControllerTest do
         |> post("/packages/#{package.name}/owners", %{
           "username" => full_owner.username,
           "transfer" => "true",
-          "transfer_to" => full_owner.username
+          "transfer_to" => full_owner.username,
+          "package_name" => package.name
         })
 
       assert redirected_to(conn) == "/packages/#{package.name}/owners"
@@ -520,7 +523,8 @@ defmodule HexpmWeb.PackageOwnerControllerTest do
         |> test_login(admin, sudo: true)
         |> post("/packages/#{package.name}/owners", %{
           "username" => organization.name,
-          "transfer_to" => organization.name
+          "transfer_to" => organization.name,
+          "package_name" => package.name
         })
 
       assert redirected_to(conn) == "/packages/#{package.name}/owners"
@@ -546,6 +550,36 @@ defmodule HexpmWeb.PackageOwnerControllerTest do
                  "Confirm the transfer to add it."
 
       assert length(Owners.all(package)) == 2
+      refute Owners.get(package, organization.user)
+    end
+
+    test "refuses a transfer without the package name typed", %{
+      full_owner: full_owner,
+      maintainer: maintainer,
+      package: package
+    } do
+      organization = insert(:organization)
+
+      for params <- [%{}, %{"package_name" => "#{package.name}x"}] do
+        conn =
+          build_conn()
+          |> test_login(full_owner, sudo: true)
+          |> post(
+            "/packages/#{package.name}/owners",
+            Map.merge(params, %{
+              "username" => organization.name,
+              "transfer_to" => organization.name
+            })
+          )
+
+        assert redirected_to(conn) == "/packages/#{package.name}/owners"
+
+        assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+                 "Type #{package.name} to confirm the transfer."
+      end
+
+      assert Owners.get(package, full_owner).level == "full"
+      assert Owners.get(package, maintainer).level == "maintainer"
       refute Owners.get(package, organization.user)
     end
 

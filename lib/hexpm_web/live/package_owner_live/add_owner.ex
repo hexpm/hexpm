@@ -22,20 +22,36 @@ defmodule HexpmWeb.PackageOwnerLive.AddOwner do
       |> assign(:transfer, false)
       |> assign(:looked_up_user, nil)
       |> assign(:transfer_to, nil)
+      |> assign(:confirming, false)
 
     {:ok, assign(socket, :manage?, manage?(socket)), layout: false}
   end
 
   # The socket outlives the page that authorized it, and the user is resolved
-  # again before every event, so access is checked again before each lookup.
+  # again before every event, so access is checked again before each event.
   @impl true
-  def handle_event("lookup", params, socket) do
+  def handle_event(event, params, socket) do
     if manage?(socket) do
-      {:noreply, lookup(socket, params)}
+      {:noreply, handle_managed(event, params, socket)}
     else
-      {:noreply, assign(socket, manage?: false, transfer_to: nil)}
+      {:noreply, assign(socket, manage?: false, transfer_to: nil, confirming: false)}
     end
   end
+
+  # The confirm step only changes the typed package name.
+  defp handle_managed("lookup", _params, %{assigns: %{confirming: true}} = socket), do: socket
+  defp handle_managed("lookup", params, socket), do: lookup(socket, params)
+
+  defp handle_managed("confirm_transfer", _params, %{assigns: %{transfer_to: nil}} = socket),
+    do: socket
+
+  defp handle_managed("confirm_transfer", _params, socket) do
+    socket
+    |> assign_transfer(socket.assigns.transfer_to)
+    |> assign(:confirming, true)
+  end
+
+  defp handle_managed("back", _params, socket), do: assign(socket, :confirming, false)
 
   defp lookup(socket, params) do
     username = String.trim(params["username"] || "")
@@ -118,15 +134,25 @@ defmodule HexpmWeb.PackageOwnerLive.AddOwner do
         {icon(:heroicon, "plus", class: "w-4 h-4")} Add owner
       </.button>
 
-      <.modal id="add-owner-modal" title="Add owner" max_width="md">
+      <.modal
+        id="add-owner-modal"
+        title={
+          if @confirming,
+            do: "Transfer #{@package.name} to #{@transfer_to.username}?",
+            else: "Add owner"
+        }
+        max_width="md"
+      >
+        <%!-- A transfer asks for the package name first, then posts the form --%>
         <.sudo_form
           current_user={@current_user}
           action={ViewHelpers.path_for_owners(@package)}
           method="post"
           id="add-owner-form"
           phx-change="lookup"
+          phx-submit={if @transfer_to && not @confirming, do: "confirm_transfer"}
         >
-          <div class="space-y-4">
+          <div class={["space-y-4", @confirming && "hidden"]}>
             <div>
               <label
                 for="add-owner-username"
@@ -201,23 +227,59 @@ defmodule HexpmWeb.PackageOwnerLive.AddOwner do
               {render_preview(assigns)}
             </div>
 
-            <%= if @transfer_to do %>
-              <input type="hidden" name="transfer_to" value={@transfer_to.username} />
-              {render_transfer(assigns)}
-            <% end %>
+            {if @transfer_to && not @confirming, do: render_transfer(assigns)}
+          </div>
+
+          <input :if={@transfer_to} type="hidden" name="transfer_to" value={@transfer_to.username} />
+
+          <div :if={@confirming} class="space-y-4">
+            {render_transfer(assigns)}
+
+            <div>
+              <label
+                for="add-owner-confirm-package"
+                class="block text-small font-medium text-grey-900 dark:text-grey-100 mb-[6px]"
+              >
+                Type <strong>{@package.name}</strong> to confirm
+              </label>
+              <input
+                type="text"
+                id="add-owner-confirm-package"
+                name="package_name"
+                placeholder={@package.name}
+                autocomplete="off"
+                required
+                pattern={@package.name}
+                title={"Please type '#{@package.name}' to confirm"}
+                class="w-full h-10 text-sm bg-white dark:bg-grey-700 border border-grey-200 dark:border-grey-600 rounded-lg px-3 text-grey-800 dark:text-white placeholder:text-grey-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
+            </div>
           </div>
 
           <div class="flex justify-end gap-3 mt-6">
-            <.button type="button" variant="secondary" phx-click={hide_modal("add-owner-modal")}>
-              Cancel
-            </.button>
-            <.button
-              type="submit"
-              variant={if @transfer_to, do: "danger", else: "primary"}
-              disabled={not match?(%User{}, @looked_up_user)}
-            >
-              {if @transfer_to, do: "Transfer to #{@transfer_to.username}", else: "Add as owner"}
-            </.button>
+            <%= if @confirming do %>
+              <.button type="button" variant="secondary" phx-click="back">
+                Back
+              </.button>
+              <.button type="submit" variant="danger">
+                Transfer {@package.name}
+              </.button>
+            <% else %>
+              <.button
+                type="button"
+                variant="secondary"
+                phx-click={hide_modal("add-owner-modal")}
+              >
+                Cancel
+              </.button>
+              <.button
+                type="submit"
+                variant={if @transfer_to, do: "danger", else: "primary"}
+                disabled={not match?(%User{}, @looked_up_user)}
+              >
+                {if @transfer_to, do: "Transfer to #{@transfer_to.username}", else: "Add as owner"}
+              </.button>
+            <% end %>
           </div>
         </.sudo_form>
       </.modal>
