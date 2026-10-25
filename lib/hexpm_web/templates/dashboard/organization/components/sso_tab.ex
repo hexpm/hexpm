@@ -440,7 +440,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
           <.select_input
             id="sso-enforcement-personal-keys"
             name="enforcement[personal_keys]"
-            label="Personal API keys"
+            label="Personal keys"
             value={@connection.personal_keys || "allow"}
             options={[
               {"Allow them, and list them below", "allow"},
@@ -492,13 +492,13 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
           </h4>
           <ul class="mt-2 space-y-2 text-sm text-grey-600 dark:text-grey-300">
             <li>
-              <span class="font-medium">Organization API keys.</span>
+              <span class="font-medium">Organization keys.</span>
               These authenticate as the organization rather than as a person, which is what makes
               continuous integration work, so SSO never applies to them. Revoke the key to revoke
               the access.
             </li>
             <li :if={@connection.personal_keys != "block"}>
-              <span class="font-medium">Personal API keys.</span>
+              <span class="font-medium">Personal keys.</span>
               They are static credentials with nothing to expire them and nothing for your
               provider's policy to evaluate, and they keep reaching this organization regardless of
               enforcement. Removing the member here still takes their keys with it.
@@ -709,14 +709,14 @@ defmodule HexpmWeb.Dashboard.Organization.Components.SSOTab do
 
   defp personal_keys_heading(%Connection{} = connection) do
     if Connection.blocks_personal_keys?(connection) do
-      "Personal API keys this organization already turns away"
+      "Personal keys this organization already turns away"
     else
-      "Personal API keys that reach this organization"
+      "Personal keys that reach this organization"
     end
   end
 
   defp pending_keys_heading(%Connection{required_at: required_at}) when not is_nil(required_at) do
-    "Personal API keys that lose access on " <> Calendar.strftime(required_at, "%Y-%m-%d")
+    "Personal keys that lose access on " <> Calendar.strftime(required_at, "%Y-%m-%d")
   end
 
   defp reach_description(key, organization) do

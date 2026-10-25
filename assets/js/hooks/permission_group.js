@@ -7,6 +7,8 @@
  * - This prevents conflicting permissions (parent gives full access)
  * When a parent checkbox is unchecked:
  * - All child checkboxes are unchecked and enabled
+ * Children marked data-locked stay disabled, because the server rendered
+ * them as permissions the viewer can't grant.
  * 
  * Usage:
  * <div phx-hook="PermissionGroup" data-parent="parent-checkbox-id">
@@ -65,6 +67,8 @@ export const PermissionGroup = {
   updateChildrenState(parentCheckbox, childCheckboxes) {
     const isParentChecked = parentCheckbox.checked;
     childCheckboxes.forEach(child => {
+      if (child.hasAttribute("data-locked")) return;
+
       if (isParentChecked) {
         // Parent is checked: check and disable children
         child.checked = true;

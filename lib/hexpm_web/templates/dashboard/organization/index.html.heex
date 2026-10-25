@@ -51,6 +51,8 @@
               keys={@keys}
               organization={@organization}
               packages={@packages}
+              grantor={@key_grantor}
+              can_revoke={@can_revoke_keys}
             />
           <% :workload_identities -> %>
             <.workload_identities_tab

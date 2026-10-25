@@ -1,8 +1,8 @@
-## Leaked API keys
+## Leaked keys
 
-If you reached this page from a GitHub secret scanning alert, your Hex.pm API key was found in a public location — a public GitHub repository, a public Gist, or a public npm package — and has been automatically revoked.
+If you reached this page from a GitHub secret scanning alert, your Hex.pm key was found in a public location — a public GitHub repository, a public Gist, or a public npm package — and has been automatically revoked.
 
-Hex.pm API keys carry a `hex_` prefix followed by 40 hexadecimal characters (for example `hex_0123456789abcdef0123456789abcdef0123abcd`). GitHub detects this pattern, forwards the matching token to Hex.pm, and we revoke it before it can be used by anyone who found it.
+Hex.pm keys carry a `hex_` prefix followed by 40 hexadecimal characters (for example `hex_0123456789abcdef0123456789abcdef0123abcd`). GitHub detects this pattern, forwards the matching token to Hex.pm, and we revoke it before it can be used by anyone who found it.
 
 ### What Hex.pm did automatically
 
@@ -14,11 +14,11 @@ No further action is required from Hex.pm. The steps below are for you, the key 
 
 ### Step 1. Confirm the revocation
 
-Open the [API keys page](/dashboard/keys) on your dashboard, or the organization's page for an organization key. The leaked key is no longer listed there. If it still is, stop using it and contact [support@hex.pm](mailto:support@hex.pm).
+Open the [keys page](/dashboard/keys) on your dashboard, or the organization's page for an organization key. The leaked key is no longer listed there. If it still is, stop using it and contact [support@hex.pm](mailto:support@hex.pm).
 
 ### Step 2. Generate a replacement key
 
-Create a new key on the [API keys page](/dashboard/keys), or on the organization's page for an organization key. Scope it to the smallest permission set that the consumer actually needs — see [Permissions](/docs/permissions) for the available scopes. If you only need the key for publishing or for read access to a single repository, do not issue a full-access key.
+Create a new key on the [keys page](/dashboard/keys), or on the organization's page for an organization key. Scope it to the smallest permission set that the consumer actually needs — see [Keys](/docs/keys) for the available scopes. If you only need the key for publishing or for read access to a single repository, do not issue a full-access key.
 
 For locally-stored credentials used by the Mix client, the simplest path is:
 
@@ -26,7 +26,7 @@ For locally-stored credentials used by the Mix client, the simplest path is:
 mix hex.user auth
 ```
 
-This signs the Mix client in, so that machine doesn't need an API key at all.
+This signs the Mix client in, so that machine doesn't need a key at all.
 
 ### Step 3. Update everywhere the leaked key was used
 
@@ -53,7 +53,7 @@ Because the key has been revoked, scrubbing it from history is no longer require
 
 ### Step 6. Prevent future leaks
 
-* **Use scoped keys.** A publish-only or read-only key cannot be used to take over your account. See [Permissions](/docs/permissions).
+* **Use scoped keys.** A publish-only or read-only key cannot be used to take over your account. See [Keys](/docs/keys).
 * **Set an expiry on CI keys.** Keys can be issued with an expiration date so a forgotten secret eventually stops working on its own.
 * **Never commit a key.** Use your CI provider's secret store and read the value from an environment variable at runtime. Pre-commit hooks that grep for `hex_[0-9a-f]{40}` are a cheap second line of defense.
 * **Rotate periodically.** A regular rotation cadence makes the impact of a future leak smaller.

@@ -80,7 +80,7 @@ defmodule HexpmWeb.SharedAuthorizationView do
 
   defp render_scope_item(assigns) do
     description = Permissions.scope_description(assigns.scope)
-    requires_2fa = assigns.scope in ["api", "api:write"]
+    requires_2fa = Permissions.requires_write_access?([assigns.scope])
     has_2fa = User.tfa_enabled?(assigns.current_user)
     required = assigns.scope == "api:read"
     disabled = required or (requires_2fa and not has_2fa)

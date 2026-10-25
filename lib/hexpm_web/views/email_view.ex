@@ -536,7 +536,7 @@ defmodule HexpmWeb.EmailView do
     defdelegate rebar_code(), to: BuildTools, as: :rebar3_hex_user_auth
 
     def before_code() do
-      "After resetting your password, you will need to regenerate your API keys by running:"
+      "After resetting your password, you will need to regenerate your keys by running:"
     end
 
     def after_code() do
@@ -626,7 +626,7 @@ defmodule HexpmWeb.EmailView do
     def heading(), do: "Organization Packages Scheduled for Deletion"
 
     def body(organization, deletion_at) do
-      "The #{organization} organization on Hex.pm has had no active billing for 90 days, and its private packages are scheduled for deletion on #{Common.date(deletion_at)}. The packages, their releases and documentation, and the organization's policies will be removed for good. The organization, its members and its API keys stay."
+      "The #{organization} organization on Hex.pm has had no active billing for 90 days, and its private packages are scheduled for deletion on #{Common.date(deletion_at)}. The packages, their releases and documentation, and the organization's policies will be removed for good. The organization, its members and its keys stay."
     end
 
     def next_step() do
@@ -639,7 +639,7 @@ defmodule HexpmWeb.EmailView do
       do: "Organization Packages Deleted #{Common.in_days(days) |> String.capitalize()}"
 
     def body(organization, deletion_at, days) do
-      "The private packages of the #{organization} organization on Hex.pm are deleted #{Common.in_days(days)}, on #{Common.date(deletion_at)}, because it has had no active billing for 90 days. The packages, their releases and documentation, and the organization's policies are then removed for good. The organization, its members and its API keys stay."
+      "The private packages of the #{organization} organization on Hex.pm are deleted #{Common.in_days(days)}, on #{Common.date(deletion_at)}, because it has had no active billing for 90 days. The packages, their releases and documentation, and the organization's policies are then removed for good. The organization, its members and its keys stay."
     end
 
     def next_step() do
@@ -651,7 +651,7 @@ defmodule HexpmWeb.EmailView do
     def heading(), do: "Organization Packages Deleted"
 
     def body(organization) do
-      "The private packages of the #{organization} organization on Hex.pm have been deleted after 90 days without active billing, with their releases and documentation and the organization's policies. The organization, its members and its API keys are still there. Packages published to the public repository by its members are not affected."
+      "The private packages of the #{organization} organization on Hex.pm have been deleted after 90 days without active billing, with their releases and documentation and the organization's policies. The organization, its members and its keys are still there. Packages published to the public repository by its members are not affected."
     end
 
     def next_step() do
@@ -754,7 +754,7 @@ defmodule HexpmWeb.EmailView do
     end
 
     def body("suspended", _suspended, format) do
-      "Your access to the organization is suspended until you enable 2FA #{security_settings(format)}. Your existing Hex client sessions and API keys work again as soon as it's enabled, and your membership, role, package ownership and billed seat are kept."
+      "Your access to the organization is suspended until you enable 2FA #{security_settings(format)}. Your existing Hex client sessions and keys work again as soon as it's enabled, and your membership, role, package ownership and billed seat are kept."
     end
 
     def body("summary", [], _format) do
@@ -819,7 +819,7 @@ defmodule HexpmWeb.EmailView do
 
     def keys(keys) do
       [
-        "The organization doesn't accept personal API keys from the members it requires single sign-on for, so on that date:"
+        "The organization doesn't accept personal keys from the members it requires single sign-on for, so on that date:"
         | Enum.reject(
             [
               revoked(keys.revoked),
@@ -882,7 +882,7 @@ defmodule HexpmWeb.EmailView do
 
   defmodule SSOKeysRefused do
     def removed(organization, revoked, trimmed) do
-      "The #{organization} organization on Hex.pm now requires single sign-on, and chose not to allow personal API keys. #{keys_removed(revoked ++ trimmed)} to that organization removed."
+      "The #{organization} organization on Hex.pm now requires single sign-on, and chose not to allow personal keys. #{keys_removed(revoked ++ trimmed)} to that organization removed."
     end
 
     # A key whose only permission named this organization has nothing left to
@@ -898,11 +898,11 @@ defmodule HexpmWeb.EmailView do
     end
 
     def refused(organization, blocked, []) do
-      "The #{organization} organization on Hex.pm authenticates its members through an identity provider, and chose not to accept personal API keys from the members it covers. Your account is one of them, so #{keys_refused(blocked)} that organization."
+      "The #{organization} organization on Hex.pm authenticates its members through an identity provider, and chose not to accept personal keys from the members it covers. Your account is one of them, so #{keys_refused(blocked)} that organization."
     end
 
     def refused(organization, blocked, _changed) do
-      "The #{organization} organization does not accept personal API keys from the members it covers at all, so #{keys_refused(blocked)} it either."
+      "The #{organization} organization does not accept personal keys from the members it covers at all, so #{keys_refused(blocked)} it either."
     end
 
     def unchanged([_key_name]) do
@@ -1002,7 +1002,7 @@ defmodule HexpmWeb.EmailView do
     end
 
     def scope() do
-      "Private packages, publishing and the rest of the organization dashboard were refused as usual. Billing and the SSO settings stay open to administrators and aren't read-only: billing can be changed and the subscription cancelled, and the SSO settings can replace the provider, unlink accounts and turn enforcement off. The SSO settings also show the linked accounts, the personal API keys that reach this organization, and recent login failures."
+      "Private packages, publishing and the rest of the organization dashboard were refused as usual. Billing and the SSO settings stay open to administrators and aren't read-only: billing can be changed and the subscription cancelled, and the SSO settings can replace the provider, unlink accounts and turn enforcement off. The SSO settings also show the linked accounts, the personal keys that reach this organization, and recent login failures."
     end
 
     def action(username) do

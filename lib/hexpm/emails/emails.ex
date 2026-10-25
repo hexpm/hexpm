@@ -335,7 +335,7 @@ defmodule Hexpm.Emails do
   def key_leaked(user_or_org, key, url \\ nil) do
     base_email(:key_leaked)
     |> email_to(user_or_org)
-    |> subject("Hex.pm - API key #{key.name} was found in a public repository and revoked")
+    |> subject("Hex.pm - Key #{key.name} was found in a public repository and revoked")
     |> assign(:username, display_name(user_or_org))
     |> assign(:key_name, key.name)
     |> assign(:keys_url, HexpmWeb.EmailView.keys_url(user_or_org))
@@ -374,7 +374,7 @@ defmodule Hexpm.Emails do
   def api_key_created(user_or_org, key) do
     base_email(:api_key_created)
     |> email_to(user_or_org)
-    |> subject("Hex.pm - A new API key was created on your account")
+    |> subject("Hex.pm - A new key was created on your account")
     |> assign(:username, display_name(user_or_org))
     |> assign(:key_name, key.name)
     |> render_body(:api_key_created)
@@ -383,7 +383,7 @@ defmodule Hexpm.Emails do
   def api_key_revoked(user_or_org, key) do
     base_email(:api_key_revoked)
     |> email_to(user_or_org)
-    |> subject("Hex.pm - An API key was revoked on your account")
+    |> subject("Hex.pm - A key was revoked on your account")
     |> assign(:username, display_name(user_or_org))
     |> assign(:key_name, key.name)
     |> render_body(:api_key_revoked)
@@ -392,7 +392,7 @@ defmodule Hexpm.Emails do
   def api_keys_all_revoked(user_or_org) do
     base_email(:api_keys_all_revoked)
     |> email_to(user_or_org)
-    |> subject("Hex.pm - All API keys have been revoked on your account")
+    |> subject("Hex.pm - All keys have been revoked on your account")
     |> assign(:username, display_name(user_or_org))
     |> render_body(:api_keys_all_revoked)
   end
@@ -564,10 +564,10 @@ defmodule Hexpm.Emails do
   end
 
   defp sso_keys_refused_subject(organization, []),
-    do: "Hex.pm - #{organization} does not accept personal API keys"
+    do: "Hex.pm - #{organization} does not accept personal keys"
 
   defp sso_keys_refused_subject(organization, _changed),
-    do: "Hex.pm - #{organization} access removed from an API key"
+    do: "Hex.pm - #{organization} access removed from a key"
 
   def sso_break_glass(organization, username, screen, recipients) do
     base_email(:sso_break_glass)

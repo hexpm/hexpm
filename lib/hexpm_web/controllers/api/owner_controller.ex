@@ -12,7 +12,7 @@ defmodule HexpmWeb.API.OwnerController do
 
   plug :authorize,
        [
-         domains: [{"api", "write"}, "package"],
+         domains: ["owners", "package_owners"],
          fun: [
            {AuthHelpers, :package_owner, [owner_level: "full"]},
            {AuthHelpers, :organization_billing_active, [owner_level: "full"]}

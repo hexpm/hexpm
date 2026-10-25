@@ -9,6 +9,7 @@ defmodule Hexpm.Shared do
         Accounts.BlockedEmailDomain,
         Accounts.Email,
         Accounts.Key,
+        Accounts.KeyGrantor,
         Accounts.KeyPermission,
         Accounts.Keys,
         Accounts.Organization,

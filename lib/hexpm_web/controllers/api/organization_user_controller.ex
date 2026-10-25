@@ -13,7 +13,7 @@ defmodule HexpmWeb.API.OrganizationUserController do
 
   plug :authorize,
        [
-         domains: [{"api", "write"}],
+         domains: ["members"],
          fun: {AuthHelpers, :organization_access, [organization_role: "admin"]}
        ]
        when action in [:create, :update, :delete]

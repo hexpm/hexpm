@@ -227,20 +227,18 @@ defmodule Hexpm.Accounts.User do
     {:ok, nil}
   end
 
-  def verify_permissions(%User{} = user, "package", name) when is_binary(name) do
-    case String.split(name, "/", parts: 2) do
-      [organization, package_name] ->
-        package = Packages.get(organization, package_name)
+  def verify_permissions(%User{}, domain, nil)
+      when domain in ~w(publish owners keys members administration) do
+    {:ok, nil}
+  end
 
-        if package && Packages.owner_with_access?(package, user) do
-          {:ok, package}
-        else
-          :error
-        end
+  def verify_permissions(%User{} = user, "owners", name) when is_binary(name) do
+    verify_package_permissions(user, name, "full")
+  end
 
-      _other ->
-        :error
-    end
+  def verify_permissions(%User{} = user, domain, name)
+      when domain in ["package", "publish"] and is_binary(name) do
+    verify_package_permissions(user, name, "maintainer")
   end
 
   def verify_permissions(%User{} = user, domain, name)
@@ -255,6 +253,22 @@ defmodule Hexpm.Accounts.User do
   end
 
   def verify_permissions(%User{}, _domain, _resource), do: :error
+
+  defp verify_package_permissions(user, name, level) do
+    case String.split(name, "/", parts: 2) do
+      [organization, package_name] ->
+        package = Packages.get(organization, package_name)
+
+        if package && Packages.owner_with_access?(package, user, level) do
+          {:ok, package}
+        else
+          :error
+        end
+
+      _other ->
+        :error
+    end
+  end
 
   def organization?(user), do: user.organization_id != nil
 
