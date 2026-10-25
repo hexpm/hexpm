@@ -228,7 +228,7 @@ defmodule HexpmWeb.KeyCapabilitiesTest do
 
     test "is limited by the scopes it signs in with", c do
       conn = create_key(signed_in(c.admin, ["keys"]), c.organization, [%{domain: "members"}])
-      assert errors(conn) =~ "members is not held by the authenticating key"
+      assert errors(conn) =~ "members is not held by the authenticating token"
     end
   end
 
@@ -266,7 +266,7 @@ defmodule HexpmWeb.KeyCapabilitiesTest do
         |> signed_in(["keys"])
         |> post("/api/keys", %{name: "laptop", permissions: [%{domain: "publish"}]})
 
-      assert errors(conn) =~ "publish is not held by the authenticating key"
+      assert errors(conn) =~ "publish is not held by the authenticating token"
     end
 
     test "a full sign-in creates capability keys", c do
@@ -317,7 +317,7 @@ defmodule HexpmWeb.KeyCapabilitiesTest do
       end
 
       assert errors(create.(["keys", "package:hexpm/#{package.name}"])) =~
-               "package:hexpm/#{package.name} is not held by the authenticating key"
+               "package:hexpm/#{package.name} is not held by the authenticating token"
 
       assert permissions(create.(["keys", "api:read", "package:hexpm/#{package.name}"])) ==
                ["package:hexpm/#{package.name}"]
