@@ -239,6 +239,16 @@ defmodule HexpmWeb.KeyCapabilitiesTest do
       conn = create_key(with_key(secret), c.organization, [%{domain: "publish"}])
       assert json_response(conn, 403)["message"] =~ "API keys cannot create API keys"
     end
+
+    test "gets the same answer for an organization that exists and one that doesn't", c do
+      secret = org_key(c.organization, ["api:write"])
+
+      existing = create_key(with_key(secret), insert(:repository).organization, :omitted)
+      missing = create_key(with_key(secret), %{name: "nosuchorganization"}, :omitted)
+
+      assert existing.status == 403
+      assert missing.status == 403
+    end
   end
 
   describe "personal keys" do

@@ -3,9 +3,11 @@ defmodule HexpmWeb.API.KeyController do
 
   alias Hexpm.OAuth.Token
 
-  plug :fetch_organization
-
+  # Before the organization is looked up, so a key gets the same answer for an
+  # organization that exists and one that doesn't.
   plug :refuse_key_credential when action == :create
+
+  plug :fetch_organization
 
   plug :authorize,
        [
@@ -119,12 +121,12 @@ defmodule HexpmWeb.API.KeyController do
     end
   end
 
-  defp refuse_key_credential(%{assigns: %{organization: %Organization{} = organization}} = conn) do
+  defp refuse_key_credential(%{params: %{"organization" => organization}} = conn) do
     forbidden(
       conn,
       "API keys cannot create API keys, create the key on " <>
         url(~p"/dashboard/orgs/#{organization}") <>
-        " or with mix hex.organization key #{organization.name} generate after mix hex.user auth"
+        " or with mix hex.organization key #{organization} generate after mix hex.user auth"
     )
   end
 
