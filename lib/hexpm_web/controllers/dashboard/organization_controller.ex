@@ -57,6 +57,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
               :change_plan,
               :create_key,
               :delete_key,
+              :delete_all_keys,
               :workload_identities,
               :create_workload_identity,
               :edit_workload_identity,
@@ -151,7 +152,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   end
 
   def keys(conn, %{"dashboard_org" => organization}) do
-    access_organization(conn, organization, "write", fn organization ->
+    access_organization(conn, organization, "read", fn organization ->
       generated_key = get_session(conn, :generated_key)
       conn = delete_session(conn, :generated_key)
       render_index(conn, organization, tab: :keys, generated_key: generated_key)
@@ -1047,11 +1048,13 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   defp maybe_add_error(errors, false, _section, _field, _message), do: errors
 
   def create_key(conn, %{"dashboard_org" => organization} = params) do
-    access_organization(conn, organization, "write", fn organization ->
+    access_organization(conn, organization, "read", fn organization ->
       key_params =
         params["key"] |> KeyController.munge_permissions() |> KeyController.munge_expiry()
 
-      case Keys.create(organization, key_params, audit: audit_data(conn)) do
+      grantor = KeyGrantor.new(organization, conn.assigns.current_user, nil)
+
+      case Keys.create(organization, key_params, audit: audit_data(conn), grantor: grantor) do
         {:ok, %{key: key}} ->
           conn
           |> put_session(:generated_key, %{name: key.name, user_secret: key.user_secret})
@@ -1080,6 +1083,16 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
           |> put_flash(:error, "The key #{name} was not found.")
           |> render_index(organization, tab: :keys)
       end
+    end)
+  end
+
+  def delete_all_keys(conn, %{"dashboard_org" => organization}) do
+    access_organization(conn, organization, "write", fn organization ->
+      {:ok, _} = Keys.revoke_all(organization, audit: audit_data(conn))
+
+      conn
+      |> put_flash(:info, "All keys were revoked successfully.")
+      |> redirect(to: ~p"/dashboard/orgs/#{organization}/keys")
     end)
   end
 
@@ -1381,6 +1394,16 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
 
     customer = customer(conn, organization, opts[:tab])
     keys = if opts[:tab] == :keys, do: Keys.all(organization), else: []
+    current_user = conn.assigns.current_user
+
+    key_grantor =
+      if opts[:tab] == :keys, do: KeyGrantor.new(organization, current_user, nil)
+
+    can_revoke_keys =
+      Enum.any?(
+        organization.organization_users,
+        &(&1.user_id == current_user.id and &1.role in Organization.role_or_higher("write"))
+      )
 
     # The members tab warns that removing a member leaves these in place.
     workload_identities =
@@ -1390,6 +1413,7 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
          else: []
 
     delete_key_path = ~p"/dashboard/orgs/#{organization}/keys"
+    delete_all_keys_path = ~p"/dashboard/orgs/#{organization}/keys/all"
     create_key_path = ~p"/dashboard/orgs/#{organization}/keys"
     packages = packages_assign(organization, opts[:tab])
     policy_action = opts[:policy_action]
@@ -1417,9 +1441,12 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         params: opts[:params],
         errors: opts[:errors],
         delete_key_path: delete_key_path,
+        delete_all_keys_path: delete_all_keys_path,
         create_key_path: create_key_path,
         generated_key: opts[:generated_key],
         key_changeset: opts[:key_changeset] || key_changeset(),
+        key_grantor: key_grantor,
+        can_revoke_keys: can_revoke_keys,
         workload_identities: workload_identities,
         workload_identity_changeset:
           opts[:workload_identity_changeset] || workload_identity_changeset(organization),

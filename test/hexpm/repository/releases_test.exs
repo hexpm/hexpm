@@ -551,7 +551,7 @@ defmodule Hexpm.Repository.ReleasesTest do
 
       insert(:release, package: package, version: "0.3.0")
 
-      assert :ok =
+      assert {:ok, 2} =
                Releases.retire(
                  package,
                  %{"reason" => "deprecated", "message" => "No longer maintained"},
@@ -602,7 +602,7 @@ defmodule Hexpm.Repository.ReleasesTest do
         }
       )
 
-      assert :ok =
+      assert {:ok, 2} =
                Releases.retire(
                  package,
                  %{"reason" => "deprecated", "message" => "No longer maintained"},

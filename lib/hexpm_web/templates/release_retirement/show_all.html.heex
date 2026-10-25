@@ -1,0 +1,109 @@
+<% form = to_form(@changeset, as: :retirement) %>
+<.package_layout {@package_layout} active_tab={:versions}>
+  <:inner_content>
+    <div
+      id="release-retirement"
+      class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg overflow-hidden"
+    >
+      <div class="px-6 py-4 border-b border-grey-200 dark:border-grey-700">
+        <h2 class="text-base font-semibold text-grey-900 dark:text-white">
+          Retire all versions of {@package.name}
+        </h2>
+        <p class="mt-1 text-sm text-grey-500 dark:text-grey-300">
+          A retired version can still be resolved and used. Hex marks it as retired and shows the reason and message to everyone who depends on it.
+        </p>
+        <p id="retire-all-counts" class="mt-2 text-sm text-grey-700 dark:text-grey-200">
+          <%= cond do %>
+            <% @retired_count == 0 -> %>
+              This retires {versions_text(@active_count)}.
+            <% @active_count == 0 -> %>
+              Every version is already retired. Replace existing retirements to change their reason and message.
+            <% true -> %>
+              This retires the {versions_text(@active_count)} not retired yet. Versions that are already retired keep their reason and message unless you replace them.
+          <% end %>
+        </p>
+      </div>
+
+      <p :if={not @tfa?} class="px-6 py-4 text-sm text-grey-600 dark:text-grey-300">
+        Two-factor authentication is required to retire and unretire versions. Enable it in your <a
+          href={~p"/dashboard/security"}
+          class="text-primary-600 dark:text-primary-300 hover:underline"
+        >security settings</a>.
+      </p>
+
+      <.sudo_form
+        :if={@tfa?}
+        current_user={@current_user}
+        action={ViewHelpers.path_for_retire_all(@package)}
+        id="retire-all-form"
+        class="px-6 py-4 flex flex-col gap-4"
+        phx-hook="ConfirmModal"
+        data-show-modal={show_modal("retire-all-confirm")}
+      >
+        <.select_input
+          field={form[:reason]}
+          label="Reason"
+          prompt="Select a reason"
+          options={reason_options()}
+          required
+        />
+        <div>
+          <.text_input
+            field={form[:message]}
+            label="Message"
+            placeholder="Use new_package instead"
+            required
+          />
+          <p class="mt-1.5 text-xs text-grey-500 dark:text-grey-300">
+            Up to 140 characters. For a renamed or deprecated package, name the package that replaces it.
+          </p>
+        </div>
+
+        <label :if={@retired_count > 0} class="flex items-start gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            id="retire_all_replace"
+            name="replace"
+            value="true"
+            checked={@replace?}
+            class="mt-0.5 w-4 h-4 text-purple-600 border-grey-300 dark:border-grey-600 rounded focus:ring-2 focus:ring-purple-500"
+          />
+          <span class="flex flex-col gap-0.5">
+            <span class="text-small font-medium text-grey-900 dark:text-grey-100">
+              Replace existing retirements
+            </span>
+            <span class="text-xs text-grey-500 dark:text-grey-300">
+              Give the {versions_text(@retired_count)} already retired this reason and message too.
+            </span>
+          </span>
+        </label>
+
+        <div class="flex justify-end gap-3">
+          <.button_link href={ViewHelpers.path_for_releases(@package)} variant="secondary">
+            Cancel
+          </.button_link>
+          <.button type="submit" variant="primary">Retire all versions</.button>
+        </div>
+      </.sudo_form>
+    </div>
+
+    <.modal
+      :if={@tfa?}
+      id="retire-all-confirm"
+      title={"Retire all versions of #{@package.name}?"}
+      max_width="md"
+    >
+      <p class="text-sm text-grey-600 dark:text-grey-300">
+        Everyone who depends on {@package.name} sees the reason and message. Undoing it means unretiring each version on its own.
+      </p>
+      <:footer>
+        <.button type="button" variant="secondary" phx-click={hide_modal("retire-all-confirm")}>
+          Cancel
+        </.button>
+        <.button type="submit" variant="primary" form="retire-all-form" data-confirmed>
+          Retire all versions
+        </.button>
+      </:footer>
+    </.modal>
+  </:inner_content>
+</.package_layout>

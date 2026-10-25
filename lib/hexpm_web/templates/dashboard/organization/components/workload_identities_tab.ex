@@ -44,7 +44,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.WorkloadIdentitiesTab do
         <div class="px-6 py-5 border-b border-grey-200 dark:border-grey-700">
           <h2 class="text-grey-900 dark:text-white text-lg font-semibold">Workload identities</h2>
           <p class="text-grey-500 dark:text-grey-300 text-sm mt-1">
-            GitHub Actions workflows that fetch and publish {@organization.name}'s packages without an API key.
+            GitHub Actions workflows that fetch and publish {@organization.name}'s packages without a key.
             <a
               href={~p"/docs/workload-identity" <> "#organization-workload-identities"}
               class="text-primary-600 dark:text-primary-300 hover:underline"
@@ -367,7 +367,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.WorkloadIdentitiesTab do
                     placeholder={"All public packages #{@organization.name} owns"}
                   />
                   <p class="mt-1 text-xs text-grey-500 dark:text-grey-300">
-                    Separated by commas. Leave it empty to cover every public package {@organization.name} owns, including packages it becomes an owner of later. Workload identities don't create public packages, so publish a package's first release with a user account or an API key. Each public release shows the GitHub repository, workflow and actor that published it, also when the repository is private.
+                    Separated by commas. Leave it empty to cover every public package {@organization.name} owns, including packages it becomes an owner of later. Workload identities don't create public packages, so publish a package's first release with a user account or a key. Each public release shows the GitHub repository, workflow and actor that published it, also when the repository is private.
                   </p>
                 </div>
               </div>

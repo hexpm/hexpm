@@ -70,6 +70,38 @@ defmodule HexpmWeb.Dashboard.KeyControllerTest do
                "key[permissions][package][zulu_package]"
              ]
     end
+
+    test "shows revoke all keys only when there are keys", c do
+      body =
+        build_conn()
+        |> test_login(c.user)
+        |> get("/dashboard/keys")
+        |> html_response(200)
+
+      refute body =~ "revoke-all-keys-button"
+      refute body =~ "revoke-all-keys-modal"
+
+      insert(:key, user: c.user, name: "computer")
+      insert(:key, user: c.user, name: "laptop")
+
+      document =
+        build_conn()
+        |> test_login(c.user)
+        |> get("/dashboard/keys")
+        |> html_response(200)
+        |> LazyHTML.from_document()
+
+      assert LazyHTML.query(document, "#revoke-all-keys-button") |> Enum.count() == 1
+
+      assert document
+             |> LazyHTML.query("#revoke-all-keys-modal")
+             |> LazyHTML.text()
+             |> String.replace(~r/\s+/, " ") =~ "2 keys will be revoked"
+
+      assert document
+             |> LazyHTML.query(~s(#revoke-all-keys-modal form))
+             |> LazyHTML.attribute("action") == ["/dashboard/keys/all"]
+    end
   end
 
   describe "POST /dashboard/keys" do
@@ -271,6 +303,72 @@ defmodule HexpmWeb.Dashboard.KeyControllerTest do
 
       user = Hexpm.Repo.preload(c.user, :emails)
       assert_email_sent(Hexpm.Emails.api_key_revoked(user, key))
+    end
+  end
+
+  describe "DELETE /dashboard/keys/all" do
+    test "revokes all of the user's keys", c do
+      key_a = insert(:key, user: c.user, name: "computer")
+      key_b = insert(:key, user: c.user, name: "laptop")
+      other_key = insert(:key, user: insert(:user), name: "computer")
+
+      conn =
+        build_conn()
+        |> test_login(c.user)
+        |> delete("/dashboard/keys/all")
+
+      assert redirected_to(conn) == "/dashboard/keys"
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) == "All keys were revoked successfully."
+
+      assert Hexpm.Accounts.Key.revoked?(Repo.get!(Hexpm.Accounts.Key, key_a.id))
+      assert Hexpm.Accounts.Key.revoked?(Repo.get!(Hexpm.Accounts.Key, key_b.id))
+      refute Hexpm.Accounts.Key.revoked?(Repo.get!(Hexpm.Accounts.Key, other_key.id))
+
+      logged =
+        from(a in Hexpm.Accounts.AuditLog,
+          where: a.action == "key.remove",
+          select: {a.user_id, a.params["name"]}
+        )
+        |> Repo.all()
+        |> Enum.sort()
+
+      assert logged == [{c.user.id, "computer"}, {c.user.id, "laptop"}]
+
+      user = Repo.preload(c.user, :emails)
+      assert_email_sent(Hexpm.Emails.api_keys_all_revoked(user))
+    end
+
+    test "submits from the keys page form after sudo expires", c do
+      key = insert(:key, user: c.user, name: "computer")
+
+      [token] =
+        build_conn()
+        |> test_login(c.user)
+        |> get("/dashboard/keys")
+        |> html_response(200)
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(~s(#revoke-all-keys-modal input[name="_sudo_token"]))
+        |> LazyHTML.attribute("value")
+
+      conn =
+        build_conn()
+        |> test_login(c.user, sudo: false)
+        |> delete("/dashboard/keys/all", %{"_sudo_token" => token})
+
+      assert redirected_to(conn) == "/dashboard/keys"
+      assert Hexpm.Accounts.Key.revoked?(Repo.get!(Hexpm.Accounts.Key, key.id))
+    end
+
+    test "redirects to sudo when not in sudo mode", c do
+      key = insert(:key, user: c.user, name: "computer")
+
+      conn =
+        build_conn()
+        |> test_login(c.user, sudo: false)
+        |> delete("/dashboard/keys/all")
+
+      assert redirected_to(conn) == "/sudo"
+      refute Hexpm.Accounts.Key.revoked?(Repo.get!(Hexpm.Accounts.Key, key.id))
     end
   end
 end

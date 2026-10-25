@@ -133,7 +133,7 @@ Enforcement is set on the organization's **SSO** dashboard and has three modes:
 
 Exemptions are managed from the **Exempt from SSO** list on the members tab, in both modes, and exempt members carry an **SSO exempt** badge. Moving from pilot to required doesn't change any member's settings. Members enforced in the pilot stay enforced, every other member becomes enforced, and only members on the exemption list are left out.
 
-A required-by date gives members time to link. Until it passes, the organization behaves as it does in pilot. Members who have not linked an identity are emailed in the two weeks before the date, and again if the date moves. When personal API keys are blocked, members who have linked but hold a key the date will strip or refuse are emailed too, with each key and what happens to it. A date inside those two weeks is announced when it is saved.
+A required-by date gives members time to link. Until it passes, the organization behaves as it does in pilot. Members who have not linked an identity are emailed in the two weeks before the date, and again if the date moves. When personal keys are blocked, members who have linked but hold a key the date will strip or refuse are emailed too, with each key and what happens to it. A date inside those two weeks is announced when it is saved.
 
 A member who has not linked an identity is also emailed the moment enforcement starts applying to them with no date ahead: required mode saved with no date or a past one, the date moved to now, the connection turned on while required, or an administrator enforcing them or lifting their exemption.
 
@@ -148,8 +148,8 @@ What applies depends on the credential a request uses:
 | Browser session | Needs a current organization access session for the organization. Hexpm sends you to the provider and back to the page you asked for. |
 | Hex CLI (`mix hex.user auth`) | The session established when you authorized the CLI carries organization access. Hex v2.6.0 or later asks you to re-authenticate in a browser when it lapses. |
 | hexdocs and other OAuth clients | Same, established when you approve the client. |
-| Organization API key | Never enforced. It authenticates as the organization, not as a person, so SSO doesn't apply to it. |
-| Personal API key | Allowed unless the organization chose to block them. |
+| Organization key | Never enforced. It authenticates as the organization, not as a person, so SSO doesn't apply to it. |
+| Personal key | Allowed unless the organization chose to block them. |
 | Username and password against the API | Refused. A password request has no session that could hold organization access. |
 
 Enforcement is per organization and evaluated against the resource. Your Hexpm account, your own packages, the public repository, and every other organization you belong to are unaffected.
@@ -195,7 +195,7 @@ A full import lists each member's primary email address (or the address your pro
 
 Every provisioning write is recorded in the organization's audit log as **SCIM**, with the address the request came from. The **Provisioning (SCIM)** card shows who generated the token, when, and when it was last used.
 
-CI is unaffected: organization API keys are not members and never appear on this surface.
+CI is unaffected: organization keys are not members and never appear on this surface.
 
 ### The Hex CLI
 
@@ -209,11 +209,11 @@ It names only the organizations the project actually depends on. Hex knows the w
 
 Saying yes opens a page bound to the CLI session you are already signed in on, and Hex prints its URL and waits for you to press enter. Completing SSO there renews that session: the same session, the same refresh token, and resolution carries on. Saying no continues without the organization's packages.
 
-CI is unaffected. It authenticates with an organization API key, which isn't tied to a person or a session, so SSO doesn't apply to it.
+CI is unaffected. It authenticates with an organization key, which isn't tied to a person or a session, so SSO doesn't apply to it.
 
-### Personal API keys
+### Personal keys
 
-A personal API key is a static credential. There is no session behind it, nothing expires it unless its owner set an expiry, and your provider never sees it used. Whether one may reach an enforced organization is the organization's choice, and the default is to allow them:
+A personal key is a static credential. There is no session behind it, nothing expires it unless its owner set an expiry, and your provider never sees it used. Whether one may reach an enforced organization is the organization's choice, and the default is to allow them:
 
 * **Block** turns members' personal keys away from this organization. From the moment required mode takes effect, on the required-by date or at the save when there's no date, a request made with a personal key is refused for this organization. The permissions naming the organization are removed from the keys at the next daily run after that, at 03:45 UTC. Their owners are emailed, and the rest of each key keeps working. Creating a key with a permission that names the organization, or every repository, is refused. A key with only API permissions can still be created, and its requests against the organization are refused. Members publishing by hand run `mix hex.user auth` instead, after `mix hex.organization deauth ORGANIZATION` on any machine where they ran `mix hex.organization auth ORGANIZATION`, because `mix` uses the key that command stored ahead of their sign-in. Automation moves to an organization key.
 
@@ -222,7 +222,7 @@ A personal API key is a static credential. There is no session behind it, nothin
     The removal is permanent. Setting personal keys back to allow, or turning enforcement off, does not restore the permissions that were taken; the members whose keys were changed add them again themselves. Use a pilot first if you want to see the list before anything is removed.
 * **Allow** leaves them alone, and is the default. Use it if your publishing workflow depends on personal keys. Under required mode, those keys still reach the organization without an organization access session or an expiry, and your provider's conditional-access policy never sees them. A key stops working when its owner is removed from the organization here, because its permissions are checked against current membership. The repository CDN can cache a successful check for up to ten minutes. A provider deactivation counts as removal once provisioning is connected; without provisioning, a provider-only deactivation doesn't affect the key.
 
-    An organization API key has the same properties and is never enforced, so allowing personal keys adds more credentials of a kind the organization already accepts. Blocking them means members reach the organization through organization access sessions, which your provider's conditional-access policy applies to. Removing a member doesn't give you that.
+    An organization key has the same properties and is never enforced, so allowing personal keys adds more credentials of a kind the organization already accepts. Blocking them means members reach the organization through organization access sessions, which your provider's conditional-access policy applies to. Removing a member doesn't give you that.
 
 Either way the SSO dashboard lists the members holding personal keys that reach the organization, and when each was last used, before you turn enforcement on. For a key whose permissions name the organization the list is exact. For one carrying every repository, or plain API access, it says the key could reach the organization rather than that it did; Hexpm records when a key was used and not what it was used against.
 
@@ -247,8 +247,8 @@ Turning enforcement off for the organization is allowed from the break-glass SSO
 A required organization can be reached without going through its identity provider in these ways:
 
 1. **Exemptions**, one per member, listed on the members tab.
-2. **Organization API keys**, which authenticate as the organization. This is the audited automation exception; enforcement constrains and monitors it but cannot close it.
-3. **Personal API keys**, unless the organization chose to block them.
+2. **Organization keys**, which authenticate as the organization. This is the audited automation exception; enforcement constrains and monitors it but cannot close it.
+3. **Personal keys**, unless the organization chose to block them.
 4. **Break-glass** on the billing and SSO settings screens, audited and mailed.
 5. **The provisioning token**, when provisioning is on. It authenticates as the provider's agent rather than as a person, so nothing about enforcement applies to it, and it keeps working after the administrator who generated it leaves. Every write it makes is audited. Delete it under **Provisioning (SCIM)** to close it.
 6. **Readme URLs.** A private package's readme renders on a separate host that never receives your Hexpm session cookie, so the package page signs a URL for it after taking its own authorization decision, and signs one for each image the readme contains. That URL renders that one readme for thirty minutes to anyone holding it. It isn't checked against enforcement, the session it was created from, or the member's membership, and reaching a readme this way isn't audited. It carries no other access: one package, one version, and the images in that readme.

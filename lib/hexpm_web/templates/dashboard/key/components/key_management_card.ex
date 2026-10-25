@@ -15,6 +15,7 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyManagementCard do
   import HexpmWeb.ViewHelpers, only: [pretty_date: 1, pretty_date: 2, pretty_datetime: 1]
   import HexpmWeb.ViewIcons, only: [icon: 3]
   import HexpmWeb.Dashboard.Key.Components.RevokeKeyModal
+  import HexpmWeb.Dashboard.Key.Components.RevokeAllKeysModal
   import HexpmWeb.Dashboard.Key.Components.GenerateKeyModal
   import HexpmWeb.Dashboard.Key.Components.KeyGeneratedModal
 
@@ -26,8 +27,11 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyManagementCard do
   attr :current_user, :map, required: true
   attr :create_key_path, :string, required: true
   attr :delete_key_path, :string, required: true
+  attr :delete_all_keys_path, :string, required: true
   attr :generated_key, :map, default: nil
   attr :organization, :map, default: nil
+  attr :grantor, :any, default: nil
+  attr :can_revoke, :boolean, default: true
 
   def key_management_card(assigns) do
     assigns = assign(assigns, :form, Phoenix.Component.to_form(assigns.key_changeset, as: :key))
@@ -35,11 +39,27 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyManagementCard do
     ~H"""
     <div class="bg-white dark:bg-grey-800 rounded-lg shadow-sm border border-grey-200 dark:border-grey-700 p-8">
       <%!-- Header --%>
-      <div class="mb-6">
-        <h2 class="text-xl font-semibold text-grey-900 dark:text-white mb-2">Keys</h2>
-        <p class="text-sm text-grey-500 dark:text-grey-300">
-          Keys are used to authenticate and authorize clients to interact with the Hex API and repository.
-        </p>
+      <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 class="text-xl font-semibold text-grey-900 dark:text-white mb-2">Keys</h2>
+          <p class="text-sm text-grey-500 dark:text-grey-300">
+            Keys authenticate and authorize clients to use the Hex API, private repositories and documentation.
+            <a href={~p"/docs/keys"} class="text-purple-600 dark:text-purple-400 hover:underline">
+              Read about key permissions.
+            </a>
+          </p>
+        </div>
+
+        <.button
+          :if={@keys != [] and @can_revoke}
+          variant="danger-outline"
+          size="sm"
+          phx-click={show_modal("revoke-all-keys-modal")}
+          id="revoke-all-keys-button"
+          class="flex-shrink-0 self-start"
+        >
+          Revoke All Keys
+        </.button>
       </div>
 
       <%!-- Keys Table --%>
@@ -63,18 +83,25 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyManagementCard do
             </th>
           </:header>
           <:row :for={key <- @keys}>
-            <.key_row key={key} delete_key_path={@delete_key_path} />
+            <.key_row key={key} delete_key_path={@delete_key_path} can_revoke={@can_revoke} />
           </:row>
         </.table>
 
         <%!-- Revoke Key Modals rendered outside the table to avoid invalid HTML inside <tbody> --%>
-        <%= for key <- @keys do %>
+        <%= for key <- @keys, @can_revoke do %>
           <.revoke_key_modal
             key={key}
             current_user={@current_user}
             delete_key_path={@delete_key_path}
           />
         <% end %>
+
+        <.revoke_all_keys_modal
+          :if={@can_revoke}
+          keys={@keys}
+          current_user={@current_user}
+          delete_all_keys_path={@delete_all_keys_path}
+        />
       <% end %>
 
       <%!-- Generate New Key Button --%>
@@ -101,6 +128,7 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyManagementCard do
       create_key_path={@create_key_path}
       packages={@packages}
       organization={assigns[:organization]}
+      grantor={@grantor}
     />
 
     <%!-- Key Generated Success Modal --%>
@@ -157,7 +185,7 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyManagementCard do
 
       <%!-- Actions Column --%>
       <td class="px-4 py-4">
-        <div class="flex items-center justify-end gap-2">
+        <div :if={@can_revoke} class="flex items-center justify-end gap-2">
           <.tooltip text="Revoke key">
             <.icon_button
               phx-click={show_modal(@modal_id)}
@@ -188,11 +216,21 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyManagementCard do
 
   defp permission_name(%KeyPermission{domain: "docs", resource: resource}), do: "DOCS:#{resource}"
 
+  defp permission_name(%KeyPermission{domain: domain, resource: nil}), do: String.upcase(domain)
+
+  defp permission_name(%KeyPermission{domain: domain, resource: "hexpm/" <> resource}),
+    do: "#{String.upcase(domain)}:#{resource}"
+
+  defp permission_name(%KeyPermission{domain: domain, resource: resource}),
+    do: "#{String.upcase(domain)}:#{resource}"
+
   defp permission_variant(%KeyPermission{domain: "api"}), do: "green"
   defp permission_variant(%KeyPermission{domain: "repositories"}), do: "purple"
   defp permission_variant(%KeyPermission{domain: "repository"}), do: "purple"
   defp permission_variant(%KeyPermission{domain: "docs"}), do: "purple"
   defp permission_variant(%KeyPermission{domain: "package"}), do: "default"
+  defp permission_variant(%KeyPermission{resource: nil}), do: "green"
+  defp permission_variant(%KeyPermission{}), do: "default"
 
   defp last_use_details(last_use) do
     "#{pretty_datetime(last_use.used_at)}\n#{last_use.ip}\n#{last_use.user_agent}"

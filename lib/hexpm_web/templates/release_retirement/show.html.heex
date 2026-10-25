@@ -1,0 +1,147 @@
+<% form = to_form(@changeset, as: :retirement) %>
+<.package_layout {@package_layout} active_tab={:versions} version_pinned?={true}>
+  <:inner_content>
+    <div class="flex flex-col gap-6">
+      <div
+        id="release-retirement"
+        class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg overflow-hidden"
+      >
+        <div class="px-6 py-4 border-b border-grey-200 dark:border-grey-700">
+          <h2 class="text-base font-semibold text-grey-900 dark:text-white">
+            <%= if @release.retirement do %>
+              Change the retirement of {@package.name} {@release.version}
+            <% else %>
+              Retire {@package.name} {@release.version}
+            <% end %>
+          </h2>
+          <p class="mt-1 text-sm text-grey-500 dark:text-grey-300">
+            A retired version can still be resolved and used. Hex marks it as retired and shows the reason and message to everyone who depends on it.
+          </p>
+        </div>
+
+        <p
+          :if={not @tfa?}
+          class="px-6 py-4 text-sm text-grey-600 dark:text-grey-300"
+        >
+          Two-factor authentication is required to retire and unretire versions. Enable it in your <a
+            href={~p"/dashboard/security"}
+            class="text-primary-600 dark:text-primary-300 hover:underline"
+          >security settings</a>.
+        </p>
+
+        <.sudo_form
+          :if={@tfa?}
+          current_user={@current_user}
+          action={ViewHelpers.path_for_retirement(@package, @release)}
+          id="retire-form"
+          class="px-6 py-4 flex flex-col gap-4"
+          phx-hook="ConfirmModal"
+          data-show-modal={show_modal("retire-confirm")}
+        >
+          <.select_input
+            field={form[:reason]}
+            label="Reason"
+            prompt="Select a reason"
+            options={reason_options()}
+            required
+          />
+          <div>
+            <.text_input
+              field={form[:message]}
+              label="Message"
+              placeholder="Use new_package instead"
+              required
+            />
+            <p class="mt-1.5 text-xs text-grey-500 dark:text-grey-300">
+              Up to 140 characters. For a renamed or deprecated package, name the package that replaces it.
+            </p>
+          </div>
+
+          <div class="flex justify-end gap-3">
+            <.button_link href={ViewHelpers.path_for_releases(@package)} variant="secondary">
+              Cancel
+            </.button_link>
+            <.button type="submit" variant="primary">
+              {if @release.retirement, do: "Save changes", else: "Retire version"}
+            </.button>
+          </div>
+        </.sudo_form>
+      </div>
+
+      <div
+        :if={@release.retirement && @tfa?}
+        id="release-unretire"
+        class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg px-6 py-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+      >
+        <div>
+          <h2 class="text-base font-semibold text-grey-900 dark:text-white">
+            Unretire {@package.name} {@release.version}
+          </h2>
+          <p class="mt-1 text-sm text-grey-500 dark:text-grey-300">
+            Hex stops marking {@release.version} as retired and no longer shows the reason and message.
+          </p>
+        </div>
+        <.button
+          type="button"
+          variant="outline"
+          class="shrink-0"
+          phx-click={show_modal("unretire-confirm")}
+        >
+          Unretire version
+        </.button>
+      </div>
+    </div>
+
+    <.modal
+      :if={@tfa?}
+      id="retire-confirm"
+      title={
+        if @release.retirement,
+          do: "Change the retirement of #{@package.name} #{@release.version}?",
+          else: "Retire #{@package.name} #{@release.version}?"
+      }
+      max_width="md"
+    >
+      <p class="text-sm text-grey-600 dark:text-grey-300">
+        <%= if @release.retirement do %>
+          Everyone who depends on {@package.name} {@release.version} sees the new reason and message.
+        <% else %>
+          Everyone who depends on {@package.name} {@release.version} sees the reason and message. You can unretire it later.
+        <% end %>
+      </p>
+      <:footer>
+        <.button type="button" variant="secondary" phx-click={hide_modal("retire-confirm")}>
+          Cancel
+        </.button>
+        <.button type="submit" variant="primary" form="retire-form" data-confirmed>
+          {if @release.retirement, do: "Save changes", else: "Retire version"}
+        </.button>
+      </:footer>
+    </.modal>
+
+    <.modal
+      :if={@release.retirement && @tfa?}
+      id="unretire-confirm"
+      title={"Unretire #{@package.name} #{@release.version}?"}
+      max_width="md"
+    >
+      <p class="text-sm text-grey-600 dark:text-grey-300">
+        Hex stops marking {@release.version} as retired and no longer shows the reason and message.
+      </p>
+      <:footer>
+        <.button type="button" variant="secondary" phx-click={hide_modal("unretire-confirm")}>
+          Cancel
+        </.button>
+        <.sudo_form
+          current_user={@current_user}
+          action={ViewHelpers.path_for_retirement(@package, @release)}
+          method="delete"
+          id="unretire-form"
+          class="m-0"
+        >
+          <.button type="submit" variant="primary">Unretire version</.button>
+        </.sudo_form>
+      </:footer>
+    </.modal>
+  </:inner_content>
+</.package_layout>

@@ -27,11 +27,22 @@ defmodule HexpmWeb.Dashboard.KeyController do
     end
   end
 
+  def delete_all(conn, _params) do
+    user = conn.assigns.current_user
+    {:ok, _} = Keys.revoke_all(user, audit: audit_data(conn))
+
+    conn
+    |> put_flash(:info, "All keys were revoked successfully.")
+    |> redirect(to: ~p"/dashboard/keys")
+  end
+
   def create(conn, params) do
     user = conn.assigns.current_user
     key_params = params["key"] |> munge_permissions() |> munge_expiry()
 
-    case Keys.create(user, key_params, audit: audit_data(conn)) do
+    grantor = KeyGrantor.new(user, user, nil)
+
+    case Keys.create(user, key_params, audit: audit_data(conn), grantor: grantor) do
       {:ok, %{key: key}} ->
         conn
         |> put_session(:generated_key, %{name: key.name, user_secret: key.user_secret})
@@ -62,8 +73,10 @@ defmodule HexpmWeb.Dashboard.KeyController do
       keys: keys,
       packages: packages,
       delete_key_path: ~p"/dashboard/keys",
+      delete_all_keys_path: ~p"/dashboard/keys/all",
       create_key_path: ~p"/dashboard/keys",
       key_changeset: changeset,
+      key_grantor: KeyGrantor.new(user, user, nil),
       generated_key: generated_key
     )
   end
@@ -126,8 +139,11 @@ defmodule HexpmWeb.Dashboard.KeyController do
         {"repository", resources} ->
           Enum.map(Map.keys(resources), &%{"domain" => "repository", "resource" => &1})
 
-        {"package", resources} ->
-          Enum.map(Map.keys(resources), &%{"domain" => "package", "resource" => &1})
+        {"capabilities", domains} ->
+          Enum.map(Map.keys(domains), &%{"domain" => &1, "resource" => nil})
+
+        {domain, resources} when domain in ["package", "publish", "owners"] ->
+          Enum.map(Map.keys(resources), &%{"domain" => domain, "resource" => &1})
       end)
 
     put_in(params["permissions"], permissions)

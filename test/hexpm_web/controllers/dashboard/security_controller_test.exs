@@ -254,7 +254,7 @@ defmodule HexpmWeb.Dashboard.SecurityControllerTest do
 
       result = response(conn, 200)
       assert result =~ "Current Password"
-      assert result =~ "Revoke all API keys"
+      assert result =~ "Revoke all keys"
     end
 
     test "changes password and verifies in DB", _c do

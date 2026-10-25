@@ -71,7 +71,8 @@ defmodule HexpmWeb.API.AuthController do
   # session, so this endpoint takes the decision itself. It also resolves the
   # organization differently from billing, because a public package's owner is
   # what enforcement is about rather than the repository it sits in.
-  defp sso_enforced_credential(conn, "package", %Package{} = package, _organization, principal) do
+  defp sso_enforced_credential(conn, domain, %Package{} = package, _organization, principal)
+       when domain in ["package", "publish", "owners"] do
     package_sso_enforced(conn, package, principal)
   end
 

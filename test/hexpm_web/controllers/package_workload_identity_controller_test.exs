@@ -156,7 +156,7 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
       assert card.("acme/listed") =~ "Workflow listed.yml · Environment any"
       assert body =~ ~s(href="/orgs/#{organization.name}")
       assert body =~ ~s(href="/dashboard/orgs/#{organization.name}/workload-identities")
-      assert body =~ "first release is published with a user account or an API key"
+      assert body =~ "first release is published with a user account or a key"
       refute body =~ "acme/gadget"
       refute body =~ "secret_other_package"
     end

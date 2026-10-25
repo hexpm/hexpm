@@ -36,6 +36,18 @@ defmodule Hexpm.OAuth.ClientsTest do
       assert Clients.supports_scopes?(client, ["api:read", "api:write"])
     end
 
+    test "treats api and api:write as allowing well-formed capability scopes" do
+      for allowed <- ["api", "api:write"] do
+        client = %Client{allowed_scopes: [allowed]}
+
+        assert Clients.supports_scopes?(client, ["publish", "members", "publish:acme/foo"])
+        refute Clients.supports_scopes?(client, ["keys:acme"])
+        refute Clients.supports_scopes?(client, ["publish:foo"])
+      end
+
+      refute Clients.supports_scopes?(%Client{allowed_scopes: ["api:read"]}, ["publish"])
+    end
+
     test "returns false when any requested scope is not allowed" do
       client = %Client{allowed_scopes: ["api:read"]}
 

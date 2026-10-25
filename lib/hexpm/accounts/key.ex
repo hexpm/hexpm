@@ -1,7 +1,7 @@
 defmodule Hexpm.Accounts.Key do
   use Hexpm.Schema
 
-  alias Hexpm.Accounts.OrganizationAuth
+  alias Hexpm.Accounts.{KeyGrantor, OrganizationAuth}
 
   @derive HexpmWeb.Stale
   @derive {Phoenix.Param, key: :name}
@@ -35,9 +35,14 @@ defmodule Hexpm.Accounts.Key do
   end
 
   def changeset(key, user_or_organization, params) do
+    changeset(key, user_or_organization, nil, params)
+  end
+
+  def changeset(key, user_or_organization, grantor, params) do
     # Read once for the key rather than once per permission: the form takes up
     # to a thousand of them, and each refusal answer is two queries.
     refusals = OrganizationAuth.personal_key_refusals(user_or_organization)
+    params = if grantor, do: KeyGrantor.request(grantor, params), else: params
 
     cast(key, params, ~w(name revoke_at)a)
     |> validate_required(~w(name)a)
@@ -46,7 +51,7 @@ defmodule Hexpm.Accounts.Key do
     |> add_keys()
     |> prepare_changes(&unique_name/1)
     |> cast_embed(:permissions,
-      with: &KeyPermission.changeset(&1, user_or_organization, refusals, &2)
+      with: &KeyPermission.changeset(&1, user_or_organization, grantor, refusals, &2)
     )
     |> validate_length(:permissions, max: 1000)
     |> put_default_embed(:permissions, [%KeyPermission{domain: "api"}])
@@ -62,10 +67,22 @@ defmodule Hexpm.Accounts.Key do
     end)
   end
 
+  @doc """
+  Builds a key owned by `user_or_organization`. Without a grantor the owner
+  creates it itself, which is what the personal key dashboard does.
+  """
   def build(user_or_organization, params) do
+    build(
+      user_or_organization,
+      KeyGrantor.new(user_or_organization, user_or_organization, nil),
+      params
+    )
+  end
+
+  def build(user_or_organization, %KeyGrantor{} = grantor, params) do
     build_assoc(user_or_organization, :keys)
     |> associate_owner(user_or_organization)
-    |> changeset(user_or_organization, params)
+    |> changeset(user_or_organization, grantor, params)
   end
 
   defmacrop query_revoked(key) do

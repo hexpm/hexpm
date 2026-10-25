@@ -203,7 +203,6 @@ defmodule HexpmWeb.API.OrganizationControllerTest do
         {:post, "#{org}/members/#{member.username}", %{role: "admin"}},
         {:post, "#{org}/members/#{user1.username}", %{role: "admin"}},
         {:delete, "#{org}/members/#{member.username}", %{}},
-        {:post, "#{org}/keys", %{name: "new", permissions: [%{domain: "api"}]}},
         {:delete, "#{org}/keys/#{key.name}", %{}},
         {:delete, "#{org}/keys", %{}}
       ]
@@ -217,6 +216,24 @@ defmodule HexpmWeb.API.OrganizationControllerTest do
         assert conn.status in [403, 404], "#{method} #{path} answered #{conn.status}"
       end
 
+      user1 = user1 |> Ecto.Changeset.change() |> Ecto.Changeset.put_embed(:tfa, build(:tfa))
+      user1 = Repo.update!(user1)
+
+      conn =
+        build_conn()
+        |> test_oauth_login(user1)
+        |> post("#{org}/keys", %{name: "new", permissions: [%{domain: "members"}]})
+
+      assert json_response(conn, 422)["errors"]["permissions"]
+
+      conn =
+        build_conn()
+        |> test_oauth_login(user1)
+        |> post("#{org}/keys", %{name: "new", permissions: [%{domain: "api"}]})
+
+      assert [%{"domain" => "api", "resource" => "read"}] =
+               json_response(conn, 201)["permissions"]
+
       assert Repo.get_by!(OrganizationUser, organization_id: organization.id, user_id: user1.id).role ==
                "read"
 
@@ -228,8 +245,10 @@ defmodule HexpmWeb.API.OrganizationControllerTest do
                :count
              ) == 2
 
-      assert [%Key{name: "existing", revoke_at: nil}] =
-               Repo.all(from(k in Key, where: k.organization_id == ^organization.id))
+      assert [%Key{name: "existing", revoke_at: nil}, %Key{name: "new"}] =
+               Repo.all(
+                 from(k in Key, where: k.organization_id == ^organization.id, order_by: k.id)
+               )
     end
   end
 end

@@ -158,14 +158,14 @@ When running the command to publish a package, Hex will create a tar file of all
 
 ### Publishing from CI
 
-Prefer [Workload Identity](/docs/workload-identity), sometimes also known as "Trusted Publishing", when your CI runs on GitHub Actions. Hex exchanges a short-lived OIDC identity token for a token that can only publish the package, so you don't store a long-lived API key in CI secrets. Workload identities can't create a package or publish its first release, so the package must already exist. That includes an organization's workload identities, which publish the public packages the organization already owns.
+Prefer [Workload Identity](/docs/workload-identity), sometimes also known as "Trusted Publishing", when your CI runs on GitHub Actions. Hex exchanges a short-lived OIDC identity token for a token that can only publish the package, so you don't store a long-lived key in CI secrets. Workload identities can't create a package or publish its first release, so the package must already exist. That includes an organization's workload identities, which publish the public packages the organization already owns.
 
-You can also automate publishing with a key that has permissions to publish packages:
+You can also automate publishing with a [personal key](/docs/keys#personal-keys) that has permissions to publish packages:
 
-1. Select "Generate New Key".
+1. On the [keys page](/dashboard/keys), select "Generate New Key".
 2. Enter a key name, such as `publish-ci`.
 3. Choose an expiration.
-4. Under "Key permissions", check "Write" beneath "API".
+4. Under "Key permissions", check "Read" beneath "API", and "Publish" under "Write permissions". To limit the key to one package, check "Publish" next to that package instead.
 5. Select "Generate Key".
 
 The key is shown once, when you generate it.
@@ -173,9 +173,11 @@ The key is shown once, when you generate it.
 If you are publishing a package for your organization it is recommended to use a key for the organization instead of a personal key. Generate it on the organization's dashboard, or with this command after signing in with `mix hex.user auth`:
 
 ```nohighlight
-$ mix hex.organization key acme generate --key-name publish-ci --permission api:write
+$ mix hex.organization key acme generate --key-name publish-ci --permission api:read --permission publish:acme/mypackage
 f48ac236bca15c3271e077c15c5320c4
 ```
+
+Pass `--permission publish` instead to publish every package in the organization. See [keys](/docs/keys) for the other permissions and which roles can grant them.
 
 Set the key in the `HEX_API_KEY` system environment variable. To publish the package without being prompted pass the `--yes` flag:
 

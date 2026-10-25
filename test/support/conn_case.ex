@@ -148,6 +148,7 @@ defmodule HexpmWeb.ConnCase do
   def mock_github_auth_success(conn, uid, email, opts \\ []) do
     name = Keyword.get(opts, :name, "Test User")
     nickname = Keyword.get(opts, :nickname, "testuser")
+    email_verified = Keyword.get(opts, :email_verified, true)
 
     auth = %Ueberauth.Auth{
       provider: :github,
@@ -158,7 +159,15 @@ defmodule HexpmWeb.ConnCase do
         nickname: nickname
       },
       credentials: %Ueberauth.Auth.Credentials{},
-      extra: %Ueberauth.Auth.Extra{}
+      extra: %Ueberauth.Auth.Extra{
+        raw_info: %{
+          user: %{
+            "login" => nickname,
+            "email" => nil,
+            "emails" => [%{"email" => email, "primary" => true, "verified" => email_verified}]
+          }
+        }
+      }
     }
 
     conn

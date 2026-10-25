@@ -14,7 +14,7 @@ defmodule HexpmWeb.API.ReleaseController do
   plug :authorize,
        [
          authentication: :required,
-         domains: [{"api", "write"}, "package"],
+         domains: ["publish", "package"],
          allow_workload_identity: true,
          fun: [{AuthHelpers, :package_owner}, {AuthHelpers, :organization_billing_active}]
        ]
@@ -23,7 +23,7 @@ defmodule HexpmWeb.API.ReleaseController do
   plug :authorize,
        [
          authentication: :required,
-         domains: [{"api", "write"}, "package"],
+         domains: ["publish", "package"],
          fun: [{AuthHelpers, :package_owner}, {AuthHelpers, :organization_billing_active}]
        ]
        when action in [:delete]
@@ -41,7 +41,7 @@ defmodule HexpmWeb.API.ReleaseController do
   plug :authorize,
        [
          authentication: :required,
-         domains: [{"api", "write"}, "package"],
+         domains: ["publish", "package"],
          allow_workload_identity: true,
          fun: [{AuthHelpers, :package_owner}, {AuthHelpers, :organization_billing_active}]
        ]

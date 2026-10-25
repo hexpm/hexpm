@@ -12,7 +12,7 @@ defmodule HexpmWeb.API.OwnerController do
 
   plug :authorize,
        [
-         domains: [{"api", "write"}, "package"],
+         domains: ["owners", "package_owners"],
          fun: [
            {AuthHelpers, :package_owner, [owner_level: "full"]},
            {AuthHelpers, :organization_billing_active, [owner_level: "full"]}
@@ -71,6 +71,12 @@ defmodule HexpmWeb.API.OwnerController do
           {:error, :unverified_primary_email} ->
             validation_failed(conn, %{
               "username" => "cannot add owner until the user has verified their primary email"
+            })
+
+          {:error, :private_transfer} ->
+            validation_failed(conn, %{
+              "username" =>
+                "private packages belong to their organization and cannot be transferred"
             })
 
           {:error, :not_organization_transfer} ->

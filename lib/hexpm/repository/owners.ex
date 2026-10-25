@@ -55,6 +55,11 @@ defmodule Hexpm.Repository.Owners do
     repository_access = Organizations.access?(repository.organization, user, "read")
 
     cond do
+      # A private package belongs to its organization, whose admins manage it
+      # whoever its owners are, so there's nothing to hand over.
+      repository.id != 1 and Map.get(params, "transfer", false) == true ->
+        {:error, :private_transfer}
+
       repository.id != 1 and not repository_access ->
         {:error, :not_member}
 
