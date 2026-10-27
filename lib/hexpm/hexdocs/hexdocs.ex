@@ -130,6 +130,9 @@ defmodule Hexpm.Hexdocs do
       nil ->
         Search.delete(package, version)
         Logger.info("SKIPPING SEARCH INDEX #{key} (invalid or missing search items)")
+
+      :invalid ->
+        Logger.warning("SKIPPING SEARCH INDEX #{key} (search items are missing or null)")
     end
 
     ensure_archive_current!(key, checksum)

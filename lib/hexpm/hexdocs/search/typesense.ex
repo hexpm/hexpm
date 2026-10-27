@@ -2,8 +2,26 @@ defmodule Hexpm.Hexdocs.Search.Typesense do
   @behaviour Hexpm.Hexdocs.Search
   @timeout 60_000
 
+  require Logger
+
   @impl true
   def index(package, version, proglang, search_items) do
+    {items, invalid} = Enum.split_with(search_items, &valid_item?/1)
+
+    if invalid != [] do
+      Logger.warning(
+        "SKIPPING #{length(invalid)} SEARCH ITEMS FOR #{package} #{version} " <>
+          "(missing or invalid reference/title)"
+      )
+    end
+
+    case items do
+      [] -> :ok
+      items -> index_items(package, version, proglang, items)
+    end
+  end
+
+  defp index_items(package, version, proglang, search_items) do
     full_package = "#{package}-#{version}"
 
     ndjson =
@@ -11,7 +29,8 @@ defmodule Hexpm.Hexdocs.Search.Typesense do
         json =
           item
           |> Map.take(["type", "ref", "title", "doc"])
-          |> Map.update("doc", "", &(&1 || ""))
+          |> Map.update("type", "", &string_or_empty/1)
+          |> Map.update("doc", "", &string_or_empty/1)
           |> Map.put("package", full_package)
           |> Map.put("proglang", proglang)
           |> JSON.encode!()
@@ -54,6 +73,15 @@ defmodule Hexpm.Hexdocs.Search.Typesense do
         raise "Failed to index search items #{package} #{version}: #{inspect(reason)}"
     end
   end
+
+  defp valid_item?(%{"ref" => ref, "title" => title})
+       when is_binary(ref) and ref != "" and is_binary(title) and title != "",
+       do: true
+
+  defp valid_item?(_item), do: false
+
+  defp string_or_empty(value) when is_binary(value), do: value
+  defp string_or_empty(_value), do: ""
 
   # Typesense refuses writes while a node is short on memory or disk. A request
   # it refuses outright gets a 422. When the refusal hits a later chunk of an

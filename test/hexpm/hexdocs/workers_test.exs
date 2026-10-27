@@ -320,6 +320,7 @@ defmodule Hexpm.Hexdocs.WorkersTest do
       end)
 
       assert :ok = perform_job(Workers.Search, %{key: key})
+      verify!()
     end)
   end
 
@@ -342,7 +343,30 @@ defmodule Hexpm.Hexdocs.WorkersTest do
       end)
 
       assert :ok = perform_job(Workers.Search, %{key: key})
+      verify!()
     end)
+  end
+
+  @tag :capture_log
+  test "search preserves existing entries when replacement search items are missing or null" do
+    for {kind, data} <- [
+          {"missing", %{}},
+          {"null", %{"items" => nil}}
+        ] do
+      package = insert(:package, name: "#{kind}_search_docs")
+      release = insert(:release, package: package, version: "1.0.0", has_docs: true)
+      key = "docs/#{package.name}-#{release.version}.tar.gz"
+
+      Hexpm.Store.put(
+        :repo_bucket,
+        key,
+        create_docs_tar([{"search_data-#{package.name}.js", "searchData=" <> JSON.encode!(data)}])
+      )
+
+      use_search_mock(fn ->
+        assert :ok = perform_job(Workers.Search, %{key: key})
+      end)
+    end
   end
 
   test "search preserves existing entries when replacement search data is malformed" do

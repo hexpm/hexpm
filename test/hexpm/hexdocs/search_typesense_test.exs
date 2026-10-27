@@ -65,8 +65,110 @@ defmodule Hexpm.Hexdocs.Search.TypesenseTest do
     assert events == [%{host: "typesense.example", method: "POST", status: 200}]
   end
 
+  test "normalizes missing, null, and non-string types and documentation" do
+    item = %{"ref" => "beam.html#alloc_env", "title" => "beam.alloc_env/0"}
+
+    items = [
+      Map.merge(item, %{"type" => nil, "doc" => "Allocates an environment."}),
+      Map.merge(item, %{"type" => nil, "doc" => nil}),
+      Map.merge(item, %{"type" => 123, "doc" => []}),
+      item
+    ]
+
+    expect(Hexpm.HTTP.Mock, :post, fn _url, _headers, body, _opts ->
+      documents =
+        body
+        |> IO.iodata_to_binary()
+        |> String.split("\n", trim: true)
+        |> Enum.map(&JSON.decode!/1)
+
+      expected = %{
+        "type" => "",
+        "ref" => "beam.html#alloc_env",
+        "title" => "beam.alloc_env/0",
+        "doc" => "",
+        "package" => "zigler-0.17.0",
+        "proglang" => "elixir"
+      }
+
+      assert documents == [
+               Map.put(expected, "doc", "Allocates an environment."),
+               expected,
+               expected,
+               expected
+             ]
+
+      {:ok, 200, [], Enum.map_join(items, "\n", fn _ -> ~s({"success":true}) end)}
+    end)
+
+    assert :ok = Typesense.index("zigler", "0.17.0", "elixir", items)
+  end
+
   @items [%{"type" => "module", "ref" => "Example.html", "title" => "Example", "doc" => "Doc"}]
   @rejection ~s({"message": "Rejecting write: running out of resource type: OUT_OF_MEMORY"})
+
+  @tag :capture_log
+  test "skips null items and items without usable references or titles" do
+    first = hd(@items)
+    last = %{first | "ref" => "Other.html", "title" => "Other"}
+
+    invalid = [
+      nil,
+      %{},
+      Map.delete(first, "ref"),
+      Map.put(first, "ref", nil),
+      Map.put(first, "ref", ""),
+      Map.put(first, "ref", 123),
+      Map.delete(first, "title"),
+      Map.put(first, "title", nil),
+      Map.put(first, "title", ""),
+      Map.put(first, "title", [])
+    ]
+
+    data = "searchData=" <> JSON.encode!(%{"items" => [first] ++ invalid ++ [last]})
+
+    assert {"elixir", items} =
+             Hexpm.Hexdocs.Search.find_search_items("package", "1.0.0", [
+               {"search_data-package.js", data}
+             ])
+
+    expect(Hexpm.HTTP.Mock, :post, fn _url, _headers, body, _opts ->
+      documents =
+        body
+        |> IO.iodata_to_binary()
+        |> String.split("\n", trim: true)
+        |> Enum.map(&JSON.decode!/1)
+
+      assert documents == [
+               Map.merge(first, %{"package" => "package-1.0.0", "proglang" => "elixir"}),
+               Map.merge(last, %{"package" => "package-1.0.0", "proglang" => "elixir"})
+             ]
+
+      {:ok, 200, [], ~s({"success":true}\n{"success":true})}
+    end)
+
+    assert :ok = Typesense.index("package", "1.0.0", "elixir", items)
+  end
+
+  @tag :capture_log
+  test "does not import when there are no usable search items" do
+    assert :ok = Typesense.index("package", "1.0.0", "elixir", [])
+    assert :ok = Typesense.index("package", "1.0.0", "elixir", [nil, %{}])
+  end
+
+  @tag :capture_log
+  test "associates import failures with retained items after skipping unusable entries" do
+    item = hd(@items)
+    last = %{item | "ref" => "Other.html", "title" => "Other"}
+
+    expect(Hexpm.HTTP.Mock, :post, fn _url, _headers, _body, _opts ->
+      {:ok, 200, [], ~s({"success":true}\n{"success":false,"error":"rejected"})}
+    end)
+
+    assert_raise RuntimeError, ~r/Other\.html.*rejected/, fn ->
+      Typesense.index("package", "1.0.0", "elixir", [nil, item, nil, last])
+    end
+  end
 
   test "raises WriteRejectedError when Typesense refuses the import" do
     expect(Hexpm.HTTP.Mock, :post, fn _url, _headers, _body, _opts ->
