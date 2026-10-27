@@ -22,15 +22,18 @@ defmodule Hexpm.Hexdocs.SearchTest do
              {"erlang", erlang}
   end
 
-  test "returns nil for missing, null, or empty search items" do
+  test "returns nil for missing search data or empty search items" do
     assert Search.find_search_items("package", "1.0.0", []) == nil
     assert Search.find_search_items("package", "1.0.0", search_file([])) == nil
-    assert Search.find_search_items("package", "1.0.0", search_file(nil)) == nil
+  end
+
+  test "marks missing or null search items as invalid" do
+    assert Search.find_search_items("package", "1.0.0", search_file(nil)) == :invalid
 
     assert Search.find_search_items("package", "1.0.0", [
              {"search_data-package.js", "searchData={}"}
            ]) ==
-             nil
+             :invalid
   end
 
   test "infers the search language when the explicit language is null, empty, or not a string" do

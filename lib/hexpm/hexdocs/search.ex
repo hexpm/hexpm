@@ -49,11 +49,14 @@ defmodule Hexpm.Hexdocs.Search do
 
         {language, items}
 
-      %{"items" => items} when items in [nil, []] ->
+      %{"items" => []} ->
         nil
 
+      %{"items" => nil} ->
+        :invalid
+
       %{} = data when not is_map_key(data, "items") ->
-        nil
+        :invalid
 
       nil ->
         nil
