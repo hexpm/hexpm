@@ -41,9 +41,18 @@ defmodule Hexpm.Hexdocs.Search do
 
     case search_data do
       %{"items" => [_ | _] = items} ->
-        {Map.get(search_data, "proglang") || proglang(items), items}
+        language =
+          case Map.get(search_data, "proglang") do
+            language when is_binary(language) and language != "" -> language
+            _ -> proglang(items)
+          end
 
-      %{"items" => []} ->
+        {language, items}
+
+      %{"items" => items} when items in [nil, []] ->
+        nil
+
+      %{} = data when not is_map_key(data, "items") ->
         nil
 
       nil ->

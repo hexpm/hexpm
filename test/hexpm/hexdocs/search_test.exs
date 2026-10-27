@@ -22,17 +22,26 @@ defmodule Hexpm.Hexdocs.SearchTest do
              {"erlang", erlang}
   end
 
-  test "returns nil for missing or empty search data" do
+  test "returns nil for missing, null, or empty search items" do
     assert Search.find_search_items("package", "1.0.0", []) == nil
     assert Search.find_search_items("package", "1.0.0", search_file([])) == nil
+    assert Search.find_search_items("package", "1.0.0", search_file(nil)) == nil
+
+    assert Search.find_search_items("package", "1.0.0", [
+             {"search_data-package.js", "searchData={}"}
+           ]) ==
+             nil
   end
 
-  test "infers the search language when the explicit language is null" do
+  test "infers the search language when the explicit language is null, empty, or not a string" do
     items = [%{"type" => "module", "title" => "Example"}]
-    data = "searchData=" <> JSON.encode!(%{"proglang" => nil, "items" => items})
 
-    assert Search.find_search_items("package", "1.0.0", [{"search_data-package.js", data}]) ==
-             {"elixir", items}
+    for proglang <- [nil, "", 123, []] do
+      data = "searchData=" <> JSON.encode!(%{"proglang" => proglang, "items" => items})
+
+      assert Search.find_search_items("package", "1.0.0", [{"search_data-package.js", data}]) ==
+               {"elixir", items}
+    end
   end
 
   test "raises for malformed or unexpected search data" do
@@ -52,7 +61,7 @@ defmodule Hexpm.Hexdocs.SearchTest do
       Search.find_search_items(
         "package",
         "1.0.0",
-        [{"search_data-package.js", "searchData=" <> JSON.encode!(%{})}]
+        [{"search_data-package.js", "searchData=" <> JSON.encode!(%{"items" => "invalid"})}]
       )
     end
   end

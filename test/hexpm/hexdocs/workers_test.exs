@@ -323,26 +323,32 @@ defmodule Hexpm.Hexdocs.WorkersTest do
     end)
   end
 
-  test "search removes stale entries when replacement search data is empty" do
-    package = insert(:package, name: "empty_search_docs")
-    release = insert(:release, package: package, version: "1.0.0", has_docs: true)
-    key = "docs/#{package.name}-#{release.version}.tar.gz"
+  test "search removes stale entries when replacement search items are missing, null, or empty" do
+    for {kind, data} <- [
+          {"missing", %{}},
+          {"null", %{"items" => nil}},
+          {"empty", %{"items" => []}}
+        ] do
+      package = insert(:package, name: "#{kind}_search_docs")
+      release = insert(:release, package: package, version: "1.0.0", has_docs: true)
+      key = "docs/#{package.name}-#{release.version}.tar.gz"
 
-    Hexpm.Store.put(
-      :repo_bucket,
-      key,
-      create_docs_tar([{"search_data-#{package.name}.js", ~s(searchData={"items":[]})}])
-    )
+      Hexpm.Store.put(
+        :repo_bucket,
+        key,
+        create_docs_tar([{"search_data-#{package.name}.js", "searchData=" <> JSON.encode!(data)}])
+      )
 
-    use_search_mock(fn ->
-      expect(Hexpm.Hexdocs.Search.Mock, :delete, fn name, version ->
-        assert name == package.name
-        assert version == release.version
-        :ok
+      use_search_mock(fn ->
+        expect(Hexpm.Hexdocs.Search.Mock, :delete, fn name, version ->
+          assert name == package.name
+          assert version == release.version
+          :ok
+        end)
+
+        assert :ok = perform_job(Workers.Search, %{key: key})
       end)
-
-      assert :ok = perform_job(Workers.Search, %{key: key})
-    end)
+    end
   end
 
   test "search preserves existing entries when replacement search data is malformed" do
