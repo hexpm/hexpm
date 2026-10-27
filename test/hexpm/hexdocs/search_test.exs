@@ -27,6 +27,14 @@ defmodule Hexpm.Hexdocs.SearchTest do
     assert Search.find_search_items("package", "1.0.0", search_file([])) == nil
   end
 
+  test "infers the search language when the explicit language is null" do
+    items = [%{"type" => "module", "title" => "Example"}]
+    data = "searchData=" <> JSON.encode!(%{"proglang" => nil, "items" => items})
+
+    assert Search.find_search_items("package", "1.0.0", [{"search_data-package.js", data}]) ==
+             {"elixir", items}
+  end
+
   test "raises for malformed or unexpected search data" do
     assert_raise RuntimeError, ~r/Failed to decode search data json/, fn ->
       Search.find_search_items(

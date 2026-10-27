@@ -11,6 +11,7 @@ defmodule Hexpm.Hexdocs.Search.Typesense do
         json =
           item
           |> Map.take(["type", "ref", "title", "doc"])
+          |> Map.update("type", "", &(&1 || ""))
           |> Map.update("doc", "", &(&1 || ""))
           |> Map.put("package", full_package)
           |> Map.put("proglang", proglang)

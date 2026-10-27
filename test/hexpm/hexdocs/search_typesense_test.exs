@@ -65,6 +65,43 @@ defmodule Hexpm.Hexdocs.Search.TypesenseTest do
     assert events == [%{host: "typesense.example", method: "POST", status: 200}]
   end
 
+  test "normalizes missing and null types and documentation" do
+    item = %{"ref" => "beam.html#alloc_env", "title" => "beam.alloc_env/0"}
+
+    items = [
+      Map.merge(item, %{"type" => nil, "doc" => "Allocates an environment."}),
+      Map.merge(item, %{"type" => nil, "doc" => nil}),
+      item
+    ]
+
+    expect(Hexpm.HTTP.Mock, :post, fn _url, _headers, body, _opts ->
+      documents =
+        body
+        |> IO.iodata_to_binary()
+        |> String.split("\n", trim: true)
+        |> Enum.map(&JSON.decode!/1)
+
+      expected = %{
+        "type" => "",
+        "ref" => "beam.html#alloc_env",
+        "title" => "beam.alloc_env/0",
+        "doc" => "",
+        "package" => "zigler-0.17.0",
+        "proglang" => "elixir"
+      }
+
+      assert documents == [
+               Map.put(expected, "doc", "Allocates an environment."),
+               expected,
+               expected
+             ]
+
+      {:ok, 200, [], Enum.map_join(items, "\n", fn _ -> ~s({"success":true}) end)}
+    end)
+
+    assert :ok = Typesense.index("zigler", "0.17.0", "elixir", items)
+  end
+
   @items [%{"type" => "module", "ref" => "Example.html", "title" => "Example", "doc" => "Doc"}]
   @rejection ~s({"message": "Rejecting write: running out of resource type: OUT_OF_MEMORY"})
 
