@@ -320,6 +320,7 @@ defmodule Hexpm.Hexdocs.WorkersTest do
       end)
 
       assert :ok = perform_job(Workers.Search, %{key: key})
+      verify!()
     end)
   end
 
@@ -342,6 +343,7 @@ defmodule Hexpm.Hexdocs.WorkersTest do
       end)
 
       assert :ok = perform_job(Workers.Search, %{key: key})
+      verify!()
     end)
   end
 
