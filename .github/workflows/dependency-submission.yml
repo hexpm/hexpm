@@ -25,6 +25,6 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: erlef/mix-dependency-submission@257b2df58056895d7a0f3f7dba5b0520d71d9a46 # v1.3.4
+      - uses: erlef/mix-dependency-submission@c5bd30a0e18822272a914adb7fb153866d491baf # v1.3.5
         with:
           install-deps: true
