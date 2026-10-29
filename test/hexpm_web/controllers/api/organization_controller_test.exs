@@ -216,16 +216,19 @@ defmodule HexpmWeb.API.OrganizationControllerTest do
         assert conn.status in [403, 404], "#{method} #{path} answered #{conn.status}"
       end
 
+      user1 = user1 |> Ecto.Changeset.change() |> Ecto.Changeset.put_embed(:tfa, build(:tfa))
+      user1 = Repo.update!(user1)
+
       conn =
         build_conn()
-        |> put_req_header("authorization", key_for(user1))
+        |> test_oauth_login(user1)
         |> post("#{org}/keys", %{name: "new", permissions: [%{domain: "members"}]})
 
       assert json_response(conn, 422)["errors"]["permissions"]
 
       conn =
         build_conn()
-        |> put_req_header("authorization", key_for(user1))
+        |> test_oauth_login(user1)
         |> post("#{org}/keys", %{name: "new", permissions: [%{domain: "api"}]})
 
       assert [%{"domain" => "api", "resource" => "read"}] =

@@ -19,9 +19,9 @@ defmodule HexpmWeb.KeyCapabilitiesTest do
     insert(:release, package: package, version: "1.0.0")
     insert(:release, package: other_package, version: "1.0.0")
 
-    admin = insert(:user)
-    writer = insert(:user)
-    reader = insert(:user)
+    admin = insert(:user_with_tfa)
+    writer = insert(:user_with_tfa)
+    reader = insert(:user_with_tfa)
     insert(:organization_user, organization: organization, user: admin, role: "admin")
     insert(:organization_user, organization: organization, user: writer, role: "write")
     insert(:organization_user, organization: organization, user: reader, role: "read")
@@ -36,15 +36,17 @@ defmodule HexpmWeb.KeyCapabilitiesTest do
     }
   end
 
-  defp create_key(credential, organization, permissions) do
+  defp signed_in(user, scopes \\ ["api"]), do: test_oauth_login(build_conn(), user, scopes)
+
+  defp with_key(secret), do: put_req_header(build_conn(), "authorization", secret)
+
+  defp create_key(conn, organization, permissions) do
     params =
       if permissions == :omitted,
         do: %{name: "ci"},
         else: %{name: "ci", permissions: permissions}
 
-    build_conn()
-    |> put_req_header("authorization", credential)
-    |> post("/api/orgs/#{organization.name}/keys", params)
+    post(conn, "/api/orgs/#{organization.name}/keys", params)
   end
 
   defp created_secret(conn), do: json_response(conn, 201)["secret"]
@@ -100,10 +102,12 @@ defmodule HexpmWeb.KeyCapabilitiesTest do
 
   describe "write member" do
     test "asking for api:write gets api:read, publish and keys", c do
-      conn = create_key(key_for(c.writer), c.organization, [%{domain: "api", resource: "write"}])
+      conn =
+        create_key(signed_in(c.writer), c.organization, [%{domain: "api", resource: "write"}])
+
       assert permissions(conn) == ["api:read", "keys", "publish"]
 
-      conn = create_key(key_for(c.writer), c.organization, :omitted)
+      conn = create_key(signed_in(c.writer), c.organization, :omitted)
       assert permissions(conn) == ["api:read", "keys", "publish"]
     end
 
@@ -116,7 +120,7 @@ defmodule HexpmWeb.KeyCapabilitiesTest do
             "owners:#{c.organization.name}/#{c.package.name}"
           ] do
         conn =
-          create_key(key_for(c.writer), c.organization, [
+          create_key(signed_in(c.writer), c.organization, [
             Hexpm.Permissions.scope_to_permission(scope)
           ])
 
@@ -124,26 +128,29 @@ defmodule HexpmWeb.KeyCapabilitiesTest do
       end
     end
 
-    test "the key it gets publishes and doesn't manage owners or members", c do
-      conn = create_key(key_for(c.writer), c.organization, [%{domain: "api", resource: "write"}])
+    test "the key it gets publishes, doesn't manage owners or members and can't create keys", c do
+      conn =
+        create_key(signed_in(c.writer), c.organization, [%{domain: "api", resource: "write"}])
+
       secret = created_secret(conn)
 
       assert retire(secret, c.organization, c.package).status == 204
       assert add_owner(secret, c.organization, c.package, c.reader).status == 401
       assert add_member(secret, c.organization).status == 401
 
-      conn = create_key(secret, c.organization, [%{domain: "api", resource: "write"}])
-      assert permissions(conn) == ["api:read", "keys", "publish"]
+      assert create_key(with_key(secret), c.organization, [%{domain: "publish"}]).status == 403
+    end
 
-      conn = create_key(secret, c.organization, [%{domain: "members"}])
-      assert errors(conn) =~ "members is not held by the authenticating key"
+    test "can't create keys for an organization it isn't in", c do
+      other = insert(:repository).organization
+      assert create_key(signed_in(c.writer), other, :omitted).status == 404
     end
 
     test "a single package publish key only reaches that package", c do
       resource = "#{c.organization.name}/#{c.package.name}"
 
       conn =
-        create_key(key_for(c.writer), c.organization, [%{domain: "publish", resource: resource}])
+        create_key(signed_in(c.writer), c.organization, [%{domain: "publish", resource: resource}])
 
       assert permissions(conn) == ["publish:#{resource}"]
       secret = created_secret(conn)
@@ -157,17 +164,17 @@ defmodule HexpmWeb.KeyCapabilitiesTest do
   describe "read member" do
     test "creates read keys and nothing more", c do
       conn =
-        create_key(key_for(c.reader), c.organization, [
+        create_key(signed_in(c.reader), c.organization, [
           %{domain: "repository", resource: c.organization.name},
           %{domain: "api", resource: "read"}
         ])
 
       assert permissions(conn) == ["api:read", "repository:#{c.organization.name}"]
 
-      conn = create_key(key_for(c.reader), c.organization, :omitted)
+      conn = create_key(signed_in(c.reader), c.organization, :omitted)
       assert permissions(conn) == ["api:read"]
 
-      conn = create_key(key_for(c.reader), c.organization, [%{domain: "publish"}])
+      conn = create_key(signed_in(c.reader), c.organization, [%{domain: "publish"}])
       assert errors(conn) =~ "publish requires the write role"
     end
 
@@ -186,21 +193,18 @@ defmodule HexpmWeb.KeyCapabilitiesTest do
   describe "an empty permission list" do
     test "is read as the default request", c do
       for permissions <- [[], %{}] do
-        conn = create_key(key_for(c.reader), c.organization, permissions)
+        conn = create_key(signed_in(c.reader), c.organization, permissions)
         assert permissions(conn) == ["api:read"]
 
-        conn = create_key(key_for(c.writer), c.organization, permissions)
+        conn = create_key(signed_in(c.writer), c.organization, permissions)
         assert permissions(conn) == ["api:read", "keys", "publish"]
       end
-
-      conn = create_key(org_key(c.organization, ["keys"]), c.organization, [])
-      assert permissions(conn) == ["keys"]
     end
   end
 
   describe "admin" do
     test "gets api:write as asked", c do
-      conn = create_key(key_for(c.admin), c.organization, [%{domain: "api", resource: "write"}])
+      conn = create_key(signed_in(c.admin), c.organization, [%{domain: "api", resource: "write"}])
       assert permissions(conn) == ["api:write"]
       secret = created_secret(conn)
 
@@ -211,7 +215,7 @@ defmodule HexpmWeb.KeyCapabilitiesTest do
       resource = "#{c.organization.name}/#{c.package.name}"
 
       conn =
-        create_key(key_for(c.admin), c.organization, [
+        create_key(signed_in(c.admin), c.organization, [
           %{domain: "members"},
           %{domain: "administration"},
           %{domain: "owners", resource: resource},
@@ -222,115 +226,53 @@ defmodule HexpmWeb.KeyCapabilitiesTest do
                ["administration", "members", "owners:#{resource}", "package:#{resource}"]
     end
 
-    test "is limited by the personal key it authenticates with", c do
-      conn =
-        create_key(key_for(c.admin, [%{domain: "keys"}]), c.organization, [%{domain: "members"}])
-
-      assert errors(conn) =~ "members is not held by the authenticating key"
+    test "is limited by the scopes it signs in with", c do
+      conn = create_key(signed_in(c.admin, ["keys"]), c.organization, [%{domain: "members"}])
+      assert errors(conn) =~ "members is not held by the authenticating token"
     end
   end
 
-  describe "organization credential" do
-    test "grants only what it holds", c do
+  describe "organization key" do
+    test "can't create keys, whatever it holds", c do
       secret = org_key(c.organization, ["keys", "publish"])
-      resource = "#{c.organization.name}/#{c.package.name}"
 
-      conn = create_key(secret, c.organization, [%{domain: "publish", resource: resource}])
-      assert permissions(conn) == ["publish:#{resource}"]
-
-      conn = create_key(secret, c.organization, [%{domain: "api", resource: "write"}])
-      assert permissions(conn) == ["keys", "publish"]
-
-      conn =
-        create_key(secret, c.organization, [
-          %{domain: "repository", resource: c.organization.name}
-        ])
-
-      assert errors(conn) =~
-               "repository:#{c.organization.name} is not held by the authenticating key"
-
-      conn = create_key(secret, c.organization, [%{domain: "package", resource: resource}])
-      assert errors(conn) =~ "package:#{resource} is not held by the authenticating key"
+      conn = create_key(with_key(secret), c.organization, [%{domain: "publish"}])
+      assert json_response(conn, 403)["message"] =~ "API keys cannot create API keys"
     end
 
-    test "needs api:read to build a package permission from publish and owners", c do
-      resource = "#{c.organization.name}/#{c.package.name}"
-      package = [%{domain: "package", resource: resource}]
-
-      secret = org_key(c.organization, ["keys", "publish:#{resource}", "owners:#{resource}"])
-      assert errors(create_key(secret, c.organization, package)) =~ "is not held"
-
-      secret =
-        org_key(c.organization, ["keys", "api:read", "publish:#{resource}", "owners:#{resource}"])
-
-      assert permissions(create_key(secret, c.organization, package)) == ["package:#{resource}"]
-    end
-
-    test "passes on the reads its package permission implies", c do
-      resource = "#{c.organization.name}/#{c.package.name}"
-      secret = org_key(c.organization, ["keys", "package:#{resource}"])
-
-      conn =
-        create_key(secret, c.organization, [
-          %{domain: "api", resource: "read"},
-          %{domain: "publish", resource: resource}
-        ])
-
-      assert permissions(conn) == ["api:read", "publish:#{resource}"]
-    end
-
-    test "with api:write grants everything", c do
+    test "gets the same answer for an organization that exists and one that doesn't", c do
       secret = org_key(c.organization, ["api:write"])
 
-      conn = create_key(secret, c.organization, :omitted)
-      assert permissions(conn) == ["api"]
-    end
+      existing = create_key(with_key(secret), insert(:repository).organization, :omitted)
+      missing = create_key(with_key(secret), %{name: "nosuchorganization"}, :omitted)
 
-    test "needs keys to create keys", c do
-      secret = org_key(c.organization, ["publish", "api:read"])
-
-      build_conn()
-      |> put_req_header("authorization", secret)
-      |> post("/api/orgs/#{c.organization.name}/keys", %{name: "ci"})
-      |> response(401)
-    end
-
-    test "can't create keys for another organization", c do
-      other = insert(:repository).organization
-      secret = org_key(c.organization, ["api:write"])
-
-      assert create_key(secret, other, :omitted).status == 404
+      assert existing.status == 403
+      assert missing.status == 403
     end
   end
 
   describe "personal keys" do
-    test "a key holding only keys can't create a full API key", c do
-      secret = key_for(c.writer, [%{domain: "keys"}])
-
+    test "a sign-in holding only keys can't create a full API key", c do
       for params <- [
             %{name: "laptop", permissions: [%{domain: "api", resource: "write"}]},
             %{name: "laptop"}
           ] do
-        conn =
-          build_conn()
-          |> put_req_header("authorization", secret)
-          |> post("/api/keys", params)
-
+        conn = c.writer |> signed_in(["keys"]) |> post("/api/keys", params)
         assert permissions(conn) == ["keys"]
       end
 
       conn =
-        build_conn()
-        |> put_req_header("authorization", secret)
+        c.writer
+        |> signed_in(["keys"])
         |> post("/api/keys", %{name: "laptop", permissions: [%{domain: "publish"}]})
 
-      assert errors(conn) =~ "publish is not held by the authenticating key"
+      assert errors(conn) =~ "publish is not held by the authenticating token"
     end
 
-    test "a full key creates capability keys", c do
+    test "a full sign-in creates capability keys", c do
       conn =
-        build_conn()
-        |> put_req_header("authorization", key_for(c.writer))
+        c.writer
+        |> signed_in()
         |> post("/api/keys", %{
           name: "laptop",
           permissions: [
@@ -375,7 +317,7 @@ defmodule HexpmWeb.KeyCapabilitiesTest do
       end
 
       assert errors(create.(["keys", "package:hexpm/#{package.name}"])) =~
-               "package:hexpm/#{package.name} is not held by the authenticating key"
+               "package:hexpm/#{package.name} is not held by the authenticating token"
 
       assert permissions(create.(["keys", "api:read", "package:hexpm/#{package.name}"])) ==
                ["package:hexpm/#{package.name}"]
@@ -383,8 +325,8 @@ defmodule HexpmWeb.KeyCapabilitiesTest do
 
     test "owners on one package needs full ownership", c do
       conn =
-        build_conn()
-        |> put_req_header("authorization", key_for(c.writer))
+        c.writer
+        |> signed_in()
         |> post("/api/keys", %{
           name: "laptop",
           permissions: [%{domain: "owners", resource: "#{c.organization.name}/#{c.package.name}"}]
@@ -395,12 +337,14 @@ defmodule HexpmWeb.KeyCapabilitiesTest do
   end
 
   test "a user token with a capability needs a TOTP code to write", c do
+    writer = insert(:user)
+    insert(:organization_user, organization: c.organization, user: writer, role: "write")
     client = insert(:oauth_client)
-    session = insert(:oauth_session, user: c.writer, client_id: client.client_id)
+    session = insert(:oauth_session, user: writer, client_id: client.client_id)
 
     {:ok, token} =
       Hexpm.OAuth.Tokens.create_and_insert_for_user(
-        c.writer,
+        writer,
         client.client_id,
         ["publish"],
         "authorization_code",
@@ -467,8 +411,8 @@ defmodule HexpmWeb.KeyCapabilitiesTest do
 
   test "nobody creates keys for the public organization", c do
     conn =
-      build_conn()
-      |> put_req_header("authorization", key_for(c.reader))
+      c.reader
+      |> signed_in()
       |> post("/api/orgs/hexpm/keys", %{
         name: "ci",
         permissions: [%{domain: "api", resource: "read"}]

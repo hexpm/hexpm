@@ -3,13 +3,13 @@ defmodule HexpmWeb.PlugParserTest do
 
   describe "erlang media request" do
     test "POST /api/keys" do
-      user = insert(:user)
+      user = insert(:user_with_tfa)
       erlang_params = HexpmWeb.ErlangFormat.encode_to_iodata!(%{name: "macbook"})
 
       conn =
         build_conn()
         |> put_req_header("content-type", "application/vnd.hex+erlang")
-        |> put_req_header("authorization", key_for(user))
+        |> test_oauth_login(user)
         |> post("/api/keys", erlang_params)
 
       assert json_response(conn, 201)["name"] == "macbook"

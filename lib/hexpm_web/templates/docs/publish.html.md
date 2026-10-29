@@ -170,7 +170,7 @@ You can also automate publishing with a [personal key](/docs/keys#personal-keys)
 
 The key is shown once, when you generate it.
 
-If you are publishing a package for your organization it is recommended to use a key for the organization instead of a personal key:
+If you are publishing a package for your organization it is recommended to use a key for the organization instead of a personal key. Generate it on the organization's dashboard, or with this command after signing in with `mix hex.user auth`:
 
 ```nohighlight
 $ mix hex.organization key acme generate --key-name publish-ci --permission api:read --permission publish:acme/mypackage
