@@ -104,6 +104,24 @@ defmodule HexpmWeb.Readme.RendererTest do
     assert document |> LazyHTML.query("pre code") |> LazyHTML.text() == code
   end
 
+  test "preserves the complete README as plain text when the parse budget is exhausted" do
+    content = String.duplicate("Paragraph with *emphasis*.\n\n", 20_000)
+
+    document =
+      Renderer.render(
+        "hexpm",
+        "README.md",
+        content,
+        "my_package",
+        "1.0.0",
+        HexpmWeb.SyntaxHighlight.budget(),
+        parse_time: 1
+      )
+      |> LazyHTML.from_fragment()
+
+    assert [{"pre", [{"class", "plain-text"}], [^content]}] = LazyHTML.to_tree(document)
+  end
+
   test "highlights a long Elixir operator chain in a code block" do
     chain = Enum.map_join(1..500, " or ", &"x === #{&1}")
     code = "def f(x) when #{chain} do\n  x\nend"

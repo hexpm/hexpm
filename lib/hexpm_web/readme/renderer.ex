@@ -23,7 +23,8 @@ defmodule HexpmWeb.Readme.Renderer do
         content,
         package_name,
         version,
-        budget \\ SyntaxHighlight.budget()
+        syntax_highlight_budget \\ SyntaxHighlight.budget(),
+        markdown_budget \\ [parse_time: 1_000]
       ) do
     ext = Path.extname(filename) |> String.downcase()
     content = scrub_invalid_utf8(content)
@@ -31,27 +32,10 @@ defmodule HexpmWeb.Readme.Renderer do
     tree =
       case ext do
         ext when ext in [".md", ".markdown"] ->
-          MDEx.new(
-            markdown: content,
-            extension: [description_lists: true, superscript: true, subscript: true]
-          )
-          |> MDExGFM.attach()
-          |> MDEx.Document.run()
-          |> MDEx.traverse_and_update(
-            &highlight_code_block(&1, "readme #{package_name} #{version}", budget)
-          )
-          |> MDEx.traverse_and_update(&InlineAttributeLists.transform/1)
-          |> MDEx.traverse_and_update(
-            HeadingAnchors.transform(levels: @header_tags, hover_link: false)
-          )
-          |> MDEx.to_html!()
-          |> InlineAttributeLists.apply_classes()
-          |> HeadingAnchors.anchor()
-          |> LazyHTML.from_fragment()
-          |> LazyHTML.to_tree()
+          markdown_tree(content, package_name, version, syntax_highlight_budget, markdown_budget)
 
         _ ->
-          [{"pre", [{"class", "plain-text"}], [content]}]
+          plain_tree(content)
       end
 
     tree
@@ -61,13 +45,55 @@ defmodule HexpmWeb.Readme.Renderer do
     |> LazyHTML.Tree.to_html()
   end
 
-  defp highlight_code_block(%MDEx.CodeBlock{info: info, literal: literal}, label, budget) do
+  defp markdown_tree(content, package_name, version, syntax_highlight_budget, markdown_budget) do
+    document =
+      MDEx.new(
+        markdown: content,
+        budget: markdown_budget,
+        extension: [description_lists: true, superscript: true, subscript: true]
+      )
+      |> MDExGFM.attach()
+      |> MDEx.Document.run()
+
+    case document do
+      %MDEx.Document{} = document ->
+        document
+        |> MDEx.traverse_and_update(
+          &highlight_code_block(&1, "readme #{package_name} #{version}", syntax_highlight_budget)
+        )
+        |> MDEx.traverse_and_update(&InlineAttributeLists.transform/1)
+        |> MDEx.traverse_and_update(
+          HeadingAnchors.transform(levels: @header_tags, hover_link: false)
+        )
+        |> MDEx.to_html!()
+        |> InlineAttributeLists.apply_classes()
+        |> HeadingAnchors.anchor()
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.to_tree()
+
+      _ ->
+        plain_tree(content)
+    end
+  end
+
+  defp plain_tree(content), do: [{"pre", [{"class", "plain-text"}], [content]}]
+
+  defp highlight_code_block(
+         %MDEx.CodeBlock{info: info, literal: literal},
+         label,
+         syntax_highlight_budget
+       ) do
     language = info |> String.split() |> List.first("plaintext")
-    html = SyntaxHighlight.highlight(literal, language, "#{label} #{language}", budget: budget)
+
+    html =
+      SyntaxHighlight.highlight(literal, language, "#{label} #{language}",
+        budget: syntax_highlight_budget
+      )
+
     %MDEx.HtmlBlock{literal: html}
   end
 
-  defp highlight_code_block(node, _label, _budget), do: node
+  defp highlight_code_block(node, _label, _syntax_highlight_budget), do: node
 
   # HTML parsing discards the first newline after <pre>. Prefix one so the
   # serialized HTML preserves the first text node when parsed again.
