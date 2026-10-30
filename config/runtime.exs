@@ -17,6 +17,19 @@ env_list = fn name ->
   |> Enum.uniq()
 end
 
+config :hexpm,
+  force_publish_approval:
+    (case System.get_env("HEXPM_FORCE_PUBLISH_APPROVAL", "false") do
+       "false" ->
+         false
+
+       "true" ->
+         true
+
+       value ->
+         raise "invalid HEXPM_FORCE_PUBLISH_APPROVAL #{inspect(value)}; expected true or false"
+     end)
+
 config :hexpm, :feature_flags,
   organization_sso: [
     mode: env_mode.("HEXPM_SSO_MODE", if(config_env() == :dev, do: "enabled", else: "off")),
