@@ -187,10 +187,10 @@ mix test test/hexpm_web/integration/sca_test.exs --include integration
 
 ## Staged publishing
 
-`HEXPM_STAGED_PUBLISHING_MODE` defaults to `off`. Set it to `beta` with comma-separated
-`HEXPM_STAGED_PUBLISHING_BETA_USERS` and `HEXPM_STAGED_PUBLISHING_BETA_ORGANIZATIONS`,
-or to `enabled`. Public packages follow their owners in beta; private packages
-follow their organization.
+Staged publishing follows the Workload Identity rollout flag:
+`HEXPM_WORKLOAD_IDENTITY_MODE`, with `HEXPM_WORKLOAD_IDENTITY_BETA_USERS` and
+`HEXPM_WORKLOAD_IDENTITY_BETA_ORGANIZATIONS` in `beta`. Public packages follow their
+owners in beta; private packages follow their organization.
 
 Staged package and documentation tarballs use the existing repo bucket under
 `staged/`, with private, non-cacheable responses. The CDN origin identity must be
@@ -199,7 +199,8 @@ approved for seven days; approval, rejection, restaging and expiry enqueue artif
 cleanup.
 S3 lifecycle rules expire remaining current objects after 14 days and noncurrent
 versions after one day. Lifecycle deletion is asynchronous. Deploy the
-hexpm-ops storage rules and backup exclusion before enabling staged publishing.
+hexpm-ops storage rules and backup exclusion before staged publishing reaches an
+environment where the Workload Identity flag is on.
 Development and test use the existing local and memory repo stores.
 
 Each package has an optional approval setting covering all API keys and workload
@@ -208,9 +209,8 @@ direct publishing until approval is enabled. Full owners configure it under
 Settings > Publish approval; changes require two-factor authentication and fresh
 sudo, and disabling sends a notification to full owners and owning organization
 administrators.
-The rollout flag controls when these settings take effect; it doesn't gate
-Workload Identity availability. Both public and private publishing follow the
-package's setting.
+These settings take effect where the Workload Identity flag is on. Both public and
+private publishing follow the package's setting.
 An organization administrator can require approval for API keys and workload
 identities in its private repository under Publish approval in the dashboard.
 User OAuth publishes with an OTP remain direct.

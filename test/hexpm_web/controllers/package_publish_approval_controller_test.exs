@@ -6,7 +6,7 @@ defmodule HexpmWeb.PackagePublishApprovalControllerTest do
   alias HexpmWeb.Plugs.Sudo
 
   setup do
-    put_feature_flag(:staged_publishing, mode: :enabled)
+    put_feature_flag(:workload_identity, mode: :enabled)
     user = insert(:user_with_tfa)
     maintainer = insert(:user_with_tfa)
 
@@ -197,7 +197,7 @@ defmodule HexpmWeb.PackagePublishApprovalControllerTest do
   end
 
   test "the setting is unavailable outside the staging rollout", ctx do
-    put_feature_flag(:staged_publishing, mode: :off)
+    put_feature_flag(:workload_identity, mode: :off)
     conn = build_conn() |> test_login(ctx.user)
     conn |> get(ctx.path) |> response(404)
     conn |> post(ctx.path <> "/enable") |> response(404)

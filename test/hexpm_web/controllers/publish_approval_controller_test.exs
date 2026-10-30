@@ -5,7 +5,7 @@ defmodule HexpmWeb.PublishApprovalControllerTest do
   alias HexpmWeb.Plugs.Sudo
 
   setup do
-    put_feature_flag(:staged_publishing, mode: :enabled)
+    put_feature_flag(:workload_identity, mode: :enabled)
     user = insert(:user_with_tfa)
     repository = insert(:repository)
     organization = repository.organization
@@ -156,7 +156,7 @@ defmodule HexpmWeb.PublishApprovalControllerTest do
   end
 
   test "the organization setting is hidden and inaccessible outside the rollout", ctx do
-    put_feature_flag(:staged_publishing, mode: :off)
+    put_feature_flag(:workload_identity, mode: :off)
     build_conn() |> test_login(ctx.user) |> get(ctx.path) |> response(404)
     build_conn() |> test_login(ctx.user) |> post(ctx.path <> "/enable") |> response(404)
     refute Repo.get!(Hexpm.Accounts.Organization, ctx.organization.id).require_publish_approval

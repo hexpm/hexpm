@@ -88,14 +88,16 @@ defmodule HexpmWeb.PackageOwnerControllerTest do
 
       assert links(document, "#package-settings-nav a") == [
                {"Owners", "/packages/#{package.name}/owners", "page"},
+               {"Publish approval NEW", "/packages/#{package.name}/publish-approval", nil},
                {"Workload identities", "/packages/#{package.name}/workload-identities", nil}
              ]
 
       assert document |> LazyHTML.query("#checksum-snippet") |> Enum.empty?()
 
-      assert links(document, ".package-tabs-mobile-menu a") |> Enum.take(-3) == [
+      assert links(document, ".package-tabs-mobile-menu a") |> Enum.take(-4) == [
                {"Settings", "/packages/#{package.name}/owners", nil},
                {"Owners", "/packages/#{package.name}/owners", nil},
+               {"Publish approval", "/packages/#{package.name}/publish-approval", nil},
                {"Workload identities", "/packages/#{package.name}/workload-identities", nil}
              ]
 

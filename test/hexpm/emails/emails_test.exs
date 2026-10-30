@@ -677,7 +677,7 @@ defmodule Hexpm.EmailsTest do
 
   describe "workload identity change emails" do
     setup do
-      put_feature_flag(:staged_publishing, mode: :enabled)
+      put_feature_flag(:workload_identity, mode: :enabled)
       :ok
     end
 

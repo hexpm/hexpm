@@ -5,7 +5,7 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
   alias Hexpm.Repository.{Assets, Package, Release, StagedRelease, StagedReleases}
 
   setup do
-    put_feature_flag(:staged_publishing, mode: :enabled)
+    put_feature_flag(:workload_identity, mode: :enabled)
     user = insert(:user_with_tfa)
 
     repository =
@@ -333,7 +333,7 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
 
   test "a direct publish can't replace a reserved version after the rollout is turned off", ctx do
     {result, _} = stage(ctx)
-    put_feature_flag(:staged_publishing, mode: :off)
+    put_feature_flag(:workload_identity, mode: :off)
 
     upload(
       ctx,
@@ -534,7 +534,7 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
   end
 
   test "private packages follow the organization beta list", ctx do
-    put_feature_flag(:staged_publishing,
+    put_feature_flag(:workload_identity,
       mode: :beta,
       beta_users: [ctx.user.username],
       beta_organizations: []
@@ -542,7 +542,7 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
 
     {direct, _} = stage(ctx)
     refute direct["status"] == "staged"
-    put_feature_flag(:staged_publishing, beta_organizations: [ctx.repository.organization.name])
+    put_feature_flag(:workload_identity, beta_organizations: [ctx.repository.organization.name])
 
     result =
       upload(

@@ -6,7 +6,7 @@ defmodule Hexpm.Repository.StagedReleasesConcurrencyTest do
   alias Hexpm.Repository.{Release, Releases, Repository, StagedRelease, StagedReleases}
 
   setup do
-    put_feature_flag(:staged_publishing, mode: :enabled)
+    put_feature_flag(:workload_identity, mode: :enabled)
   end
 
   for operation <- [:configure, :approve, :reject] do

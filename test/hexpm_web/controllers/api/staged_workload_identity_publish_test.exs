@@ -7,7 +7,7 @@ defmodule HexpmWeb.API.StagedWorkloadIdentityPublishTest do
   setup :verify_on_exit!
 
   setup do
-    put_feature_flag(:staged_publishing, mode: :enabled)
+    put_feature_flag(:workload_identity, mode: :enabled)
     WorkloadIdentityHelpers.stub_oidc_discovery()
     user = insert(:user_with_tfa)
 
@@ -192,7 +192,7 @@ defmodule HexpmWeb.API.StagedWorkloadIdentityPublishTest do
 
   for mode <- [:enabled, :beta] do
     test "new public packages default to approval in #{mode} rollout", ctx do
-      put_feature_flag(:staged_publishing, mode: unquote(mode), beta_users: [ctx.user.username])
+      put_feature_flag(:workload_identity, mode: unquote(mode), beta_users: [ctx.user.username])
       key = insert(:key, user: ctx.user)
       name = Fake.sequence(:package)
 
@@ -263,35 +263,25 @@ defmodule HexpmWeb.API.StagedWorkloadIdentityPublishTest do
            |> Map.fetch!("status") == "approved"
   end
 
-  test "the rollout off switch keeps workload identity publishing direct", ctx do
-    put_feature_flag(:staged_publishing, mode: :off)
-    result = publish(ctx, mint(ctx.package)) |> json_response(201)
+  test "API keys publish directly with the Workload Identity flag off", ctx do
+    put_feature_flag(:workload_identity, mode: :off)
+    result = key_publish(ctx, "1.0.0") |> json_response(201)
     refute result["status"] == "staged"
     assert Repo.aggregate(Release, :count) == 1
   end
 
   test "beta applies to public packages owned by a listed user", ctx do
-    put_feature_flag(:staged_publishing,
+    put_feature_flag(:workload_identity,
       mode: :beta,
       beta_users: [ctx.user.username],
       beta_organizations: []
     )
 
-    assert publish(ctx, mint(ctx.package)) |> json_response(201) |> Map.fetch!("status") ==
-             "staged"
+    assert key_publish(ctx, "1.0.0") |> json_response(201) |> Map.fetch!("status") == "staged"
 
-    put_feature_flag(:staged_publishing, beta_users: [], beta_organizations: [])
+    put_feature_flag(:workload_identity, beta_users: [], beta_organizations: [])
 
-    conn =
-      build_conn()
-      |> put_req_header("content-type", "application/octet-stream")
-      |> put_req_header("authorization", "Bearer #{mint(ctx.package).access_token}")
-      |> post(
-        "/api/publish",
-        create_tar(%{name: ctx.package.name, version: "2.0.0", description: "Outside beta"})
-      )
-
-    refute json_response(conn, 201)["status"] == "staged"
+    refute key_publish(ctx, "2.0.0") |> json_response(201) |> Map.get("status") == "staged"
   end
 
   test "an organization workload identity stages a new private package and its docs", ctx do
@@ -581,6 +571,16 @@ defmodule HexpmWeb.API.StagedWorkloadIdentityPublishTest do
     |> post(
       "/api/publish",
       create_tar(%{name: ctx.package.name, version: "1.0.0", description: "From CI"})
+    )
+  end
+
+  defp key_publish(ctx, version) do
+    build_conn()
+    |> put_req_header("content-type", "application/octet-stream")
+    |> put_req_header("authorization", key_for(ctx.user))
+    |> post(
+      "/api/publish",
+      create_tar(%{name: ctx.package.name, version: version, description: "From a key"})
     )
   end
 
