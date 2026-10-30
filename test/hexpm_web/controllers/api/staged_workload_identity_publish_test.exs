@@ -263,6 +263,30 @@ defmodule HexpmWeb.API.StagedWorkloadIdentityPublishTest do
            |> Map.fetch!("status") == "approved"
   end
 
+  test "a staged release reports requirement errors by dependency name", ctx do
+    dependency = insert(:package)
+
+    meta = %{
+      name: ctx.package.name,
+      version: "1.0.0",
+      description: "From a key",
+      requirements: [
+        %{name: dependency.name, requirement: "~> 0.0.1", app: "..", optional: false}
+      ]
+    }
+
+    errors =
+      build_conn()
+      |> put_req_header("content-type", "application/octet-stream")
+      |> put_req_header("authorization", key_for(ctx.user))
+      |> post("/api/publish", create_tar(meta))
+      |> json_response(422)
+      |> Map.fetch!("errors")
+
+    assert errors["requirements"] == %{dependency.name => "has invalid format"}
+    assert Repo.aggregate(Hexpm.Repository.StagedRelease, :count) == 0
+  end
+
   test "API keys publish directly with the Workload Identity flag off", ctx do
     put_feature_flag(:workload_identity, mode: :off)
     result = key_publish(ctx, "1.0.0") |> json_response(201)

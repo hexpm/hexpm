@@ -214,6 +214,9 @@ defmodule HexpmWeb.API.ReleaseController do
     result
   end
 
+  defp publish_result({:error, :staged, %Ecto.Changeset{} = changeset}, conn),
+    do: validation_failed(conn, normalize_errors(changeset))
+
   defp publish_result({:error, :staged, error}, conn), do: publish_result({:error, error}, conn)
 
   defp publish_result({:ok, %{action: :staged, staged_release: staged}}, conn) do
