@@ -1,6 +1,6 @@
-<%= OwnerAdd.message(@username, @package) %>
+<%= OwnerAdd.message(@username, @package, :text) %>
 <%= if @started != [] do %>
-<%= OwnerAdd.started(@package) %>
+<%= OwnerAdd.started(@package, :text) %>
 
 <%= for workload_identity <- @started do %><%= OrganizationWorkloadIdentityLine.line(workload_identity) %>
 <% end %><% end %>

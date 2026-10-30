@@ -18,7 +18,9 @@
       <%= if Enum.empty?(@dependants) do %>
         <div class="py-12 text-center">
           <p class="text-grey-500 dark:text-grey-300 text-sm">
-            No packages depend on {@package.name} yet.
+            No packages depend on
+            <strong class="font-semibold text-grey-900 dark:text-white">{@package.name}</strong>
+            yet.
           </p>
         </div>
       <% else %>

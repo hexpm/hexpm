@@ -3,5 +3,5 @@
 </h1>
 
 <p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
-  <%= AccountDeleted.message(@username) %>
+  <%= raw(AccountDeleted.message(@username, :html)) %>
 </p>

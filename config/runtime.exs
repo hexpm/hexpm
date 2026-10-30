@@ -26,6 +26,11 @@ config :hexpm, :feature_flags,
     mode: env_mode.("HEXPM_ORGANIZATION_TFA_MODE", "off"),
     beta_organizations: env_list.("HEXPM_ORGANIZATION_TFA_BETA_ORGANIZATIONS")
   ],
+  staged_publishing: [
+    mode: env_mode.("HEXPM_STAGED_PUBLISHING_MODE", "off"),
+    beta_users: env_list.("HEXPM_STAGED_PUBLISHING_BETA_USERS"),
+    beta_organizations: env_list.("HEXPM_STAGED_PUBLISHING_BETA_ORGANIZATIONS")
+  ],
   workload_identity: [
     mode: env_mode.("HEXPM_WORKLOAD_IDENTITY_MODE", "enabled"),
     beta_users: env_list.("HEXPM_WORKLOAD_IDENTITY_BETA_USERS"),

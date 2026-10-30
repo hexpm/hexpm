@@ -12,11 +12,4 @@ defmodule HexpmWeb.Dashboard.InvitationView do
     |> Enum.uniq_by(& &1.organization.id)
     |> Enum.sort_by(& &1.organization.name)
   end
-
-  defp invitation_details(invitation) do
-    inviter =
-      if invitation.invited_by_user, do: " by #{invitation.invited_by_user.username}", else: ""
-
-    "Invited#{inviter} as #{invitation.role}, expires #{Calendar.strftime(invitation.expires_at, "%Y-%m-%d")}"
-  end
 end

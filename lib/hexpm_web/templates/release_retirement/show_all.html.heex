@@ -94,7 +94,9 @@
       max_width="md"
     >
       <p class="text-sm text-grey-600 dark:text-grey-300">
-        Everyone who depends on {@package.name} sees the reason and message. Undoing it means unretiring each version on its own.
+        Everyone who depends on
+        <strong class="font-semibold text-grey-900 dark:text-white">{@package.name}</strong>
+        sees the reason and message. Undoing it means unretiring each version on its own.
       </p>
       <:footer>
         <.button type="button" variant="secondary" phx-click={hide_modal("retire-all-confirm")}>

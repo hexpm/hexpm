@@ -19,7 +19,9 @@ defmodule HexpmWeb.Dashboard.Organization.Components.WorkloadIdentitiesTab do
   import HexpmWeb.Components.Input, only: [errors: 1, field_errors: 2, text_input: 1]
   import HexpmWeb.Components.Modal, only: [modal: 1, show_modal: 1, hide_modal: 1]
   import HexpmWeb.Components.Tooltip, only: [tooltip: 1]
-  import HexpmWeb.Components.WorkloadIdentity, only: [repositories_input: 1, trusted_workflows: 1]
+
+  import HexpmWeb.Components.WorkloadIdentity,
+    only: [repositories_input: 1, trusted_workflows: 1]
 
   alias Hexpm.Accounts.{Organization, User}
 
@@ -489,11 +491,20 @@ defmodule HexpmWeb.Dashboard.Organization.Components.WorkloadIdentitiesTab do
   defp unowned_note(assigns) do
     ~H"""
     <p class="rounded-md bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-xs text-amber-900 dark:text-amber-100">
-      {@organization.name} doesn't own {Enum.join(@names, ", ")}, so this workload identity doesn't publish {them(
+      {@organization.name} doesn't own {bold_names(@names)}, so this workload identity doesn't publish {them(
         @names
       )}.
     </p>
     """
+  end
+
+  defp bold_names(names) do
+    names
+    |> Enum.map(
+      &[~s(<strong class="font-semibold">), Phoenix.HTML.Engine.html_escape(&1), "</strong>"]
+    )
+    |> Enum.intersperse(", ")
+    |> then(&{:safe, &1})
   end
 
   defp them([_name]), do: "it"

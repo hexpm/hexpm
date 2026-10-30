@@ -1,6 +1,8 @@
 defmodule HexpmWeb.API.DocsController do
   use HexpmWeb, :controller
 
+  alias Hexpm.Repository.StagedReleases
+
   @tarball_max_size 16 * 1024 * 1024
   @tarball_max_uncompressed_size 128 * 1024 * 1024
 
@@ -28,7 +30,8 @@ defmodule HexpmWeb.API.DocsController do
        ]
        when action in [:delete]
 
-  plug :require_release
+  plug :require_release when action in [:show, :delete]
+  plug :require_docs_target when action in [:create]
 
   plug :fetch_body, [max_size: @tarball_max_size] when action in [:create]
 
@@ -63,27 +66,107 @@ defmodule HexpmWeb.API.DocsController do
         release = conn.assigns.release
         request_id = List.first(get_resp_header(conn, "x-request-id"))
 
-        log_tarball(repository.name, package.name, release.version, request_id, body_path)
+        if is_nil(release) ||
+             StagedReleases.find(
+               repository,
+               conn.params["name"],
+               conn.params["version"],
+               "release"
+             ) ||
+             StagedReleases.required?(repository, package, audit_data(conn)) do
+          case StagedReleases.stage_docs(
+                 repository,
+                 conn.params["name"],
+                 conn.params["version"],
+                 body_path,
+                 audit_data(conn)
+               ) do
+            {:ok, %{staged_release: staged}} ->
+              conn
+              |> put_resp_header("location", ~p"/api/staged-releases/#{staged.id}")
+              |> api_cache(:private)
+              |> put_status(201)
+              |> put_view(HexpmWeb.API.StagedReleaseView)
+              |> render(:show, staged_release: staged, status: "staged")
 
-        Hexpm.Repository.Releases.publish_docs(package, release, body_path,
-          audit: audit_data(conn)
-        )
+            {:error, reason} when is_atom(reason) ->
+              validation_failed(conn, %{staged_release: Atom.to_string(reason)})
 
-        location = Hexpm.Utils.docs_tarball_url(repository, package, release)
+            {:error, changeset} ->
+              validation_failed(conn, changeset)
+          end
+        else
+          case Releases.publish_docs(package, release, body_path, audit: audit_data(conn)) do
+            {:ok, %{staged_release: staged}} ->
+              conn
+              |> put_resp_header("location", ~p"/api/staged-releases/#{staged.id}")
+              |> api_cache(:private)
+              |> put_status(201)
+              |> put_view(HexpmWeb.API.StagedReleaseView)
+              |> render(:show, staged_release: staged, status: "staged")
 
-        conn
-        |> put_resp_header("location", location)
-        |> api_cache(repository)
-        |> send_resp(201, "")
+            {:ok, _} ->
+              log_tarball(repository.name, package.name, release.version, request_id, body_path)
+
+              conn
+              |> put_resp_header(
+                "location",
+                Hexpm.Utils.docs_tarball_url(repository, package, release)
+              )
+              |> api_cache(repository)
+              |> send_resp(201, "")
+
+            {:error, reason} when is_atom(reason) ->
+              validation_failed(conn, %{staged_release: Atom.to_string(reason)})
+
+            {:error, changeset} ->
+              validation_failed(conn, changeset)
+          end
+        end
     end
   end
 
   def delete(conn, _params) do
-    Hexpm.Repository.Releases.revert_docs(conn.assigns.release, audit: audit_data(conn))
+    if StagedReleases.reverts_blocked?(
+         conn.assigns.repository,
+         conn.assigns.package,
+         audit_data(conn)
+       ) do
+      AuthHelpers.forbidden(
+        conn,
+        "Reverting requires an OAuth token with a two-factor authentication code."
+      )
+    else
+      case Releases.revert_docs(conn.assigns.release, audit: audit_data(conn)) do
+        result when result in [:ok, nil] ->
+          conn |> api_cache(:private) |> send_resp(204, "")
 
-    conn
-    |> api_cache(:private)
-    |> send_resp(204, "")
+        {:error, :publish_policy, :staging_required, _} ->
+          AuthHelpers.forbidden(
+            conn,
+            "Reverting requires an OAuth token with a two-factor authentication code."
+          )
+
+        {:error, _, changeset, _} ->
+          validation_failed(conn, changeset)
+      end
+    end
+  end
+
+  # Without a package, any publisher passes authorization, so only the
+  # credential that staged the release may learn that it exists.
+  defp require_docs_target(conn, _opts) do
+    %{repository: repository, package: package, release: release} = conn.assigns
+
+    staged =
+      repository &&
+        StagedReleases.find(repository, conn.params["name"], conn.params["version"], "release")
+
+    if release || (staged && (package || StagedReleases.staged_by?(staged, audit_data(conn)))) do
+      conn
+    else
+      conn |> not_found() |> halt()
+    end
   end
 
   defp check_tarball(path) do

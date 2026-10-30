@@ -1,6 +1,6 @@
 <%= PackageRemoved.title(@package) %>
 
-<%= PackageRemoved.message(@package) %>
+<%= PackageRemoved.message(@package, :text) %>
 
 <%= PackageRemoved.reason_heading() %>
 

@@ -32,6 +32,13 @@ defmodule HexpmWeb.EmailView do
     # it is on, or it would read as a paragraph written by hex.pm.
     def single_line(text), do: String.replace(text, ~r/[\p{Cc}\p{Zl}\p{Zp}]/u, "\u{FFFD}")
 
+    # A username or package name in a sentence, bold in the HTML part.
+    def strong(text, :html), do: "<strong>#{escape(text, :html)}</strong>"
+    def strong(text, :text), do: text
+
+    def escape(text, :html), do: text |> to_string() |> html_escape() |> safe_to_string()
+    def escape(text, :text), do: text
+
     # Smart link wrapping - add <a> only for HTML format
     def link(url, text, :html) do
       safe_to_string(
@@ -118,8 +125,8 @@ defmodule HexpmWeb.EmailView do
       "Confirm account deletion"
     end
 
-    def message(username) do
-      "We received a request to permanently delete the Hex.pm account \"#{username}\". " <>
+    def message(username, format) do
+      "We received a request to permanently delete the Hex.pm account \"#{Common.strong(username, format)}\". " <>
         "To proceed, open the link below while logged in and confirm the deletion. " <>
         "The link is valid for 24 hours and can only be used once."
     end
@@ -135,8 +142,8 @@ defmodule HexpmWeb.EmailView do
       "Your account has been deleted"
     end
 
-    def message(username) do
-      "The Hex.pm account \"#{username}\" has been permanently deleted. " <>
+    def message(username, format) do
+      "The Hex.pm account \"#{Common.strong(username, format)}\" has been permanently deleted. " <>
         "The username has been retired and cannot be registered again. " <>
         "Packages and versions you published remain available to the community."
     end
@@ -151,13 +158,13 @@ defmodule HexpmWeb.EmailView do
       "Your account has been removed"
     end
 
-    def message(username, false) do
-      "The Hex.pm account \"#{username}\" has been removed by the Hex.pm team. " <>
+    def message(username, false, format) do
+      "The Hex.pm account \"#{Common.strong(username, format)}\" has been removed by the Hex.pm team. " <>
         "The username has been retired and cannot be registered again."
     end
 
-    def message(username, true) do
-      "The Hex.pm account \"#{username}\" has been removed by the Hex.pm team, " <>
+    def message(username, true, format) do
+      "The Hex.pm account \"#{Common.strong(username, format)}\" has been removed by the Hex.pm team, " <>
         "along with the packages it was the only owner of. The username has " <>
         "been retired and cannot be registered again."
     end
@@ -177,29 +184,32 @@ defmodule HexpmWeb.EmailView do
   end
 
   defmodule OwnerAdd do
-    def message(username, package) do
-      "#{username} has been added as an owner to package #{package}."
+    def message(username, package, format) do
+      "#{Common.strong(username, format)} has been added as an owner to package " <>
+        "#{Common.strong(package, format)}."
     end
 
-    def started(package) do
-      "These workload identities of your organization now publish #{package}, so anyone " <>
-        "who can run these workflows on GitHub can publish it:"
+    def started(package, format) do
+      "These workload identities of your organization now publish #{Common.strong(package, format)}, " <>
+        "so anyone who can run these workflows on GitHub can publish it:"
     end
   end
 
   defmodule OwnerRemove do
-    def message(username, package) do
-      "#{username} has been removed from owners of package #{package}."
+    def message(username, package, format) do
+      "#{Common.strong(username, format)} has been removed from owners of package " <>
+        "#{Common.strong(package, format)}."
     end
 
-    def workload_identities(package) do
-      "Removing an owner doesn't change #{package}'s workload identities, so anyone who can " <>
-        "run these workflows on GitHub can still publish it, including a removed owner " <>
-        "with access to the repositories:"
+    def workload_identities(package, format) do
+      "Removing an owner doesn't change #{Common.strong(package, format)}'s workload identities, " <>
+        "so anyone who can run these workflows on GitHub can still publish it, including a " <>
+        "removed owner with access to the repositories:"
     end
 
-    def stopped(username, package) do
-      "These workload identities of organization #{username} no longer publish #{package}:"
+    def stopped(organization, package, format) do
+      "These workload identities of organization #{Common.escape(organization, format)} " <>
+        "no longer publish #{Common.strong(package, format)}:"
     end
 
     def review(url, format) do
@@ -215,32 +225,35 @@ defmodule HexpmWeb.EmailView do
   end
 
   defmodule WorkloadIdentityAdd do
-    def message(username, package) do
-      "#{username} added a workload identity to package #{package}."
+    def message(username, package, format) do
+      "#{Common.strong(username, format)} added a workload identity to package " <>
+        "#{Common.strong(package, format)}."
     end
 
-    def warning(package) do
-      "Anyone who can run this workflow can now publish #{package}. " <>
+    def warning(package, format) do
+      "Anyone who can run this workflow can now publish #{Common.strong(package, format)}. " <>
         "If you did not expect this change, remove the workload identity and review the package owners."
     end
   end
 
   defmodule WorkloadIdentityRemove do
-    def message(username, package) do
-      "#{username} removed a workload identity from package #{package}."
+    def message(username, package, format) do
+      "#{Common.strong(username, format)} removed a workload identity from package " <>
+        "#{Common.strong(package, format)}."
     end
   end
 
   defmodule WorkloadIdentityChange do
-    def message(username, package) do
-      "#{username} changed a workload identity of package #{package}."
+    def message(username, package, format) do
+      "#{Common.strong(username, format)} changed a workload identity of package " <>
+        "#{Common.strong(package, format)}."
     end
 
     def before, do: "Before:"
     def now, do: "Now:"
 
-    def warning(package) do
-      "Anyone who can run these workflows can now publish #{package}. " <>
+    def warning(package, format) do
+      "Anyone who can run these workflows can now publish #{Common.strong(package, format)}. " <>
         "If you did not expect this change, remove the workload identity and review the package owners."
     end
   end
@@ -265,8 +278,9 @@ defmodule HexpmWeb.EmailView do
   end
 
   defmodule OrganizationWorkloadIdentityAdd do
-    def message(username, organization) do
-      "#{username} added a workload identity to organization #{organization}."
+    def message(username, organization, format) do
+      "#{Common.strong(username, format)} added a workload identity to organization " <>
+        "#{Common.escape(organization, format)}."
     end
 
     def warning(role, organization, coverage) do
@@ -305,14 +319,16 @@ defmodule HexpmWeb.EmailView do
   end
 
   defmodule OrganizationWorkloadIdentityRemove do
-    def message(username, organization) do
-      "#{username} removed a workload identity from organization #{organization}."
+    def message(username, organization, format) do
+      "#{Common.strong(username, format)} removed a workload identity from organization " <>
+        "#{Common.escape(organization, format)}."
     end
   end
 
   defmodule OrganizationWorkloadIdentityChange do
-    def message(username, organization) do
-      "#{username} changed a workload identity of organization #{organization}."
+    def message(username, organization, format) do
+      "#{Common.strong(username, format)} changed a workload identity of organization " <>
+        "#{Common.escape(organization, format)}."
     end
   end
 
@@ -355,8 +371,10 @@ defmodule HexpmWeb.EmailView do
   end
 
   defmodule PublicWorkloadIdentityAdd do
-    def message(username, organization) do
-      "#{username} added a workload identity to organization #{organization}. " <>
+    def message(username, organization, format) do
+      organization = Common.escape(organization, format)
+
+      "#{Common.strong(username, format)} added a workload identity to organization #{organization}. " <>
         "#{organization} is an owner of these packages, so the workload identity can publish them:"
     end
 
@@ -368,16 +386,18 @@ defmodule HexpmWeb.EmailView do
   end
 
   defmodule PublicWorkloadIdentityRemove do
-    def message(username, organization) do
-      "#{username} removed a workload identity from organization #{organization}. " <>
+    def message(username, organization, format) do
+      organization = Common.escape(organization, format)
+
+      "#{Common.strong(username, format)} removed a workload identity from organization #{organization}. " <>
         "It could publish these packages, which #{organization} is an owner of:"
     end
   end
 
   defmodule PublicWorkloadIdentityChange do
-    def message(username, organization) do
-      "#{username} changed a workload identity of organization #{organization}, " <>
-        "which is an owner of packages you own."
+    def message(username, organization, format) do
+      "#{Common.strong(username, format)} changed a workload identity of organization " <>
+        "#{Common.escape(organization, format)}, which is an owner of packages you own."
     end
 
     def started, do: "It can now publish:"
@@ -446,10 +466,11 @@ defmodule HexpmWeb.EmailView do
   defmodule SecretsDetected do
     def title(), do: "Possible credentials in a published package"
 
-    def intro(package, version, findings) do
+    def intro(package, version, findings, format) do
       count = length(groups(findings))
 
-      "A scan of #{package} v#{version} found #{credentials(count)} that #{look(count)} like " <>
+      "A scan of #{Common.strong(package, format)} v#{Common.escape(version, format)} " <>
+        "found #{credentials(count)} that #{look(count)} like " <>
         "credentials. Anyone who downloads the package can read #{them(count)}."
     end
 
@@ -599,12 +620,12 @@ defmodule HexpmWeb.EmailView do
   end
 
   defmodule SSOIdentityUnlinked do
-    def intro(organization, username, username) do
-      "You disconnected your Hex.pm account from the identity provider of the #{organization} organization."
+    def intro(organization, username, username, format) do
+      "You disconnected your Hex.pm account from the identity provider of the #{Common.escape(organization, format)} organization."
     end
 
-    def intro(organization, _username, unlinked_by) do
-      "#{unlinked_by}, an administrator of the #{organization} organization, disconnected your Hex.pm account from the organization's identity provider."
+    def intro(organization, _username, unlinked_by, format) do
+      "#{Common.strong(unlinked_by, format)}, an administrator of the #{Common.escape(organization, format)} organization, disconnected your Hex.pm account from the organization's identity provider."
     end
 
     def access(true) do
@@ -762,7 +783,7 @@ defmodule HexpmWeb.EmailView do
     end
 
     def body("summary", suspended, format) do
-      "Members suspended because they haven't enabled 2FA: #{escape(Enum.join(suspended, ", "), format)}. They keep their membership, role, package ownership and billed seat, and regain access as soon as they enable 2FA."
+      "Members suspended because they haven't enabled 2FA: #{Enum.map_join(suspended, ", ", &Common.strong(&1, format))}. They keep their membership, role, package ownership and billed seat, and regain access as soon as they enable 2FA."
     end
 
     def members_page(organization, format) do
@@ -956,7 +977,10 @@ defmodule HexpmWeb.EmailView do
   end
 
   defmodule SSOBreakGlass do
-    def intro(organization, username, screen) do
+    def intro(organization, username, screen, format) do
+      username = Common.strong(username, format)
+      organization = Common.escape(organization, format)
+
       case purpose(screen) do
         nil ->
           "#{username} reached the #{organization} organization on Hex.pm without a current single sign-on session."
@@ -1005,8 +1029,8 @@ defmodule HexpmWeb.EmailView do
       "Private packages, publishing and the rest of the organization dashboard were refused as usual. Billing and the SSO settings stay open to administrators and aren't read-only: billing can be changed and the subscription cancelled, and the SSO settings can replace the provider, unlink accounts and turn enforcement off. The SSO settings also show the linked accounts, the personal keys that reach this organization, and recent login failures."
     end
 
-    def action(username) do
-      "This notice is sent at most once an hour for each member. The audit log records everything reached this way, including anything this notice doesn't name. If you didn't expect #{username} to do this, review the organization's administrators and audit log."
+    def action(username, format) do
+      "This notice is sent at most once an hour for each member. The audit log records everything reached this way, including anything this notice doesn't name. If you didn't expect #{Common.strong(username, format)} to do this, review the organization's administrators and audit log."
     end
   end
 
@@ -1032,8 +1056,8 @@ defmodule HexpmWeb.EmailView do
   end
 
   defmodule OrganizationUserInvitation do
-    def intro(organization, username, role) do
-      "Your Hex.pm account #{username} has been invited to join the #{organization} organization as #{article(role)} #{role} member."
+    def intro(organization, username, role, format) do
+      "Your Hex.pm account #{Common.strong(username, format)} has been invited to join the #{Common.escape(organization, format)} organization as #{article(role)} #{Common.escape(role, format)} member."
     end
 
     def review(url, :html) do
@@ -1080,17 +1104,17 @@ defmodule HexpmWeb.EmailView do
   end
 
   defmodule PackagePublished do
-    def intro(nil, package, version) do
+    def intro(nil, package, version, format) do
       """
-      Package #{package} v#{version} was recently published.
+      Package #{Common.strong(package, format)} v#{Common.escape(version, format)} was recently published.
       If this wasn't done by you or one of the other package owners, you should
       reset your account and revert or retire the version.
       """
     end
 
-    def intro(publisher, package, version) do
+    def intro(publisher, package, version, format) do
       """
-      Package #{package} v#{version} was recently published by #{publisher.username}.
+      Package #{Common.strong(package, format)} v#{Common.escape(version, format)} was recently published by #{Common.strong(publisher.username, format)}.
       If this wasn't done by you or one of the other package owners, you should
       reset your account and revert or retire the version.
       """
@@ -1130,8 +1154,8 @@ defmodule HexpmWeb.EmailView do
       "Package #{package} has been removed"
     end
 
-    def message(package) do
-      "The package #{package} and all of its releases have been removed from Hex.pm " <>
+    def message(package, format) do
+      "The package #{Common.strong(package, format)} and all of its releases have been removed from Hex.pm " <>
         "by the Hex.pm team."
     end
   end
@@ -1145,14 +1169,14 @@ defmodule HexpmWeb.EmailView do
     def title(package, false),
       do: "New versions of #{package} will not be added to HexDocs search"
 
-    def message(package, true) do
-      "The Hex.pm team has removed the documentation of #{package} from the search on " <>
+    def message(package, true, format) do
+      "The Hex.pm team has removed the documentation of #{Common.strong(package, format)} from the search on " <>
         "hexdocs.pm, and new versions will not be added to it. The documentation is still " <>
         "published on hexdocs.pm and the package itself is unaffected."
     end
 
-    def message(package, false) do
-      "The Hex.pm team has stopped adding new versions of #{package} to the search on " <>
+    def message(package, false, format) do
+      "The Hex.pm team has stopped adding new versions of #{Common.strong(package, format)} to the search on " <>
         "hexdocs.pm. Versions already in the search stay there, the documentation is still " <>
         "published on hexdocs.pm and the package itself is unaffected."
     end
@@ -1179,14 +1203,14 @@ defmodule HexpmWeb.EmailView do
       "#{package} v#{version} has been removed"
     end
 
-    def message(package, version, 0) do
-      "Version #{version} of the package #{package} has been removed from Hex.pm " <>
+    def message(package, version, 0, format) do
+      "Version #{Common.escape(version, format)} of the package #{Common.strong(package, format)} has been removed from Hex.pm " <>
         "by the Hex.pm team. It was the only version, so the package no longer " <>
         "has any releases."
     end
 
-    def message(package, version, _remaining) do
-      "Version #{version} of the package #{package} has been removed from Hex.pm " <>
+    def message(package, version, _remaining, format) do
+      "Version #{Common.escape(version, format)} of the package #{Common.strong(package, format)} has been removed from Hex.pm " <>
         "by the Hex.pm team. Other versions of the package are unaffected."
     end
   end

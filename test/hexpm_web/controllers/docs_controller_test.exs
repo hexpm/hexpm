@@ -194,6 +194,15 @@ defmodule HexpmWeb.DocsControllerTest do
 
     document = LazyHTML.from_document(html)
 
+    text = LazyHTML.text(document)
+    assert text =~ "package setting covering all API keys and workload identities"
+    assert text =~ "New packages default to requiring approval"
+    assert text =~ "Existing packages start with the package setting disabled"
+    assert text =~ "Settings > Publish approval"
+    assert text =~ "Full package owners and owning organization admins"
+    assert text =~ "private-repository approval policy still applies"
+    assert text =~ "User OAuth publishes with an OTP remain direct"
+
     assert [link] =
              LazyHTML.query(document, ~s(#docs-nav a[href="/docs/workload-identity"]))
              |> Enum.to_list()

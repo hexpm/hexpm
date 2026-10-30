@@ -185,6 +185,51 @@ mix test --only integration
 mix test test/hexpm_web/integration/sca_test.exs --include integration
 ```
 
+## Staged publishing
+
+`HEXPM_STAGED_PUBLISHING_MODE` defaults to `off`. Set it to `beta` with comma-separated
+`HEXPM_STAGED_PUBLISHING_BETA_USERS` and `HEXPM_STAGED_PUBLISHING_BETA_ORGANIZATIONS`,
+or to `enabled`. Public packages follow their owners in beta; private packages
+follow their organization.
+
+Staged package and documentation tarballs use the existing repo bucket under
+`staged/`, with private, non-cacheable responses. The CDN origin identity must be
+denied access to this prefix, and backups must exclude it. Staged releases can be
+approved for seven days; approval, rejection, restaging and expiry enqueue artifact
+cleanup.
+S3 lifecycle rules expire remaining current objects after 14 days and noncurrent
+versions after one day. Lifecycle deletion is asynchronous. Deploy the
+hexpm-ops storage rules and backup exclusion before enabling staged publishing.
+Development and test use the existing local and memory repo stores.
+
+Each package has an optional approval setting covering all API keys and workload
+identities that publish it, on by default for new packages. Existing packages keep
+direct publishing until approval is enabled. Full owners configure it under
+Settings > Publish approval; changes require two-factor authentication and fresh
+sudo, and disabling sends a notification to full owners and owning organization
+administrators.
+The rollout flag controls when these settings take effect; it doesn't gate
+Workload Identity availability. Both public and private publishing follow the
+package's setting.
+An organization administrator can require approval for API keys and workload
+identities in its private repository under Publish approval in the dashboard.
+User OAuth publishes with an OTP remain direct.
+
+Publish approval doesn't change how API keys and workload identities are created
+or managed. A key is only created by a signed-in person: on the dashboard behind
+sudo, which asks for the 2FA code when the account has 2FA, or through the API with
+an OAuth token and a valid `X-Hex-OTP`. API keys can't create keys.
+
+Publish approval doesn't change who can add owners or organization members. An API
+key with the `owners` or `members` permission can add an owner or member whose own
+account publishes with OAuth and an OTP, which isn't staged. The user and
+organization API key pages list the packages requiring approval.
+
+Review and approval are available under
+Staged releases. Approval and rejection require 2FA and forced sudo; approval also
+binds to the displayed package and documentation checksums. Staged releases expire
+after seven days, and a periodic worker removes them and queues artifact deletion.
+
 ## License
 
     Copyright 2015 Six Colors AB

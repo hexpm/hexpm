@@ -21,7 +21,8 @@ defmodule HexpmWeb.Dashboard.InvitationControllerTest do
     test "lists the account's pending invitations", %{
       organization: organization,
       admin: admin,
-      user: user
+      user: user,
+      invitation: invitation
     } do
       html =
         build_conn()
@@ -30,7 +31,18 @@ defmodule HexpmWeb.Dashboard.InvitationControllerTest do
         |> html_response(200)
 
       assert html =~ organization.name
-      assert html =~ "Invited by #{admin.username} as write"
+
+      [details] =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#invitation-#{invitation.id} p.text-xs")
+        |> Enum.to_list()
+
+      assert details |> LazyHTML.text() |> String.replace(~r/\s+/, " ") |> String.trim() =~
+               "Invited by #{admin.username} as write, expires"
+
+      assert details |> LazyHTML.query("strong") |> LazyHTML.text() |> String.trim() ==
+               admin.username
     end
 
     test "shows the invitation in the sidebar of other dashboard pages", %{

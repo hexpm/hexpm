@@ -1,0 +1,99 @@
+<.package_layout {@package_layout} active_tab={:publish_approval}>
+  <:inner_content>
+    <section class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-4 sm:p-6 text-grey-700 dark:text-grey-200">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <h2 class="text-xl font-semibold text-grey-900 dark:text-white">Publish approval</h2>
+        <.badge
+          variant={if @package.require_publish_approval, do: "green", else: "default"}
+          class={
+            if @package.require_publish_approval,
+              do: "dark:bg-green-950 dark:text-green-200",
+              else: "dark:bg-grey-700 dark:text-grey-200"
+          }
+        >
+          {if @package.require_publish_approval, do: "Enabled", else: "Disabled"}
+        </.badge>
+      </div>
+      <p class="mt-4">
+        Require a user with two-factor authentication to approve releases and documentation
+        published with any API key or workload identity. Publishing with OAuth and an OTP stays direct.
+      </p>
+      <p
+        :if={
+          @package.repository_id != 1 &&
+            @package.repository.organization.require_publish_approval
+        }
+        class="mt-5 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 p-4 text-sm text-blue-900 dark:text-blue-100"
+      >
+        Your organization requires approval for automated publishes, regardless of this setting.
+      </p>
+      <div class="mt-6 pt-5 border-t border-grey-200 dark:border-grey-700">
+        <%= if @package.require_publish_approval do %>
+          <p class="text-sm text-grey-600 dark:text-grey-300 mb-4">
+            Publish approval is enabled for this package.
+          </p>
+          <.button
+            :if={@manage?}
+            type="button"
+            phx-click={show_modal("disable-publish-approval-modal")}
+            variant="danger"
+          >
+            Disable publish approval
+          </.button>
+        <% else %>
+          <p class="text-sm text-grey-600 dark:text-grey-300 mb-4">
+            Publish approval is disabled for this package.
+          </p>
+          <.sudo_form
+            :if={@manage?}
+            current_user={@current_user}
+            action={ViewHelpers.path_for_publish_approval(@package) <> "/enable"}
+          >
+            <.button type="submit">Enable publish approval</.button>
+          </.sudo_form>
+        <% end %>
+      </div>
+    </section>
+
+    <.modal
+      :if={@manage? && @package.require_publish_approval}
+      id="disable-publish-approval-modal"
+      title="Disable publish approval"
+      max_width="md"
+    >
+      <p class="font-medium text-grey-900 dark:text-white">
+        Publish approval is currently enabled for <strong class="font-semibold">{@package.name}</strong>.
+      </p>
+      <p class="mt-3 text-grey-700 dark:text-grey-300">
+        Disabling it lets API keys and workload identities publish without this package's approval requirement.
+      </p>
+      <p
+        :if={
+          @package.repository_id != 1 && @package.repository.organization.require_publish_approval
+        }
+        class="mt-5 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 p-4 text-sm text-blue-900 dark:text-blue-100"
+      >
+        Your organization still requires approval for automated publishes.
+      </p>
+      <p class="mt-3 text-sm text-grey-600 dark:text-grey-300">
+        Existing staged releases still need approval. Package owners and owning organization administrators will be notified.
+      </p>
+      <:footer>
+        <.button
+          type="button"
+          variant="secondary"
+          phx-click={hide_modal("disable-publish-approval-modal")}
+        >
+          Cancel
+        </.button>
+        <.sudo_form
+          current_user={@current_user}
+          action={ViewHelpers.path_for_publish_approval(@package) <> "/disable"}
+          class="m-0"
+        >
+          <.button type="submit" variant="danger">Disable approval</.button>
+        </.sudo_form>
+      </:footer>
+    </.modal>
+  </:inner_content>
+</.package_layout>

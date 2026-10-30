@@ -9,6 +9,7 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyManagementCard do
 
   import HexpmWeb.Components.Buttons
   import HexpmWeb.Components.Badge
+  import HexpmWeb.Components.PublishApprovalNotice
   import HexpmWeb.Components.Modal, only: [show_modal: 1]
   import HexpmWeb.Components.Table
   import HexpmWeb.Components.Tooltip
@@ -36,6 +37,15 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyManagementCard do
   def key_management_card(assigns) do
     assigns = assign(assigns, :form, Phoenix.Component.to_form(assigns.key_changeset, as: :key))
 
+    assigns =
+      assign(
+        assigns,
+        :approval_packages,
+        Hexpm.Repository.StagedReleases.protected_packages(
+          assigns.organization || assigns.current_user
+        )
+      )
+
     ~H"""
     <div class="bg-white dark:bg-grey-800 rounded-lg shadow-sm border border-grey-200 dark:border-grey-700 p-8">
       <%!-- Header --%>
@@ -61,6 +71,8 @@ defmodule HexpmWeb.Dashboard.Key.Components.KeyManagementCard do
           Revoke All Keys
         </.button>
       </div>
+
+      <.publish_approval_notice packages={@approval_packages} />
 
       <%!-- Keys Table --%>
       <%= if @keys != [] do %>

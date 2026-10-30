@@ -124,7 +124,7 @@ defmodule HexpmWeb.PackageOwnerControllerTest do
         |> html_response(200)
 
       assert body =~
-               "Removing an owner doesn't change #{package.name}'s workload identities"
+               ~s(Removing an owner doesn't change <strong class="font-semibold">#{package.name}</strong>'s workload identities)
 
       assert body =~ "acme/widget, acme/gadget (release.yml)"
       assert body =~ ~s(href="/packages/#{package.name}/workload-identities")

@@ -20,6 +20,16 @@ Transferring a package (`mix hex.owner transfer`, or "Transfer ownership" on the
 
 An organization that owns a public package publishes it with its own workload identities that cover public packages. Transferring the package to the organization makes them publish it, and removing the organization as an owner or transferring the package away stops them. The email to the package's owners lists the organization workload identities that start or stop publishing the package, and so does the confirmation on the Owners tab when an organization is removed.
 
+### Publish approval
+
+Publish approval is a package setting covering all API keys and workload identities that publish it. New packages default to requiring approval when staged publishing is enabled for the package or organization. Existing packages start with the package setting disabled. When approval is required, Hex stores the release privately until a maintainer with 2FA approves it on Hex. `mix hex.publish --wait` opens the approval page and waits for the result.
+
+Full package owners and owning organization admins configure it under Settings > Publish approval. Changes require enrolled 2FA and fresh verification. Disabling sends a notification to full owners and owning organization admins.
+
+Publish approval doesn't change how API keys are created. [Creating a key](/docs/publish#publishing-from-ci) always needs a person signed in to Hex.pm, with their 2FA code if their account has 2FA, and an API key can't create other keys. Publish approval also doesn't stop a key with the `owners` or `members` permission, or `api:write`, from adding an owner or organization member who then publishes with OAuth and an OTP, which isn't staged. Use workload identity for CI.
+
+An organization's private-repository approval policy still applies when the package setting is off. User OAuth publishes with an OTP remain direct. Workload Identity availability doesn't depend on enabling staged publishing.
+
 ### Before you begin
 
 You need:
@@ -42,7 +52,7 @@ Fill in the form:
   <dt><code>Workflow</code></dt>
   <dd>Workflow filename only, for example <code>release.yml</code> or <code>release.yaml</code>. Hex strips any path and matches the basename of the calling workflow in each of the repositories. <strong>Case-sensitive</strong>, so <code>Release.yml</code> and <code>release.yml</code> are different workflows.</dd>
   <dt><code>Environment</code></dt>
-  <dd>GitHub Actions environment name. Required when one of the repositories is public, and strongly recommended otherwise. A GitHub environment is where you can require reviewers, add a wait timer, or restrict which branches can deploy, so it's the only place to add a check before a publish. GitHub <a href="https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments">offers environments</a> in public repositories on every plan and in private repositories only on paid plans, which is why Hex doesn't require one for a private repository. When it's set, the OIDC token must name the same environment, compared case-insensitively as GitHub compares environment names. When it's blank, Hex accepts any environment or none from a private repository, and no token from a public one.</dd>
+  <dd>GitHub Actions environment name. Required when one of the repositories is public, and strongly recommended otherwise. A GitHub environment is where you can require reviewers, add a wait timer, or restrict which branches can deploy, so it adds a check before the workflow receives its token. GitHub <a href="https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments">offers environments</a> in public repositories on every plan and in private repositories only on paid plans, which is why Hex doesn't require one for a private repository. When it's set, the OIDC token must name the same environment, compared case-insensitively as GitHub compares environment names. When it's blank, Hex accepts any environment or none from a private repository, and no token from a public one.</dd>
 </dl>
 
 When you add a workload identity, Hex pins the immutable GitHub IDs of the owner and of each repository, so a GitHub login or repository that's deleted and created again can't inherit it. Adding it fails if an ID is missing.

@@ -1,6 +1,6 @@
 <%= AccountRemoved.title() %>
 
-<%= AccountRemoved.message(@username, @packages_deleted) %>
+<%= AccountRemoved.message(@username, @packages_deleted, :text) %>
 
 <%= AccountRemoved.reason_heading() %>
 

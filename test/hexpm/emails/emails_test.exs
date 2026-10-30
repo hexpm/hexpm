@@ -10,6 +10,8 @@ defmodule Hexpm.EmailsTest do
     Emails.package_published([build(:user)], build(:user), "cowboy", "2.16.1")
   end
 
+  defp unbold(html), do: String.replace(html, ~r{</?strong>}, "")
+
   describe "type" do
     test "names the builder that produced the email" do
       assert package_published_email().private.type == "package_published"
@@ -274,7 +276,10 @@ defmodule Hexpm.EmailsTest do
           ["primary@example.com"]
         )
 
-      for body <- [email.html_body, email.text_body] do
+      assert email.html_body =~
+               "<strong>alice</strong>, an administrator of the acme organization, disconnected"
+
+      for body <- [unbold(email.html_body), email.text_body] do
         assert body =~ "alice, an administrator of the acme organization, disconnected"
         assert body =~ "https://hex.pm/sso/org/acme"
         assert body =~ "ask an administrator of the acme organization"
@@ -318,8 +323,9 @@ defmodule Hexpm.EmailsTest do
   describe "sso_break_glass/4" do
     test "says what was reached in words" do
       email = Emails.sso_break_glass("acme", "alice", "delete", ["admin@example.com"])
+      assert email.html_body =~ "<strong>alice</strong> reached the acme organization"
 
-      for body <- [email.html_body, email.text_body] do
+      for body <- [unbold(email.html_body), email.text_body] do
         assert body =~
                  "alice reached the acme organization on Hex.pm without a current single " <>
                    "sign-on session, to delete the identity provider connection."
@@ -496,8 +502,9 @@ defmodule Hexpm.EmailsTest do
       email = secrets_detected_email([finding()])
 
       assert email.subject == "Hex.pm - Possible credentials found in cowboy v2.16.1"
+      assert email.html_body =~ "<strong>cowboy</strong> v2.16.1"
 
-      for body <- [email.html_body, email.text_body] do
+      for body <- [unbold(email.html_body), email.text_body] do
         assert body =~ "cowboy v2.16.1"
         assert body =~ "config/prod.exs:12"
         assert body =~ "aws-access-token"
@@ -669,6 +676,11 @@ defmodule Hexpm.EmailsTest do
   end
 
   describe "workload identity change emails" do
+    setup do
+      put_feature_flag(:staged_publishing, mode: :enabled)
+      :ok
+    end
+
     test "tell the package owners what the workload identity trusted before and trusts now" do
       owner = build(:user)
 
@@ -935,6 +947,37 @@ defmodule Hexpm.EmailsTest do
         text = email.html_body |> LazyHTML.from_document() |> LazyHTML.text()
         assert text |> String.split(path) |> length() == 2
       end
+    end
+  end
+
+  describe "staged publishing emails" do
+    test "the staged release email emphasizes the package name" do
+      staged = %Hexpm.Repository.StagedRelease{
+        id: 1,
+        name: "decimal",
+        version: "2.0.0",
+        kind: "release",
+        repository: %Hexpm.Repository.Repository{name: "hexpm"},
+        credential_name: "release-ci",
+        expires_at: ~U[2026-11-06 11:37:00.000000Z]
+      }
+
+      email = Emails.staged_release([build(:user)], staged, :staged)
+
+      assert email.html_body =~ "Release Staged for Approval"
+      assert email.html_body =~ "<strong>decimal</strong> 2.0.0 (release) was staged."
+      assert email.text_body =~ "decimal 2.0.0 (release) was staged."
+      assert email.text_body =~ "Expires November 6, 2026 at 11:37 UTC."
+    end
+
+    test "the disabled approval email emphasizes the package name" do
+      package =
+        build(:package, name: "decimal", repository: %Hexpm.Repository.Repository{name: "hexpm"})
+
+      email = Emails.publish_approval_disabled([build(:user)], package)
+
+      assert email.html_body =~ "disabled for package <strong>decimal</strong>."
+      assert email.text_body =~ "disabled for package decimal."
     end
   end
 

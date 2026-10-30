@@ -20,6 +20,7 @@ defmodule HexpmWeb.DashboardView do
 
   defp account_settings() do
     [
+      staged_releases: {"Staged releases", ~p"/dashboard/staged-releases"},
       profile: {"Profile", ~p"/dashboard/profile"},
       security: {"Security", ~p"/dashboard/security"},
       email: {"Emails", ~p"/dashboard/email"},
@@ -30,6 +31,10 @@ defmodule HexpmWeb.DashboardView do
       delete_account: {"Delete account", ~p"/dashboard/delete-account"}
     ]
   end
+
+  defp new_setting?(id), do: id == :staged_releases
+
+  defp icon_for_setting(:staged_releases, selected?), do: icon_for_setting(:keys, selected?)
 
   defp icon_for_setting(:profile, selected?) do
     color = if selected?, do: "text-purple-600", else: "text-grey-600"

@@ -209,6 +209,48 @@ defmodule Hexpm.Repository.Releases do
   end
 
   def publish(repository, package, user, body, meta, inner_checksum, outer_checksum, opts) do
+    if Hexpm.Repository.StagedReleases.required?(repository, package, opts[:audit]) do
+      Hexpm.Repository.StagedReleases.stage(
+        repository,
+        body,
+        meta,
+        inner_checksum,
+        outer_checksum,
+        opts
+      )
+      |> staged_result()
+    else
+      case publish_transaction(
+             repository,
+             package,
+             user,
+             meta,
+             inner_checksum,
+             outer_checksum,
+             opts
+           ) do
+        {:error, :publish_policy, :staging_required, _} ->
+          Hexpm.Repository.StagedReleases.stage(
+            repository,
+            body,
+            meta,
+            inner_checksum,
+            outer_checksum,
+            opts
+          )
+          |> staged_result()
+
+        result ->
+          complete_publish(result, user, body)
+      end
+    end
+  end
+
+  defp staged_result({:error, error}), do: {:error, :staged, error}
+  defp staged_result(result), do: result
+
+  @doc false
+  def publish_transaction(repository, package, user, meta, inner_checksum, outer_checksum, opts) do
     Repo.write_mode!()
 
     audit_data = Keyword.fetch!(opts, :audit)
@@ -217,6 +259,21 @@ defmodule Hexpm.Repository.Releases do
 
     Multi.new()
     |> Multi.run(:repository, fn _, _ -> {:ok, repository} end)
+    |> Multi.run(:staged_reservation, fn _, _ ->
+      Hexpm.Repository.StagedReleases.check_reservation(
+        repository,
+        meta,
+        opts[:staged_release_id]
+      )
+    end)
+    |> Multi.run(:publish_policy, fn _, _ ->
+      Hexpm.Repository.StagedReleases.check_direct_policy(
+        repository,
+        package,
+        audit_data,
+        opts[:approved_by_id]
+      )
+    end)
     |> Multi.run(:reserved_packages, fn _, _ -> {:ok, reserved_packages(repository, meta)} end)
     |> create_package(repository, package, user, meta)
     |> create_release(
@@ -234,12 +291,53 @@ defmodule Hexpm.Repository.Releases do
     |> Multi.run(:package_dependants, fn repo, %{package: package} ->
       PackageDependants.recompute_for_package(repo, package)
     end)
+    |> Multi.run(:approved_by, fn repo, %{release: release} ->
+      if release.approved_by_id == opts[:approved_by_id],
+        do: {:ok, release},
+        else: repo.update(Ecto.Changeset.change(release, approved_by_id: opts[:approved_by_id]))
+    end)
     |> audit_publish(audit_data)
     |> Repo.transaction(timeout: @publish_timeout)
-    |> publish_result(user, body)
   end
 
-  def publish_docs(package, release, body_path, audit: audit_data) do
+  def publish_docs(package, release, body_path, opts) do
+    if opts[:approved_by_id] do
+      publish_docs_now(package, release, body_path, opts[:audit])
+    else
+      repository = package.repository
+
+      case Repo.transaction(
+             fn ->
+               Hexpm.Repository.StagedReleases.lock_name(repository, package.name)
+
+               case Hexpm.Repository.StagedReleases.check_direct_policy(
+                      repository,
+                      package,
+                      opts[:audit],
+                      opts[:approved_by_id]
+                    ) do
+                 {:ok, _} -> publish_docs_now(package, release, body_path, opts[:audit])
+                 {:error, :staging_required} -> Repo.rollback(:staging_required)
+               end
+             end,
+             timeout: @publish_timeout
+           ) do
+        {:ok, result} ->
+          result
+
+        {:error, :staging_required} ->
+          Hexpm.Repository.StagedReleases.stage_docs(
+            repository,
+            package.name,
+            release.version,
+            body_path,
+            opts[:audit]
+          )
+      end
+    end
+  end
+
+  defp publish_docs_now(package, release, body_path, audit_data) do
     Repo.write_mode!()
     Assets.push_docs(release, body_path)
 
@@ -261,6 +359,19 @@ defmodule Hexpm.Repository.Releases do
 
   def revert(package, release, audit: audit_data) do
     Multi.new()
+    |> Multi.run(:publish_policy, fn _, _ ->
+      Hexpm.Repository.StagedReleases.lock_name(package.repository, package.name)
+
+      with {:ok, _} <-
+             Hexpm.Repository.StagedReleases.check_direct_policy(
+               package.repository,
+               package,
+               audit_data,
+               nil
+             ) do
+        Hexpm.Repository.StagedReleases.check_revert(release)
+      end
+    end)
     |> Multi.delete(:release, Release.delete(release))
     |> audit_revert(audit_data, package, release)
     |> Multi.run(:release_count, &release_count/2)
@@ -293,14 +404,28 @@ defmodule Hexpm.Repository.Releases do
     release_changeset = Ecto.Changeset.change(release, has_docs: false)
     package_changeset = Ecto.Changeset.change(release.package, docs_updated_at: now)
 
-    {:ok, _} =
-      Multi.new()
-      |> Multi.update(:release, release_changeset)
-      |> Multi.update(:package, package_changeset)
-      |> audit(audit_data, "docs.revert", {release.package, release})
-      |> Repo.transaction()
+    Multi.new()
+    |> Multi.run(:publish_policy, fn _, _ ->
+      Hexpm.Repository.StagedReleases.lock_name(release.package.repository, release.package.name)
 
-    Assets.revert_docs(release)
+      with {:ok, _} <-
+             Hexpm.Repository.StagedReleases.check_direct_policy(
+               release.package.repository,
+               release.package,
+               audit_data,
+               nil
+             ) do
+        Hexpm.Repository.StagedReleases.check_revert(release)
+      end
+    end)
+    |> Multi.update(:release, release_changeset)
+    |> Multi.update(:package, package_changeset)
+    |> audit(audit_data, "docs.revert", {release.package, release})
+    |> Repo.transaction()
+    |> case do
+      {:ok, _} -> Assets.revert_docs(release)
+      error -> error
+    end
   end
 
   def retire(package, release, params, audit: audit_data) do
@@ -374,7 +499,8 @@ defmodule Hexpm.Repository.Releases do
 
   # The registry build is enqueued after the tarball is in the store, so the
   # registry never names a release whose tarball is not there yet.
-  defp publish_result({:ok, %{package: package, release: release} = result}, user, body) do
+  @doc false
+  def complete_publish({:ok, %{package: package, approved_by: release} = result}, user, body) do
     release = %{release | package: package}
 
     Assets.push_release(release, body)
@@ -386,7 +512,7 @@ defmodule Hexpm.Repository.Releases do
     {:ok, %{result | release: release, package: package}}
   end
 
-  defp publish_result(result, _user, _body), do: result
+  def complete_publish(result, _user, _body), do: result
 
   defp retire_result({:ok, _changes}), do: :ok
 
@@ -414,6 +540,62 @@ defmodule Hexpm.Repository.Releases do
   end
 
   defp revert_result(result), do: result
+
+  @doc false
+  def validate_staged(repository, package, user, meta, inner_checksum, outer_checksum, opts) do
+    reserved = reserved_packages(repository, meta)
+
+    package_changeset =
+      if package,
+        do: Package.update(package, %{"meta" => meta}),
+        else: Package.build(repository, user, %{"name" => meta["name"], "meta" => meta})
+
+    with {:ok, package} <-
+           apply_action(validate_reserved_package(package_changeset, reserved), :insert) do
+      params = %{
+        "version" => meta["version"],
+        "app" => meta["app"],
+        "requirements" => normalize_requirements(meta["requirements"]),
+        "meta" => meta
+      }
+
+      release =
+        with true <- not is_nil(package.id),
+             {:ok, version} <- Version.parse(meta["version"]) do
+          Repo.get_by(assoc(package, :releases), version: version)
+        else
+          _ -> nil
+        end
+
+      changeset =
+        if release do
+          %{release | package: package}
+          |> preload([:requirements, :publisher])
+          |> Release.update(
+            user,
+            params,
+            inner_checksum,
+            outer_checksum,
+            opts[:replace],
+            opts[:workload_identity]
+          )
+        else
+          Release.build(
+            package,
+            user,
+            params,
+            inner_checksum,
+            outer_checksum,
+            opts[:replace],
+            opts[:workload_identity]
+          )
+        end
+
+      changeset
+      |> validate_reserved_version(reserved)
+      |> apply_action(if(release, do: :update, else: :insert))
+    end
+  end
 
   defp create_package(multi, repository, package, user, meta) do
     changeset =
