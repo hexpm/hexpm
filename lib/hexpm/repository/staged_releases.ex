@@ -11,6 +11,8 @@ defmodule Hexpm.Repository.StagedReleases do
   @lifetime 7 * 24 * 60 * 60
   @publish_timeout 60_000
 
+  def forced?, do: Application.get_env(:hexpm, :force_publish_approval, false)
+
   def enabled?(target),
     do: not is_nil(target) && FeatureFlags.enabled?(:workload_identity, target)
 
@@ -23,7 +25,7 @@ defmodule Hexpm.Repository.StagedReleases do
   end
 
   def approval_required?(%Package{id: id}) do
-    if FeatureFlags.available?(:workload_identity) do
+    if forced?() || FeatureFlags.available?(:workload_identity) do
       package =
         Repo.one!(
           from(p in Package,
@@ -45,6 +47,10 @@ defmodule Hexpm.Repository.StagedReleases do
   end
 
   def approval_required?(%Organization{id: id}) do
+    forced?() || organization_approval_required?(id)
+  end
+
+  defp organization_approval_required?(id) do
     if FeatureFlags.available?(:workload_identity) do
       organization = Repo.get!(Organization, id)
 
@@ -116,7 +122,7 @@ defmodule Hexpm.Repository.StagedReleases do
   end
 
   defp filter_protected_packages(query) do
-    if FeatureFlags.available?(:workload_identity) do
+    if forced?() || FeatureFlags.available?(:workload_identity) do
       query
       |> Repo.all()
       |> Enum.filter(&policy_required?(&1.repository, &1, policy_target(&1.repository, &1, nil)))
@@ -127,9 +133,10 @@ defmodule Hexpm.Repository.StagedReleases do
   end
 
   defp policy_required?(repository, package, target) do
-    enabled?(target) &&
-      (package_approval?(package) ||
-         (repository.id != 1 && repository.organization.require_publish_approval))
+    forced?() ||
+      (enabled?(target) &&
+         (package_approval?(package) ||
+            (repository.id != 1 && repository.organization.require_publish_approval)))
   end
 
   defp automated?(audit) do

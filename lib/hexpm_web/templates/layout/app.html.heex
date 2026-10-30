@@ -12,6 +12,21 @@
       </div>
     </div>
 
+    <div
+      :if={Hexpm.Repository.StagedReleases.forced?()}
+      id="emergency-publishing-banner"
+      class="emergency-publishing-mode"
+      role="status"
+    >
+      <div class="container">
+        <strong>Emergency publishing mode is active.</strong>
+        Automated publishes require approval with fresh 2FA.
+        <a href={~p"/docs/publish#emergency-publishing-mode"} class="underline">
+          Details
+        </a>
+      </div>
+    </div>
+
     <.header
       conn={assigns[:conn] || assigns[:socket]}
       current_user={assigns[:current_user]}

@@ -21,9 +21,11 @@ defmodule HexpmWeb.Components.PublishApprovalNotice do
           <a href={ViewHelpers.path_for_package(package)} class="font-medium underline">{ViewHelpers.package_name(
             package
           )}</a>
-          <span class="ml-2 text-xs">{if package.require_publish_approval,
-            do: "Package approval enabled",
-            else: "Required by organization policy"}</span>
+          <span class="ml-2 text-xs">{cond do
+            Hexpm.Repository.StagedReleases.forced?() -> "Required by emergency publishing mode"
+            package.require_publish_approval -> "Package approval enabled"
+            true -> "Required by organization policy"
+          end}</span>
         </li>
       </ul>
     </section>

@@ -230,6 +230,19 @@ Staged releases. Approval and rejection require 2FA and forced sudo; approval al
 binds to the displayed package and documentation checksums. Staged releases expire
 after seven days, and a periodic worker removes them and queues artifact deletion.
 
+## Emergency publishing mode
+
+Registry operators can set `HEXPM_FORCE_PUBLISH_APPROVAL=true` to require human
+approval with fresh 2FA for every API-key, organization-key OAuth exchange, and
+workload-identity publish, including documentation. This applies to public and
+private repositories regardless of package settings, organization settings, or
+Workload Identity rollout lists. Automated reverts are blocked. Human OAuth
+publishing with an OTP remains direct.
+
+The website displays a banner while this mode is active. The override uses the
+same repo-bucket `staged/` prefix and retention rules and doesn't remove existing
+owners or memberships.
+
 ## License
 
     Copyright 2015 Six Colors AB
