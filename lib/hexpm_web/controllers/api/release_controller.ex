@@ -3,6 +3,8 @@ defmodule HexpmWeb.API.ReleaseController do
 
   @tarball_max_size 16 * 1024 * 1024
   @metadata_string_max_size 255
+  @revert_blocked "This package requires publish approval, so API keys can't revert it. " <>
+                    "Revert with your Hex account and a two-factor code."
 
   plug :maybe_fetch_release when action in [:show, :delete]
   plug :maybe_fetch_package when action in [:create]
@@ -119,10 +121,7 @@ defmodule HexpmWeb.API.ReleaseController do
          package,
          audit_data(conn)
        ) do
-      AuthHelpers.forbidden(
-        conn,
-        "Reverting requires an OAuth token with a two-factor authentication code."
-      )
+      AuthHelpers.forbidden(conn, @revert_blocked)
     else
       case Releases.revert(package, release, audit: audit_data(conn)) do
         :ok ->
@@ -131,10 +130,7 @@ defmodule HexpmWeb.API.ReleaseController do
           |> send_resp(204, "")
 
         {:error, :publish_policy, :staging_required, _} ->
-          AuthHelpers.forbidden(
-            conn,
-            "Reverting requires an OAuth token with a two-factor authentication code."
-          )
+          AuthHelpers.forbidden(conn, @revert_blocked)
 
         {:error, _, changeset, _} ->
           validation_failed(conn, changeset)

@@ -1,6 +1,9 @@
 defmodule HexpmWeb.StagedReleaseControllerTest do
   use HexpmWeb.ConnCase
 
+  @revert_blocked "This package requires publish approval, so API keys can't revert it. " <>
+                    "Revert with your Hex account and a two-factor code."
+
   alias Hexpm.Accounts.{AuditLog, Key}
   alias Hexpm.Repository.{Assets, Package, Release, StagedRelease, StagedReleases}
 
@@ -431,10 +434,14 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
     approve(ctx, docs) |> response(302)
 
     for suffix <- ["", "/docs"] do
-      build_conn()
-      |> put_req_header("authorization", "Bearer #{token}")
-      |> delete("/api/repos/#{ctx.repository.name}/packages/#{ctx.name}/releases/1.0.0#{suffix}")
-      |> response(403)
+      conn =
+        build_conn()
+        |> put_req_header("authorization", "Bearer #{token}")
+        |> delete(
+          "/api/repos/#{ctx.repository.name}/packages/#{ctx.name}/releases/1.0.0#{suffix}"
+        )
+
+      assert json_response(conn, 403)["message"] == @revert_blocked
     end
 
     assert Repo.one!(Release).has_docs
@@ -493,10 +500,12 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
     path = "/api/repos/#{ctx.repository.name}/packages/#{ctx.name}/releases/1.0.0"
 
     for suffix <- ["", "/docs"] do
-      build_conn()
-      |> put_req_header("authorization", ctx.key.user_secret)
-      |> delete(path <> suffix)
-      |> response(403)
+      conn =
+        build_conn()
+        |> put_req_header("authorization", ctx.key.user_secret)
+        |> delete(path <> suffix)
+
+      assert json_response(conn, 403)["message"] == @revert_blocked
     end
 
     assert Repo.get!(Release, release.id).has_docs
