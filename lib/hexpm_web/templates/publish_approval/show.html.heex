@@ -25,6 +25,12 @@
             Require a user with two-factor authentication to approve releases and documentation
             published to {@organization.name}'s private repository with an API key or workload identity.
           </p>
+          <p
+            :if={Hexpm.Repository.StagedReleases.forced?()}
+            class="mt-5 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 p-4 text-sm text-blue-900 dark:text-blue-100"
+          >
+            The registry currently requires approval for all automated publishes. Disabling the organization policy won't disable that requirement.
+          </p>
           <p class="mt-3 text-sm text-grey-600 dark:text-grey-300">
             This organization policy applies even when approval is disabled for an individual package.
             Publishing with OAuth and an OTP stays direct.
@@ -65,7 +71,13 @@
             Publish approval is currently enabled for {@organization.name}.
           </p>
           <p class="mt-3 text-grey-700 dark:text-grey-300">
-            Disabling it allows direct publishing to the private repository unless a package policy requires approval.
+            Disabling it allows direct publishing to the private repository unless a package or registry policy requires approval.
+          </p>
+          <p
+            :if={Hexpm.Repository.StagedReleases.forced?()}
+            class="mt-5 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 p-4 text-sm text-blue-900 dark:text-blue-100"
+          >
+            The registry currently requires approval for all automated publishes. Disabling the organization policy won't disable that requirement.
           </p>
           <p class="mt-3 text-sm text-grey-600 dark:text-grey-300">
             Existing staged releases still need approval. Every administrator will receive an email.
