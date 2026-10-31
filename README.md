@@ -185,9 +185,9 @@ mix test --only integration
 mix test test/hexpm_web/integration/sca_test.exs --include integration
 ```
 
-## Staged publishing
+## Publish approval
 
-Staged publishing follows the Workload Identity rollout flag:
+Publish approval follows the Workload Identity rollout flag:
 `HEXPM_WORKLOAD_IDENTITY_MODE`, with `HEXPM_WORKLOAD_IDENTITY_BETA_USERS` and
 `HEXPM_WORKLOAD_IDENTITY_BETA_ORGANIZATIONS` in `beta`. Public packages follow their
 owners in beta; private packages follow their organization.
@@ -199,7 +199,7 @@ approved for seven days; approval, rejection, restaging and expiry enqueue artif
 cleanup.
 S3 lifecycle rules expire remaining current objects after 14 days and noncurrent
 versions after one day. Lifecycle deletion is asynchronous. Deploy the
-hexpm-ops storage rules and backup exclusion before staged publishing reaches an
+hexpm-ops storage rules and backup exclusion before publish approval reaches an
 environment where the Workload Identity flag is on.
 Development and test use the existing local and memory repo stores.
 

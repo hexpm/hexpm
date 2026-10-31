@@ -145,7 +145,7 @@ defmodule HexpmWeb.PublishApprovalControllerTest do
 
     email =
       Repo.one!(
-        from(e in Hexpm.Emails.OutboxEntry, where: e.category == "staged-publishing-policy")
+        from(e in Hexpm.Emails.OutboxEntry, where: e.category == "publish_approval.disabled")
       )
 
     assert Enum.sort(email.recipients) ==

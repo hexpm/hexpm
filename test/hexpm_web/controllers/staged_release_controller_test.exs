@@ -35,7 +35,7 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
     assert Repo.aggregate(Release, :count) == 0
     assert Repo.aggregate(AuditLog, :count, :id) == 1
     assert Repo.one!(AuditLog).action == "release.stage"
-    assert [%{category: "staged-release"}] = Repo.all(Hexpm.Emails.OutboxEntry)
+    assert [%{category: "staged_release.staged"}] = Repo.all(Hexpm.Emails.OutboxEntry)
     assert [] = Repo.all(from(j in Oban.Job, where: j.queue == "registry"))
   end
 

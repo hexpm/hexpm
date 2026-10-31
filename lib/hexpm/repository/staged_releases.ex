@@ -687,7 +687,7 @@ defmodule Hexpm.Repository.StagedReleases do
       if package.require_publish_approval && not enabled do
         package_policy_recipients(package)
         |> Emails.publish_approval_disabled(package)
-        |> enqueue_email("staged-publishing-policy")
+        |> enqueue_email("publish_approval.disabled")
       end
 
       updated
@@ -724,7 +724,7 @@ defmodule Hexpm.Repository.StagedReleases do
         )
         |> Repo.preload(:emails)
         |> Emails.publish_approval_disabled(organization)
-        |> enqueue_email("staged-publishing-policy")
+        |> enqueue_email("publish_approval.disabled")
       end
 
       updated
@@ -1066,7 +1066,10 @@ defmodule Hexpm.Repository.StagedReleases do
       |> Enum.filter(&eligible_approver?(staged, package, &1))
 
     if approvers != [],
-      do: approvers |> Emails.staged_release(staged, event) |> enqueue_email("staged-release")
+      do:
+        approvers
+        |> Emails.staged_release(staged, event)
+        |> enqueue_email("staged_release.#{event}")
   end
 
   defp eligible_approver?(staged, package, user) do

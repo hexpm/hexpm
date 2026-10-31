@@ -22,13 +22,7 @@ An organization that owns a public package publishes it with its own workload id
 
 ### Publish approval
 
-Publish approval is a package setting covering all API keys and workload identities that publish it. New packages default to requiring approval when staged publishing is enabled for the package or organization. Existing packages start with the package setting disabled. When approval is required, Hex stores the release privately until a maintainer with 2FA approves it on Hex. `mix hex.publish --wait` opens the approval page and waits for the result.
-
-Full package owners and owning organization admins configure it under Settings > Publish approval. Changes require enrolled 2FA and fresh verification. Disabling sends a notification to full owners and owning organization admins.
-
-Publish approval doesn't change how API keys are created. [Creating a key](/docs/publish#publishing-from-ci) always needs a person signed in to Hex.pm, with their 2FA code if their account has 2FA, and an API key can't create other keys. Publish approval also doesn't stop a key with the `owners` or `members` permission, or `api:write`, from adding an owner or organization member who then publishes with OAuth and an OTP, which isn't staged. Use workload identity for CI.
-
-An organization's private-repository approval policy still applies when the package setting is off. User OAuth publishes with an OTP remain direct. Workload Identity availability doesn't depend on enabling staged publishing.
+A release or documentation a workload identity publishes waits for [publish approval](/docs/publish#publish-approval) when the package or its organization requires it.
 
 ### Before you begin
 

@@ -179,7 +179,7 @@ f48ac236bca15c3271e077c15c5320c4
 
 Pass `--permission publish` instead to publish every package in the organization. See [keys](/docs/keys) for the other permissions and which roles can grant them.
 
-Only a person signed in to Hex.pm can create a key, and an account with 2FA needs its 2FA code to do it. The keys pages ask for the code, or for your password if your account doesn't have 2FA, unless you verified in the last hour. `mix hex.organization key` creates keys with the OAuth token from `mix hex.user auth`, which needs the 2FA code for every change. An API key can't create other keys. [Publish approval](/docs/workload-identity#publish-approval) doesn't add a step to creating a key; it applies when the key publishes.
+Only a person signed in to Hex.pm can create a key, and an account with 2FA needs its 2FA code to do it. The keys pages ask for the code, or for your password if your account doesn't have 2FA, unless you verified in the last hour. `mix hex.organization key` creates keys with the OAuth token from `mix hex.user auth`, which needs the 2FA code for every change. An API key can't create other keys. [Publish approval](#publish-approval) doesn't add a step to creating a key; it applies when the key publishes.
 
 Publish approval doesn't stop a key with the `owners` or `members` permission, or `api:write`, from adding an owner or organization member. That account then publishes with OAuth and its own OTP, which isn't staged. Use [Workload Identity](/docs/workload-identity) for CI.
 
@@ -190,6 +190,14 @@ $ HEX_API_KEY=f48ac236bca15c3271e077c15c5320c4 mix hex.publish --yes
 ```
 
 *Note that care should be used when automating publishing because Hex can output important warnings or even recommendations on how to improve your package that will easily be missed when the process is automated. Also note that Hex is still pre 1.0 so breaking changes can happen between any releases and CI will usually install the latest version.*
+
+### Publish approval
+
+Publish approval holds releases and documentation published with an API key or a workload identity until a person approves them. It's a package setting, and an organization can also require it for every package in its private repository, whatever the package setting. Publishing with your own account, which uses an OAuth token and your 2FA code, isn't held.
+
+New packages require approval by default, and existing packages start with it off. Full package owners and owning organization admins change it under Settings > Publish approval, which requires enrolled 2FA and fresh verification. Turning it off emails the full owners and owning organization admins.
+
+While approval is required, Hex stores each upload privately as a staged release. A maintainer with 2FA opens it under Staged releases in the dashboard, checks the package and documentation checksums, and approves or rejects it. Staged releases expire after seven days. `mix hex.publish --wait` opens the approval page and waits for the result.
 
 <a id="secret-scanning"></a>
 

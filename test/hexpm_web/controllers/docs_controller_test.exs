@@ -194,14 +194,9 @@ defmodule HexpmWeb.DocsControllerTest do
 
     document = LazyHTML.from_document(html)
 
-    text = LazyHTML.text(document)
-    assert text =~ "package setting covering all API keys and workload identities"
-    assert text =~ "New packages default to requiring approval"
-    assert text =~ "Existing packages start with the package setting disabled"
-    assert text =~ "Settings > Publish approval"
-    assert text =~ "Full package owners and owning organization admins"
-    assert text =~ "private-repository approval policy still applies"
-    assert text =~ "User OAuth publishes with an OTP remain direct"
+    assert [_] =
+             LazyHTML.query(document, ~s(a[href="/docs/publish#publish-approval"]))
+             |> Enum.to_list()
 
     assert [link] =
              LazyHTML.query(document, ~s(#docs-nav a[href="/docs/workload-identity"]))
@@ -251,6 +246,25 @@ defmodule HexpmWeb.DocsControllerTest do
 
     assert html =~ ~s(href="/docs/workload-identity")
     assert html =~ "Workload Identity"
+  end
+
+  test "publish docs explain publish approval" do
+    document =
+      build_conn()
+      |> get("/docs/publish")
+      |> html_response(200)
+      |> LazyHTML.from_document()
+
+    assert [_] = document |> LazyHTML.query("#publish-approval") |> Enum.to_list()
+    assert [_] = document |> LazyHTML.query(~s(p a[href="#publish-approval"])) |> Enum.to_list()
+
+    text = LazyHTML.text(document)
+    assert text =~ "published with an API key or a workload identity until a person approves them"
+    assert text =~ "every package in its private repository, whatever the package setting"
+    assert text =~ "New packages require approval by default"
+    assert text =~ "Settings > Publish approval"
+    assert text =~ "Full package owners and owning organization admins"
+    assert text =~ "Staged releases expire after seven days"
   end
 
   test "2FA documentation and navigation follow their own rollout availability" do
