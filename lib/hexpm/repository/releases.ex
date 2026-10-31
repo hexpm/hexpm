@@ -220,15 +220,10 @@ defmodule Hexpm.Repository.Releases do
       )
       |> staged_result()
     else
-      case publish_transaction(
-             repository,
-             package,
-             user,
-             meta,
-             inner_checksum,
-             outer_checksum,
-             opts
-           ) do
+      result =
+        publish_transaction(repository, package, user, meta, inner_checksum, outer_checksum, opts)
+
+      case result do
         {:error, :publish_policy, :staging_required, _} ->
           Hexpm.Repository.StagedReleases.stage(
             repository,
@@ -304,36 +299,36 @@ defmodule Hexpm.Repository.Releases do
     if opts[:approved_by_id] do
       publish_docs_now(package, release, body_path, opts[:audit])
     else
-      repository = package.repository
+      result =
+        Repo.transaction(fn -> publish_direct_docs(package, release, body_path, opts[:audit]) end,
+          timeout: @publish_timeout
+        )
 
-      case Repo.transaction(
-             fn ->
-               Hexpm.Repository.StagedReleases.lock_name(repository, package.name)
-
-               case Hexpm.Repository.StagedReleases.check_direct_policy(
-                      repository,
-                      package,
-                      opts[:audit],
-                      opts[:approved_by_id]
-                    ) do
-                 {:ok, _} -> publish_docs_now(package, release, body_path, opts[:audit])
-                 {:error, :staging_required} -> Repo.rollback(:staging_required)
-               end
-             end,
-             timeout: @publish_timeout
-           ) do
+      case result do
         {:ok, result} ->
           result
 
         {:error, :staging_required} ->
           Hexpm.Repository.StagedReleases.stage_docs(
-            repository,
+            package.repository,
             package.name,
             release.version,
             body_path,
             opts[:audit]
           )
       end
+    end
+  end
+
+  defp publish_direct_docs(package, release, body_path, audit) do
+    Hexpm.Repository.StagedReleases.lock_name(package.repository, package.name)
+
+    policy =
+      Hexpm.Repository.StagedReleases.check_direct_policy(package.repository, package, audit, nil)
+
+    case policy do
+      {:ok, _} -> publish_docs_now(package, release, body_path, audit)
+      {:error, :staging_required} -> Repo.rollback(:staging_required)
     end
   end
 
@@ -359,19 +354,7 @@ defmodule Hexpm.Repository.Releases do
 
   def revert(package, release, audit: audit_data) do
     Multi.new()
-    |> Multi.run(:publish_policy, fn _, _ ->
-      Hexpm.Repository.StagedReleases.lock_name(package.repository, package.name)
-
-      with {:ok, _} <-
-             Hexpm.Repository.StagedReleases.check_direct_policy(
-               package.repository,
-               package,
-               audit_data,
-               nil
-             ) do
-        Hexpm.Repository.StagedReleases.check_revert(release)
-      end
-    end)
+    |> Multi.run(:publish_policy, fn _, _ -> revert_policy(package, release, audit_data) end)
     |> Multi.delete(:release, Release.delete(release))
     |> audit_revert(audit_data, package, release)
     |> Multi.run(:release_count, &release_count/2)
@@ -404,28 +387,34 @@ defmodule Hexpm.Repository.Releases do
     release_changeset = Ecto.Changeset.change(release, has_docs: false)
     package_changeset = Ecto.Changeset.change(release.package, docs_updated_at: now)
 
-    Multi.new()
-    |> Multi.run(:publish_policy, fn _, _ ->
-      Hexpm.Repository.StagedReleases.lock_name(release.package.repository, release.package.name)
+    result =
+      Multi.new()
+      |> Multi.run(:publish_policy, fn _, _ ->
+        revert_policy(release.package, release, audit_data)
+      end)
+      |> Multi.update(:release, release_changeset)
+      |> Multi.update(:package, package_changeset)
+      |> audit(audit_data, "docs.revert", {release.package, release})
+      |> Repo.transaction()
 
-      with {:ok, _} <-
-             Hexpm.Repository.StagedReleases.check_direct_policy(
-               release.package.repository,
-               release.package,
-               audit_data,
-               nil
-             ) do
-        Hexpm.Repository.StagedReleases.check_revert(release)
-      end
-    end)
-    |> Multi.update(:release, release_changeset)
-    |> Multi.update(:package, package_changeset)
-    |> audit(audit_data, "docs.revert", {release.package, release})
-    |> Repo.transaction()
-    |> case do
+    case result do
       {:ok, _} -> Assets.revert_docs(release)
       error -> error
     end
+  end
+
+  defp revert_policy(package, release, audit_data) do
+    Hexpm.Repository.StagedReleases.lock_name(package.repository, package.name)
+
+    policy =
+      Hexpm.Repository.StagedReleases.check_direct_policy(
+        package.repository,
+        package,
+        audit_data,
+        nil
+      )
+
+    with {:ok, _} <- policy, do: Hexpm.Repository.StagedReleases.check_revert(release)
   end
 
   def retire(package, release, params, audit: audit_data) do

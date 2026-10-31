@@ -418,80 +418,7 @@ defmodule Hexpm.Repository.StagedReleases do
 
     try do
       result =
-        Repo.transaction(
-          fn ->
-            staged = lock_staged!(id)
-            staged = lock_authorization(staged, user)
-
-            if not can_approve?(staged, fresh_user(user), opts[:session_id]),
-              do: Repo.rollback(:forbidden)
-
-            if expired?(staged), do: Repo.rollback(:expired)
-            if checksum != StagedRelease.checksum(staged), do: Repo.rollback(:changed)
-
-            if staged.publication do
-              staged
-            else
-              repository = staged.repository
-              package = Packages.get(repository, staged.name)
-
-              credential =
-                authorize_credential!(repository, package, Map.from_struct(staged), staged.name)
-
-              publisher = publisher(credential)
-
-              _body =
-                download!(staged.storage_key, staged.outer_checksum, directory, "release.tar")
-
-              _docs =
-                download!(staged.docs_storage_key, staged.docs_checksum, directory, "docs.tar.gz")
-
-              audit = restore_audit(staged, credential)
-
-              published =
-                if staged.kind == "release" do
-                  wi_context =
-                    if staged.workload_identity_id,
-                      do: %{
-                        workload_identity_id: staged.workload_identity_id,
-                        oidc_claims: claims_struct(staged.oidc_claims)
-                      }
-
-                  case Releases.publish_transaction(
-                         repository,
-                         package,
-                         publisher,
-                         staged.meta,
-                         staged.inner_checksum,
-                         staged.outer_checksum,
-                         audit: audit,
-                         replace: staged.replace,
-                         workload_identity: wi_context,
-                         staged_release_id: staged.id,
-                         approved_by_id: user.id
-                       ) do
-                    {:ok, result} -> result
-                    {:error, _, reason, _} -> Repo.rollback(reason)
-                  end
-                else
-                  release = package && Releases.get(package, staged.version)
-                  if is_nil(release), do: Repo.rollback(:not_found)
-                  %{package: package, release: release}
-                end
-
-              audit!(opts[:audit], "release.approve", staged)
-
-              staged =
-                Repo.update!(
-                  change(staged,
-                    publication: %{"release_id" => published.release.id, "approver_id" => user.id}
-                  )
-                )
-
-              StagedReleasePublishWorker.enqueue(staged.id)
-              staged
-            end
-          end,
+        Repo.transaction(fn -> approve_in_transaction(id, user, checksum, directory, opts) end,
           timeout: @publish_timeout
         )
 
@@ -502,6 +429,78 @@ defmodule Hexpm.Repository.StagedReleases do
     after
       File.rm_rf!(directory)
     end
+  end
+
+  defp approve_in_transaction(id, user, checksum, directory, opts) do
+    staged = lock_staged!(id)
+    staged = lock_authorization(staged, user)
+
+    if not can_approve?(staged, fresh_user(user), opts[:session_id]),
+      do: Repo.rollback(:forbidden)
+
+    if expired?(staged), do: Repo.rollback(:expired)
+    if checksum != StagedRelease.checksum(staged), do: Repo.rollback(:changed)
+
+    if staged.publication,
+      do: staged,
+      else: record_approval(staged, user, directory, opts)
+  end
+
+  defp record_approval(staged, user, directory, opts) do
+    repository = staged.repository
+    package = Packages.get(repository, staged.name)
+    credential = authorize_credential!(repository, package, Map.from_struct(staged), staged.name)
+    publisher = publisher(credential)
+    _body = download!(staged.storage_key, staged.outer_checksum, directory, "release.tar")
+    _docs = download!(staged.docs_storage_key, staged.docs_checksum, directory, "docs.tar.gz")
+    audit = restore_audit(staged, credential)
+    published = publish_approved(staged, package, publisher, audit, user)
+    audit!(opts[:audit], "release.approve", staged)
+
+    staged =
+      Repo.update!(
+        change(staged,
+          publication: %{"release_id" => published.release.id, "approver_id" => user.id}
+        )
+      )
+
+    StagedReleasePublishWorker.enqueue(staged.id)
+    staged
+  end
+
+  defp publish_approved(%{kind: "release"} = staged, package, publisher, audit, user) do
+    wi_context =
+      if staged.workload_identity_id,
+        do: %{
+          workload_identity_id: staged.workload_identity_id,
+          oidc_claims: claims_struct(staged.oidc_claims)
+        }
+
+    result =
+      Releases.publish_transaction(
+        staged.repository,
+        package,
+        publisher,
+        staged.meta,
+        staged.inner_checksum,
+        staged.outer_checksum,
+        audit: audit,
+        replace: staged.replace,
+        workload_identity: wi_context,
+        staged_release_id: staged.id,
+        approved_by_id: user.id
+      )
+
+    case result do
+      {:ok, published} -> published
+      {:error, _, reason, _} -> Repo.rollback(reason)
+    end
+  end
+
+  defp publish_approved(staged, package, _publisher, _audit, _user) do
+    release = package && Releases.get(package, staged.version)
+    if is_nil(release), do: Repo.rollback(:not_found)
+    %{package: package, release: release}
   end
 
   def complete_approval(id) do
