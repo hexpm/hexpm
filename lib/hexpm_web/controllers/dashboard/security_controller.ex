@@ -1,6 +1,7 @@
 defmodule HexpmWeb.Dashboard.SecurityController do
   use HexpmWeb, :controller
   alias Hexpm.Accounts.{TFA, User, Users, UserProviders}
+  alias HexpmWeb.Plugs.ContentSecurityPolicy
 
   plug :requires_login
   plug HexpmWeb.Plugs.Sudo
@@ -265,14 +266,23 @@ defmodule HexpmWeb.Dashboard.SecurityController do
           User.add_password(user, %{})
         end
 
-    render(
-      conn,
+    conn
+    |> allow_github_form_action(user)
+    |> render(
       "index.html",
       title: "Dashboard - Security",
       container: "container page dashboard",
       password_changeset: password_changeset,
       add_password_changeset: add_password_changeset
     )
+  end
+
+  defp allow_github_form_action(conn, user) do
+    if UserProviders.has_provider?(user, "github") do
+      conn
+    else
+      ContentSecurityPolicy.allow_form_action(conn, "https://github.com/login/oauth/authorize")
+    end
   end
 
   # A page that requires 2FA links here with itself as `return`, and enabling
