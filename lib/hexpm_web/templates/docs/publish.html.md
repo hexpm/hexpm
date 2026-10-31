@@ -197,7 +197,7 @@ Publish approval holds releases and documentation published with an API key or a
 
 New packages require approval by default, and existing packages start with it off. Full package owners and owning organization admins change it under Settings > Publish approval, which requires enrolled 2FA and fresh verification. Turning it off emails the full owners and owning organization admins.
 
-While approval is required, Hex stores each upload privately as a staged release. A maintainer with 2FA opens it under Staged releases in the dashboard, checks the package and documentation checksums, and approves or rejects it. Staged releases expire after seven days. `mix hex.publish --wait` opens the approval page and waits for the result.
+While approval is required, Hex keeps each release and its documentation private as a staged release. A maintainer with 2FA opens it under Staged releases in the dashboard, checks the package and documentation checksums, and approves or rejects it. Staged releases expire after seven days. `mix hex.publish --wait` opens the approval page and waits for the result.
 
 <a id="secret-scanning"></a>
 
