@@ -109,6 +109,35 @@ defmodule HexpmWeb.Dashboard.SecurityControllerTest do
       assert result =~ "Remove Password"
       refute result =~ "You must connect a GitHub account before you can remove your password"
     end
+
+    test "allows GitHub in form-action for the Connect GitHub form" do
+      user = insert(:user)
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/security")
+
+      assert response(conn, 200) =~ "/dashboard/security/connect-github"
+
+      [csp] = get_resp_header(conn, "content-security-policy")
+      assert csp =~ "form-action 'self' https://github.com;"
+    end
+
+    test "keeps form-action closed when GitHub is connected" do
+      user = insert(:user)
+      insert(:user_provider, user: user, provider: "github")
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/security")
+
+      refute response(conn, 200) =~ "/dashboard/security/connect-github"
+
+      [csp] = get_resp_header(conn, "content-security-policy")
+      assert csp =~ "form-action 'self';"
+    end
   end
 
   describe "post /dashboard_security/enable-tfa" do
