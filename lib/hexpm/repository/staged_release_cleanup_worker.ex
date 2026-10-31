@@ -10,7 +10,6 @@ defmodule Hexpm.Repository.StagedReleaseCleanupWorker do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"keys" => keys}}) do
-    Enum.each(keys, &Hexpm.Store.delete(:repo_bucket, &1))
-    :ok
+    Hexpm.Store.delete_many(:repo_bucket, keys)
   end
 end
