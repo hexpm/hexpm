@@ -1,5 +1,5 @@
-<%= WorkloadIdentityAdd.message(@username, @package) %>
+<%= WorkloadIdentityAdd.message(@username, @package, :text) %>
 
 <%= Enum.join(WorkloadIdentityDetails.lines(@current), "\n") %>
 
-<%= WorkloadIdentityAdd.warning(@package) %>
+<%= WorkloadIdentityAdd.warning(@package, :text) %>

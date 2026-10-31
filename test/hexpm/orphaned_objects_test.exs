@@ -115,14 +115,15 @@ defmodule Hexpm.OrphanedObjectsTest do
   end
 
   describe "delete/1 on the repo bucket" do
-    test "keeps the index, installs and debug objects" do
+    test "keeps the index, installs, debug and staged objects" do
       put(:repo_bucket, "names")
       put(:repo_bucket, "versions")
       put(:repo_bucket, "installs/list.csv")
       put(:repo_bucket, "debug/tarballs/hexpm-foo-1.0.0-abc.tar.gz")
+      put(:repo_bucket, "staged/pending-upload")
 
       assert %{deleted: 0, unrecognised: 0} = sweep(:repo_bucket)
-      assert length(keys(:repo_bucket)) == 4
+      assert length(keys(:repo_bucket)) == 5
     end
 
     test "deletes the index of a repository that is gone" do

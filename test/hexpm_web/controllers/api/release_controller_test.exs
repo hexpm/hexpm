@@ -1,8 +1,13 @@
 defmodule HexpmWeb.API.ReleaseControllerTest do
-  use HexpmWeb.ConnCase, async: true
+  use HexpmWeb.ConnCase
 
   alias Hexpm.Accounts.AuditLog
   alias Hexpm.Repository.{Owners, Package, RegistryBuilder, Release, Repository}
+
+  # Staged publishing follows the Workload Identity flag, and these tests publish directly.
+  setup do
+    put_feature_flag(:workload_identity, mode: :off)
+  end
 
   setup do
     user = insert(:user)

@@ -1,4 +1,4 @@
-<%= PackagePublished.intro(@publisher, @package, @version) %>
+<%= PackagePublished.intro(@publisher, @package, @version, :text) %>
 
 <%= Common.for_mix_label() %>
 

@@ -1,9 +1,9 @@
 Organization Reached Without Single Sign-On
 
-<%= SSOBreakGlass.intro(@organization, @username, @screen) %>
+<%= SSOBreakGlass.intro(@organization, @username, @screen, :text) %>
 
 <%= SSOBreakGlass.why() %>
 
 <%= SSOBreakGlass.scope() %>
 
-<%= SSOBreakGlass.action(@username) %>
+<%= SSOBreakGlass.action(@username, :text) %>

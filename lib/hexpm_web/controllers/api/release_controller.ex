@@ -3,6 +3,8 @@ defmodule HexpmWeb.API.ReleaseController do
 
   @tarball_max_size 16 * 1024 * 1024
   @metadata_string_max_size 255
+  @revert_blocked "This package requires publish approval, so API keys can't revert it. " <>
+                    "Revert with your Hex account and a two-factor code."
 
   plug :maybe_fetch_release when action in [:show, :delete]
   plug :maybe_fetch_package when action in [:create]
@@ -53,17 +55,8 @@ defmodule HexpmWeb.API.ReleaseController do
     case release_metadata(body_path) do
       {:ok, meta, inner_checksum, outer_checksum} ->
         replace? = Map.get(params, "replace", true)
-        request_id = List.first(get_resp_header(conn, "x-request-id"))
 
-        log_tarball(
-          conn.assigns.repository.name,
-          meta["name"],
-          meta["version"],
-          request_id,
-          body_path
-        )
-
-        Releases.publish(
+        publish_release(
           conn.assigns.repository,
           conn.assigns.package,
           publisher_for(conn),
@@ -123,14 +116,25 @@ defmodule HexpmWeb.API.ReleaseController do
     package = conn.assigns.package
     release = conn.assigns.release
 
-    case Releases.revert(package, release, audit: audit_data(conn)) do
-      :ok ->
-        conn
-        |> api_cache(:private)
-        |> send_resp(204, "")
+    if Hexpm.Repository.StagedReleases.reverts_blocked?(
+         conn.assigns.repository,
+         package,
+         audit_data(conn)
+       ) do
+      AuthHelpers.forbidden(conn, @revert_blocked)
+    else
+      case Releases.revert(package, release, audit: audit_data(conn)) do
+        :ok ->
+          conn
+          |> api_cache(:private)
+          |> send_resp(204, "")
 
-      {:error, _, changeset, _} ->
-        validation_failed(conn, changeset)
+        {:error, :publish_policy, :staging_required, _} ->
+          AuthHelpers.forbidden(conn, @revert_blocked)
+
+        {:error, _, changeset, _} ->
+          validation_failed(conn, changeset)
+      end
     end
   end
 
@@ -166,10 +170,8 @@ defmodule HexpmWeb.API.ReleaseController do
 
           true ->
             replace? = Map.get(conn.params, "replace", true)
-            request_id = List.first(get_resp_header(conn, "x-request-id"))
-            log_tarball(repository.name, meta["name"], meta["version"], request_id, body_path)
 
-            Releases.publish(
+            publish_release(
               repository,
               package,
               user,
@@ -189,6 +191,39 @@ defmodule HexpmWeb.API.ReleaseController do
     |> publish_result(conn)
   end
 
+  defp publish_release(repository, package, user, body, meta, inner, outer, opts) do
+    audit = opts[:audit]
+
+    always_direct? =
+      match?(%User{}, audit.user) && match?(%Hexpm.OAuth.Token{}, audit.auth_credential)
+
+    if always_direct?,
+      do: log_tarball(repository.name, meta["name"], meta["version"], audit[:request_id], body)
+
+    result = Releases.publish(repository, package, user, body, meta, inner, outer, opts)
+
+    unless always_direct? || match?({:ok, %{action: :staged}}, result) ||
+             match?({:error, :staged, _}, result) do
+      log_tarball(repository.name, meta["name"], meta["version"], opts[:audit][:request_id], body)
+    end
+
+    result
+  end
+
+  defp publish_result({:error, :staged, %Ecto.Changeset{} = changeset}, conn),
+    do: validation_failed(conn, normalize_errors(changeset))
+
+  defp publish_result({:error, :staged, error}, conn), do: publish_result({:error, error}, conn)
+
+  defp publish_result({:ok, %{action: :staged, staged_release: staged}}, conn) do
+    conn
+    |> put_resp_header("location", ~p"/api/staged-releases/#{staged.id}")
+    |> api_cache(:private)
+    |> put_status(201)
+    |> put_view(HexpmWeb.API.StagedReleaseView)
+    |> render(:show, staged_release: staged, status: "staged")
+  end
+
   defp publish_result({:ok, %{action: :insert, package: package, release: release}}, conn) do
     location = ~p"/api/packages/#{package}/releases/#{release}"
 
@@ -203,6 +238,10 @@ defmodule HexpmWeb.API.ReleaseController do
     conn
     |> api_cache(conn.assigns.repository)
     |> render(:show, release: release)
+  end
+
+  defp publish_result({:error, error}, conn) when is_atom(error) do
+    validation_failed(conn, %{staged_release: Atom.to_string(error)})
   end
 
   defp publish_result({:error, errors}, conn) do

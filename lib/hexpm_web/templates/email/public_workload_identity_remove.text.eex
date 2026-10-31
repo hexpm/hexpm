@@ -1,4 +1,4 @@
-<%= PublicWorkloadIdentityRemove.message(@username, @organization) %>
+<%= PublicWorkloadIdentityRemove.message(@username, @organization, :text) %>
 
 <%= Enum.join(@public_packages_covered, "\n") %>
 

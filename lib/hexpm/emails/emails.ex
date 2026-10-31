@@ -3,6 +3,7 @@ defmodule Hexpm.Emails do
 
   alias HexpmWeb.EmailView.{Common, PackageSearchDisabled}
   alias Hexpm.Accounts.{Email, Organization, User}
+  alias Hexpm.Repository.Package
 
   @coverage_fields [:covers_private, :packages, :covers_public, :public_packages]
 
@@ -623,6 +624,46 @@ defmodule Hexpm.Emails do
 
   defp billing_url(organization) do
     HexpmWeb.EmailView.email_url("/dashboard/orgs/#{organization}/billing")
+  end
+
+  def staged_release(users, staged, event) do
+    base_email(:staged_release)
+    |> email_to(users)
+    |> subject("Hex.pm - #{staged.name} #{staged.version} #{event}")
+    |> assign(:staged, staged)
+    |> assign(:event, event)
+    |> assign(
+      :approval_url,
+      HexpmWeb.EmailView.email_url("/dashboard/staged-releases/#{staged.id}")
+    )
+    |> render_body(:staged_release)
+  end
+
+  def publish_approval_disabled(users, %Package{} = package) do
+    name = HexpmWeb.ViewHelpers.package_name(package)
+
+    base_email(:publish_approval_disabled)
+    |> email_to(users)
+    |> subject("Hex.pm - Publish approval disabled for package #{name}")
+    |> assign(:package, name)
+    |> assign(
+      :remaining_requirements,
+      "Organization and registry policies may still require approval."
+    )
+    |> render_body(:publish_approval_disabled)
+  end
+
+  def publish_approval_disabled(users, organization) do
+    base_email(:publish_approval_disabled)
+    |> email_to(users)
+    |> subject("Hex.pm - Publish approval disabled for organization #{organization.name}")
+    |> assign(:package, nil)
+    |> assign(:organization, organization.name)
+    |> assign(
+      :remaining_requirements,
+      "Package and registry policies may still require approval."
+    )
+    |> render_body(:publish_approval_disabled)
   end
 
   def package_published(owners, publisher, name, version) do

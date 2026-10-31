@@ -7,7 +7,7 @@ invitations_url = url(email_uri(), ~p"/dashboard/invitations")
 </h1>
 
 <p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
-  <%= OrganizationUserInvitation.intro(@organization, @username, @role) %>
+  <%= raw(OrganizationUserInvitation.intro(@organization, @username, @role, :html)) %>
 </p>
 
 <p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">

@@ -196,6 +196,9 @@ defmodule HexpmWeb.PackageOwnerLive.AddOwnerTest do
                "Adding an organization transfers the package to it. " <>
                  "#{organization.name} becomes the only owner of #{package.name}."
 
+      assert document |> LazyHTML.query("#add-owner-transfer strong") |> Enum.map(&text/1) ==
+               [organization.name, package.name, package.name, package.name]
+
       assert transfer_items(document) ==
                Enum.sort([
                  "#{current_user.username} (you)",
@@ -486,7 +489,7 @@ defmodule HexpmWeb.PackageOwnerLive.AddOwnerTest do
         |> form("#add-owner-form", username: organization.name, level: "maintainer")
         |> render_change()
 
-      assert html =~
+      assert html |> LazyHTML.from_fragment() |> LazyHTML.query("#add-owner-modal") |> text() =~
                "is an organization. Only members of #{repository.name} can own #{package.name}."
 
       refute html =~ ~s(name="transfer_to")
@@ -574,7 +577,9 @@ defmodule HexpmWeb.PackageOwnerLive.AddOwnerTest do
     html =
       render_change(view, "lookup", %{"username" => current_user.username, "transfer" => "true"})
 
-    assert html =~ "You can no longer change the owners of #{package.name}."
+    assert html =~
+             ~s(You can no longer change the owners of <strong class="font-semibold text-grey-900 dark:text-white">#{package.name}</strong>.)
+
     refute html =~ "acme/new-owner-identity"
     refute html =~ ~s(id="add-owner-form")
   end
@@ -586,8 +591,13 @@ defmodule HexpmWeb.PackageOwnerLive.AddOwnerTest do
     |> Enum.sort()
   end
 
+  # The separator also lands between a bold name and the punctuation after it.
   defp text(document) do
-    document |> LazyHTML.text(separator: " ") |> String.replace(~r/\s+/, " ") |> String.trim()
+    document
+    |> LazyHTML.text(separator: " ")
+    |> String.replace(~r/\s+/, " ")
+    |> String.replace(~r/ ([.,:])/, "\\1")
+    |> String.trim()
   end
 
   defp submit_button_disabled?(html) do

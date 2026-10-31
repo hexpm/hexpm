@@ -805,6 +805,8 @@ defmodule HexpmWeb.Dashboard.OrganizationWorkloadIdentitiesTest do
 
       assert normalized_text(card) =~
                "#{organization.name} doesn't own gone_one, so this workload identity doesn't publish it."
+
+      assert card |> LazyHTML.query("p strong") |> normalized_text() == "gone_one"
     end
 
     test "links Edit for admins with 2FA only", %{

@@ -93,6 +93,7 @@ defmodule Hexpm.ObanConfigTest do
              {"30 0 * * *", Hexpm.Repository.TyposquatWorker},
              {"0 1 * * *", Hexpm.Repository.DownloadsWorker},
              {"0 2 * * *", Hexpm.PurgeExpiredRecords},
+             {"*/15 * * * *", Hexpm.Repository.StagedReleaseExpiryWorker},
              {"15 3 * * *", Hexpm.Accounts.OrganizationDomains.RecheckWorker},
              {"45 3 * * *", Hexpm.Accounts.SSO.EnforcementWorker},
              {"*/15 * * * *", Hexpm.Accounts.OrganizationTFAWorker},

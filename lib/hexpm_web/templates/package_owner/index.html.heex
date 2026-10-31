@@ -161,7 +161,9 @@
           class="mt-4 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 p-4 space-y-2 text-sm text-amber-900 dark:text-amber-100"
         >
           <p>
-            These workload identities of {owner.user.username} publish {@package.name} because {owner.user.username} owns it, and stop publishing it when it's removed:
+            These workload identities of {owner.user.username} publish
+            <strong class="font-semibold">{@package.name}</strong>
+            because {owner.user.username} owns it, and stop publishing it when it's removed:
           </p>
           <ul class="list-disc pl-5">
             <li :for={
@@ -181,7 +183,7 @@
           class="mt-4 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 p-4 space-y-2 text-sm text-amber-900 dark:text-amber-100"
         >
           <p>
-            Removing an owner doesn't change {@package.name}'s workload identities, so anyone who can run these workflows on GitHub can still publish it, including a removed owner with access to the repositories:
+            Removing an owner doesn't change <strong class="font-semibold">{@package.name}</strong>'s workload identities, so anyone who can run these workflows on GitHub can still publish it, including a removed owner with access to the repositories:
           </p>
           <ul class="list-disc pl-5">
             <li :for={workload_identity <- @workload_identities}>

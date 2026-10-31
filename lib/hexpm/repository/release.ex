@@ -15,6 +15,7 @@ defmodule Hexpm.Repository.Release do
     field :vulnerable?, :boolean, virtual: true, default: false
     timestamps()
 
+    belongs_to :approved_by, User
     belongs_to :package, Package
     belongs_to(:publisher, User, on_replace: :nilify)
     belongs_to :workload_identity, Hexpm.WorkloadIdentities.WorkloadIdentity
@@ -201,6 +202,18 @@ defmodule Hexpm.Repository.Release do
 
   defp editable_error_message(:delete),
     do: "can only delete a release up to one hour after publication"
+
+  def editable_until(release) do
+    if release.package.repository.id == 1 do
+      Enum.max(
+        [
+          NaiveDateTime.add(release.inserted_at, @one_hour),
+          NaiveDateTime.add(release.package.inserted_at, @one_day)
+        ],
+        NaiveDateTime
+      )
+    end
+  end
 
   defp editable?(release) do
     release.package.repository.id != 1 or

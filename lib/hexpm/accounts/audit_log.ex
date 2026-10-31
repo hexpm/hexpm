@@ -19,7 +19,7 @@ defmodule Hexpm.Accounts.AuditLog do
   end
 
   def build(%{user: nil} = audit_data, action, params)
-      when action in ~w(password.reset.init password.reset.finish user_provider.create user.delete) do
+      when action in ~w(password.reset.init password.reset.finish user_provider.create user.delete release.stage_expire docs.publish) do
     params = extract_params(action, params)
 
     {key, oauth_token} = extract_auth_credential(audit_data.auth_credential)
@@ -238,6 +238,45 @@ defmodule Hexpm.Accounts.AuditLog do
 
   defp extract_params("owner.remove", {package, level, user}),
     do: %{package: serialize(package), level: level, user: serialize(user)}
+
+  defp extract_params(action, %Hexpm.Repository.StagedRelease{} = staged)
+       when action in ~w(release.stage release.approve release.reject release.stage_expire) do
+    package = Hexpm.Repository.Packages.get(staged.repository, staged.name)
+
+    %{
+      package: package && serialize(package),
+      organization_id:
+        if(staged.repository_id == 1, do: nil, else: staged.repository.organization_id),
+      staged_release: %{
+        id: staged.id,
+        repository: staged.repository.name,
+        repository_id: staged.repository_id,
+        name: staged.name,
+        user_id: staged.user_id,
+        organization_id: staged.organization_id,
+        credential_type: staged.credential_type,
+        credential_name: staged.credential_name,
+        oidc_claims: staged.oidc_claims,
+        outer_checksum: encode_checksum(staged.outer_checksum),
+        docs_checksum: encode_checksum(staged.docs_checksum),
+        expires_at: staged.expires_at,
+        version: to_string(staged.version),
+        kind: staged.kind,
+        checksum: Hexpm.Repository.StagedRelease.checksum(staged),
+        key_id: staged.key_id,
+        workload_identity_id: staged.workload_identity_id
+      }
+    }
+  end
+
+  defp extract_params("organization.publish_approval.configure", organization),
+    do: %{
+      organization: serialize(organization),
+      require_publish_approval: organization.require_publish_approval
+    }
+
+  defp extract_params("package.publish_approval.configure", package),
+    do: %{package: serialize(package), require_publish_approval: package.require_publish_approval}
 
   defp extract_params("release.publish", {package, release}),
     do: %{package: serialize(package), release: serialize(release)}

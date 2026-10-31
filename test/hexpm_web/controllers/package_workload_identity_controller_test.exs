@@ -38,7 +38,7 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
     document
     |> LazyHTML.query("#package-settings-nav a")
     |> Enum.map(fn link ->
-      {link |> LazyHTML.text(separator: " ") |> String.trim(),
+      {link |> LazyHTML.text(separator: " ") |> String.replace(~r/\s+/, " ") |> String.trim(),
        link |> LazyHTML.attribute("aria-current") |> List.first()}
     end)
   end
@@ -69,6 +69,7 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
 
       assert settings_nav(document) == [
                {"Owners", nil},
+               {"Publish approval NEW", nil},
                {"Workload identities", "page"}
              ]
     end
@@ -349,6 +350,7 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
 
       assert settings_nav(document) == [
                {"Owners", nil},
+               {"Publish approval NEW", nil},
                {"Workload identities", "page"}
              ]
     end
@@ -1342,7 +1344,11 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
              |> LazyHTML.query(~s(form[id^="remove-workload-identity-form-"]))
              |> Enum.empty?()
 
-      assert settings_nav(document) == [{"Owners", nil}, {"Workload identities", "page"}]
+      assert settings_nav(document) == [
+               {"Owners", nil},
+               {"Publish approval NEW", nil},
+               {"Workload identities", "page"}
+             ]
     end
 
     test "shows an admin the controls", %{organization: organization, package: package} do

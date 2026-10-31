@@ -1,6 +1,6 @@
 <%= PackageSearchDisabled.title(@package, @removed) %>
 
-<%= PackageSearchDisabled.message(@package, @removed) %>
+<%= PackageSearchDisabled.message(@package, @removed, :text) %>
 
 <%= PackageSearchDisabled.reason_heading() %>
 

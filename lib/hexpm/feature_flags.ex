@@ -6,7 +6,7 @@ defmodule Hexpm.FeatureFlags do
 
   import Ecto.Query, only: [from: 2]
 
-  alias Hexpm.Accounts.Organization
+  alias Hexpm.Accounts.{Organization, User}
   alias Hexpm.Repo
   alias Hexpm.Repository.{Package, PackageOwner, Repository}
 
@@ -24,7 +24,7 @@ defmodule Hexpm.FeatureFlags do
   end
 
   @doc """
-  Whether the flag is on for an organization or a package.
+  Whether the flag is on for a user, organization or package.
 
   In `beta`, an organization is in when its name is on the organization list.
   A public package is in when one of its owners is on the user or organization
@@ -39,6 +39,8 @@ defmodule Hexpm.FeatureFlags do
   end
 
   defp beta?(flag, %Organization{name: name}), do: name in beta_organizations(flag)
+
+  defp beta?(flag, %User{username: name}), do: name in beta_users(flag)
 
   # Owners include organizations, whose users have the organization's name.
   defp beta?(flag, %Package{repository_id: 1, id: id}) do

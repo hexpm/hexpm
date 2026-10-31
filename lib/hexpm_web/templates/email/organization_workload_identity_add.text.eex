@@ -1,4 +1,4 @@
-<%= OrganizationWorkloadIdentityAdd.message(@username, @organization) %>
+<%= OrganizationWorkloadIdentityAdd.message(@username, @organization, :text) %>
 
 <%= Enum.join(OrganizationWorkloadIdentityDetails.lines(@role, @current, @organization, @coverage), "\n") %>
 

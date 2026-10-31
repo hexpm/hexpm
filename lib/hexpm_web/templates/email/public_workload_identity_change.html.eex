@@ -3,7 +3,7 @@
 </h1>
 
 <p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
-  <%= PublicWorkloadIdentityChange.message(@username, @organization) %>
+  <%= raw(PublicWorkloadIdentityChange.message(@username, @organization, :html)) %>
 </p>
 
 <%= for {heading, names} <- [{PublicWorkloadIdentityChange.started(), @started}, {PublicWorkloadIdentityChange.stopped(), @stopped}, {PublicWorkloadIdentityChange.kept(), @kept}], names != [] do %>

@@ -36,6 +36,7 @@ defmodule Hexpm.Repo do
   defwrite(advisory_xact_lock(key, opts \\ []))
   defwrite(advisory_xact_lock_shared(key, opts \\ []))
   defwrite(try_advisory_xact_lock?(key, opts \\ []))
+  defwrite(advisory_lock(key, opts \\ []))
   defwrite(try_advisory_lock?(key, opts \\ []))
   defwrite(advisory_unlock(key, opts \\ []))
   defwrite(delete_all(queryable, opts \\ []))
@@ -117,7 +118,8 @@ defmodule Hexpm.RepoBase do
     migrate: 6,
     secret_scan: 7,
     registry_object: 8,
-    hexdocs: 9
+    hexdocs: 9,
+    staged_publish: 10
   }
 
   def advisory_lock_key(key), do: Map.fetch!(@advisory_locks, key)
@@ -167,7 +169,7 @@ defmodule Hexpm.RepoBase do
   end
 
   def advisory_xact_lock(key, opts \\ []) do
-    xact_lock("pg_advisory_xact_lock", key, opts)
+    take_lock("pg_advisory_xact_lock", key, opts)
   end
 
   @doc """
@@ -176,10 +178,18 @@ defmodule Hexpm.RepoBase do
   sub key) blocks them all and waits for them all.
   """
   def advisory_xact_lock_shared(key, opts \\ []) do
-    xact_lock("pg_advisory_xact_lock_shared", key, opts)
+    take_lock("pg_advisory_xact_lock_shared", key, opts)
   end
 
-  defp xact_lock(function, key, opts) do
+  @doc """
+  Takes the session form of the lock, held until `advisory_unlock/2` releases
+  it on the same connection, so the caller checks out a connection first.
+  """
+  def advisory_lock(key, opts \\ []) do
+    take_lock("pg_advisory_lock", key, opts)
+  end
+
+  defp take_lock(function, key, opts) do
     unless skip_advisory_locks?() do
       %Postgrex.Result{} = lock_query(function, key, opts)
     end
@@ -228,13 +238,7 @@ defmodule Hexpm.RepoBase do
     if skip_advisory_locks?() do
       :ok
     else
-      %Postgrex.Result{rows: [[true]]} =
-        query!(
-          "SELECT pg_advisory_unlock($1)",
-          [Map.fetch!(@advisory_locks, key)],
-          opts
-        )
-
+      %Postgrex.Result{rows: [[true]]} = lock_query("pg_advisory_unlock", key, opts)
       :ok
     end
   end

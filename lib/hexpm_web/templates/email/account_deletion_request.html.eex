@@ -7,7 +7,7 @@ confirm_url = url(email_uri(), ~p"/dashboard/delete-account/confirm?key=#{@key}"
 </h1>
 
 <p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
-  <%= AccountDeletionRequest.message(@username) %>
+  <%= raw(AccountDeletionRequest.message(@username, :html)) %>
 </p>
 
 <p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">

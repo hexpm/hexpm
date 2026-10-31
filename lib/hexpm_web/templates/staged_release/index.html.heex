@@ -1,0 +1,66 @@
+<div class="bg-grey-50 dark:bg-grey-950 min-h-screen py-4 sm:py-8">
+  <div class="max-w-7xl mx-auto px-4">
+    <div class="flex flex-col gap-4 sm:gap-8 lg:flex-row">
+      <div class="w-full lg:w-64 flex-shrink-0">
+        {render(HexpmWeb.DashboardView, "_sidebar.html", assigns)}
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg">
+          <div class="p-4 sm:p-6 border-b border-grey-200 dark:border-grey-700">
+            <h2 class="text-xl font-semibold text-grey-900 dark:text-white">Staged releases</h2>
+            <p class="mt-2 text-sm text-grey-600 dark:text-grey-300">
+              Review staged releases waiting for your approval. They remain private until approved and expire after seven days.
+            </p>
+          </div>
+          <div :if={@staged_releases == []} class="p-6 sm:p-8 text-grey-600 dark:text-grey-300">
+            There are no staged releases you can approve.
+          </div>
+          <ul class="divide-y divide-grey-200 dark:divide-grey-700">
+            <li :for={staged <- @staged_releases} class="p-4 sm:p-6">
+              <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div class="min-w-0">
+                  <p class="text-xs text-grey-500 dark:text-grey-300 mb-1">
+                    {if staged.repository_id == 1,
+                      do: "Public repository",
+                      else: staged.repository.name}
+                  </p>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <h3 class="font-semibold text-grey-900 dark:text-white break-all">
+                      {staged.name}
+                    </h3>
+                    <span class="font-mono text-sm text-grey-600 dark:text-grey-300">{staged.version}</span>
+                    <.badge variant="purple">{content_label(staged)}</.badge>
+                  </div>
+                  <p class="mt-2 text-sm text-grey-600 dark:text-grey-300 break-words">
+                    Staged with {staged.credential_name}
+                  </p>
+                  <p
+                    :if={is_nil(staged.publication)}
+                    class="mt-1 text-xs text-grey-500 dark:text-grey-300"
+                  >
+                    Expires {ViewHelpers.pretty_utc_datetime(staged.expires_at)}
+                  </p>
+                  <p
+                    :if={staged.publication}
+                    class="mt-1 text-xs text-grey-500 dark:text-grey-300"
+                  >
+                    Publication in progress
+                  </p>
+                </div>
+                <.button_link
+                  href={~p"/dashboard/staged-releases/#{staged.id}"}
+                  variant="outline"
+                  size="sm"
+                  class="shrink-0 self-start sm:self-center"
+                  aria-label={"Review #{staged.name} #{staged.version} #{content_label(staged)}"}
+                >
+                  Review release
+                </.button_link>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

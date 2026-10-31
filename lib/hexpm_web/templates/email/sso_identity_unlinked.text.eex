@@ -2,7 +2,7 @@ Organization SSO Disconnected
 
 <%= Common.greeting(@username) %>
 
-<%= SSOIdentityUnlinked.intro(@organization, @username, @unlinked_by) %>
+<%= SSOIdentityUnlinked.intro(@organization, @username, @unlinked_by, :text) %>
 
 <%= SSOIdentityUnlinked.access(@locked_out) %>
 
