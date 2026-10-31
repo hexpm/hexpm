@@ -8,6 +8,15 @@ defmodule Hexpm.Repo.Migrations.CreateStagedReleases do
       add :require_publish_approval, :boolean, null: false, default: false
     end
 
+    # Existing packages get false, packages created afterwards default to true.
+    alter table(:packages) do
+      add :require_publish_approval, :boolean, null: false, default: false
+    end
+
+    alter table(:packages) do
+      modify :require_publish_approval, :boolean, null: false, default: true
+    end
+
     alter table(:releases) do
       add :approved_by_id, references(:users, on_delete: :nilify_all)
     end
@@ -56,6 +65,10 @@ defmodule Hexpm.Repo.Migrations.CreateStagedReleases do
 
     alter table(:releases) do
       remove :approved_by_id
+    end
+
+    alter table(:packages) do
+      remove :require_publish_approval
     end
 
     alter table(:organizations) do
