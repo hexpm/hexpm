@@ -7,6 +7,7 @@ defmodule Hexpm.Repository.StagedReleasesConcurrencyTest do
 
   setup do
     put_feature_flag(:workload_identity, mode: :enabled)
+    app_env(:hexpm, :skip_advisory_locks, false)
   end
 
   for operation <- [:configure, :approve, :reject] do

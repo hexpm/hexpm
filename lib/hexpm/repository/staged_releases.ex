@@ -205,13 +205,10 @@ defmodule Hexpm.Repository.StagedReleases do
 
   # Every release publish takes this lock, including a publish that creates a
   # package. There may be no package row to lock until approval creates it.
-  def lock_name(repository, name) do
-    Repo.query!("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [
-      "staged-publish:#{repository.id}:#{name}"
-    ])
+  def lock_name(repository, name),
+    do: Repo.advisory_xact_lock(:staged_publish, sub_key: name_lock_key(repository.id, name))
 
-    :ok
-  end
+  defp name_lock_key(repository_id, name), do: :erlang.phash2({repository_id, name})
 
   def check_reservation(repository, meta, allowed_id) do
     lock_name(repository, meta["name"])
@@ -511,13 +508,13 @@ defmodule Hexpm.Repository.StagedReleases do
             {:ok, :completed}
 
           staged ->
-            key = "staged-publish:#{staged.repository_id}:#{staged.name}"
-            Repo.query!("SELECT pg_advisory_lock(hashtextextended($1, 0))", [key])
+            lock = [sub_key: name_lock_key(staged.repository_id, staged.name)]
+            Repo.advisory_lock(:staged_publish, lock)
 
             try do
               complete_approval_locked(id)
             after
-              Repo.query!("SELECT pg_advisory_unlock(hashtextextended($1, 0))", [key])
+              Repo.advisory_unlock(:staged_publish, lock)
             end
         end
       end,
