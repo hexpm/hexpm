@@ -170,9 +170,9 @@ defmodule Hexpm.PromExTest do
 
       Plug.Test.conn(:get, "/")
       |> Plug.Conn.put_req_header("authorization", "Basic not-base64")
-      |> HexpmWeb.AuthHelpers.authenticate_at(~U[2026-09-30 23:59:59Z])
+      |> HexpmWeb.AuthHelpers.authenticate()
 
-      series = ~s(hexpm_api_authenticate_total{result="invalid",scheme="basic"})
+      series = ~s(hexpm_api_authenticate_total{result="basic_auth_disabled",scheme="basic"})
 
       assert Enum.filter(samples(__MODULE__.Metrics), &String.starts_with?(&1, series)) ==
                [series <> " 1"]

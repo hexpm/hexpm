@@ -27,4 +27,4 @@ You can generate organizations keys on your organization's [dashboard](/dashboar
 $ rebar3 hex organization auth hexpm:private_org -k <key>
 ```
 
-This can then be used to fetch packages on your CI servers without requiring manual authentication with username and password.
+This can then be used to fetch packages on your CI servers without signing in on them.

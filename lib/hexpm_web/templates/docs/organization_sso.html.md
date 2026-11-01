@@ -150,7 +150,6 @@ What applies depends on the credential a request uses:
 | hexdocs and other OAuth clients | Same, established when you approve the client. |
 | Organization key | Never enforced. It authenticates as the organization, not as a person, so SSO doesn't apply to it. |
 | Personal key | Allowed unless the organization chose to block them. |
-| Username and password against the API | Refused. A password request has no session that could hold organization access. |
 
 Enforcement is per organization and evaluated against the resource. Your Hexpm account, your own packages, the public repository, and every other organization you belong to are unaffected.
 

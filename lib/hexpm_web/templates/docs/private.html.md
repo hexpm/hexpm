@@ -44,7 +44,7 @@ end
 
 ### Authenticating on CI and build servers
 
-You can generate repository authentication keys manually with the `mix hex.organization key` task. This can then be used to fetch packages on your CI servers without requiring manual authentication with username and password.
+You can generate repository authentication keys manually with the `mix hex.organization key` task. This can then be used to fetch packages on your CI servers without signing in on them.
 
 Run the following command on your local machine after signing in with `mix hex.user auth`:
 
