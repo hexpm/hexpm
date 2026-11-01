@@ -3,10 +3,10 @@ defmodule Hexpm.Accounts.KeyGrantor do
   Who creates a key, and so which permissions it may be given.
 
   A member grants what their organization role lets them do themselves, and a
-  key or token grants what it holds.
+  token grants what it holds.
   """
 
-  alias Hexpm.Accounts.{Key, KeyPermission, Organization, Organizations, User}
+  alias Hexpm.Accounts.{KeyPermission, Organization, Organizations, User}
   alias Hexpm.OAuth.Token
   alias Hexpm.Permissions
 
@@ -19,7 +19,7 @@ defmodule Hexpm.Accounts.KeyGrantor do
 
   @doc """
   A grantor for a key owned by `owner`, created by `principal` authenticated
-  with `credential`. The credential is nil for a browser session.
+  with `credential`. The credential is nil for a browser session or a password.
   """
   def new(owner, principal, credential) do
     %__MODULE__{
@@ -162,7 +162,7 @@ defmodule Hexpm.Accounts.KeyGrantor do
          implied_read?(credential, permission) do
       :ok
     else
-      {:error, "#{scope(permission)} is not held by the authenticating key"}
+      {:error, "#{scope(permission)} is not held by the authenticating token"}
     end
   end
 
@@ -174,11 +174,7 @@ defmodule Hexpm.Accounts.KeyGrantor do
 
   defp reads_held?(_credential, _permission), do: true
 
-  # A key's package permission and a token's bare package scope both answer
-  # `api:read`, so they can pass it on.
-  defp implied_read?(%Key{permissions: permissions}, %{domain: "api", resource: "read"}),
-    do: Enum.any?(permissions, &(&1.domain == "package"))
-
+  # A token's bare package scope answers `api:read`, so it can pass it on.
   defp implied_read?(%Token{} = token, %{domain: "api", resource: "read"}),
     do: has?(held(token), "package", nil)
 
@@ -190,7 +186,6 @@ defmodule Hexpm.Accounts.KeyGrantor do
     Enum.any?(held(credential), &(&1.domain == "api" and &1.resource in [nil, "write"]))
   end
 
-  defp held(%Key{permissions: permissions}), do: permissions
   defp held(%Token{scopes: scopes}), do: Enum.map(scopes, &Permissions.scope_to_permission/1)
 
   defp holds?(held, %{domain: "repository", resource: resource}) do

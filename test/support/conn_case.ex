@@ -81,6 +81,33 @@ defmodule HexpmWeb.ConnCase do
     Plug.Test.init_test_session(conn, session_data)
   end
 
+  @doc """
+  Signs `conn` in the way the Hex client does after `mix hex.user auth`, with
+  the TOTP code OAuth writes need. The user needs two-factor authentication.
+  """
+  @spec test_oauth_login(Plug.Conn.t(), Hexpm.Accounts.User.t(), [String.t()]) :: Plug.Conn.t()
+  def test_oauth_login(conn, user, scopes \\ ["api"]) do
+    client = Hexpm.Factory.insert(:oauth_client)
+    session = Hexpm.Factory.insert(:oauth_session, user: user, client_id: client.client_id)
+
+    {:ok, token} =
+      Hexpm.OAuth.Tokens.create_and_insert_for_user(
+        user,
+        client.client_id,
+        scopes,
+        "urn:ietf:params:oauth:grant-type:device_code",
+        "test",
+        user_session_id: session.id
+      )
+
+    conn
+    |> Plug.Conn.put_req_header("authorization", "Bearer #{token.access_token}")
+    |> Plug.Conn.put_req_header(
+      "x-hex-otp",
+      Hexpm.Accounts.TFA.time_based_token(user.tfa.secret)
+    )
+  end
+
   def test_audit_data(user) do
     %{
       user: user,
