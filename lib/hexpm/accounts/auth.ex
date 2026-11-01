@@ -86,12 +86,7 @@ defmodule Hexpm.Accounts.Auth do
   end
 
   def password_auth(username_or_email, password) do
-    user =
-      Users.get(username_or_email, [
-        :emails,
-        owned_packages: :repository,
-        organizations: :repository
-      ])
+    user = Users.get(username_or_email, [:emails])
 
     cond do
       is_nil(user) or User.organization?(user) ->
@@ -101,14 +96,7 @@ defmodule Hexpm.Accounts.Auth do
         {:error, :no_password}
 
       Bcrypt.verify_pass(password, user.password) ->
-        {:ok,
-         %{
-           auth_credential: nil,
-           user: user,
-           organization: nil,
-           email: find_email(user, username_or_email),
-           workload_identity: nil
-         }}
+        {:ok, %{user: user, email: find_email(user, username_or_email)}}
 
       true ->
         {:error, :wrong_password}

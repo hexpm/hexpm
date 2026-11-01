@@ -383,7 +383,6 @@ defmodule Hexpm.Accounts.SSO.EnforcementTest do
     test "refuses a credential that holds no session at all", context do
       {:ok, _connection} = require_sso(context)
 
-      # Basic auth has nothing for an organization access session to attach to.
       assert Enforcement.check(context.organization, context.member) ==
                {:error, :sso_required}
     end

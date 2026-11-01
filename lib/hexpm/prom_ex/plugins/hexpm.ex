@@ -28,7 +28,7 @@ defmodule Hexpm.PromEx.Plugins.Hexpm do
   @deletion_steps [:cleared, :scheduled, :reminded, :deleted, :skipped, :failed]
 
   @authenticate_results [
-    basic: [:ok, :basic_auth_disabled, :password, :invalid],
+    basic: [:basic_auth_disabled],
     bearer: [:ok, :invalid_token, :key],
     key: [:ok, :key, :revoked_key]
   ]

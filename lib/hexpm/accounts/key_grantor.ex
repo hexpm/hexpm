@@ -19,7 +19,7 @@ defmodule Hexpm.Accounts.KeyGrantor do
 
   @doc """
   A grantor for a key owned by `owner`, created by `principal` authenticated
-  with `credential`. The credential is nil for a browser session or a password.
+  with `credential`. The credential is nil for a browser session.
   """
   def new(owner, principal, credential) do
     %__MODULE__{

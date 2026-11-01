@@ -10,7 +10,6 @@ defmodule HexpmWeb.AuthHelpers do
   alias Hexpm.OAuth.Token
   alias Hexpm.WorkloadIdentities
   alias Hexpm.WorkloadIdentities.WorkloadIdentity
-  alias HexpmWeb.BasicAuth
   alias HexpmWeb.Plugs.Attack
 
   def authorize(conn, opts) do
@@ -130,10 +129,6 @@ defmodule HexpmWeb.AuthHelpers do
     true
   end
 
-  defp verify_permissions?(_conn, _auth_credential = nil, _domains) do
-    true
-  end
-
   defp verify_permissions?(_conn, _auth_credential, _domains = []) do
     true
   end
@@ -224,18 +219,10 @@ defmodule HexpmWeb.AuthHelpers do
       {:error, :missing} ->
         unauthorized(conn, "missing authentication information")
 
-      {:error, :invalid} ->
-        basic_unauthorized(conn, "invalid authentication information")
-
-      {:error, :password} ->
-        basic_unauthorized(conn, "invalid username and password combination")
-
       {:error, :basic_auth_disabled} ->
-        conn
-        |> put_resp_header("www-authenticate", ~s(Bearer realm="hex"))
-        |> render_error(401,
-          message:
-            "Basic authentication is disabled. Update your client to use OAuth or an API key."
+        unauthorized(
+          conn,
+          "Basic authentication is disabled. Update your client to use OAuth or an API key."
         )
 
       {:error, :key} ->
@@ -308,12 +295,8 @@ defmodule HexpmWeb.AuthHelpers do
   @token_prefix Hexpm.Accounts.Key.token_prefix()
 
   def authenticate(conn) do
-    authenticate_at(conn, DateTime.utc_now())
-  end
-
-  def authenticate_at(conn, now) do
     case get_req_header(conn, "authorization") do
-      ["Basic " <> credentials] -> credentials |> basic_auth(conn, now) |> report(:basic)
+      ["Basic " <> _credentials] -> report({:error, :basic_auth_disabled}, :basic)
       ["Bearer " <> token] -> token |> bearer_auth(conn) |> report(:bearer)
       [key] -> key |> String.trim() |> key_auth(conn) |> report(:key)
       _ -> {:error, :missing}
@@ -340,32 +323,6 @@ defmodule HexpmWeb.AuthHelpers do
 
   defp result_tag({:ok, _}), do: :ok
   defp result_tag({:error, reason}), do: reason
-
-  defp basic_auth(credentials, conn, now) do
-    if BasicAuth.disabled?(now) do
-      {:error, :basic_auth_disabled}
-    else
-      basic_auth(credentials, conn)
-    end
-  end
-
-  defp basic_auth(credentials, conn) do
-    with {:ok, decoded} <- Base.decode64(credentials),
-         true <- Hexpm.Utils.storable_text?(decoded),
-         [username_or_email, password] <- String.split(decoded, ":", parts: 2) do
-      case Auth.password_auth(username_or_email, password) do
-        {:ok, result} ->
-          {:ok, result}
-
-        {:error, reason} ->
-          SecurityLog.auth_failure(conn, :password, reason, username: username_or_email)
-          {:error, :password}
-      end
-    else
-      _ ->
-        {:error, :invalid}
-    end
-  end
 
   defp oauth_token_auth(token, conn) do
     case Auth.oauth_token_auth(token, usage_info(conn)) do
@@ -407,12 +364,6 @@ defmodule HexpmWeb.AuthHelpers do
   def unauthorized(conn, reason) do
     conn
     |> put_resp_header("www-authenticate", ~s(Bearer realm="hex"))
-    |> render_error(401, message: reason)
-  end
-
-  defp basic_unauthorized(conn, reason) do
-    conn
-    |> put_resp_header("www-authenticate", ~s(Basic realm="hex"))
     |> render_error(401, message: reason)
   end
 

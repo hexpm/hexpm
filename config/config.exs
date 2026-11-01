@@ -52,8 +52,6 @@ config :hexpm,
 # has settled which rules are precise enough to notify strangers about.
 config :hexpm, secret_scan_notify: false
 
-config :hexpm, HexpmWeb.BasicAuth, schedule_enabled: true
-
 config :hexpm, :workload_identity, audience: "hexpm", github_lookup_timeout: 15_000
 
 config :hexpm, :organization_sso,
