@@ -4,13 +4,15 @@ defmodule HexpmWeb.API.StagedReleaseController do
   alias Hexpm.Repository.{StagedRelease, StagedReleases}
   alias Hexpm.Repo
 
-  plug :fetch_staged
+  plug :maybe_fetch_package
 
   plug :authorize,
     authentication: :required,
     domains: [{"api", "read"}, "package"],
     allow_workload_identity: true,
     fun: {AuthHelpers, :package_owner}
+
+  plug :fetch_staged
 
   def show(conn, _params) do
     staged = conn.assigns.staged_release
@@ -27,35 +29,38 @@ defmodule HexpmWeb.API.StagedReleaseController do
   end
 
   defp fetch_staged(conn, _opts) do
+    %{"repository" => repository_name, "name" => name, "version" => version} = conn.params
+    kind = conn.assigns.staged_kind
+
     {staged, status} =
-      case StagedReleases.get(conn.params["id"]) do
-        nil -> terminal(conn.params["id"])
+      case StagedReleases.get(repository_name, name, version, kind) do
+        nil -> terminal(conn.assigns.repository, name, version, kind)
         staged -> {staged, nil}
       end
 
     if staged do
-      repository = staged.repository
-
       conn
       |> assign(:staged_release, staged)
       |> assign(:staged_status, status)
-      |> assign(:repository, repository)
-      |> assign(:organization, repository.organization)
-      |> assign(:package, Packages.get(repository, staged.name))
-      |> Map.update!(:params, &Map.put(&1, "name", staged.name))
     else
       conn |> not_found() |> halt()
     end
   end
 
-  defp terminal(id) do
-    with {id, ""} <- Integer.parse(id),
+  defp terminal(repository, name, version, kind) do
+    with %Repository{} <- repository,
+         {:ok, version} <- Version.parse(version),
          log when not is_nil(log) <-
            Repo.one(
              from(l in AuditLog,
                where:
                  l.action in ["release.approve", "release.reject", "release.stage_expire"] and
-                   fragment("? -> 'staged_release' ->> 'id'", l.params) == ^to_string(id),
+                   fragment("? -> 'staged_release' ->> 'repository_id'", l.params) ==
+                     ^to_string(repository.id) and
+                   fragment("? -> 'staged_release' ->> 'name'", l.params) == ^name and
+                   fragment("? -> 'staged_release' ->> 'version'", l.params) ==
+                     ^to_string(version) and
+                   fragment("? -> 'staged_release' ->> 'kind'", l.params) == ^kind,
                order_by: [desc: l.id],
                limit: 1
              )
@@ -64,10 +69,9 @@ defmodule HexpmWeb.API.StagedReleaseController do
 
       staged =
         %StagedRelease{
-          id: id,
           repository_id: data["repository_id"],
           name: data["name"],
-          version: Version.parse!(data["version"]),
+          version: version,
           kind: data["kind"],
           key_id: data["key_id"],
           workload_identity_id: data["workload_identity_id"],

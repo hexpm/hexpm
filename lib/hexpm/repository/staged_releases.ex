@@ -236,6 +236,13 @@ defmodule Hexpm.Repository.StagedReleases do
     end
   end
 
+  def get(repository_name, name, version, kind) do
+    with %Repository{} = repository <- Repositories.get(repository_name),
+         %StagedRelease{} = staged <- find(repository, name, version, kind) do
+      Repo.preload(staged, [:user, :organization, repository: :organization])
+    end
+  end
+
   def staged_by?(staged, audit), do: same_credential?(staged, credential_attrs(audit))
 
   def find(repository, name, version, kind) do

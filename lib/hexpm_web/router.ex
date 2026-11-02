@@ -255,11 +255,24 @@ defmodule HexpmWeb.Router do
     post "/oauth/device/authorize", DeviceController, :authorize_create
 
     get "/dashboard/staged-releases", StagedReleaseController, :index
-    get "/dashboard/staged-releases/:id", StagedReleaseController, :show
-    post "/dashboard/staged-releases/:id/approve", StagedReleaseController, :approve
-    post "/dashboard/staged-releases/:id/reject", StagedReleaseController, :reject
-    get "/dashboard/staged-releases/:id/tarball", StagedReleaseController, :tarball
-    get "/dashboard/staged-releases/:id/docs", StagedReleaseController, :docs
+
+    scope "/dashboard/staged-releases/:repository/:name/:version",
+      assigns: %{staged_kind: "release"} do
+      get "/", StagedReleaseController, :show
+      post "/approve", StagedReleaseController, :approve
+      post "/reject", StagedReleaseController, :reject
+      get "/release.tar", StagedReleaseController, :tarball
+      get "/docs.tar.gz", StagedReleaseController, :docs
+    end
+
+    scope "/dashboard/staged-releases/:repository/:name/:version/docs",
+      assigns: %{staged_kind: "docs"} do
+      get "/", StagedReleaseController, :show
+      post "/approve", StagedReleaseController, :approve
+      post "/reject", StagedReleaseController, :reject
+      get "/docs.tar.gz", StagedReleaseController, :docs
+    end
+
     get "/dashboard/orgs/:dashboard_org/publish-approval", PublishApprovalController, :show
 
     post "/dashboard/orgs/:dashboard_org/publish-approval/enable",
@@ -660,13 +673,18 @@ defmodule HexpmWeb.Router do
 
     for prefix <- ["/", "/repos/:repository"] do
       scope prefix do
-        get "/staged-releases/:id", StagedReleaseController, :show
         get "/packages", PackageController, :index
         get "/packages/:name", PackageController, :show
         get "/packages/:name/audit-logs", PackageController, :audit_logs
 
         get "/packages/:name/releases/:version", ReleaseController, :show
         delete "/packages/:name/releases/:version", ReleaseController, :delete
+
+        get "/packages/:name/releases/:version/staged", StagedReleaseController, :show,
+          assigns: %{staged_kind: "release"}
+
+        get "/packages/:name/releases/:version/docs/staged", StagedReleaseController, :show,
+          assigns: %{staged_kind: "docs"}
 
         post "/packages/:name/retire", RetirementController, :create_all
         post "/packages/:name/releases/:version/retire", RetirementController, :create

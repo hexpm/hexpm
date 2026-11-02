@@ -85,7 +85,7 @@ defmodule HexpmWeb.API.DocsController do
                ) do
             {:ok, %{staged_release: staged}} ->
               conn
-              |> put_resp_header("location", ~p"/api/staged-releases/#{staged.id}")
+              |> put_resp_header("location", HexpmWeb.ViewHelpers.url_for_staged_release(staged))
               |> api_cache(:private)
               |> put_status(201)
               |> put_view(HexpmWeb.API.StagedReleaseView)
@@ -101,7 +101,7 @@ defmodule HexpmWeb.API.DocsController do
           case Releases.publish_docs(package, release, body_path, audit: audit_data(conn)) do
             {:ok, %{staged_release: staged}} ->
               conn
-              |> put_resp_header("location", ~p"/api/staged-releases/#{staged.id}")
+              |> put_resp_header("location", HexpmWeb.ViewHelpers.url_for_staged_release(staged))
               |> api_cache(:private)
               |> put_status(201)
               |> put_view(HexpmWeb.API.StagedReleaseView)

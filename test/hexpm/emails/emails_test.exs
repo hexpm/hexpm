@@ -953,7 +953,6 @@ defmodule Hexpm.EmailsTest do
   describe "staged publishing emails" do
     test "the staged release email emphasizes the package name" do
       staged = %Hexpm.Repository.StagedRelease{
-        id: 1,
         name: "decimal",
         version: "2.0.0",
         kind: "release",
@@ -968,6 +967,26 @@ defmodule Hexpm.EmailsTest do
       assert email.html_body =~ "<strong>decimal</strong> 2.0.0 (release) was staged."
       assert email.text_body =~ "decimal 2.0.0 (release) was staged."
       assert email.text_body =~ "Expires November 6, 2026 at 11:37 UTC."
+    end
+
+    test "the staged release email links to the review page for its kind" do
+      for {kind, suffix} <- [{"release", ""}, {"docs", "/docs"}] do
+        staged = %Hexpm.Repository.StagedRelease{
+          name: "decimal",
+          version: "2.0.0",
+          kind: kind,
+          repository: %Hexpm.Repository.Repository{name: "acme"},
+          credential_name: "release-ci",
+          expires_at: ~U[2026-11-06 11:37:00.000000Z]
+        }
+
+        url =
+          HexpmWeb.EmailView.email_url("/dashboard/staged-releases/acme/decimal/2.0.0#{suffix}")
+
+        email = Emails.staged_release([build(:user)], staged, :staged)
+        assert email.text_body =~ "Review staged release: #{url}\n"
+        assert email.html_body =~ ~s(href="#{url}")
+      end
     end
 
     test "the disabled approval email emphasizes the package name" do

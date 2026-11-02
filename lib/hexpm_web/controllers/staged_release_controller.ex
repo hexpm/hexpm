@@ -84,7 +84,13 @@ defmodule HexpmWeb.StagedReleaseController do
   end
 
   defp fetch_staged(conn, _opts) do
-    staged = StagedReleases.get(conn.params["id"])
+    staged =
+      StagedReleases.get(
+        conn.params["repository"],
+        conn.params["name"],
+        conn.params["version"],
+        conn.assigns.staged_kind
+      )
 
     if staged &&
          StagedReleases.can_approve?(

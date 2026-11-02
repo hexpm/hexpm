@@ -2,7 +2,7 @@ defmodule HexpmWeb.ViewHelpers do
   use PhoenixHTMLHelpers
   use HexpmWeb, :verified_routes
   import Phoenix.HTML
-  alias Hexpm.Repository.{Package, Release}
+  alias Hexpm.Repository.{Package, Release, StagedRelease}
 
   def logged_in?(assigns) do
     !!assigns[:current_user]
@@ -227,6 +227,46 @@ defmodule HexpmWeb.ViewHelpers do
 
   def url_for_release(%Package{} = package, release) do
     url(~p"/api/repos/#{package.repository}/packages/#{package}/releases/#{release}")
+  end
+
+  def path_for_staged_release(%StagedRelease{kind: "release"} = staged) do
+    ~p"/dashboard/staged-releases/#{staged.repository}/#{staged.name}/#{to_string(staged.version)}"
+  end
+
+  def path_for_staged_release(%StagedRelease{kind: "docs"} = staged) do
+    ~p"/dashboard/staged-releases/#{staged.repository}/#{staged.name}/#{to_string(staged.version)}/docs"
+  end
+
+  def html_url_for_staged_release(%StagedRelease{kind: "release"} = staged) do
+    url(
+      ~p"/dashboard/staged-releases/#{staged.repository}/#{staged.name}/#{to_string(staged.version)}"
+    )
+  end
+
+  def html_url_for_staged_release(%StagedRelease{kind: "docs"} = staged) do
+    url(
+      ~p"/dashboard/staged-releases/#{staged.repository}/#{staged.name}/#{to_string(staged.version)}/docs"
+    )
+  end
+
+  def url_for_staged_release(%StagedRelease{repository_id: 1, kind: "release"} = staged) do
+    url(~p"/api/packages/#{staged.name}/releases/#{to_string(staged.version)}/staged")
+  end
+
+  def url_for_staged_release(%StagedRelease{repository_id: 1, kind: "docs"} = staged) do
+    url(~p"/api/packages/#{staged.name}/releases/#{to_string(staged.version)}/docs/staged")
+  end
+
+  def url_for_staged_release(%StagedRelease{kind: "release"} = staged) do
+    url(
+      ~p"/api/repos/#{staged.repository}/packages/#{staged.name}/releases/#{to_string(staged.version)}/staged"
+    )
+  end
+
+  def url_for_staged_release(%StagedRelease{kind: "docs"} = staged) do
+    url(
+      ~p"/api/repos/#{staged.repository}/packages/#{staged.name}/releases/#{to_string(staged.version)}/docs/staged"
+    )
   end
 
   def gravatar_url(nil, size) do

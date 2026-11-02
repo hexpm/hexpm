@@ -59,12 +59,12 @@ defmodule HexpmWeb.API.EmergencyPublishingTest do
 
     build_conn()
     |> test_login(outsider)
-    |> get("/dashboard/staged-releases/#{result["id"]}")
+    |> get(URI.parse(result["html_url"]).path)
     |> response(404)
 
     assert build_conn()
            |> test_login(ctx.user)
-           |> post("/dashboard/staged-releases/#{result["id"]}/approve", %{
+           |> post(URI.parse(result["html_url"]).path <> "/approve", %{
              checksum: result["approval_checksum"]
            })
            |> redirected_to() == "/dashboard/staged-releases"
@@ -124,7 +124,7 @@ defmodule HexpmWeb.API.EmergencyPublishingTest do
 
     build_conn()
     |> test_login(ctx.user)
-    |> post("/dashboard/staged-releases/#{result["id"]}/approve", %{
+    |> post(URI.parse(result["html_url"]).path <> "/approve", %{
       checksum: result["approval_checksum"]
     })
     |> response(302)
@@ -181,7 +181,7 @@ defmodule HexpmWeb.API.EmergencyPublishingTest do
 
     build_conn()
     |> test_login(ctx.user)
-    |> post("/dashboard/staged-releases/#{staged["id"]}/approve", %{
+    |> post(URI.parse(staged["html_url"]).path <> "/approve", %{
       checksum: staged["approval_checksum"]
     })
     |> response(302)
@@ -298,7 +298,7 @@ defmodule HexpmWeb.API.EmergencyPublishingTest do
 
     staged = conn |> post(path <> "/docs", docs) |> json_response(201)
     assert staged["status"] == "staged"
-    assert StagedReleases.get(staged["id"]).kind == "docs"
+    assert StagedReleases.get("hexpm", package.name, "1.0.0", "docs")
     refute Repo.get!(Release, release.id).has_docs
     conn |> delete(path) |> response(403)
     conn |> delete(path <> "/docs") |> response(403)

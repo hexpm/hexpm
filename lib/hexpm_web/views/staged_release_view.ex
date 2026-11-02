@@ -3,6 +3,10 @@ defmodule HexpmWeb.StagedReleaseView do
 
   import HexpmWeb.Components.Badge
 
+  # The base path depends on the kind, so `~p` can't verify these.
+  def action_path(staged, action),
+    do: "#{ViewHelpers.path_for_staged_release(staged)}/#{action}"
+
   def content_label(%{kind: "docs"}), do: "Documentation"
 
   def content_label(%{docs_storage_key: key}) when not is_nil(key),

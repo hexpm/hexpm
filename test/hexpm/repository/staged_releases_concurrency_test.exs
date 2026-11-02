@@ -154,7 +154,7 @@ defmodule Hexpm.Repository.StagedReleasesConcurrencyTest do
         |> Phoenix.ConnTest.dispatch(
           HexpmWeb.Endpoint,
           :get,
-          "/api/staged-releases/#{staged.id}",
+          URI.parse(HexpmWeb.ViewHelpers.url_for_staged_release(staged)).path,
           nil
         )
 
