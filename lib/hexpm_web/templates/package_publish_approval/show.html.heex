@@ -25,7 +25,7 @@
         }
         class="mt-5 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 p-4 text-sm text-blue-900 dark:text-blue-100"
       >
-        Your organization requires approval for automated publishes, regardless of this setting.
+        Your organization requires approval for publishes from API keys and workload identities, regardless of this setting.
       </p>
       <div class="mt-6 pt-5 border-t border-grey-200 dark:border-grey-700">
         <%= if @package.require_publish_approval do %>
@@ -73,7 +73,7 @@
         }
         class="mt-5 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 p-4 text-sm text-blue-900 dark:text-blue-100"
       >
-        Your organization still requires approval for automated publishes.
+        Your organization still requires approval for publishes from API keys and workload identities.
       </p>
       <p class="mt-3 text-sm text-grey-600 dark:text-grey-300">
         Existing staged releases still need approval. Package owners and owning organization administrators will be notified.

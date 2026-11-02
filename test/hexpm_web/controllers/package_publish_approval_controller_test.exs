@@ -246,7 +246,9 @@ defmodule HexpmWeb.PackagePublishApprovalControllerTest do
     path = "/packages/#{repository.name}/#{package.name}/publish-approval"
 
     page = build_conn() |> test_login(ctx.user) |> get(path) |> html_response(200)
-    assert page =~ "Your organization requires approval"
+
+    assert page =~
+             "Your organization requires approval for publishes from API keys and workload identities"
 
     assert build_conn() |> test_login(ctx.user) |> post(path <> "/enable") |> redirected_to() ==
              path
