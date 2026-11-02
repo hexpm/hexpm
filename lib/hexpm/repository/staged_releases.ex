@@ -22,69 +22,6 @@ defmodule Hexpm.Repository.StagedReleases do
     automated?(audit) && policy_required?(repository, package, target)
   end
 
-  def approval_required?(%Package{id: id}) do
-    if FeatureFlags.available?(:workload_identity) do
-      package =
-        Repo.one!(
-          from(p in Package,
-            join: r in assoc(p, :repository),
-            left_join: o in assoc(r, :organization),
-            where: p.id == ^id,
-            preload: [repository: {r, organization: o}]
-          )
-        )
-
-      policy_required?(
-        package.repository,
-        package,
-        policy_target(package.repository, package, nil)
-      )
-    else
-      false
-    end
-  end
-
-  def approval_required?(%Organization{id: id}) do
-    if FeatureFlags.available?(:workload_identity) do
-      organization = Repo.get!(Organization, id)
-
-      (enabled?(organization) && organization.require_publish_approval) ||
-        Enum.any?(approval_packages(id), fn package ->
-          policy_required?(
-            package.repository,
-            package,
-            policy_target(package.repository, package, nil)
-          )
-        end) ||
-        (enabled?(organization) &&
-           Repo.exists?(
-             from(s in StagedRelease,
-               left_join: p in Package,
-               on: p.repository_id == s.repository_id and p.name == s.name,
-               where: is_nil(p.id),
-               where: s.organization_id == ^id and s.repository_id == 1,
-               where: s.expires_at > ^DateTime.utc_now() or not is_nil(s.publication)
-             )
-           ))
-    else
-      false
-    end
-  end
-
-  defp approval_packages(organization_id) do
-    Repo.all(
-      from(p in Package,
-        join: r in assoc(p, :repository),
-        left_join: po in assoc(p, :package_owners),
-        left_join: u in assoc(po, :user),
-        where: r.organization_id == ^organization_id or u.organization_id == ^organization_id,
-        where: p.require_publish_approval,
-        distinct: true,
-        preload: [repository: :organization]
-      )
-    )
-  end
-
   defp policy_required?(repository, package, target) do
     enabled?(target) &&
       (package_approval?(package) ||
