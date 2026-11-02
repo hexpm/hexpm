@@ -24,7 +24,7 @@ defmodule HexpmWeb.Readme.Renderer do
         package_name,
         version,
         syntax_highlight_budget \\ SyntaxHighlight.budget(),
-        markdown_budget \\ [parse_time: 1_000]
+        markdown_budget \\ [parse_time: 1_000, parse_memory: 4_000_000]
       ) do
     ext = Path.extname(filename) |> String.downcase()
     content = scrub_invalid_utf8(content)
