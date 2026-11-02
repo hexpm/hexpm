@@ -72,16 +72,12 @@ defmodule HexpmWeb.Dashboard.InvitationControllerTest do
     end
   end
 
-  describe "POST /dashboard/invitations/:id/accept" do
-    test "joins the organization", %{
-      organization: organization,
-      user: user,
-      invitation: invitation
-    } do
+  describe "POST /dashboard/invitations/:organization/accept" do
+    test "joins the organization", %{organization: organization, user: user} do
       conn =
         build_conn()
         |> test_login(user)
-        |> post("/dashboard/invitations/#{invitation.id}/accept")
+        |> post("/dashboard/invitations/#{organization.name}/accept")
 
       assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}"
 
@@ -93,15 +89,14 @@ defmodule HexpmWeb.Dashboard.InvitationControllerTest do
 
     test "refuses an account the invitation isn't for", %{
       organization: organization,
-      user: user,
-      invitation: invitation
+      user: user
     } do
       other = insert(:user)
 
       conn =
         build_conn()
         |> test_login(other)
-        |> post("/dashboard/invitations/#{invitation.id}/accept")
+        |> post("/dashboard/invitations/#{organization.name}/accept")
 
       assert redirected_to(conn) == "/dashboard/invitations"
 
@@ -114,15 +109,14 @@ defmodule HexpmWeb.Dashboard.InvitationControllerTest do
 
     test "keeps the invitation when the organization has no seat left", %{
       organization: organization,
-      user: user,
-      invitation: invitation
+      user: user
     } do
       seats(organization, 1)
 
       conn =
         build_conn()
         |> test_login(user)
-        |> post("/dashboard/invitations/#{invitation.id}/accept")
+        |> post("/dashboard/invitations/#{organization.name}/accept")
 
       assert html_response(conn, 400)
 
@@ -133,17 +127,20 @@ defmodule HexpmWeb.Dashboard.InvitationControllerTest do
       assert [_pending] = OrganizationInvitations.all_pending_for_user(user)
     end
 
-    test "answers an unknown id as an invalid invitation", %{user: user} do
+    test "answers an unknown organization as an invalid invitation", %{user: user} do
       conn =
         build_conn()
         |> test_login(user)
-        |> post("/dashboard/invitations/not-an-id/accept")
+        |> post("/dashboard/invitations/not_an_organization/accept")
 
       assert redirected_to(conn) == "/dashboard/invitations"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "This invitation is no longer valid."
     end
   end
 
-  describe "POST /dashboard/invitations/:id/decline" do
+  describe "POST /dashboard/invitations/:organization/decline" do
     test "declines the invitation", %{
       organization: organization,
       admin: admin,
@@ -153,7 +150,7 @@ defmodule HexpmWeb.Dashboard.InvitationControllerTest do
       conn =
         build_conn()
         |> test_login(user)
-        |> post("/dashboard/invitations/#{invitation.id}/decline")
+        |> post("/dashboard/invitations/#{organization.name}/decline")
 
       assert redirected_to(conn) == "/dashboard/invitations"
 
@@ -169,11 +166,15 @@ defmodule HexpmWeb.Dashboard.InvitationControllerTest do
                )
     end
 
-    test "refuses an account the invitation isn't for", %{user: user, invitation: invitation} do
+    test "refuses an account the invitation isn't for", %{
+      organization: organization,
+      user: user,
+      invitation: invitation
+    } do
       conn =
         build_conn()
         |> test_login(insert(:user))
-        |> post("/dashboard/invitations/#{invitation.id}/decline")
+        |> post("/dashboard/invitations/#{organization.name}/decline")
 
       assert redirected_to(conn) == "/dashboard/invitations"
       refute Repo.get!(OrganizationInvitation, invitation.id).declined_at
@@ -181,31 +182,73 @@ defmodule HexpmWeb.Dashboard.InvitationControllerTest do
     end
   end
 
-  test "declined invitations have a persistent undo action", %{user: user, invitation: invitation} do
+  test "declined invitations have a persistent undo action", %{
+    organization: organization,
+    user: user,
+    invitation: invitation
+  } do
     conn =
-      build_conn() |> test_login(user) |> post("/dashboard/invitations/#{invitation.id}/decline")
+      build_conn()
+      |> test_login(user)
+      |> post("/dashboard/invitations/#{organization.name}/decline")
 
     html = conn |> recycle() |> get("/dashboard/invitations") |> html_response(200)
-    assert html =~ ~s(action="/dashboard/invitations/#{invitation.id}/restore")
+    assert html =~ ~s(action="/dashboard/invitations/#{organization.name}/restore")
     assert html =~ "Undo decline"
 
-    conn = conn |> recycle() |> post("/dashboard/invitations/#{invitation.id}/restore")
+    conn = conn |> recycle() |> post("/dashboard/invitations/#{organization.name}/restore")
     assert redirected_to(conn) == "/dashboard/invitations"
     assert [%{id: id}] = OrganizationInvitations.all_pending_for_user(user)
     assert id == invitation.id
   end
 
+  test "restores the declined invitation when the organization revoked an earlier one", %{
+    organization: organization,
+    admin: admin,
+    user: user,
+    invitation: invitation
+  } do
+    {:ok, _revoked} =
+      OrganizationInvitations.revoke(organization, invitation, audit: audit_data(admin))
+
+    invitation
+    |> Ecto.Changeset.change(sent_at: DateTime.add(DateTime.utc_now(), -2, :day))
+    |> Repo.update!()
+
+    {:ok, reissued} =
+      OrganizationInvitations.invite_user(organization, user, %{"role" => "read"}, admin,
+        audit: audit_data(admin)
+      )
+
+    {:ok, _declined} = OrganizationInvitations.decline(reissued, user, audit: audit_data(user))
+
+    conn =
+      build_conn()
+      |> test_login(user)
+      |> post("/dashboard/invitations/#{organization.name}/restore")
+
+    assert redirected_to(conn) == "/dashboard/invitations"
+
+    assert Phoenix.Flash.get(conn.assigns.flash, :info) ==
+             "You restored the invitation to #{organization.name}."
+
+    assert [%{id: id}] = OrganizationInvitations.all_pending_for_user(user)
+    assert id == reissued.id
+    assert Repo.get!(OrganizationInvitation, invitation.id).revoked_at
+  end
+
   test "blocks and unblocks from the invitations settings page", %{
     user: user,
-    invitation: invitation,
     admin: admin,
     organization: organization
   } do
     conn =
-      build_conn() |> test_login(user) |> post("/dashboard/invitations/#{invitation.id}/block")
+      build_conn()
+      |> test_login(user)
+      |> post("/dashboard/invitations/#{organization.name}/block")
 
     assert redirected_to(conn) == "/dashboard/invitations"
-    assert [block] = OrganizationInvitations.all_blocks_for_user(user)
+    assert [_block] = OrganizationInvitations.all_blocks_for_user(user)
 
     assert {:error, :blocked} =
              OrganizationInvitations.invite_user(organization, user, %{"role" => "read"}, admin,
@@ -214,15 +257,15 @@ defmodule HexpmWeb.Dashboard.InvitationControllerTest do
 
     html = conn |> recycle() |> get("/dashboard/invitations") |> html_response(200)
     assert html =~ "Declined and blocked organizations"
-    assert html =~ ~s(action="/dashboard/invitations/blocks/#{block.id}/unblock")
-    refute html =~ ~s(action="/dashboard/invitations/#{invitation.id}/restore")
+    assert html =~ ~s(action="/dashboard/invitations/blocks/#{organization.name}/unblock")
+    refute html =~ ~s(action="/dashboard/invitations/#{organization.name}/restore")
 
-    conn = conn |> recycle() |> post("/dashboard/invitations/blocks/#{block.id}/unblock")
+    conn = conn |> recycle() |> post("/dashboard/invitations/blocks/#{organization.name}/unblock")
     assert redirected_to(conn) == "/dashboard/invitations"
     assert OrganizationInvitations.all_blocks_for_user(user) == []
     assert OrganizationInvitations.all_pending_for_user(user) == []
     html = conn |> recycle() |> get("/dashboard/invitations") |> html_response(200)
-    assert html =~ ~s(action="/dashboard/invitations/#{invitation.id}/restore")
+    assert html =~ ~s(action="/dashboard/invitations/#{organization.name}/restore")
   end
 
   test "another account can't restore, block, or unblock", %{
@@ -237,7 +280,7 @@ defmodule HexpmWeb.Dashboard.InvitationControllerTest do
       conn =
         build_conn()
         |> test_login(other)
-        |> post("/dashboard/invitations/#{invitation.id}/#{action}")
+        |> post("/dashboard/invitations/#{organization.name}/#{action}")
 
       assert redirected_to(conn) == "/dashboard/invitations"
 
@@ -248,12 +291,12 @@ defmodule HexpmWeb.Dashboard.InvitationControllerTest do
     assert {:ok, _invitation} =
              OrganizationInvitations.block(invitation, user, audit: audit_data(user))
 
-    assert [block] = OrganizationInvitations.all_blocks_for_user(user)
+    assert [_block] = OrganizationInvitations.all_blocks_for_user(user)
 
     conn =
       build_conn()
       |> test_login(other)
-      |> post("/dashboard/invitations/blocks/#{block.id}/unblock")
+      |> post("/dashboard/invitations/blocks/#{organization.name}/unblock")
 
     assert redirected_to(conn) == "/dashboard/invitations"
     assert [_block] = OrganizationInvitations.all_blocks_for_user(user)
@@ -282,7 +325,7 @@ defmodule HexpmWeb.Dashboard.InvitationControllerTest do
     {:ok, _blocked} =
       OrganizationInvitations.block(blocked_invitation, user, audit: audit_data(user))
 
-    [block] = OrganizationInvitations.all_blocks_for_user(user)
+    [_block] = OrganizationInvitations.all_blocks_for_user(user)
 
     html = build_conn() |> test_login(user) |> get("/dashboard/invitations") |> html_response(200)
     document = LazyHTML.from_document(html)
@@ -300,14 +343,14 @@ defmodule HexpmWeb.Dashboard.InvitationControllerTest do
     assert Enum.count(
              LazyHTML.query(
                declined_row,
-               ~s(form[action="/dashboard/invitations/#{invitation.id}/restore"])
+               ~s(form[action="/dashboard/invitations/#{organization.name}/restore"])
              )
            ) == 1
 
     assert Enum.count(
              LazyHTML.query(
                declined_row,
-               ~s(form[action="/dashboard/invitations/#{invitation.id}/block"])
+               ~s(form[action="/dashboard/invitations/#{organization.name}/block"])
              )
            ) == 1
 
@@ -320,21 +363,21 @@ defmodule HexpmWeb.Dashboard.InvitationControllerTest do
     assert Enum.count(
              LazyHTML.query(
                blocked_row,
-               ~s(form[action="/dashboard/invitations/blocks/#{block.id}/unblock"])
+               ~s(form[action="/dashboard/invitations/blocks/#{blocked_org.name}/unblock"])
              )
            ) == 1
 
     assert Enum.empty?(
              LazyHTML.query(
                blocked_row,
-               ~s(form[action="/dashboard/invitations/#{blocked_invitation.id}/restore"])
+               ~s(form[action="/dashboard/invitations/#{blocked_org.name}/restore"])
              )
            )
 
     assert Enum.empty?(
              LazyHTML.query(
                blocked_row,
-               ~s(form[action="/dashboard/invitations/#{blocked_invitation.id}/block"])
+               ~s(form[action="/dashboard/invitations/#{blocked_org.name}/block"])
              )
            )
   end
@@ -345,12 +388,12 @@ defmodule HexpmWeb.Dashboard.InvitationControllerTest do
     organization: organization
   } do
     {:ok, _blocked} = OrganizationInvitations.block(invitation, user, audit: audit_data(user))
-    [block] = OrganizationInvitations.all_blocks_for_user(user)
+    [_block] = OrganizationInvitations.all_blocks_for_user(user)
 
     conn =
       build_conn()
       |> test_login(user)
-      |> post("/dashboard/invitations/blocks/#{block.id}/unblock")
+      |> post("/dashboard/invitations/blocks/#{organization.name}/unblock")
 
     html = conn |> recycle() |> get("/dashboard/invitations") |> html_response(200)
     document = LazyHTML.from_document(html)
@@ -365,7 +408,7 @@ defmodule HexpmWeb.Dashboard.InvitationControllerTest do
     assert Enum.count(
              LazyHTML.query(
                row,
-               ~s(form[action="/dashboard/invitations/#{invitation.id}/restore"])
+               ~s(form[action="/dashboard/invitations/#{organization.name}/restore"])
              )
            ) == 1
   end
@@ -376,7 +419,7 @@ defmodule HexpmWeb.Dashboard.InvitationControllerTest do
     organization: organization
   } do
     {:ok, _blocked} = OrganizationInvitations.block(invitation, user, audit: audit_data(user))
-    [block] = OrganizationInvitations.all_blocks_for_user(user)
+    [_block] = OrganizationInvitations.all_blocks_for_user(user)
 
     invitation
     |> Ecto.Changeset.change(expires_at: DateTime.add(DateTime.utc_now(), -1))
@@ -385,25 +428,33 @@ defmodule HexpmWeb.Dashboard.InvitationControllerTest do
     conn = build_conn() |> test_login(user) |> get("/dashboard/invitations")
     html = html_response(conn, 200)
     assert html =~ ~s(id="organization-invitation-state-#{organization.id}")
-    assert html =~ ~s(action="/dashboard/invitations/blocks/#{block.id}/unblock")
+    assert html =~ ~s(action="/dashboard/invitations/blocks/#{organization.name}/unblock")
 
-    conn = conn |> recycle() |> post("/dashboard/invitations/blocks/#{block.id}/unblock")
+    conn = conn |> recycle() |> post("/dashboard/invitations/blocks/#{organization.name}/unblock")
     html = conn |> recycle() |> get("/dashboard/invitations") |> html_response(200)
     refute html =~ ~s(id="declined-and-blocked-organizations")
     refute html =~ ~s(id="organization-invitation-state-#{organization.id}")
   end
 
-  test "unknown and malformed ids don't change invitation state", %{user: user} do
-    for id <- ["not-an-id", "0"], action <- ["restore", "block", "blocks/#{id}/unblock"] do
-      path =
-        if String.starts_with?(action, "blocks/"),
-          do: "/dashboard/invitations/#{action}",
-          else: "/dashboard/invitations/#{id}/#{action}"
-
+  test "organizations without an invitation or block don't change invitation state", %{
+    user: user
+  } do
+    for name <- ["not_an_organization", insert(:organization).name],
+        path <- [
+          "/dashboard/invitations/#{name}/accept",
+          "/dashboard/invitations/#{name}/decline",
+          "/dashboard/invitations/#{name}/restore",
+          "/dashboard/invitations/#{name}/block",
+          "/dashboard/invitations/blocks/#{name}/unblock"
+        ] do
       conn = build_conn() |> test_login(user) |> post(path)
       assert redirected_to(conn) == "/dashboard/invitations"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "This invitation is no longer valid."
     end
 
     assert [_pending] = OrganizationInvitations.all_pending_for_user(user)
+    assert OrganizationInvitations.all_blocks_for_user(user) == []
   end
 end

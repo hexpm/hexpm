@@ -7,10 +7,10 @@ defmodule HexpmWeb.Dashboard.InvitationController do
     render_index(conn)
   end
 
-  def accept(conn, %{"id" => id}) do
+  def accept(conn, %{"organization" => organization}) do
     user = conn.assigns.current_user
 
-    case pending(user, id) do
+    case OrganizationInvitations.get_pending_for_user(user, organization) do
       nil ->
         unavailable(conn)
 
@@ -21,10 +21,11 @@ defmodule HexpmWeb.Dashboard.InvitationController do
     end
   end
 
-  def decline(conn, %{"id" => id}) do
+  def decline(conn, %{"organization" => organization}) do
     user = conn.assigns.current_user
 
-    with %OrganizationInvitation{} = invitation <- pending(user, id),
+    with %OrganizationInvitation{} = invitation <-
+           OrganizationInvitations.get_pending_for_user(user, organization),
          {:ok, _invitation} <-
            OrganizationInvitations.decline(invitation, user, audit: audit_data(conn)) do
       conn
@@ -38,11 +39,11 @@ defmodule HexpmWeb.Dashboard.InvitationController do
     end
   end
 
-  def restore(conn, %{"id" => id}) do
+  def restore(conn, %{"organization" => organization}) do
     user = conn.assigns.current_user
 
-    with id when is_integer(id) <- safe_to_integer(id),
-         %OrganizationInvitation{} = invitation <- OrganizationInvitations.get_for_user(user, id),
+    with %OrganizationInvitation{} = invitation <-
+           OrganizationInvitations.get_for_user(user, organization),
          {:ok, _invitation} <-
            OrganizationInvitations.restore(invitation, user, audit: audit_data(conn)) do
       conn
@@ -53,11 +54,11 @@ defmodule HexpmWeb.Dashboard.InvitationController do
     end
   end
 
-  def block(conn, %{"id" => id}) do
+  def block(conn, %{"organization" => organization}) do
     user = conn.assigns.current_user
 
-    with id when is_integer(id) <- safe_to_integer(id),
-         %OrganizationInvitation{} = invitation <- OrganizationInvitations.get_for_user(user, id),
+    with %OrganizationInvitation{} = invitation <-
+           OrganizationInvitations.get_for_user(user, organization),
          {:ok, _invitation} <-
            OrganizationInvitations.block(invitation, user, audit: audit_data(conn)) do
       conn
@@ -71,11 +72,11 @@ defmodule HexpmWeb.Dashboard.InvitationController do
     end
   end
 
-  def unblock(conn, %{"id" => id}) do
+  def unblock(conn, %{"organization" => organization}) do
     user = conn.assigns.current_user
 
-    with id when is_integer(id) <- safe_to_integer(id),
-         block when not is_nil(block) <- OrganizationInvitations.get_block_for_user(user, id),
+    with block when not is_nil(block) <-
+           OrganizationInvitations.get_block_for_user(user, organization),
          {:ok, _block} <- OrganizationInvitations.unblock(block, user, audit: audit_data(conn)) do
       conn
       |> put_flash(:info, "You unblocked invitations from #{block.organization.name}.")
@@ -126,13 +127,6 @@ defmodule HexpmWeb.Dashboard.InvitationController do
     |> put_status(400)
     |> put_flash(:error, "Could not join #{invitation.organization.name}.")
     |> render_index()
-  end
-
-  defp pending(user, id) do
-    case safe_to_integer(id) do
-      nil -> nil
-      id -> OrganizationInvitations.get_pending_for_user(user, id)
-    end
   end
 
   defp unavailable(conn) do

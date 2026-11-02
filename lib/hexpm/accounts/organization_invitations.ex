@@ -64,8 +64,17 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
     )
   end
 
-  def get_for_user(user, id) do
-    Repo.one(from(invitation in available_for_user(user), where: invitation.id == ^id))
+  @doc """
+  The invitation from the named organization that `user` can still answer,
+  declined or not. An account has at most one per organization.
+  """
+  def get_for_user(user, organization_name) do
+    Repo.one(
+      from(invitation in available_for_user(user),
+        join: organization in assoc(invitation, :organization),
+        where: organization.name == ^organization_name
+      )
+    )
   end
 
   defp available_for_user(%User{id: user_id}) do
@@ -89,17 +98,18 @@ defmodule Hexpm.Accounts.OrganizationInvitations do
     )
   end
 
-  def get_block_for_user(%User{id: user_id}, id) do
+  def get_block_for_user(%User{id: user_id}, organization_name) do
     Repo.one(
       from(block in OrganizationInvitationBlock,
-        where: block.user_id == ^user_id and block.id == ^id,
-        preload: [:organization]
+        join: organization in assoc(block, :organization),
+        where: block.user_id == ^user_id and organization.name == ^organization_name,
+        preload: [organization: organization]
       )
     )
   end
 
-  def get_pending_for_user(user, id) do
-    Enum.find(all_pending_for_user(user), &(&1.id == id))
+  def get_pending_for_user(user, organization_name) do
+    Enum.find(all_pending_for_user(user), &(&1.organization.name == organization_name))
   end
 
   @doc """

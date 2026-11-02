@@ -481,11 +481,11 @@ defmodule HexpmWeb.Router do
       as: :dashboard_security
 
     get "/invitations", InvitationController, :index
-    post "/invitations/:id/accept", InvitationController, :accept
-    post "/invitations/:id/decline", InvitationController, :decline
-    post "/invitations/:id/restore", InvitationController, :restore
-    post "/invitations/:id/block", InvitationController, :block
-    post "/invitations/blocks/:id/unblock", InvitationController, :unblock
+    post "/invitations/:organization/accept", InvitationController, :accept
+    post "/invitations/:organization/decline", InvitationController, :decline
+    post "/invitations/:organization/restore", InvitationController, :restore
+    post "/invitations/:organization/block", InvitationController, :block
+    post "/invitations/blocks/:organization/unblock", InvitationController, :unblock
 
     get "/email", EmailController, :index
     post "/email", EmailController, :create

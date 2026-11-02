@@ -48,13 +48,22 @@
                 </div>
 
                 <div class="flex flex-wrap shrink-0 items-center gap-2">
-                  <.form for={%{}} action={~p"/dashboard/invitations/#{invitation.id}/block"}>
+                  <.form
+                    for={%{}}
+                    action={~p"/dashboard/invitations/#{invitation.organization}/block"}
+                  >
                     <.button type="submit" variant="danger-outline" size="sm">Block invitations</.button>
                   </.form>
-                  <.form for={%{}} action={~p"/dashboard/invitations/#{invitation.id}/decline"}>
+                  <.form
+                    for={%{}}
+                    action={~p"/dashboard/invitations/#{invitation.organization}/decline"}
+                  >
                     <.button type="submit" variant="secondary" size="sm">Decline</.button>
                   </.form>
-                  <.form for={%{}} action={~p"/dashboard/invitations/#{invitation.id}/accept"}>
+                  <.form
+                    for={%{}}
+                    action={~p"/dashboard/invitations/#{invitation.organization}/accept"}
+                  >
                     <.button type="submit" variant="primary" size="sm">Accept</.button>
                   </.form>
                 </div>
@@ -119,20 +128,20 @@
                     <%= if row.block do %>
                       <.form
                         for={%{}}
-                        action={~p"/dashboard/invitations/blocks/#{row.block.id}/unblock"}
+                        action={~p"/dashboard/invitations/blocks/#{row.organization}/unblock"}
                       >
                         <.button type="submit" variant="secondary" size="sm">Unblock</.button>
                       </.form>
                     <% else %>
                       <.form
                         for={%{}}
-                        action={~p"/dashboard/invitations/#{row.invitation.id}/restore"}
+                        action={~p"/dashboard/invitations/#{row.organization}/restore"}
                       >
                         <.button type="submit" variant="secondary" size="sm">Undo decline</.button>
                       </.form>
                       <.form
                         for={%{}}
-                        action={~p"/dashboard/invitations/#{row.invitation.id}/block"}
+                        action={~p"/dashboard/invitations/#{row.organization}/block"}
                       >
                         <.button type="submit" variant="danger-outline" size="sm">Block invitations</.button>
                       </.form>
