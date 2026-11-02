@@ -50,8 +50,11 @@ defmodule HexpmWeb.StagedReleaseController do
     end
   end
 
-  def reject(conn, _params) do
-    case StagedReleases.reject(conn.assigns.staged_release.id, conn.assigns.current_user,
+  def reject(conn, params) do
+    case StagedReleases.reject(
+           conn.assigns.staged_release.id,
+           conn.assigns.current_user,
+           params["checksum"],
            audit: audit_data(conn),
            session_id: conn.assigns.current_session.id
          ) do

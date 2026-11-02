@@ -75,7 +75,8 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
 
     assert page
            |> LazyHTML.query(~s(#review-actions input[type="hidden"][name="checksum"]))
-           |> LazyHTML.attribute("value") == [docs_result["approval_checksum"]]
+           |> LazyHTML.attribute("value") ==
+             [docs_result["approval_checksum"], docs_result["approval_checksum"]]
 
     refute LazyHTML.text(page) =~ "Approval checksum"
     refute LazyHTML.text(page) =~ docs_result["approval_checksum"]
@@ -226,6 +227,28 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
     assert Hexpm.Store.get(:repo_bucket, Assets.tarball_store_key(release)) == second_body
   end
 
+  test "an outdated review page can't reject a restaged release", ctx do
+    {first, _} = stage(ctx)
+    {second, _} = stage(ctx, "second")
+    reject(ctx, first) |> response(409)
+    assert staged(ctx, second)
+    reject(ctx, second) |> response(302)
+    refute staged(ctx, second)
+  end
+
+  test "an outdated review page can't approve identical bytes staged again by another credential",
+       ctx do
+    {first, _} = stage(ctx)
+    reject(ctx, first) |> response(302)
+    {second, _} = stage(%{ctx | key: insert(:key, user: ctx.user)})
+    assert second["html_url"] == first["html_url"]
+    assert second["checksum"] == first["checksum"]
+    refute second["approval_checksum"] == first["approval_checksum"]
+    approve(ctx, first) |> response(409)
+    assert staged(ctx, second)
+    approve(ctx, second) |> response(302)
+  end
+
   test "approval refuses a revoked key and leaves the staged release intact", ctx do
     {result, _} = stage(ctx)
     Repo.update!(Key.revoke(ctx.key))
@@ -302,7 +325,7 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
     refute LazyHTML.text(page) =~ "Package contents"
 
     assert page |> LazyHTML.query(~s(input[name="checksum"])) |> LazyHTML.attribute("value") ==
-             [result["approval_checksum"]]
+             [result["approval_checksum"], result["approval_checksum"]]
 
     for action <- ["approve", "reject"] do
       assert page
@@ -323,10 +346,7 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
   test "rejection frees the reserved version and the polling endpoint reports rejected", ctx do
     {result, _} = stage(ctx)
 
-    build_conn()
-    |> test_login(ctx.user)
-    |> post(html_path(result) <> "/reject")
-    |> response(302)
+    reject(ctx, result) |> response(302)
 
     refute staged(ctx, result)
     rejected = read(ctx, result) |> json_response(200)
@@ -889,6 +909,14 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
     build_conn()
     |> test_login(ctx.user)
     |> post(html_path(result) <> "/approve", %{
+      checksum: result["approval_checksum"]
+    })
+  end
+
+  defp reject(ctx, result) do
+    build_conn()
+    |> test_login(ctx.user)
+    |> post(html_path(result) <> "/reject", %{
       checksum: result["approval_checksum"]
     })
   end

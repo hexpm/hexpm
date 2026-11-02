@@ -108,6 +108,7 @@
               current_user={@current_user}
               action={action_path(@staged_release, "reject")}
             >
+              <input type="hidden" name="checksum" value={@approval_checksum} />
               <.button type="submit" variant="danger-outline">Reject publication</.button>
             </.sudo_form>
           </div>
