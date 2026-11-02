@@ -1623,6 +1623,50 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
   end
 
   describe "DELETE /api/packages/:name/releases/:version" do
+    test "an organization key exchanged for a token publishes a new package and reverts it",
+         %{organization: organization} do
+      key = insert(:key, organization: organization, user: nil)
+
+      client =
+        insert(:oauth_client,
+          allowed_grant_types: ["client_credentials"],
+          allowed_scopes: ["api:write"]
+        )
+
+      token =
+        build_conn()
+        |> post("/api/oauth/token", %{
+          grant_type: "client_credentials",
+          client_id: client.client_id,
+          client_secret: key.user_secret,
+          scope: "api:write"
+        })
+        |> json_response(200)
+        |> Map.fetch!("access_token")
+
+      name = Fake.sequence(:package)
+
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", "Bearer #{token}")
+
+      conn
+      |> post(
+        "/api/packages/#{name}/releases",
+        create_tar(%{name: name, version: "1.0.0", description: "Org release"})
+      )
+      |> json_response(201)
+
+      package = Repo.get_by!(Package, name: name)
+
+      assert Repo.get_by!(Hexpm.Repository.PackageOwner, package_id: package.id).user_id ==
+               Repo.preload(organization, :user).user.id
+
+      assert conn |> delete("/api/packages/#{name}/releases/1.0.0") |> response(204)
+      refute Repo.get_by(Package, name: name)
+    end
+
     test "delete release validates release age", %{user: user, package: package, release: release} do
       Ecto.Changeset.change(package, inserted_at: %{DateTime.utc_now() | year: 2000})
       |> Hexpm.Repo.update!()

@@ -193,7 +193,8 @@ defmodule Hexpm.Accounts.Auth do
   defp load_organization_from_name(org_name) when is_binary(org_name) do
     case Organizations.get(org_name, [
            :repository,
-           :users
+           :users,
+           user: [:emails, owned_packages: :repository]
          ]) do
       nil -> {:error, :organization_not_found}
       organization -> {:ok, organization}
