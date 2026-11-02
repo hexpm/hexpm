@@ -1,10 +1,10 @@
-<%= OwnerRemove.message(@username, @package) %>
+<%= OwnerRemove.message(@username, @package, :text) %>
 <%= if @stopped != [] do %>
-<%= OwnerRemove.stopped(@username, @package) %>
+<%= OwnerRemove.stopped(@username, @package, :text) %>
 
 <%= for workload_identity <- @stopped do %><%= HexpmWeb.ViewHelpers.workload_identity_repositories(workload_identity) %> (<%= workload_identity.workflow %>)
 <% end %><% end %><%= if @workload_identities != [] do %>
-<%= OwnerRemove.workload_identities(@package) %>
+<%= OwnerRemove.workload_identities(@package, :text) %>
 
 <%= for workload_identity <- @workload_identities do %><%= HexpmWeb.ViewHelpers.workload_identity_repositories(workload_identity) %> (<%= workload_identity.workflow %>)
 <% end %>

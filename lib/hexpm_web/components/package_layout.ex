@@ -25,7 +25,7 @@ defmodule HexpmWeb.Components.PackageLayout do
   alias Hexpm.WorkloadIdentities
   alias HexpmWeb.ViewHelpers
 
-  @settings_tabs [:owners, :workload_identities]
+  @settings_tabs [:owners, :workload_identities, :publish_approval]
 
   # All assigns below (except per-page ones) come from
   # `HexpmWeb.PackageLayoutAssigns.for_package/3`. Use that helper in every
@@ -288,7 +288,13 @@ defmodule HexpmWeb.Components.PackageLayout do
                     aria-current={section.active && "page"}
                     class={settings_nav_class(section.active)}
                   >
-                    {section.label}
+                    <span>{section.label}</span>
+                    <span
+                      :if={Map.get(section, :new?, false)}
+                      class="ml-auto inline-flex items-center px-1.5 py-[2px] rounded-full text-[9px] font-bold leading-none uppercase tracking-wider bg-primary-600 text-white"
+                    >
+                      NEW
+                    </span>
                   </a>
                 </li>
               </ul>
@@ -676,6 +682,7 @@ defmodule HexpmWeb.Components.PackageLayout do
         path: ViewHelpers.path_for_owners(assigns.package)
       }
     ] ++
+      approval_section(assigns) ++
       if WorkloadIdentities.enabled?(assigns.package) do
         [
           %{
@@ -688,6 +695,22 @@ defmodule HexpmWeb.Components.PackageLayout do
       else
         []
       end
+  end
+
+  defp approval_section(assigns) do
+    if Hexpm.Repository.StagedReleases.enabled?(assigns.package) do
+      [
+        %{
+          active: assigns.active_tab == :publish_approval,
+          icon: "shield-check",
+          label: "Publish approval",
+          new?: true,
+          path: ViewHelpers.path_for_publish_approval(assigns.package)
+        }
+      ]
+    else
+      []
+    end
   end
 
   defp dependency_tab(%{current_release: nil}), do: []

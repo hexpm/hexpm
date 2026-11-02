@@ -14,13 +14,15 @@ defmodule HexpmWeb.Components.Badge do
       <.badge variant="purple">REPOS</.badge>
   """
   attr :variant, :string, default: "default", values: ~w(default green purple blue red yellow)
+  attr :class, :string, default: ""
   slot :inner_block, required: true
 
   def badge(assigns) do
     ~H"""
     <span class={[
       "inline-flex items-center justify-center px-3 py-1 rounded text-xs font-medium leading-3",
-      badge_variant(@variant)
+      badge_variant(@variant),
+      @class
     ]}>
       {render_slot(@inner_block)}
     </span>

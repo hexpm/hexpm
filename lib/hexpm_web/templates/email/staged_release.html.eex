@@ -1,0 +1,15 @@
+<h1 style="color: #030913; font-size: 24px; line-height: 32px; font-weight: 600; margin: 0 0 24px 0; text-align: center;">
+  <%= if @event == :expired, do: "Staged Release Expired", else: "Release Staged for Approval" %>
+</h1>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <strong><%= HexpmWeb.ViewHelpers.package_name(@staged.repository.name, @staged.name) %></strong> <%= @staged.version %> (<%= @staged.kind %>) was <%= @event %>.
+</p>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  Staged by <%= @staged.credential_name %>. Expires <%= HexpmWeb.ViewHelpers.pretty_utc_datetime(@staged.expires_at) %>.
+</p>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <a href="<%= @approval_url %>" style="color: #0f59d8; text-decoration: none;">Review staged release</a>
+</p>

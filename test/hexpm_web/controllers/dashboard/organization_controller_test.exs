@@ -89,6 +89,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
                "Workload identities NEW",
                "Packages",
                "Policies NEW",
+               "Publish approval NEW",
                "Danger Zone"
              ]
 

@@ -104,9 +104,11 @@
     >
       <p class="text-sm text-grey-600 dark:text-grey-300">
         <%= if @release.retirement do %>
-          Everyone who depends on {@package.name} {@release.version} sees the new reason and message.
+          Everyone who depends on
+          <strong class="font-semibold text-grey-900 dark:text-white">{@package.name}</strong> {@release.version} sees the new reason and message.
         <% else %>
-          Everyone who depends on {@package.name} {@release.version} sees the reason and message. You can unretire it later.
+          Everyone who depends on
+          <strong class="font-semibold text-grey-900 dark:text-white">{@package.name}</strong> {@release.version} sees the reason and message. You can unretire it later.
         <% end %>
       </p>
       <:footer>

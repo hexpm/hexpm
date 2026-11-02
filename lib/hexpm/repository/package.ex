@@ -9,6 +9,7 @@ defmodule Hexpm.Repository.Package do
 
   schema "packages" do
     field :name, :string
+    field :require_publish_approval, :boolean, default: true
     field :docs_updated_at, :utc_datetime_usec
     field :search_disabled_at, :utc_datetime_usec
     field :latest_release, :map, virtual: true

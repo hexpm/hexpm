@@ -1,4 +1,4 @@
-<%= PublicWorkloadIdentityChange.message(@username, @organization) %>
+<%= PublicWorkloadIdentityChange.message(@username, @organization, :text) %>
 <%= for {heading, names} <- [{PublicWorkloadIdentityChange.started(), @started}, {PublicWorkloadIdentityChange.stopped(), @stopped}, {PublicWorkloadIdentityChange.kept(), @kept}], names != [] do %>
 <%= heading %>
 <%= Enum.join(names, "\n") %>

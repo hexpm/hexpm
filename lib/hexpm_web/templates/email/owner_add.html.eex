@@ -3,12 +3,12 @@
 </h1>
 
 <p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
-  <%= OwnerAdd.message(@username, @package) %>
+  <%= raw(OwnerAdd.message(@username, @package, :html)) %>
 </p>
 
 <%= if @started != [] do %>
 <p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
-  <%= OwnerAdd.started(@package) %>
+  <%= raw(OwnerAdd.started(@package, :html)) %>
 </p>
 
 <p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">

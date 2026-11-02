@@ -461,6 +461,7 @@ defmodule Hexpm.OrphanedObjects do
 
   defp classify_repo("hexpm", "installs/list.csv"), do: :keep
   defp classify_repo("hexpm", "debug/" <> _rest), do: :keep
+  defp classify_repo("hexpm", "staged/" <> _rest), do: :keep
 
   defp classify_repo(repository, "packages/" <> package) do
     if String.contains?(package, "/"), do: :unrecognised, else: {:package, repository, package}

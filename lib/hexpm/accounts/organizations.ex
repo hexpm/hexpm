@@ -218,6 +218,7 @@ defmodule Hexpm.Accounts.Organizations do
 
     multi =
       Multi.new()
+      |> Seats.lock(:staged_publish_lock, organization)
       |> Multi.delete_all(
         :audit_logs,
         from(a in AuditLog, where: a.organization_id == ^organization.id)
@@ -289,6 +290,9 @@ defmodule Hexpm.Accounts.Organizations do
     package_ids = from(p in packages, select: p.id)
 
     multi
+    |> Multi.run(:staged_releases, fn _, _ ->
+      {:ok, Hexpm.Repository.StagedReleases.delete_repository(repository)}
+    end)
     |> Multi.delete_all(
       :package_audit_logs,
       from(a in AuditLog,
@@ -346,6 +350,7 @@ defmodule Hexpm.Accounts.Organizations do
 
     multi =
       Multi.new()
+      |> Seats.lock(:staged_publish_lock, organization)
       |> delete_packages(organization.repository)
       |> Multi.delete_all(:policies, assoc(organization, :policies))
       |> Multi.delete_all(

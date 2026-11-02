@@ -145,7 +145,7 @@ defmodule HexpmWeb.PackageOwnerLive.AddOwner do
   def render(%{manage?: false} = assigns) do
     ~H"""
     <p class="text-sm text-grey-600 dark:text-grey-300">
-      You can no longer change the owners of {@package.name}.
+      You can no longer change the owners of <strong class="font-semibold text-grey-900 dark:text-white">{@package.name}</strong>.
     </p>
     """
   end
@@ -231,7 +231,8 @@ defmodule HexpmWeb.PackageOwnerLive.AddOwner do
               id="add-owner-private-note"
               class="text-xs text-grey-500 dark:text-grey-300"
             >
-              {@package.name} is part of the {@package.repository.name} organization, so it can't be transferred. Only members of {@package.repository.name} can own it.
+              <strong class="font-semibold text-grey-900 dark:text-white">{@package.name}</strong>
+              is part of the {@package.repository.name} organization, so it can't be transferred. Only members of {@package.repository.name} can own it.
             </p>
 
             <label
@@ -252,7 +253,7 @@ defmodule HexpmWeb.PackageOwnerLive.AddOwner do
                   Transfer ownership
                 </span>
                 <span class="text-xs text-grey-500 dark:text-grey-300">
-                  Make the new owner the only owner of {@package.name}.
+                  Make the new owner the only owner of <strong class="font-semibold text-grey-900 dark:text-white">{@package.name}</strong>.
                 </span>
               </span>
             </label>
@@ -350,7 +351,7 @@ defmodule HexpmWeb.PackageOwnerLive.AddOwner do
     ~H"""
     <p class="text-sm text-red-600 dark:text-red-400">
       <span class="font-medium">{@username}</span>
-      is an organization. Only members of {@package.repository.name} can own {@package.name}.
+      is an organization. Only members of {@package.repository.name} can own <span class="font-medium">{@package.name}</span>.
     </p>
     """
   end
@@ -359,7 +360,7 @@ defmodule HexpmWeb.PackageOwnerLive.AddOwner do
     ~H"""
     <p class="text-sm text-red-600 dark:text-red-400">
       <span class="font-medium">{@username}</span>
-      isn't a member of {@package.repository.name}. Only members of {@package.repository.name} can own {@package.name}.
+      isn't a member of {@package.repository.name}. Only members of {@package.repository.name} can own <span class="font-medium">{@package.name}</span>.
     </p>
     """
   end
@@ -415,7 +416,8 @@ defmodule HexpmWeb.PackageOwnerLive.AddOwner do
       </p>
       <p>
         {if User.organization?(@transfer_to),
-          do: "Adding an organization transfers the package to it. "}{@transfer_to.username} becomes the only owner of {@package.name}.
+          do: "Adding an organization transfers the package to it. "}<strong class="font-semibold">{@transfer_to.username}</strong>
+        becomes the only owner of <strong class="font-semibold">{@package.name}</strong>.
       </p>
       <%= if @removed_owners != [] do %>
         <p>The transfer removes these owners:</p>
@@ -426,7 +428,9 @@ defmodule HexpmWeb.PackageOwnerLive.AddOwner do
         </ul>
       <% end %>
       <%= if @workload_identities != [] do %>
-        <p>The transfer removes these workload identities of {@package.name}:</p>
+        <p>
+          The transfer removes these workload identities of <strong class="font-semibold">{@package.name}</strong>:
+        </p>
         <ul class="list-disc pl-5">
           <li :for={workload_identity <- @workload_identities}>
             {ViewHelpers.workload_identity_repositories(workload_identity)} ({workload_identity.workflow})
@@ -434,7 +438,9 @@ defmodule HexpmWeb.PackageOwnerLive.AddOwner do
         </ul>
       <% end %>
       <%= if @stopped_workload_identities != [] do %>
-        <p>These organization workload identities stop publishing {@package.name}:</p>
+        <p>
+          These organization workload identities stop publishing <strong class="font-semibold">{@package.name}</strong>:
+        </p>
         <ul class="list-disc pl-5">
           <li :for={workload_identity <- @stopped_workload_identities}>
             {workload_identity.organization.name}: {ViewHelpers.workload_identity_repositories(

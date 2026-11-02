@@ -1,4 +1,4 @@
-<%= OrganizationUserInvitation.intro(@organization, @username, @role) %>
+<%= OrganizationUserInvitation.intro(@organization, @username, @role, :text) %>
 
 <%= OrganizationUserInvitation.review(url(email_uri(), ~p"/dashboard/invitations"), :text) %>
 

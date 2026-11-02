@@ -1,4 +1,4 @@
-<%= OrganizationWorkloadIdentityChange.message(@username, @organization) %>
+<%= OrganizationWorkloadIdentityChange.message(@username, @organization, :text) %>
 
 <%= WorkloadIdentityChange.before() %>
 <%= Enum.join(OrganizationWorkloadIdentityDetails.lines(@role, @previous, @organization, @previous_coverage), "\n") %>

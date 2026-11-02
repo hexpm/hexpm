@@ -15,7 +15,7 @@ defmodule HexpmWeb.Dashboard.Organization.Components.OrgNav do
   alias Hexpm.Accounts.SSO
   alias Hexpm.WorkloadIdentities
 
-  @new_sections [:workload_identities, :policies, :sso]
+  @new_sections [:workload_identities, :policies, :sso, :publish_approval]
 
   attr :current_user, :map, required: true
   attr :organization, :map, required: true
@@ -146,7 +146,14 @@ defmodule HexpmWeb.Dashboard.Organization.Components.OrgNav do
        [
          {:packages, "Packages", ~p"/dashboard/orgs/#{organization}/packages"},
          {:policies, "Policies", ~p"/dashboard/orgs/#{organization}/policies"}
-       ]}
+       ] ++
+         if(admin? and Hexpm.Repository.StagedReleases.enabled?(organization),
+           do: [
+             {:publish_approval, "Publish approval",
+              ~p"/dashboard/orgs/#{organization}/publish-approval"}
+           ],
+           else: []
+         )}
     ]
   end
 

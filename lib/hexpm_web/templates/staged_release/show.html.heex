@@ -1,0 +1,238 @@
+<div class="bg-grey-50 dark:bg-grey-950 min-h-screen py-4 sm:py-8">
+  <div class="max-w-7xl mx-auto px-4">
+    <div class="flex flex-col gap-4 sm:gap-8 lg:flex-row">
+      <div class="w-full lg:w-64 flex-shrink-0">
+        {render(HexpmWeb.DashboardView, "_sidebar.html", assigns)}
+      </div>
+      <div class="flex-1 min-w-0 space-y-4 sm:space-y-6 text-grey-700 dark:text-grey-200">
+        <.text_link
+          href={~p"/dashboard/staged-releases"}
+          variant="purple"
+          class="block w-fit text-sm"
+        >
+          Back to staged releases
+        </.text_link>
+        <section class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-4 sm:p-6">
+          <div class="flex flex-wrap items-center gap-2 mb-3">
+            <.badge variant="purple">{content_label(@staged_release)}</.badge>
+            <.badge :if={@replacement?} variant="yellow">Release replacement</.badge>
+            <.badge variant="yellow">
+              {if @staged_release.publication, do: "Publishing", else: "Awaiting approval"}
+            </.badge>
+          </div>
+          <h2 class="text-xl sm:text-2xl font-semibold text-grey-900 dark:text-white break-words">
+            {@staged_release.name} <span class="font-mono">{@staged_release.version}</span>
+          </h2>
+          <p class="mt-2 text-sm text-grey-600 dark:text-grey-300">
+            {if @staged_release.repository_id == 1,
+              do: "Public repository",
+              else: "Private repository: #{@staged_release.repository.name}"}
+          </p>
+          <p
+            :if={@staged_release.kind == "release" && @staged_release.meta["description"]}
+            class="mt-4 break-words"
+          >
+            {@staged_release.meta["description"]}
+          </p>
+          <p :if={@staged_release.kind == "docs"} class="mt-4">
+            Only documentation was staged, for an existing release. Approval replaces any documentation already published for this version.
+          </p>
+          <p :if={@replacement?} class="mt-4">
+            Approval replaces the published package files for this version.
+          </p>
+          <dl class="grid gap-4 sm:grid-cols-2 mt-6 text-sm">
+            <div class="min-w-0">
+              <dt class="text-grey-500 dark:text-grey-300">Publishing credential</dt>
+              <dd class="mt-1 font-medium break-all">{@staged_release.credential_name}</dd>
+            </div>
+            <div :if={@staged_release.user || @staged_release.organization} class="min-w-0">
+              <dt class="text-grey-500 dark:text-grey-300">Credential owner</dt>
+              <dd class="mt-1 font-medium break-all">
+                {if @staged_release.organization,
+                  do: @staged_release.organization.name,
+                  else: @staged_release.user.username}
+              </dd>
+            </div>
+            <div>
+              <dt class="text-grey-500 dark:text-grey-300">First staged</dt>
+              <dd class="mt-1">{ViewHelpers.pretty_utc_datetime(@staged_release.inserted_at)}</dd>
+            </div>
+            <div :if={is_nil(@staged_release.publication)}>
+              <dt class="text-grey-500 dark:text-grey-300">Expires</dt>
+              <dd class="mt-1">{ViewHelpers.pretty_utc_datetime(@staged_release.expires_at)}</dd>
+            </div>
+          </dl>
+          <div
+            :if={is_nil(@staged_release.publication)}
+            class="mt-6 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 p-4 text-sm text-blue-900 dark:text-blue-100"
+          >
+            Verify that the version and publishing credential match the release you intended to publish. Inspect the files before approving.
+            Approval publishes these files. If the staged files change, you'll need to review them again.
+          </div>
+          <p :if={@staged_release.publication} class="mt-6 text-sm">
+            Approval has been recorded and publication is in progress. Retry publication if the files haven't appeared in the repository.
+          </p>
+          <div class="flex flex-wrap gap-3 mt-5">
+            <.button_link
+              :if={@staged_release.storage_key}
+              href={~p"/dashboard/staged-releases/#{@staged_release.id}/tarball"}
+              variant="outline"
+              size="sm"
+            >
+              Download package
+            </.button_link>
+            <.button_link
+              :if={@staged_release.docs_storage_key}
+              href={~p"/dashboard/staged-releases/#{@staged_release.id}/docs"}
+              variant="outline"
+              size="sm"
+            >
+              Download documentation
+            </.button_link>
+          </div>
+          <div
+            id="review-actions"
+            class="flex flex-wrap items-center gap-3 mt-6 pt-5 border-t border-grey-200 dark:border-grey-700"
+          >
+            <.sudo_form
+              current_user={@current_user}
+              action={~p"/dashboard/staged-releases/#{@staged_release.id}/approve"}
+            >
+              <input type="hidden" name="checksum" value={@approval_checksum} />
+              <.button type="submit">{if @staged_release.publication,
+                do: "Retry publication",
+                else: "Approve publication"}</.button>
+            </.sudo_form>
+            <.sudo_form
+              :if={is_nil(@staged_release.publication)}
+              current_user={@current_user}
+              action={~p"/dashboard/staged-releases/#{@staged_release.id}/reject"}
+            >
+              <.button type="submit" variant="danger-outline">Reject publication</.button>
+            </.sudo_form>
+          </div>
+        </section>
+
+        <section
+          :if={@staged_release.oidc_claims}
+          class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-4 sm:p-6"
+        >
+          <h3 class="text-lg font-semibold text-grey-900 dark:text-white">Workload identity</h3>
+          <dl class="mt-4 space-y-3 text-sm">
+            <div :for={
+              {key, label} <- [
+                {"repository", "Source repository"},
+                {"workflow_ref", "Workflow"},
+                {"ref", "Git ref"},
+                {"sha", "Commit"}
+              ]
+            }>
+              <dt class="text-grey-500 dark:text-grey-300">{label}</dt>
+              <dd class="mt-1 font-mono break-all">{@staged_release.oidc_claims[key]}</dd>
+            </div>
+          </dl>
+          <.button_link
+            :if={
+              @staged_release.oidc_claims["repository"] && @staged_release.oidc_claims["run_id"]
+            }
+            href={"https://github.com/#{@staged_release.oidc_claims["repository"]}/actions/runs/#{@staged_release.oidc_claims["run_id"]}"}
+            variant="outline"
+            size="sm"
+            class="mt-4"
+          >
+            View workflow run
+          </.button_link>
+        </section>
+
+        <section
+          :if={@staged_release.kind == "release"}
+          class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-4 sm:p-6"
+        >
+          <h3 class="text-lg font-semibold text-grey-900 dark:text-white">Package contents</h3>
+          <dl class="grid gap-4 sm:grid-cols-2 mt-4 text-sm">
+            <div :if={@staged_release.meta["licenses"] not in [nil, []]}>
+              <dt class="text-grey-500 dark:text-grey-300">Licenses</dt>
+              <dd class="mt-1">{Enum.join(@staged_release.meta["licenses"], ", ")}</dd>
+            </div>
+            <div>
+              <dt class="text-grey-500 dark:text-grey-300">Build tools</dt>
+              <dd class="mt-1">{Enum.join(@staged_release.meta["build_tools"], ", ")}</dd>
+            </div>
+            <div :if={@staged_release.meta["elixir"]}>
+              <dt class="text-grey-500 dark:text-grey-300">Elixir</dt>
+              <dd class="mt-1 font-mono">{@staged_release.meta["elixir"]}</dd>
+            </div>
+          </dl>
+          <% dependencies = dependency_entries(@staged_release.meta["requirements"]) %>
+          <div :if={dependencies != []} class="mt-5">
+            <h4 class="font-medium">Dependencies</h4>
+            <ul class="mt-2 space-y-2 text-sm">
+              <li
+                :for={{name, requirement} <- dependencies}
+                class="flex flex-wrap gap-x-3 gap-y-1"
+              >
+                <span class="font-medium break-all">{if requirement["repository"] not in [
+                                                          nil,
+                                                          "hexpm"
+                                                        ],
+                                                        do: requirement["repository"] <> "/"}{name}</span>
+                <code>{requirement["requirement"]}</code>
+                <span :if={requirement["optional"]} class="text-grey-500 dark:text-grey-300">Optional</span>
+              </li>
+            </ul>
+          </div>
+          <div :if={@staged_release.meta["links"] not in [nil, %{}]} class="mt-5">
+            <h4 class="font-medium">Links</h4>
+            <ul class="mt-2 space-y-2 text-sm">
+              <li :for={{label, url} <- Enum.sort(@staged_release.meta["links"])}>
+                <.text_link href={url} variant="purple" class="break-all">{label}</.text_link>
+              </li>
+            </ul>
+          </div>
+          <details open class="mt-5 border-t border-grey-200 dark:border-grey-700 pt-4">
+            <summary class="cursor-pointer font-medium">
+              Files in this package ({length(@staged_release.meta["files"] || [])})
+            </summary>
+            <p class="mt-3 text-sm text-grey-600 dark:text-grey-300">
+              Paths listed in the package metadata. Download the package to inspect their contents.
+            </p>
+            <ul class="mt-3 max-h-64 overflow-y-auto space-y-1 text-sm font-mono">
+              <li :for={file <- @staged_release.meta["files"] || []} class="break-all">{file}</li>
+            </ul>
+          </details>
+        </section>
+
+        <section
+          id="verify-downloads"
+          class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-4 sm:p-6"
+        >
+          <h3 class="text-lg font-semibold text-grey-900 dark:text-white">Verify this release</h3>
+          <p class="mt-4 text-sm text-grey-600 dark:text-grey-300">
+            Compare these SHA-256 values with the publishing command's output before approving.
+            They identify the exact package and documentation that were staged.
+          </p>
+          <div :if={@staged_release.outer_checksum} class="mt-4">
+            <h4 class="text-sm font-medium">Package SHA-256</h4>
+            <code class="block mt-2 text-xs break-all">{Base.encode16(
+              @staged_release.outer_checksum,
+              case: :lower
+            )}</code>
+            <p class="mt-2 text-xs text-grey-500 dark:text-grey-300">
+              Run <code>shasum -a 256 release.tar</code> after downloading the package.
+            </p>
+          </div>
+          <div :if={@staged_release.docs_checksum} class="mt-4">
+            <h4 class="text-sm font-medium">Documentation SHA-256</h4>
+            <code class="block mt-2 text-xs break-all">{Base.encode16(
+              @staged_release.docs_checksum,
+              case: :lower
+            )}</code>
+            <p class="mt-2 text-xs text-grey-500 dark:text-grey-300">
+              Run <code>shasum -a 256 docs.tar.gz</code> after downloading the documentation.
+            </p>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,6 +1,6 @@
 <%= ReleaseRemoved.title(@package, @version) %>
 
-<%= ReleaseRemoved.message(@package, @version, @remaining) %>
+<%= ReleaseRemoved.message(@package, @version, @remaining, :text) %>
 
 <%= ReleaseRemoved.reason_heading() %>
 

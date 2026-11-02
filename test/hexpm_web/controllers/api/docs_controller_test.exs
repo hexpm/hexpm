@@ -1,9 +1,14 @@
 defmodule HexpmWeb.API.DocsControllerTest do
-  use HexpmWeb.ConnCase, async: true
+  use HexpmWeb.ConnCase
 
   import Ecto.Query, only: [from: 2]
   alias Hexpm.Accounts.AuditLog
   alias Hexpm.Repository.{Package, Repository}
+
+  # Staged publishing follows the Workload Identity flag, and these tests publish directly.
+  setup do
+    put_feature_flag(:workload_identity, mode: :off)
+  end
 
   setup do
     user = insert(:user)

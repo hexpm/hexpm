@@ -3,7 +3,7 @@
 </h1>
 
 <p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
-  <%= OrganizationWorkloadIdentityRemove.message(@username, @organization) %>
+  <%= raw(OrganizationWorkloadIdentityRemove.message(@username, @organization, :html)) %>
 </p>
 
 <p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">

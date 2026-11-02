@@ -1,4 +1,4 @@
-<%= WorkloadIdentityChange.message(@username, @package) %>
+<%= WorkloadIdentityChange.message(@username, @package, :text) %>
 
 <%= WorkloadIdentityChange.before() %>
 <%= Enum.join(WorkloadIdentityDetails.lines(@previous), "\n") %>
@@ -6,4 +6,4 @@
 <%= WorkloadIdentityChange.now() %>
 <%= Enum.join(WorkloadIdentityDetails.lines(@current), "\n") %>
 
-<%= WorkloadIdentityChange.warning(@package) %>
+<%= WorkloadIdentityChange.warning(@package, :text) %>

@@ -17,7 +17,8 @@ defmodule HexpmWeb.API.WorkloadIdentityPublishTest do
       insert(
         :package,
         package_owners: [build(:package_owner, user: user)],
-        meta: build(:package_metadata, description: "original")
+        meta: build(:package_metadata, description: "original"),
+        require_publish_approval: false
       )
 
     workload_identity =
@@ -35,7 +36,8 @@ defmodule HexpmWeb.API.WorkloadIdentityPublishTest do
       insert(
         :package,
         package_owners: [build(:package_owner, user: user)],
-        meta: build(:package_metadata, description: "other")
+        meta: build(:package_metadata, description: "other"),
+        require_publish_approval: false
       )
 
     %{package: package, other: other, user: user, workload_identity: workload_identity}
@@ -278,7 +280,7 @@ defmodule HexpmWeb.API.WorkloadIdentityPublishTest do
     setup do
       repository = insert(:repository)
       organization = repository.organization
-      package = insert(:package, repository_id: repository.id)
+      package = insert(:package, repository_id: repository.id, require_publish_approval: false)
 
       workload_identity =
         insert(:organization_workload_identity,
@@ -305,6 +307,18 @@ defmodule HexpmWeb.API.WorkloadIdentityPublishTest do
       |> then(fn {:ok, token} -> token end)
     end
 
+    defp approve(organization, staged) do
+      admin = insert(:user_with_tfa)
+      insert(:organization_user, organization: organization, user: admin, role: "admin")
+
+      build_conn()
+      |> test_login(admin)
+      |> post("/dashboard/staged-releases/#{staged["id"]}/approve", %{
+        checksum: staged["approval_checksum"]
+      })
+      |> response(302)
+    end
+
     defp publish(token, repository, name, version \\ "1.0.0") do
       meta = %{name: name, version: version, description: "from CI"}
 
@@ -328,24 +342,35 @@ defmodule HexpmWeb.API.WorkloadIdentityPublishTest do
       assert release.publisher_id == nil
     end
 
-    test "creates a package", %{repository: repository, org_publisher: tp} do
+    test "creates a package once its staged release is approved", %{
+      repository: repository,
+      organization: organization,
+      org_publisher: tp
+    } do
       token = mint(repository: repository.name, package: "new_package")
 
-      result = json_response(publish(token, repository, "new_package"), 201)
-      assert result["oidc_claims"]["repository"] == "acme/widget"
+      staged = json_response(publish(token, repository, "new_package"), 201)
+      assert staged["status"] == "staged"
+      refute Hexpm.Repo.get_by(Package, repository_id: repository.id, name: "new_package")
+
+      approve(organization, staged)
 
       package = Hexpm.Repo.get_by!(Package, repository_id: repository.id, name: "new_package")
       assert Hexpm.Repo.preload(package, :package_owners).package_owners == []
 
       release = Hexpm.Repo.get_by!(Release, package_id: package.id)
       assert release.workload_identity_id == tp.id
+      assert release.oidc_claims.repository == "acme/widget"
 
       log = Hexpm.Repo.get_by!(AuditLog, action: "release.publish")
       assert log.user_data["workload_identity_id"] == tp.id
       assert log.params["package"]["name"] == "new_package"
     end
 
-    test "creates a package through the package releases endpoint", %{repository: repository} do
+    test "creates a package through the package releases endpoint", %{
+      repository: repository,
+      organization: organization
+    } do
       token = mint(repository: repository.name, package: "new_package")
       meta = %{name: "new_package", version: "1.0.0", description: "from CI"}
 
@@ -358,7 +383,10 @@ defmodule HexpmWeb.API.WorkloadIdentityPublishTest do
           create_tar(meta)
         )
 
-      assert json_response(conn, 201)
+      staged = json_response(conn, 201)
+      assert staged["status"] == "staged"
+
+      approve(organization, staged)
       assert Hexpm.Repo.get_by(Package, repository_id: repository.id, name: "new_package")
     end
 
@@ -509,7 +537,8 @@ defmodule HexpmWeb.API.WorkloadIdentityPublishTest do
       owned =
         insert(:package,
           package_owners: [build(:package_owner, user: organization.user, level: "full")],
-          meta: build(:package_metadata, description: "original")
+          meta: build(:package_metadata, description: "original"),
+          require_publish_approval: false
         )
 
       identity =

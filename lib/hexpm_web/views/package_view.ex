@@ -202,6 +202,11 @@ defmodule HexpmWeb.PackageView do
       "owner.remove" ->
         do_owner_action(:remove, params)
 
+      "package.publish_approval.configure" ->
+        if params["require_publish_approval"],
+          do: "Require publish approval",
+          else: "Disable publish approval"
+
       "release.publish" ->
         do_release_action("Publish release", version_from_params(params))
 

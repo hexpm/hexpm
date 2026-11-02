@@ -1,0 +1,7 @@
+<%= if @event == :expired, do: "Staged Release Expired", else: "Release Staged for Approval" %>
+
+<%= HexpmWeb.ViewHelpers.package_name(@staged.repository.name, @staged.name) %> <%= @staged.version %> (<%= @staged.kind %>) was <%= @event %>.
+
+Staged by <%= @staged.credential_name %>. Expires <%= HexpmWeb.ViewHelpers.pretty_utc_datetime(@staged.expires_at) %>.
+
+Review staged release: <%= @approval_url %>

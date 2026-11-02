@@ -1,0 +1,3 @@
+Publish Approval Disabled
+
+Approval for API keys and workload identities was disabled for <%= if @package do %>package <%= @package %><% else %>organization <%= @organization %><% end %>. <%= @remaining_requirements %>

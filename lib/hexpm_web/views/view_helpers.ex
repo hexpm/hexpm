@@ -110,6 +110,8 @@ defmodule HexpmWeb.ViewHelpers do
     ~p"/packages/#{package.repository}/#{package}/owners"
   end
 
+  def path_for_publish_approval(package), do: path_for_package(package) <> "/publish-approval"
+
   def path_for_owner(%Package{repository_id: 1} = package, username) do
     ~p"/packages/#{package}/owners/#{username}"
   end

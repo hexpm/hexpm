@@ -64,6 +64,12 @@
             >
               {icon_for_setting(id, selected_setting(@conn, id))}
               {name}
+              <span
+                :if={new_setting?(id)}
+                class="ml-auto inline-flex items-center px-1.5 py-[2px] rounded-full text-[9px] font-bold leading-none uppercase tracking-wider bg-primary-600 text-white"
+              >
+                NEW
+              </span>
             </a>
           </li>
         <% end %>

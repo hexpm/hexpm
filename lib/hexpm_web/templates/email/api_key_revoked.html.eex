@@ -7,7 +7,7 @@
 </p>
 
 <p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
-  The key named <strong><%= @key_name %></strong> has been revoked on the <%= @username %> Hex.pm account.
+  The key named <strong><%= @key_name %></strong> has been revoked on the <strong><%= @username %></strong> Hex.pm account.
 </p>
 
 <p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">

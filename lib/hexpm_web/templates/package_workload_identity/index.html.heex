@@ -49,7 +49,11 @@
             Workload identities that publish {@package.name}
           </h2>
           <p class="mt-1 text-sm text-grey-500 dark:text-grey-300">
-            GitHub Actions workflows that publish {@package.name} without a key. Organizations that own {@package.name} can also publish it with their workload identities. Workload identities only publish packages that exist, so a new package's first release is published with a user account or a key.
+            GitHub Actions workflows that publish
+            <strong class="font-semibold text-grey-900 dark:text-white">{@package.name}</strong>
+            without a key. Organizations that own
+            <strong class="font-semibold text-grey-900 dark:text-white">{@package.name}</strong>
+            can also publish it with their workload identities. Workload identities only publish packages that exist, so a new package's first release is published with a user account or a key.
           </p>
         </div>
 
@@ -116,7 +120,9 @@
             </div>
             <.trusted_workflows workload_identity={workload_identity} />
             <p class="text-xs text-grey-500 dark:text-grey-300">
-              Publishes {@package.name} while
+              Publishes
+              <strong class="font-semibold text-grey-900 dark:text-white">{@package.name}</strong>
+              while
               <a
                 href={~p"/orgs/#{workload_identity.organization.name}"}
                 class="text-primary-600 dark:text-primary-300 hover:underline"

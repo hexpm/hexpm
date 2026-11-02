@@ -3,7 +3,7 @@
 </h1>
 
 <p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
-  <%= SSOBreakGlass.intro(@organization, @username, @screen) %>
+  <%= raw(SSOBreakGlass.intro(@organization, @username, @screen, :html)) %>
 </p>
 
 <p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
@@ -15,5 +15,5 @@
 </p>
 
 <p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
-  <%= SSOBreakGlass.action(@username) %>
+  <%= raw(SSOBreakGlass.action(@username, :html)) %>
 </p>

@@ -254,6 +254,22 @@ defmodule HexpmWeb.Router do
     get "/oauth/device/authorize", DeviceController, :authorize_show
     post "/oauth/device/authorize", DeviceController, :authorize_create
 
+    get "/dashboard/staged-releases", StagedReleaseController, :index
+    get "/dashboard/staged-releases/:id", StagedReleaseController, :show
+    post "/dashboard/staged-releases/:id/approve", StagedReleaseController, :approve
+    post "/dashboard/staged-releases/:id/reject", StagedReleaseController, :reject
+    get "/dashboard/staged-releases/:id/tarball", StagedReleaseController, :tarball
+    get "/dashboard/staged-releases/:id/docs", StagedReleaseController, :docs
+    get "/dashboard/orgs/:dashboard_org/publish-approval", PublishApprovalController, :show
+
+    post "/dashboard/orgs/:dashboard_org/publish-approval/enable",
+         PublishApprovalController,
+         :enable
+
+    post "/dashboard/orgs/:dashboard_org/publish-approval/disable",
+         PublishApprovalController,
+         :disable
+
     get "/dashboard", DashboardController, :index
 
     get "/users/:username", UserController, :show
@@ -321,6 +337,10 @@ defmodule HexpmWeb.Router do
     post "/packages/:name/owners", PackageOwnerController, :create
     put "/packages/:name/owners/:username", PackageOwnerController, :update
     delete "/packages/:name/owners/:username", PackageOwnerController, :delete
+    get "/packages/:name/publish-approval", PackagePublishApprovalController, :show
+    post "/packages/:name/publish-approval/enable", PackagePublishApprovalController, :enable
+
+    post "/packages/:name/publish-approval/disable", PackagePublishApprovalController, :disable
     get "/packages/:name/workload-identities", PackageWorkloadIdentityController, :index
     post "/packages/:name/workload-identities", PackageWorkloadIdentityController, :create
 
@@ -357,6 +377,15 @@ defmodule HexpmWeb.Router do
     post "/packages/:repository/:name/owners", PackageOwnerController, :create
     put "/packages/:repository/:name/owners/:username", PackageOwnerController, :update
     delete "/packages/:repository/:name/owners/:username", PackageOwnerController, :delete
+    get "/packages/:repository/:name/publish-approval", PackagePublishApprovalController, :show
+
+    post "/packages/:repository/:name/publish-approval/enable",
+         PackagePublishApprovalController,
+         :enable
+
+    post "/packages/:repository/:name/publish-approval/disable",
+         PackagePublishApprovalController,
+         :disable
 
     get "/packages/:repository/:name/workload-identities",
         PackageWorkloadIdentityController,
@@ -631,6 +660,7 @@ defmodule HexpmWeb.Router do
 
     for prefix <- ["/", "/repos/:repository"] do
       scope prefix do
+        get "/staged-releases/:id", StagedReleaseController, :show
         get "/packages", PackageController, :index
         get "/packages/:name", PackageController, :show
         get "/packages/:name/audit-logs", PackageController, :audit_logs

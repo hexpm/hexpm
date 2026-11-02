@@ -11,6 +11,8 @@ Use an organization key for automation that acts for an organization, and a pers
 
 `api:write` includes every write permission, so a key with `api:write` can do everything the narrower write permissions below allow. Neither `api:write` nor `api:read` allows fetching from private repositories, which needs an organization key with `repository:acme` or `repositories`.
 
+A key with `api:write`, `owners`, `package:name` or `members` can add an owner or organization member, and that person can then publish from their own account without [publish approval](/docs/publish#publish-approval). For publishing from CI we recommend [Workload Identity](/docs/workload-identity) over API keys. If you have to use a key, give it only the permissions the job needs.
+
 ### Personal keys
 
 Create a personal key on the [keys page](/dashboard/keys) of your dashboard and pick its permissions under "Key permissions".

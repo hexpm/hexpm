@@ -20,6 +20,10 @@ Transferring a package (`mix hex.owner transfer`, or "Transfer ownership" on the
 
 An organization that owns a public package publishes it with its own workload identities that cover public packages. Transferring the package to the organization makes them publish it, and removing the organization as an owner or transferring the package away stops them. The email to the package's owners lists the organization workload identities that start or stop publishing the package, and so does the confirmation on the Owners tab when an organization is removed.
 
+### Publish approval
+
+A release or documentation a workload identity publishes waits for [publish approval](/docs/publish#publish-approval) when the package or its organization requires it.
+
 ### Before you begin
 
 You need:
@@ -42,7 +46,7 @@ Fill in the form:
   <dt><code>Workflow</code></dt>
   <dd>Workflow filename only, for example <code>release.yml</code> or <code>release.yaml</code>. Hex strips any path and matches the basename of the calling workflow in each of the repositories. <strong>Case-sensitive</strong>, so <code>Release.yml</code> and <code>release.yml</code> are different workflows.</dd>
   <dt><code>Environment</code></dt>
-  <dd>GitHub Actions environment name. Required when one of the repositories is public, and strongly recommended otherwise. A GitHub environment is where you can require reviewers, add a wait timer, or restrict which branches can deploy, so it's the only place to add a check before a publish. GitHub <a href="https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments">offers environments</a> in public repositories on every plan and in private repositories only on paid plans, which is why Hex doesn't require one for a private repository. When it's set, the OIDC token must name the same environment, compared case-insensitively as GitHub compares environment names. When it's blank, Hex accepts any environment or none from a private repository, and no token from a public one.</dd>
+  <dd>GitHub Actions environment name. Required when one of the repositories is public, and strongly recommended otherwise. A GitHub environment is where you can require reviewers, add a wait timer, or restrict which branches can deploy, so it adds a check before the workflow receives its token. GitHub <a href="https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments">offers environments</a> in public repositories on every plan and in private repositories only on paid plans, which is why Hex doesn't require one for a private repository. When it's set, the OIDC token must name the same environment, compared case-insensitively as GitHub compares environment names. When it's blank, Hex accepts any environment or none from a private repository, and no token from a public one.</dd>
 </dl>
 
 When you add a workload identity, Hex pins the immutable GitHub IDs of the owner and of each repository, so a GitHub login or repository that's deleted and created again can't inherit it. Adding it fails if an ID is missing.
