@@ -222,9 +222,9 @@ an OAuth token and a valid `X-Hex-OTP`. API keys can't create keys.
 
 Publish approval doesn't change who can add owners or organization members. An API
 key with `api:write`, `owners`, `package:name` or `members` can add an owner or
-member whose own account publishes with OAuth and an OTP, which isn't staged. The
-publishing guide and keys docs recommend Workload Identity over API keys for CI,
-and keys with only the permissions they need.
+member, who can then publish from their own account with OAuth and an OTP without
+being staged. The publishing guide and the keys docs recommend Workload Identity
+over API keys for CI, and keys limited to the permissions the job needs.
 
 Review and approval are available under
 Staged releases. Approval and rejection require 2FA and forced sudo; approval also
