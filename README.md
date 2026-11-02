@@ -221,8 +221,10 @@ sudo, which asks for the 2FA code when the account has 2FA, or through the API w
 an OAuth token and a valid `X-Hex-OTP`. API keys can't create keys.
 
 Publish approval doesn't change who can add owners or organization members. An API
-key with the `owners` or `members` permission can add an owner or member whose own
-account publishes with OAuth and an OTP, which isn't staged.
+key with `api:write`, `owners`, `package:name` or `members` can add an owner or
+member whose own account publishes with OAuth and an OTP, which isn't staged. The
+publishing guide and keys docs recommend Workload Identity over API keys for CI,
+and keys with only the permissions they need.
 
 Review and approval are available under
 Staged releases. Approval and rejection require 2FA and forced sudo; approval also

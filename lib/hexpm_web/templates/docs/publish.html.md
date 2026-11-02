@@ -181,7 +181,7 @@ Pass `--permission publish` instead to publish every package in the organization
 
 Only a person signed in to Hex.pm can create a key, and an account with 2FA needs its 2FA code to do it. The keys pages ask for the code, or for your password if your account doesn't have 2FA, unless you verified in the last hour. `mix hex.organization key` creates keys with the OAuth token from `mix hex.user auth`, which needs the 2FA code for every change. An API key can't create other keys. [Publish approval](#publish-approval) doesn't add a step to creating a key; it applies when the key publishes.
 
-Publish approval doesn't stop a key with the `owners` or `members` permission, or `api:write`, from adding an owner or organization member. That account then publishes with OAuth and its own OTP, which isn't staged. Use [Workload Identity](/docs/workload-identity) for CI.
+Publish approval doesn't stop a key with `api:write`, `owners`, `package:name` or `members` from adding an owner or organization member. That account then publishes with OAuth and its own OTP, which isn't staged, so publish approval only holds releases from keys that can't change owners or members. We recommend publishing from CI with [Workload Identity](/docs/workload-identity) instead of an API key. If you have to use a key, give it only `publish:name` (`publish:acme/name` for an organization's package) and `api:read`, as in the example above.
 
 Set the key in the `HEX_API_KEY` system environment variable. To publish the package without being prompted pass the `--yes` flag:
 
