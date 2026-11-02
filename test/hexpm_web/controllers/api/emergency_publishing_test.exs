@@ -163,7 +163,7 @@ defmodule HexpmWeb.API.EmergencyPublishingTest do
       |> Map.fetch!("access_token")
 
     name = Fake.sequence(:package)
-    path = "/api/repos/#{repository.name}/packages/#{name}/releases"
+    path = "/api/packages/#{name}/releases"
 
     conn =
       build_conn()
@@ -176,7 +176,7 @@ defmodule HexpmWeb.API.EmergencyPublishingTest do
       |> json_response(201)
 
     assert staged["status"] == "staged"
-    {:ok, docs} = :hex_tarball.create_docs([{~c"index.html", "Private docs"}])
+    {:ok, docs} = :hex_tarball.create_docs([{~c"index.html", "Org docs"}])
     staged = conn |> post(path <> "/1.0.0/docs", docs) |> json_response(201)
 
     build_conn()
@@ -187,8 +187,6 @@ defmodule HexpmWeb.API.EmergencyPublishingTest do
     |> response(302)
 
     assert Repo.one!(Release).has_docs
-    assert conn |> delete(path <> "/1.0.0") |> response(403)
-    assert conn |> delete(path <> "/1.0.0/docs") |> response(403)
   end
 
   test "user OAuth with OTP publishes directly under the override", ctx do
@@ -220,7 +218,7 @@ defmodule HexpmWeb.API.EmergencyPublishingTest do
     assert Repo.aggregate(Release, :count) == 1
   end
 
-  test "package and organization settings explain the active override", ctx do
+  test "public package settings explain the active override and private settings don't", ctx do
     put_feature_flag(:workload_identity, mode: :enabled)
     package = Repo.update!(Ecto.Changeset.change(ctx.package, require_publish_approval: false))
     path = "/packages/#{ctx.package.name}/publish-approval"
@@ -258,32 +256,24 @@ defmodule HexpmWeb.API.EmergencyPublishingTest do
       role: "admin"
     )
 
-    path = "/dashboard/orgs/#{repository.name}/publish-approval"
-    page = build_conn() |> test_login(ctx.user) |> get(path) |> html_response(200)
-    assert page =~ "The registry currently requires approval"
-    refute repository.organization.require_publish_approval
+    private_package = insert(:package, repository_id: repository.id)
 
-    repository.organization
-    |> Ecto.Changeset.change(require_publish_approval: true)
-    |> Repo.update!()
-
-    confirmation =
+    page =
       build_conn()
       |> test_login(ctx.user)
-      |> get(path)
+      |> get("/packages/#{repository.name}/#{private_package.name}/publish-approval")
       |> html_response(200)
 
-    modal =
-      confirmation
-      |> LazyHTML.from_document()
-      |> LazyHTML.query("#disable-publish-approval-modal")
+    assert page =~ "Disable publish approval"
+    refute page =~ "The registry requires approval"
 
-    assert LazyHTML.text(modal) =~ "Disable organization approval"
+    page =
+      build_conn()
+      |> test_login(ctx.user)
+      |> get("/dashboard/orgs/#{repository.name}/publish-approval")
+      |> html_response(200)
 
-    assert LazyHTML.text(modal) =~
-             "Publish approval is currently enabled for #{repository.organization.name}."
-
-    assert LazyHTML.text(modal) =~ "The registry currently requires approval"
+    refute page =~ "The registry"
   end
 
   test "approval settings outside the rollout stay hidden while the override is active", ctx do
@@ -315,7 +305,7 @@ defmodule HexpmWeb.API.EmergencyPublishingTest do
   end
 
   for credential <- [:key, :workload_identity] do
-    test "emergency mode stages private #{credential} releases and docs without individual policies",
+    test "private #{credential} releases and docs without approval policies publish directly",
          ctx do
       repository = insert(:repository)
 
@@ -364,7 +354,7 @@ defmodule HexpmWeb.API.EmergencyPublishingTest do
 
       path = "/api/repos/#{repository.name}/packages/#{package.name}/releases"
 
-      staged =
+      release =
         conn
         |> post(
           path,
@@ -372,24 +362,16 @@ defmodule HexpmWeb.API.EmergencyPublishingTest do
         )
         |> json_response(201)
 
-      assert staged["status"] == "staged"
-      assert Repo.aggregate(Release, :count) == 0
+      refute release["status"] == "staged"
+      assert Repo.aggregate(Release, :count) == 1
       {:ok, docs} = :hex_tarball.create_docs([{~c"index.html", "Private docs"}])
-      staged = conn |> post(path <> "/1.0.0/docs", docs) |> json_response(201)
-
-      build_conn()
-      |> test_login(ctx.user)
-      |> post("/dashboard/staged-releases/#{staged["id"]}/approve", %{
-        checksum: staged["approval_checksum"]
-      })
-      |> response(302)
-
+      assert conn |> post(path <> "/1.0.0/docs", docs) |> response(201) == ""
       assert Repo.one!(Release).has_docs
-      refute repository.organization.require_publish_approval
+      assert Repo.aggregate(Hexpm.Repository.StagedRelease, :count) == 0
 
       if unquote(credential) == :key do
-        conn |> delete(path <> "/1.0.0") |> response(403)
-        conn |> delete(path <> "/1.0.0/docs") |> response(403)
+        assert conn |> delete(path <> "/1.0.0/docs") |> response(204)
+        assert conn |> delete(path <> "/1.0.0") |> response(204)
       end
     end
   end

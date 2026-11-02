@@ -28,7 +28,7 @@ defmodule HexpmWeb.EmergencyPublishingBannerTest do
       assert text =~ "Emergency publishing mode is active."
 
       assert text =~
-               "Publishes from API keys and workload identities require approval with fresh 2FA."
+               "Public package publishes from API keys and workload identities require approval with fresh 2FA."
     end
   end
 
@@ -46,9 +46,10 @@ defmodule HexpmWeb.EmergencyPublishingBannerTest do
     document = build_conn() |> get(path) |> html_response(200) |> LazyHTML.from_document()
     assert [_heading] = Enum.to_list(LazyHTML.query(document, ".docs-content ##{anchor}"))
     text = LazyHTML.text(document)
-    assert text =~ "releases and documentation in both public and private repositories"
+    assert text =~ "releases and documentation of public packages"
     assert text =~ "All API keys, organization-key OAuth exchanges and workload identities"
-    assert text =~ "They can't revert releases or documentation."
+    assert text =~ "They can't revert public releases or documentation."
+    assert text =~ "Private repositories keep their package and organization settings."
     assert text =~ "Human OAuth publishing with an OTP remains direct."
 
     assert text =~
@@ -79,6 +80,6 @@ defmodule HexpmWeb.EmergencyPublishingBannerTest do
     assert LazyHTML.attribute(emergency, "id") == ["emergency-publishing-banner"]
 
     assert LazyHTML.text(emergency) =~
-             "Publishes from API keys and workload identities require approval with fresh 2FA."
+             "Public package publishes from API keys and workload identities require approval with fresh 2FA."
   end
 end

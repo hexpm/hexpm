@@ -235,10 +235,11 @@ after seven days, and a periodic worker removes them and queues artifact deletio
 
 Registry operators can set `HEXPM_FORCE_PUBLISH_APPROVAL=true` to require human
 approval with fresh 2FA for every API-key, organization-key OAuth exchange, and
-workload-identity publish, including documentation. This applies to public and
-private repositories regardless of package settings, organization settings, or
-Workload Identity rollout lists. None of these credentials can revert releases or
-documentation. Human OAuth publishing with an OTP remains direct.
+workload-identity publish of a public package, including documentation. This
+applies regardless of package settings or Workload Identity rollout lists. None of
+these credentials can revert public releases or documentation. Private
+repositories keep their package and organization settings. Human OAuth publishing
+with an OTP remains direct.
 
 The website displays a banner while this mode is active. The override uses the
 same repo-bucket `staged/` prefix and retention rules and doesn't remove existing

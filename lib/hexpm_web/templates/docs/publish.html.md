@@ -201,11 +201,11 @@ New packages require approval by default, and existing packages start with it of
 
 While approval is required, Hex keeps each release and its documentation private as a staged release. A maintainer with 2FA opens it under Staged releases in the dashboard, checks the package and documentation checksums, and approves or rejects it. Staged releases expire after seven days. `mix hex.publish --wait` opens the approval page and waits for the result.
 
-During an incident, [emergency publishing mode](#emergency-publishing-mode) can require approval for every publish from an API key or workload identity.
+During an incident, [emergency publishing mode](#emergency-publishing-mode) can require approval for every public package publish from an API key or workload identity.
 
 ### Emergency publishing mode
 
-During an incident, registry operators can enable emergency publishing mode. All API keys, organization-key OAuth exchanges and workload identities then require human approval with fresh 2FA for releases and documentation in both public and private repositories, regardless of package settings, organization settings or rollout lists. They can't revert releases or documentation. Human OAuth publishing with an OTP remains direct. A banner at the top of the website explains these requirements while the mode is active.
+During an incident, registry operators can enable emergency publishing mode. All API keys, organization-key OAuth exchanges and workload identities then require human approval with fresh 2FA for releases and documentation of public packages, regardless of package settings or rollout lists. They can't revert public releases or documentation. Private repositories keep their package and organization settings. Human OAuth publishing with an OTP remains direct. A banner at the top of the website explains these requirements while the mode is active.
 
 Staged releases are reviewed and approved as described under [publish approval](#publish-approval).
 

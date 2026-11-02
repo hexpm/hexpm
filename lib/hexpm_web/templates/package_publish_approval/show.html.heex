@@ -19,7 +19,7 @@
         published with any API key or workload identity. Publishing with OAuth and an OTP stays direct.
       </p>
       <p
-        :if={Hexpm.Repository.StagedReleases.forced?()}
+        :if={Hexpm.Repository.StagedReleases.forced?() && @package.repository_id == 1}
         class="mt-5 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 p-4 text-sm text-blue-900 dark:text-blue-100"
       >
         The registry requires approval for every publish from an API key or workload identity, regardless of this setting.
@@ -74,7 +74,7 @@
         Disabling it lets API keys and workload identities publish without this package's approval requirement.
       </p>
       <p
-        :if={Hexpm.Repository.StagedReleases.forced?()}
+        :if={Hexpm.Repository.StagedReleases.forced?() && @package.repository_id == 1}
         class="mt-5 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 p-4 text-sm text-blue-900 dark:text-blue-100"
       >
         The registry requires approval for every publish from an API key or workload identity, regardless of this setting.

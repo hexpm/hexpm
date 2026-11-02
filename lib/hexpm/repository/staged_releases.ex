@@ -25,7 +25,7 @@ defmodule Hexpm.Repository.StagedReleases do
   end
 
   def approval_required?(%Package{id: id}) do
-    if forced?() || FeatureFlags.available?(:workload_identity) do
+    if FeatureFlags.available?(:workload_identity) do
       package =
         Repo.one!(
           from(p in Package,
@@ -47,10 +47,6 @@ defmodule Hexpm.Repository.StagedReleases do
   end
 
   def approval_required?(%Organization{id: id}) do
-    forced?() || organization_approval_required?(id)
-  end
-
-  defp organization_approval_required?(id) do
     if FeatureFlags.available?(:workload_identity) do
       organization = Repo.get!(Organization, id)
 
@@ -92,7 +88,7 @@ defmodule Hexpm.Repository.StagedReleases do
   end
 
   defp policy_required?(repository, package, target) do
-    forced?() ||
+    (forced?() && repository.id == 1) ||
       (enabled?(target) &&
          (package_approval?(package) ||
             (repository.id != 1 && repository.organization.require_publish_approval)))
