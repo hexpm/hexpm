@@ -11,6 +11,8 @@ defmodule Hexpm.Repository.StagedReleases do
   @lifetime 7 * 24 * 60 * 60
   @publish_timeout 60_000
 
+  def forced?, do: Application.get_env(:hexpm, :force_publish_approval, false)
+
   def enabled?(target),
     do: not is_nil(target) && FeatureFlags.enabled?(:workload_identity, target)
 
@@ -86,9 +88,10 @@ defmodule Hexpm.Repository.StagedReleases do
   end
 
   defp policy_required?(repository, package, target) do
-    enabled?(target) &&
-      (package_approval?(package) ||
-         (repository.id != 1 && repository.organization.require_publish_approval))
+    (forced?() && repository.id == 1) ||
+      (enabled?(target) &&
+         (package_approval?(package) ||
+            (repository.id != 1 && repository.organization.require_publish_approval)))
   end
 
   defp automated?(audit) do

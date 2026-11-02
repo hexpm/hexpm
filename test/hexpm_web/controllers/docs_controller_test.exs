@@ -256,7 +256,9 @@ defmodule HexpmWeb.DocsControllerTest do
       |> LazyHTML.from_document()
 
     assert [_] = document |> LazyHTML.query("#publish-approval") |> Enum.to_list()
-    assert [_] = document |> LazyHTML.query(~s(p a[href="#publish-approval"])) |> Enum.to_list()
+
+    assert [_, _] =
+             document |> LazyHTML.query(~s(p a[href="#publish-approval"])) |> Enum.to_list()
 
     text = LazyHTML.text(document)
     assert text =~ "published with an API key or a workload identity until a person approves them"

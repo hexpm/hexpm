@@ -385,11 +385,15 @@ html[data-theme-preference="system"] [data-theme-menu] [data-theme-choice="syste
   margin: 10px 0;
 }
 
-/* Read-only mode banner (app layout) */
-.read-only-mode {
+/* Site-wide mode banners (app layout) */
+.read-only-mode,
+.emergency-publishing-mode {
   padding: 10px;
   font-size: 1.2em;
   font-weight: bold;
+}
+
+.read-only-mode {
   color: #721c24;
   background-color: #f8d7da;
 }
@@ -397,6 +401,16 @@ html[data-theme-preference="system"] [data-theme-menu] [data-theme-choice="syste
 html[data-theme="dark"] .read-only-mode {
   color: var(--color-red-100);
   background-color: var(--color-red-800);
+}
+
+.emergency-publishing-mode {
+  color: var(--color-yellow-900);
+  background-color: var(--color-yellow-200);
+}
+
+html[data-theme="dark"] .emergency-publishing-mode {
+  color: var(--color-yellow-100);
+  background-color: var(--color-yellow-900);
 }
 
 /* Inline form validation (view_helpers.ex) */
