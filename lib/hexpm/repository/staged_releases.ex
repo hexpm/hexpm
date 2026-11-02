@@ -85,47 +85,6 @@ defmodule Hexpm.Repository.StagedReleases do
     )
   end
 
-  def protected_packages(%Organization{id: id}) do
-    from(p in Package,
-      join: r in assoc(p, :repository),
-      left_join: po in assoc(p, :package_owners),
-      left_join: u in assoc(po, :user),
-      where: r.organization_id == ^id or u.organization_id == ^id,
-      distinct: true,
-      preload: [repository: :organization]
-    )
-    |> filter_protected_packages()
-  end
-
-  def protected_packages(%User{id: id}) do
-    from(p in Package,
-      join: r in assoc(p, :repository),
-      left_join: po in assoc(p, :package_owners),
-      left_join: u in assoc(po, :user),
-      left_join: m in OrganizationUser,
-      on:
-        m.user_id == ^id and
-          (m.organization_id == r.organization_id or m.organization_id == u.organization_id),
-      where:
-        po.user_id == ^id or (m.role in ["admin", "write"] and r.id != 1) or
-          (m.role in ["admin", "write"] and m.organization_id == u.organization_id),
-      distinct: true,
-      preload: [repository: :organization]
-    )
-    |> filter_protected_packages()
-  end
-
-  defp filter_protected_packages(query) do
-    if FeatureFlags.available?(:workload_identity) do
-      query
-      |> Repo.all()
-      |> Enum.filter(&policy_required?(&1.repository, &1, policy_target(&1.repository, &1, nil)))
-      |> Enum.sort_by(&{&1.repository.name, &1.name})
-    else
-      []
-    end
-  end
-
   defp policy_required?(repository, package, target) do
     enabled?(target) &&
       (package_approval?(package) ||

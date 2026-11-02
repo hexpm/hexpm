@@ -811,30 +811,6 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
     assert class =~ "text-purple-600"
   end
 
-  test "API key pages name the packages that require approval", ctx do
-    admin = insert(:user_with_tfa)
-    organization = ctx.repository.organization
-    insert(:organization_user, organization: organization, user: admin, role: "admin")
-    organization_user = Repo.preload(organization, :user).user
-
-    package =
-      insert(:package, package_owners: [build(:package_owner, user: organization_user)])
-
-    other_package =
-      insert(:package,
-        require_publish_approval: false,
-        package_owners: [build(:package_owner, user: organization_user)]
-      )
-
-    for path <- ["/dashboard/keys", "/dashboard/orgs/#{organization.name}/keys"] do
-      html = build_conn() |> test_login(admin) |> get(path) |> html_response(200)
-      notice = html |> LazyHTML.from_document() |> LazyHTML.query("#publish-approval-packages")
-      assert LazyHTML.text(notice) =~ package.name
-      refute LazyHTML.text(notice) =~ other_package.name
-      assert LazyHTML.text(notice) =~ "stage releases and documentation"
-    end
-  end
-
   defp stage(ctx, text \\ "first") do
     body =
       create_tar(%{name: ctx.name, version: "1.0.0", description: "Staged package"}, [

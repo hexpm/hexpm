@@ -222,8 +222,7 @@ an OAuth token and a valid `X-Hex-OTP`. API keys can't create keys.
 
 Publish approval doesn't change who can add owners or organization members. An API
 key with the `owners` or `members` permission can add an owner or member whose own
-account publishes with OAuth and an OTP, which isn't staged. The user and
-organization API key pages list the packages requiring approval.
+account publishes with OAuth and an OTP, which isn't staged.
 
 Review and approval are available under
 Staged releases. Approval and rejection require 2FA and forced sudo; approval also
