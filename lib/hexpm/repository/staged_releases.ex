@@ -236,6 +236,13 @@ defmodule Hexpm.Repository.StagedReleases do
     end
   end
 
+  def get(repository_name, name, version, kind) do
+    with %Repository{} = repository <- Repositories.get(repository_name),
+         %StagedRelease{} = staged <- find(repository, name, version, kind) do
+      Repo.preload(staged, [:user, :organization, repository: :organization])
+    end
+  end
+
   def staged_by?(staged, audit), do: same_credential?(staged, credential_attrs(audit))
 
   def find(repository, name, version, kind) do
@@ -499,13 +506,15 @@ defmodule Hexpm.Repository.StagedReleases do
     })
   end
 
-  def reject(id, user, opts) do
+  def reject(id, user, checksum, opts) do
     Repo.transaction(fn ->
       staged = lock_staged!(id)
       staged = lock_authorization(staged, user)
 
       if not can_approve?(staged, fresh_user(user), opts[:session_id]),
         do: Repo.rollback(:forbidden)
+
+      if checksum != StagedRelease.checksum(staged), do: Repo.rollback(:changed)
 
       if staged.publication, do: Repo.rollback(:publishing)
       audit!(opts[:audit], "release.reject", staged)

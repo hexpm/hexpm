@@ -50,8 +50,11 @@ defmodule HexpmWeb.StagedReleaseController do
     end
   end
 
-  def reject(conn, _params) do
-    case StagedReleases.reject(conn.assigns.staged_release.id, conn.assigns.current_user,
+  def reject(conn, params) do
+    case StagedReleases.reject(
+           conn.assigns.staged_release.id,
+           conn.assigns.current_user,
+           params["checksum"],
            audit: audit_data(conn),
            session_id: conn.assigns.current_session.id
          ) do
@@ -84,7 +87,13 @@ defmodule HexpmWeb.StagedReleaseController do
   end
 
   defp fetch_staged(conn, _opts) do
-    staged = StagedReleases.get(conn.params["id"])
+    staged =
+      StagedReleases.get(
+        conn.params["repository"],
+        conn.params["name"],
+        conn.params["version"],
+        conn.assigns.staged_kind
+      )
 
     if staged &&
          StagedReleases.can_approve?(

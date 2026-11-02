@@ -21,9 +21,16 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
 
   test "stages a new package without publishing its name, release, registry or tarball", ctx do
     {result, body} = stage(ctx)
-    staged = StagedReleases.get(result["id"])
+    staged = staged(ctx, result)
+    path = "#{ctx.repository.name}/packages/#{ctx.name}/releases/1.0.0/staged"
     assert result["status"] == "staged"
-    assert result["html_url"] =~ "/dashboard/staged-releases/#{staged.id}"
+    assert result["url"] == HexpmWeb.Endpoint.url() <> "/api/repos/#{path}"
+
+    assert result["html_url"] ==
+             HexpmWeb.Endpoint.url() <>
+               "/dashboard/staged-releases/#{ctx.repository.name}/#{ctx.name}/1.0.0"
+
+    refute Map.has_key?(result, "id")
     assert result["expires_at"]
     assert result["checksum"] == Base.encode16(:crypto.hash(:sha256, body), case: :lower)
     refute Repo.get_by(Package, repository_id: ctx.repository.id, name: ctx.name)
@@ -49,15 +56,15 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
     docs_result =
       upload(ctx, "/packages/#{ctx.name}/releases/1.0.0/docs", docs) |> json_response(201)
 
-    staged = StagedReleases.get(result["id"])
+    staged = staged(ctx, result)
     assert Hexpm.Store.get(:repo_bucket, staged.docs_storage_key) == docs
-    assert docs_result["id"] == result["id"]
+    assert docs_result["url"] == result["url"]
     refute docs_result["approval_checksum"] == result["approval_checksum"]
 
     page =
       build_conn()
       |> test_login(ctx.user)
-      |> get("/dashboard/staged-releases/#{result["id"]}")
+      |> get(html_path(result))
       |> html_response(200)
       |> LazyHTML.from_document()
 
@@ -68,7 +75,8 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
 
     assert page
            |> LazyHTML.query(~s(#review-actions input[type="hidden"][name="checksum"]))
-           |> LazyHTML.attribute("value") == [docs_result["approval_checksum"]]
+           |> LazyHTML.attribute("value") ==
+             [docs_result["approval_checksum"], docs_result["approval_checksum"]]
 
     refute LazyHTML.text(page) =~ "Approval checksum"
     refute LazyHTML.text(page) =~ docs_result["approval_checksum"]
@@ -86,7 +94,7 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
 
     approve(ctx, docs_result) |> response(302)
 
-    refute StagedReleases.get(result["id"])
+    refute staged(ctx, result)
     package = Hexpm.Repository.Packages.get(ctx.repository, ctx.name)
     release = Hexpm.Repository.Releases.get(package, "1.0.0")
     assert release.publisher_id == ctx.user.id
@@ -115,7 +123,7 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
     refute Hexpm.Store.get(:repo_bucket, staged.docs_storage_key)
     assert Hexpm.Store.get(:repo_bucket, Assets.tarball_store_key(release)) == body
     assert Hexpm.Store.get(:repo_bucket, Assets.docs_store_key(release)) == docs
-    assert read(ctx, result["id"]) |> json_response(200) |> Map.fetch!("status") == "approved"
+    assert read(ctx, result) |> json_response(200) |> Map.fetch!("status") == "approved"
   end
 
   test "requires fresh sudo even when rolling sudo is active", ctx do
@@ -126,16 +134,16 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
       |> test_login(ctx.user, sudo_at: NaiveDateTime.add(NaiveDateTime.utc_now(), -60))
 
     response =
-      post(conn, "/dashboard/staged-releases/#{result["id"]}/approve", %{
+      post(conn, html_path(result) <> "/approve", %{
         checksum: result["approval_checksum"]
       })
 
     assert redirected_to(response) == "/sudo"
     assert get_session(response, "sudo_force")
-    assert StagedReleases.get(result["id"])
+    assert staged(ctx, result)
 
-    for download <- ["tarball", "docs"] do
-      response = get(conn, "/dashboard/staged-releases/#{result["id"]}/#{download}")
+    for download <- ["release.tar", "docs.tar.gz"] do
+      response = get(conn, html_path(result) <> "/#{download}")
       assert redirected_to(response) == "/sudo"
     end
   end
@@ -182,7 +190,7 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
       page =
         build_conn()
         |> test_login(ctx.user)
-        |> get("/dashboard/staged-releases/#{result["id"]}")
+        |> get(html_path(result))
         |> html_response(200)
         |> LazyHTML.from_document()
 
@@ -207,21 +215,45 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
 
   test "a restage invalidates the displayed checksum and keeps the same reservation", ctx do
     {first, _} = stage(ctx)
+    id = staged(ctx, first).id
     {second, second_body} = stage(ctx, "second")
-    assert second["id"] == first["id"]
+    assert second["url"] == first["url"]
+    assert staged(ctx, second).id == id
     refute second["checksum"] == first["checksum"]
     approve(ctx, first) |> response(409)
-    assert StagedReleases.get(first["id"])
+    assert staged(ctx, first)
     approve(ctx, second) |> response(302)
     release = Repo.one!(Release) |> Repo.preload(package: :repository)
     assert Hexpm.Store.get(:repo_bucket, Assets.tarball_store_key(release)) == second_body
+  end
+
+  test "an outdated review page can't reject a restaged release", ctx do
+    {first, _} = stage(ctx)
+    {second, _} = stage(ctx, "second")
+    reject(ctx, first) |> response(409)
+    assert staged(ctx, second)
+    reject(ctx, second) |> response(302)
+    refute staged(ctx, second)
+  end
+
+  test "an outdated review page can't approve identical bytes staged again by another credential",
+       ctx do
+    {first, _} = stage(ctx)
+    reject(ctx, first) |> response(302)
+    {second, _} = stage(%{ctx | key: insert(:key, user: ctx.user)})
+    assert second["html_url"] == first["html_url"]
+    assert second["checksum"] == first["checksum"]
+    refute second["approval_checksum"] == first["approval_checksum"]
+    approve(ctx, first) |> response(409)
+    assert staged(ctx, second)
+    approve(ctx, second) |> response(302)
   end
 
   test "approval refuses a revoked key and leaves the staged release intact", ctx do
     {result, _} = stage(ctx)
     Repo.update!(Key.revoke(ctx.key))
     approve(ctx, result) |> response(409)
-    assert StagedReleases.get(result["id"])
+    assert staged(ctx, result)
     refute Repo.get_by(Package, repository_id: ctx.repository.id, name: ctx.name)
   end
 
@@ -237,15 +269,15 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
 
     Repo.delete_all(from(m in Hexpm.Accounts.OrganizationUser, where: m.user_id == ^ctx.user.id))
     approve(%{ctx | user: reviewer}, result) |> response(409)
-    assert StagedReleases.get(result["id"])
+    assert staged(ctx, result)
   end
 
   test "approval rejects modified bytes even when the submitted checksum matches the row", ctx do
     {result, _} = stage(ctx)
-    staged = StagedReleases.get(result["id"])
+    staged = staged(ctx, result)
     Hexpm.Store.put(:repo_bucket, staged.storage_key, "modified")
     approve(ctx, result) |> response(409)
-    assert StagedReleases.get(result["id"])
+    assert staged(ctx, result)
     assert Repo.aggregate(Release, :count) == 0
   end
 
@@ -258,16 +290,33 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
 
     Hexpm.Store.put(:repo_bucket, Assets.docs_store_key(release), "previous")
 
-    result =
-      upload(ctx, "/packages/#{ctx.name}/releases/1.0.0/docs", docs_tar()) |> json_response(201)
-
+    conn = upload(ctx, "/packages/#{ctx.name}/releases/1.0.0/docs", docs_tar())
+    result = json_response(conn, 201)
+    version_path = "#{ctx.repository.name}/packages/#{ctx.name}/releases/1.0.0"
     assert result["kind"] == "docs"
+    assert result["url"] == HexpmWeb.Endpoint.url() <> "/api/repos/#{version_path}/docs/staged"
+    assert get_resp_header(conn, "location") == [result["url"]]
+
+    assert result["html_url"] ==
+             HexpmWeb.Endpoint.url() <>
+               "/dashboard/staged-releases/#{ctx.repository.name}/#{ctx.name}/1.0.0/docs"
+
     assert Hexpm.Store.get(:repo_bucket, Assets.docs_store_key(release)) == "previous"
+
+    build_conn()
+    |> put_req_header("authorization", ctx.key.user_secret)
+    |> get("/api/repos/#{version_path}/staged")
+    |> json_response(404)
+
+    build_conn()
+    |> test_login(ctx.user)
+    |> get("/dashboard/staged-releases/#{ctx.repository.name}/#{ctx.name}/1.0.0")
+    |> response(404)
 
     page =
       build_conn()
       |> test_login(ctx.user)
-      |> get("/dashboard/staged-releases/#{result["id"]}")
+      |> get(html_path(result))
       |> html_response(200)
       |> LazyHTML.from_document()
 
@@ -276,37 +325,58 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
     refute LazyHTML.text(page) =~ "Package contents"
 
     assert page |> LazyHTML.query(~s(input[name="checksum"])) |> LazyHTML.attribute("value") ==
-             [result["approval_checksum"]]
+             [result["approval_checksum"], result["approval_checksum"]]
+
+    for action <- ["approve", "reject"] do
+      assert page
+             |> LazyHTML.query(~s(form[action="#{html_path(result)}/#{action}"]))
+             |> Enum.count() == 1
+    end
+
+    download = "#{html_path(result)}/docs.tar.gz"
+    assert page |> LazyHTML.query(~s(a[href="#{download}"])) |> Enum.count() == 1
+    assert build_conn() |> test_login(ctx.user) |> get(download) |> response(200) == docs_tar()
 
     approve(ctx, result) |> response(302)
     assert Hexpm.Store.get(:repo_bucket, Assets.docs_store_key(release)) == docs_tar()
     assert Repo.aggregate(Release, :count) == 1
+    assert read(ctx, result) |> json_response(200) |> Map.fetch!("status") == "approved"
   end
 
   test "rejection frees the reserved version and the polling endpoint reports rejected", ctx do
     {result, _} = stage(ctx)
 
-    build_conn()
-    |> test_login(ctx.user)
-    |> post("/dashboard/staged-releases/#{result["id"]}/reject")
-    |> response(302)
+    reject(ctx, result) |> response(302)
 
-    refute StagedReleases.get(result["id"])
-    assert read(ctx, result["id"]) |> json_response(200) |> Map.fetch!("status") == "rejected"
-    {restaged, _} = stage(ctx)
-    refute restaged["id"] == result["id"]
+    refute staged(ctx, result)
+    rejected = read(ctx, result) |> json_response(200)
+    assert rejected["status"] == "rejected"
+    assert rejected["approval_checksum"] == result["approval_checksum"]
+
+    {restaged, _} = stage(ctx, "second")
+    assert restaged["url"] == result["url"]
+    assert restaged["html_url"] == result["html_url"]
+    refute restaged["approval_checksum"] == result["approval_checksum"]
+    staged = read(ctx, restaged) |> json_response(200)
+    assert staged["status"] == "staged"
+    assert staged["approval_checksum"] == restaged["approval_checksum"]
+
+    approve(ctx, restaged) |> response(302)
+    approved = read(ctx, restaged) |> json_response(200)
+    assert approved["status"] == "approved"
+    assert approved["approval_checksum"] == restaged["approval_checksum"]
   end
 
   test "expiry refuses approval, removes the row and tarball, and records expiry", ctx do
     {result, _} = stage(ctx)
-    staged = StagedReleases.get(result["id"])
+    staged = staged(ctx, result)
     Repo.update!(Ecto.Changeset.change(staged, expires_at: DateTime.add(DateTime.utc_now(), -1)))
     approve(ctx, result) |> response(409)
     assert :ok = Hexpm.Repository.StagedReleaseExpiryWorker.perform(%Oban.Job{})
-    refute StagedReleases.get(result["id"])
+    refute staged(ctx, result)
     Oban.drain_queue(queue: :heavy)
     refute Hexpm.Store.get(:repo_bucket, staged.storage_key)
-    assert read(ctx, result["id"]) |> json_response(200) |> Map.fetch!("status") == "expired"
+    assert read(ctx, result) |> json_response(200) |> Map.fetch!("status") == "expired"
     assert Repo.exists?(from(l in AuditLog, where: l.action == "release.stage_expire"))
   end
 
@@ -322,14 +392,14 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
 
       build_conn()
       |> test_login(user)
-      |> get("/dashboard/staged-releases/#{result["id"]}")
+      |> get(html_path(result))
       |> response(404)
 
       approve(%{ctx | user: user}, result) |> response(404)
 
       build_conn()
       |> test_login(user)
-      |> get("/dashboard/staged-releases/#{result["id"]}/tarball")
+      |> get(html_path(result) <> "/release.tar")
       |> response(404)
     end
   end
@@ -345,7 +415,7 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
     )
     |> response(422)
 
-    assert StagedReleases.get(result["id"])
+    assert staged(ctx, result)
   end
 
   test "validation rejects invalid metadata without reserving the package", ctx do
@@ -367,15 +437,15 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
     assert LazyHTML.query(page, "#sidebar-content") |> LazyHTML.text() =~ "Staged releases"
 
     assert page
-           |> LazyHTML.query(~s(a[href="/dashboard/staged-releases/#{result["id"]}"]))
+           |> LazyHTML.query(~s(a[href="#{html_path(result)}"]))
            |> LazyHTML.text() =~ "Review release"
 
     assert LazyHTML.text(page) =~
-             HexpmWeb.ViewHelpers.pretty_utc_datetime(StagedReleases.get(result["id"]).expires_at)
+             HexpmWeb.ViewHelpers.pretty_utc_datetime(staged(ctx, result).expires_at)
 
     outsider = insert(:user_with_tfa)
     conn = build_conn() |> test_login(outsider) |> get("/dashboard/staged-releases")
-    refute html_response(conn, 200) =~ "/dashboard/staged-releases/#{result["id"]}"
+    refute html_response(conn, 200) =~ html_path(result)
   end
 
   test "organization keys stage and retain the organization's publisher", ctx do
@@ -417,7 +487,7 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
       |> json_response(201)
 
     assert result["status"] == "staged"
-    assert StagedReleases.get(result["id"]).key_id == key.id
+    assert staged(ctx, result).key_id == key.id
     assert Repo.aggregate(Release, :count) == 0
 
     docs =
@@ -430,7 +500,7 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
       )
       |> json_response(201)
 
-    assert docs["id"] == result["id"]
+    assert docs["url"] == result["url"]
     approve(ctx, docs) |> response(302)
 
     for suffix <- ["", "/docs"] do
@@ -479,7 +549,7 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
 
     Repo.update!(Key.revoke(key))
     approve(ctx, result) |> response(409)
-    assert StagedReleases.get(result["id"])
+    assert staged(ctx, result)
     assert Repo.aggregate(Release, :count) == 0
   end
 
@@ -490,7 +560,7 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
     docs =
       upload(ctx, "/packages/#{ctx.name}/releases/1.0.0/docs", docs_tar()) |> json_response(201)
 
-    assert docs["id"] == result["id"]
+    assert docs["url"] == result["url"]
     assert Repo.aggregate(Hexpm.Emails.OutboxEntry, :count) == count
   end
 
@@ -583,7 +653,7 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
     email = Repo.one!(Hexpm.Emails.OutboxEntry)
     assert Hexpm.Accounts.User.email(maintainer, :primary) in email.recipients
     approve(%{ctx | user: maintainer}, result) |> response(302)
-    terminal = read(ctx, result["id"]) |> json_response(200)
+    terminal = read(ctx, result) |> json_response(200)
     assert terminal["checksum"] == result["checksum"]
     assert terminal["approval_checksum"] == result["approval_checksum"]
     assert terminal["expires_at"] == result["expires_at"]
@@ -599,7 +669,7 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
       })
 
     result = upload(ctx, "/packages/#{ctx.name}/releases", body) |> json_response(201)
-    staged = StagedReleases.get(result["id"])
+    staged = staged(ctx, result)
     assert staged.meta["build_env"] == [["hex", "2.7.0-dev"]]
     approve(ctx, result) |> response(302)
     assert Repo.one!(Package).meta.description == "From Hex"
@@ -616,12 +686,12 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
       upload(ctx, "/packages/#{ctx.name}/releases?replace=true", body) |> json_response(201)
 
     assert Repo.get!(Release, release.id).outer_checksum == release.outer_checksum
-    assert StagedReleases.get(result["id"]).replace
+    assert staged(ctx, result).replace
 
     page =
       build_conn()
       |> test_login(ctx.user)
-      |> get("/dashboard/staged-releases/#{result["id"]}")
+      |> get(html_path(result))
       |> html_response(200)
 
     assert page =~ "Release replacement"
@@ -640,7 +710,7 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
     upload(%{ctx | key: other}, "/packages/#{ctx.name}/releases", replacement)
     |> json_response(422)
 
-    staged = StagedReleases.get(result["id"])
+    staged = staged(ctx, result)
     assert staged.key_id == ctx.key.id
     assert Hexpm.Store.get(:repo_bucket, staged.storage_key) == body
   end
@@ -657,7 +727,7 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
     upload(%{ctx | key: other}, "/packages/#{ctx.name}/releases/1.0.0/docs", docs_tar())
     |> json_response(422)
 
-    assert StagedReleases.get(result["id"]).key_id == ctx.key.id
+    assert staged(ctx, result).key_id == ctx.key.id
   end
 
   test "another credential can't tell a staged new public package from a missing one", ctx do
@@ -703,7 +773,8 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
     assert result["status"] == "staged"
 
     deadline = DateTime.from_naive!(NaiveDateTime.add(release.inserted_at, 60 * 60), "Etc/UTC")
-    assert abs(DateTime.diff(StagedReleases.get(result["id"]).expires_at, deadline)) <= 1
+    staged = StagedReleases.get("hexpm", package.name, "1.0.0", "release")
+    assert abs(DateTime.diff(staged.expires_at, deadline)) <= 1
   end
 
   test "an artifact upload failure leaves approval pending for retry", ctx do
@@ -713,20 +784,20 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
     Mox.expect(Hexpm.Store.Mock, :put_file, fn _, _, _, _ -> raise "store unavailable" end)
 
     assert_raise RuntimeError, "store unavailable", fn ->
-      StagedReleases.approve(result["id"], ctx.user, result["approval_checksum"],
+      StagedReleases.approve(staged(ctx, result).id, ctx.user, result["approval_checksum"],
         audit: audit_data(ctx.user)
       )
     end
 
-    assert StagedReleases.get(result["id"])
+    assert staged(ctx, result)
     assert Repo.exists?(from(l in AuditLog, where: l.action == "release.approve"))
     assert Repo.aggregate(Release, :count) == 1
-    assert read(ctx, result["id"]) |> json_response(200) |> Map.fetch!("status") == "staged"
+    assert read(ctx, result) |> json_response(200) |> Map.fetch!("status") == "staged"
 
     page =
       build_conn()
       |> test_login(ctx.user)
-      |> get("/dashboard/staged-releases/#{result["id"]}")
+      |> get(html_path(result))
       |> html_response(200)
       |> LazyHTML.from_document()
 
@@ -773,15 +844,15 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
     Mox.verify!()
     app_env(:hexpm, :repo_bucket, {Hexpm.Store.Memory, "repo_bucket"})
     Oban.drain_queue(queue: :heavy)
-    refute StagedReleases.get(result["id"])
-    assert read(ctx, result["id"]) |> json_response(200) |> Map.fetch!("status") == "approved"
+    refute staged(ctx, result)
+    assert read(ctx, result) |> json_response(200) |> Map.fetch!("status") == "approved"
   end
 
   for operation <- [:delete, :delete_data] do
     test "organization #{operation} removes staged artifacts", ctx do
       {result, _} = stage(ctx)
       upload(ctx, "/packages/#{ctx.name}/releases/1.0.0/docs", docs_tar()) |> json_response(201)
-      staged = StagedReleases.get(result["id"])
+      staged = staged(ctx, result)
 
       assert :ok =
                apply(Hexpm.Accounts.Organizations, unquote(operation), [
@@ -837,16 +908,29 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
   defp approve(ctx, result) do
     build_conn()
     |> test_login(ctx.user)
-    |> post("/dashboard/staged-releases/#{result["id"]}/approve", %{
+    |> post(html_path(result) <> "/approve", %{
       checksum: result["approval_checksum"]
     })
   end
 
-  defp read(ctx, id),
+  defp reject(ctx, result) do
+    build_conn()
+    |> test_login(ctx.user)
+    |> post(html_path(result) <> "/reject", %{
+      checksum: result["approval_checksum"]
+    })
+  end
+
+  defp read(ctx, result),
     do:
       build_conn()
       |> put_req_header("authorization", ctx.key.user_secret)
-      |> get("/api/staged-releases/#{id}")
+      |> get(URI.parse(result["url"]).path)
+
+  defp staged(ctx, result),
+    do: StagedReleases.get(ctx.repository.name, result["name"], result["version"], result["kind"])
+
+  defp html_path(result), do: URI.parse(result["html_url"]).path
 
   defp docs_tar do
     {:ok, body} = :hex_tarball.create_docs([{~c"index.html", "Documentation"}])

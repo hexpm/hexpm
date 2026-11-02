@@ -75,7 +75,7 @@
           <div class="flex flex-wrap gap-3 mt-5">
             <.button_link
               :if={@staged_release.storage_key}
-              href={~p"/dashboard/staged-releases/#{@staged_release.id}/tarball"}
+              href={action_path(@staged_release, "release.tar")}
               variant="outline"
               size="sm"
             >
@@ -83,7 +83,7 @@
             </.button_link>
             <.button_link
               :if={@staged_release.docs_storage_key}
-              href={~p"/dashboard/staged-releases/#{@staged_release.id}/docs"}
+              href={action_path(@staged_release, "docs.tar.gz")}
               variant="outline"
               size="sm"
             >
@@ -96,7 +96,7 @@
           >
             <.sudo_form
               current_user={@current_user}
-              action={~p"/dashboard/staged-releases/#{@staged_release.id}/approve"}
+              action={action_path(@staged_release, "approve")}
             >
               <input type="hidden" name="checksum" value={@approval_checksum} />
               <.button type="submit">{if @staged_release.publication,
@@ -106,8 +106,9 @@
             <.sudo_form
               :if={is_nil(@staged_release.publication)}
               current_user={@current_user}
-              action={~p"/dashboard/staged-releases/#{@staged_release.id}/reject"}
+              action={action_path(@staged_release, "reject")}
             >
+              <input type="hidden" name="checksum" value={@approval_checksum} />
               <.button type="submit" variant="danger-outline">Reject publication</.button>
             </.sudo_form>
           </div>

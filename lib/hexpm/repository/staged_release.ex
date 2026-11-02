@@ -43,7 +43,24 @@ defmodule Hexpm.Repository.StagedRelease do
   end
 
   def checksum(staged) do
-    :crypto.hash(:sha256, [staged.outer_checksum || <<>>, staged.docs_checksum || <<>>])
+    credential =
+      Enum.map_join(
+        [
+          staged.credential_type,
+          staged.key_id,
+          staged.workload_identity_id,
+          staged.user_id,
+          staged.organization_id
+        ],
+        ":",
+        &to_string/1
+      )
+
+    :crypto.hash(:sha256, [
+      staged.outer_checksum || <<>>,
+      staged.docs_checksum || <<>>,
+      credential
+    ])
     |> Base.encode16(case: :lower)
   end
 end

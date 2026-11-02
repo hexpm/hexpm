@@ -38,16 +38,16 @@ defmodule HexpmWeb.API.StagedWorkloadIdentityPublishTest do
     assert result["status"] == "staged"
     assert Repo.get!(Package, ctx.package.id).meta.description == "Published"
     assert Repo.aggregate(Release, :count) == 0
-    assert read(token, result["id"]) |> json_response(200) |> Map.fetch!("status") == "staged"
+    assert read(token, result) |> json_response(200) |> Map.fetch!("status") == "staged"
 
     page =
       build_conn()
       |> test_login(ctx.user)
-      |> get("/dashboard/staged-releases/#{result["id"]}")
+      |> get(html_path(result))
       |> html_response(200)
       |> LazyHTML.from_document()
 
-    claims = StagedReleases.get(result["id"]).oidc_claims
+    claims = staged(result).oidc_claims
     assert LazyHTML.text(page) =~ "Source repository"
     assert LazyHTML.text(page) =~ claims["repository"]
     assert LazyHTML.text(page) =~ claims["workflow_ref"]
@@ -61,7 +61,7 @@ defmodule HexpmWeb.API.StagedWorkloadIdentityPublishTest do
 
     build_conn()
     |> test_login(ctx.user)
-    |> post("/dashboard/staged-releases/#{result["id"]}/approve", %{
+    |> post(html_path(result) <> "/approve", %{
       checksum: result["approval_checksum"]
     })
     |> response(302)
@@ -81,17 +81,17 @@ defmodule HexpmWeb.API.StagedWorkloadIdentityPublishTest do
 
     build_conn()
     |> test_login(ctx.user)
-    |> post("/dashboard/staged-releases/#{result["id"]}/approve", %{
+    |> post(html_path(result) <> "/approve", %{
       checksum: result["approval_checksum"]
     })
     |> response(409)
 
-    assert StagedReleases.get(result["id"])
+    assert staged(result)
     Repo.delete!(ctx.wi)
 
     build_conn()
     |> test_login(ctx.user)
-    |> post("/dashboard/staged-releases/#{result["id"]}/approve", %{
+    |> post(html_path(result) <> "/approve", %{
       checksum: result["approval_checksum"]
     })
     |> response(409)
@@ -140,7 +140,7 @@ defmodule HexpmWeb.API.StagedWorkloadIdentityPublishTest do
 
     staged = publish(ctx, token) |> json_response(201)
     assert staged["status"] == "staged"
-    assert StagedReleases.get(staged["id"]).workload_identity_id == second.id
+    assert staged(staged).workload_identity_id == second.id
     assert Repo.aggregate(Release, :count) == 0
   end
 
@@ -175,14 +175,14 @@ defmodule HexpmWeb.API.StagedWorkloadIdentityPublishTest do
     path = "/api/packages/#{ctx.package.name}/releases/1.0.0"
     staged = conn |> post(path <> "/docs", docs) |> json_response(201)
     assert staged["status"] == "staged"
-    assert StagedReleases.get(staged["id"]).kind == "docs"
+    assert staged(staged).kind == "docs"
     refute Repo.get!(Release, release.id).has_docs
     conn |> delete(path) |> response(403)
     conn |> delete(path <> "/docs") |> response(403)
 
     build_conn()
     |> test_login(ctx.user)
-    |> post("/dashboard/staged-releases/#{staged["id"]}/approve", %{
+    |> post(html_path(staged) <> "/approve", %{
       checksum: staged["approval_checksum"]
     })
     |> response(302)
@@ -211,7 +211,7 @@ defmodule HexpmWeb.API.StagedWorkloadIdentityPublishTest do
 
       build_conn()
       |> test_login(ctx.user)
-      |> post("/dashboard/staged-releases/#{staged["id"]}/approve", %{
+      |> post(html_path(staged) <> "/approve", %{
         checksum: staged["approval_checksum"]
       })
       |> response(302)
@@ -241,15 +241,22 @@ defmodule HexpmWeb.API.StagedWorkloadIdentityPublishTest do
 
     assert staged["status"] == "staged"
 
+    assert staged["url"] ==
+             HexpmWeb.Endpoint.url() <> "/api/packages/#{ctx.package.name}/releases/1.0.0/staged"
+
+    assert staged["html_url"] ==
+             HexpmWeb.Endpoint.url() <>
+               "/dashboard/staged-releases/hexpm/#{ctx.package.name}/1.0.0"
+
     assert build_conn()
            |> put_req_header("authorization", key.user_secret)
-           |> get("/api/staged-releases/#{staged["id"]}")
+           |> get(URI.parse(staged["url"]).path)
            |> json_response(200)
            |> Map.fetch!("status") == "staged"
 
     build_conn()
     |> test_login(ctx.user)
-    |> post("/dashboard/staged-releases/#{staged["id"]}/approve", %{
+    |> post(html_path(staged) <> "/approve", %{
       checksum: staged["approval_checksum"]
     })
     |> response(302)
@@ -258,7 +265,7 @@ defmodule HexpmWeb.API.StagedWorkloadIdentityPublishTest do
 
     assert build_conn()
            |> put_req_header("authorization", key.user_secret)
-           |> get("/api/staged-releases/#{staged["id"]}")
+           |> get(URI.parse(staged["url"]).path)
            |> json_response(200)
            |> Map.fetch!("status") == "approved"
   end
@@ -357,7 +364,7 @@ defmodule HexpmWeb.API.StagedWorkloadIdentityPublishTest do
 
     build_conn()
     |> test_login(ctx.user)
-    |> post("/dashboard/staged-releases/#{result["id"]}/approve", %{
+    |> post(html_path(result) <> "/approve", %{
       checksum: result["approval_checksum"]
     })
     |> response(302)
@@ -392,11 +399,11 @@ defmodule HexpmWeb.API.StagedWorkloadIdentityPublishTest do
 
     result = publish(ctx, mint(ctx.package)) |> json_response(201)
     assert result["status"] == "staged"
-    assert StagedReleases.get(result["id"]).workload_identity_id == wi.id
+    assert staged(result).workload_identity_id == wi.id
 
     build_conn()
     |> test_login(ctx.user)
-    |> post("/dashboard/staged-releases/#{result["id"]}/approve", %{
+    |> post(html_path(result) <> "/approve", %{
       checksum: result["approval_checksum"]
     })
     |> response(302)
@@ -519,7 +526,7 @@ defmodule HexpmWeb.API.StagedWorkloadIdentityPublishTest do
 
     build_conn()
     |> test_login(ctx.user)
-    |> post("/dashboard/staged-releases/#{staged["id"]}/approve", %{
+    |> post(html_path(staged) <> "/approve", %{
       checksum: staged["approval_checksum"]
     })
     |> response(302)
@@ -561,7 +568,7 @@ defmodule HexpmWeb.API.StagedWorkloadIdentityPublishTest do
 
     build_conn()
     |> test_login(ctx.user)
-    |> post("/dashboard/staged-releases/#{result["id"]}/approve", %{
+    |> post(html_path(result) <> "/approve", %{
       checksum: result["approval_checksum"]
     })
     |> response(302)
@@ -608,9 +615,14 @@ defmodule HexpmWeb.API.StagedWorkloadIdentityPublishTest do
     )
   end
 
-  defp read(token, id),
+  defp read(token, result),
     do:
       build_conn()
       |> put_req_header("authorization", "Bearer #{token.access_token}")
-      |> get("/api/staged-releases/#{id}")
+      |> get(URI.parse(result["url"]).path)
+
+  defp staged(result),
+    do: StagedReleases.get("hexpm", result["name"], result["version"], result["kind"])
+
+  defp html_path(result), do: URI.parse(result["html_url"]).path
 end

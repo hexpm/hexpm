@@ -634,7 +634,7 @@ defmodule Hexpm.Emails do
     |> assign(:event, event)
     |> assign(
       :approval_url,
-      HexpmWeb.EmailView.email_url("/dashboard/staged-releases/#{staged.id}")
+      HexpmWeb.EmailView.email_url(HexpmWeb.ViewHelpers.path_for_staged_release(staged))
     )
     |> render_body(:staged_release)
   end

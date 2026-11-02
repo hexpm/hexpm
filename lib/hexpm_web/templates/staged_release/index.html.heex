@@ -48,7 +48,7 @@
                   </p>
                 </div>
                 <.button_link
-                  href={~p"/dashboard/staged-releases/#{staged.id}"}
+                  href={ViewHelpers.path_for_staged_release(staged)}
                   variant="outline"
                   size="sm"
                   class="shrink-0 self-start sm:self-center"

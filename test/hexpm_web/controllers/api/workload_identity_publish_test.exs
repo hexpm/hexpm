@@ -313,7 +313,7 @@ defmodule HexpmWeb.API.WorkloadIdentityPublishTest do
 
       build_conn()
       |> test_login(admin)
-      |> post("/dashboard/staged-releases/#{staged["id"]}/approve", %{
+      |> post(URI.parse(staged["html_url"]).path <> "/approve", %{
         checksum: staged["approval_checksum"]
       })
       |> response(302)

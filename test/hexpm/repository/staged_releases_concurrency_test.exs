@@ -81,7 +81,12 @@ defmodule Hexpm.Repository.StagedReleasesConcurrencyTest do
                   approve(ctx, ctx.staged)
 
                 :reject ->
-                  StagedReleases.reject(ctx.staged.id, ctx.user, audit: audit_data(ctx.user))
+                  StagedReleases.reject(
+                    ctx.staged.id,
+                    ctx.user,
+                    StagedRelease.checksum(ctx.staged),
+                    audit: audit_data(ctx.user)
+                  )
               end
             end)
 
@@ -154,7 +159,7 @@ defmodule Hexpm.Repository.StagedReleasesConcurrencyTest do
         |> Phoenix.ConnTest.dispatch(
           HexpmWeb.Endpoint,
           :get,
-          "/api/staged-releases/#{staged.id}",
+          URI.parse(HexpmWeb.ViewHelpers.url_for_staged_release(staged)).path,
           nil
         )
 
