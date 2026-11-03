@@ -145,7 +145,7 @@ defmodule HexpmWeb.API.StagedWorkloadIdentityPublishTest do
   end
 
   test "an opted-out package permits API-key publishing", ctx do
-    Repo.update!(Ecto.Changeset.change(ctx.package, require_publish_approval: false))
+    Repo.update!(Ecto.Changeset.change(ctx.package, require_staged_publishing: false))
     key = insert(:key, user: ctx.user)
 
     result =
@@ -216,7 +216,7 @@ defmodule HexpmWeb.API.StagedWorkloadIdentityPublishTest do
       })
       |> response(302)
 
-      assert Repo.get_by!(Package, name: name).require_publish_approval
+      assert Repo.get_by!(Package, name: name).require_staged_publishing
     end
   end
 
@@ -317,7 +317,7 @@ defmodule HexpmWeb.API.StagedWorkloadIdentityPublishTest do
 
   test "an organization workload identity stages a new private package and its docs", ctx do
     repository =
-      insert(:repository, organization: build(:organization, require_publish_approval: true))
+      insert(:repository, organization: build(:organization, require_staged_publishing: true))
 
     insert(:organization_user,
       organization: repository.organization,
@@ -413,7 +413,7 @@ defmodule HexpmWeb.API.StagedWorkloadIdentityPublishTest do
 
   test "an existing token follows the package approval setting", ctx do
     token = mint(ctx.package)
-    Repo.update!(Ecto.Changeset.change(ctx.package, require_publish_approval: false))
+    Repo.update!(Ecto.Changeset.change(ctx.package, require_staged_publishing: false))
     result = publish(ctx, token) |> json_response(201)
     refute result["status"] == "staged"
     assert Repo.aggregate(Release, :count) == 1
@@ -430,7 +430,7 @@ defmodule HexpmWeb.API.StagedWorkloadIdentityPublishTest do
 
   test "an organization policy overrides a package opt-out" do
     repository =
-      insert(:repository, organization: build(:organization, require_publish_approval: true))
+      insert(:repository, organization: build(:organization, require_staged_publishing: true))
 
     wi =
       insert(:organization_workload_identity,
@@ -439,22 +439,22 @@ defmodule HexpmWeb.API.StagedWorkloadIdentityPublishTest do
         workflow: "release.yml"
       )
 
-    package = insert(:package, repository_id: repository.id, require_publish_approval: false)
+    package = insert(:package, repository_id: repository.id, require_staged_publishing: false)
     audit = %{user: wi, auth_credential: nil}
     assert StagedReleases.required?(repository, package, audit)
 
     repository = %{
       repository
-      | organization: %{repository.organization | require_publish_approval: false}
+      | organization: %{repository.organization | require_staged_publishing: false}
     }
 
     refute StagedReleases.required?(repository, package, audit)
   end
 
   test "the direct transaction rechecks the package policy after authentication", ctx do
-    package = Repo.update!(Ecto.Changeset.change(ctx.package, require_publish_approval: false))
+    package = Repo.update!(Ecto.Changeset.change(ctx.package, require_staged_publishing: false))
     audit = %{user: ctx.wi, auth_credential: nil}
-    Repo.update!(Ecto.Changeset.change(package, require_publish_approval: true))
+    Repo.update!(Ecto.Changeset.change(package, require_staged_publishing: true))
 
     assert {:error, :staging_required} =
              StagedReleases.check_direct_policy(
@@ -476,7 +476,7 @@ defmodule HexpmWeb.API.StagedWorkloadIdentityPublishTest do
       )
 
     assert StagedReleases.required?(repository, nil, %{user: wi, auth_credential: nil})
-    refute repository.organization.require_publish_approval
+    refute repository.organization.require_staged_publishing
   end
 
   test "the package policy stages organization-key exchanges and their docs", ctx do

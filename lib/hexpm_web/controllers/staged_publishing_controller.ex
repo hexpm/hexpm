@@ -1,4 +1,4 @@
-defmodule HexpmWeb.PublishApprovalController do
+defmodule HexpmWeb.StagedPublishingController do
   use HexpmWeb, :controller
 
   alias Hexpm.Repository.StagedReleases
@@ -21,12 +21,12 @@ defmodule HexpmWeb.PublishApprovalController do
          ) do
       {:ok, _} ->
         conn
-        |> put_flash(:info, "Publish approval policy updated.")
-        |> redirect(to: ~p"/dashboard/orgs/#{conn.assigns.organization}/publish-approval")
+        |> put_flash(:info, "Staged publishing policy updated.")
+        |> redirect(to: ~p"/dashboard/orgs/#{conn.assigns.organization}/staged-publishing")
 
       {:error, :tfa_required} ->
         render_error(conn, 403,
-          message: "Enable two-factor authentication before configuring publish approval."
+          message: "Enable two-factor authentication before configuring staged publishing."
         )
 
       {:error, :forbidden} ->
@@ -48,15 +48,15 @@ defmodule HexpmWeb.PublishApprovalController do
   end
 
   defp require_settings_sudo(conn, _opts) do
-    HexpmWeb.Plugs.Sudo.call(conn, force: conn.assigns.organization.require_publish_approval)
+    HexpmWeb.Plugs.Sudo.call(conn, force: conn.assigns.organization.require_staged_publishing)
   end
 
   defp render_show(conn) do
     render(conn, :show,
-      title: "Publish approval",
+      title: "Staged publishing",
       container: "container page dashboard",
       sidebar: :organization,
-      tab: :publish_approval
+      tab: :staged_publishing
     )
   end
 end

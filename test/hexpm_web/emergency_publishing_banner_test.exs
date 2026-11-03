@@ -2,7 +2,7 @@ defmodule HexpmWeb.EmergencyPublishingBannerTest do
   use HexpmWeb.ConnCase
 
   test "normal package approval doesn't display the emergency banner" do
-    app_env(:hexpm, :force_publish_approval, false)
+    app_env(:hexpm, :force_staged_publishing, false)
     put_feature_flag(:workload_identity, mode: :enabled)
 
     for path <- ["/", "/login", "/docs/publish"] do
@@ -12,7 +12,7 @@ defmodule HexpmWeb.EmergencyPublishingBannerTest do
   end
 
   test "emergency mode explains the active requirements above the website" do
-    app_env(:hexpm, :force_publish_approval, true)
+    app_env(:hexpm, :force_staged_publishing, true)
     put_feature_flag(:workload_identity, mode: :off)
 
     for path <- ["/", "/login", "/docs/publish"] do
@@ -33,7 +33,7 @@ defmodule HexpmWeb.EmergencyPublishingBannerTest do
   end
 
   test "the banner's guide is available with Workload Identity disabled" do
-    app_env(:hexpm, :force_publish_approval, true)
+    app_env(:hexpm, :force_staged_publishing, true)
     put_feature_flag(:workload_identity, mode: :off)
     document = build_conn() |> get("/login") |> html_response(200) |> LazyHTML.from_document()
 
@@ -64,7 +64,7 @@ defmodule HexpmWeb.EmergencyPublishingBannerTest do
   end
 
   test "emergency and read-only notices appear together before navigation" do
-    app_env(:hexpm, :force_publish_approval, true)
+    app_env(:hexpm, :force_staged_publishing, true)
     app_env(:hexpm, :read_only_mode, true)
     document = build_conn() |> get("/login") |> html_response(200) |> LazyHTML.from_document()
 

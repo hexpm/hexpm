@@ -1,4 +1,4 @@
-defmodule HexpmWeb.PackagePublishApprovalControllerTest do
+defmodule HexpmWeb.PackageStagedPublishingControllerTest do
   use HexpmWeb.ConnCase
 
   alias Hexpm.Accounts.AuditLog
@@ -12,7 +12,7 @@ defmodule HexpmWeb.PackagePublishApprovalControllerTest do
 
     package =
       insert(:package,
-        require_publish_approval: false,
+        require_staged_publishing: false,
         package_owners: [
           build(:package_owner, user: user),
           build(:package_owner, user: maintainer, level: "maintainer")
@@ -24,7 +24,7 @@ defmodule HexpmWeb.PackagePublishApprovalControllerTest do
       user: user,
       maintainer: maintainer,
       package: package,
-      path: "/packages/#{package.name}/publish-approval"
+      path: "/packages/#{package.name}/staged-publishing"
     }
   end
 
@@ -32,21 +32,21 @@ defmodule HexpmWeb.PackagePublishApprovalControllerTest do
     assert build_conn() |> test_login(ctx.user) |> post(ctx.path <> "/enable") |> redirected_to() ==
              ctx.path
 
-    assert Repo.get!(Package, ctx.package.id).require_publish_approval
-    log = Repo.get_by!(AuditLog, action: "package.publish_approval.configure")
+    assert Repo.get!(Package, ctx.package.id).require_staged_publishing
+    log = Repo.get_by!(AuditLog, action: "package.staged_publishing.configure")
     assert log.params["package"]["id"] == ctx.package.id
-    assert log.params["require_publish_approval"]
+    assert log.params["require_staged_publishing"]
     assert Enum.any?(Hexpm.Accounts.AuditLogs.all_by(ctx.package), &(&1.id == log.id))
 
     page = build_conn() |> test_login(ctx.user) |> get(ctx.path) |> html_response(200)
-    assert page =~ "Publish approval is enabled for this package"
+    assert page =~ "Staged publishing is enabled for this package"
     assert page =~ "id=\"package-settings-nav\""
     assert page =~ "API key or workload identity"
 
     audit_page =
       build_conn() |> get("/packages/#{ctx.package.name}/audit-logs") |> html_response(200)
 
-    assert audit_page =~ "Require publish approval"
+    assert audit_page =~ "Require staged publishing"
   end
 
   test "settings forms and changes require fresh sudo", ctx do
@@ -58,11 +58,11 @@ defmodule HexpmWeb.PackagePublishApprovalControllerTest do
 
     assert conn |> get(ctx.path) |> redirected_to() == "/sudo"
     assert conn |> post(ctx.path <> "/enable") |> redirected_to() == "/sudo"
-    refute Repo.get!(Package, ctx.package.id).require_publish_approval
+    refute Repo.get!(Package, ctx.package.id).require_staged_publishing
   end
 
   test "enabled settings confirm disabling in a modal on the same page", ctx do
-    Repo.update!(Ecto.Changeset.change(ctx.package, require_publish_approval: true))
+    Repo.update!(Ecto.Changeset.change(ctx.package, require_staged_publishing: true))
 
     settings =
       build_conn()
@@ -71,7 +71,7 @@ defmodule HexpmWeb.PackagePublishApprovalControllerTest do
       |> html_response(200)
       |> LazyHTML.from_document()
 
-    assert settings |> LazyHTML.query("section h2") |> LazyHTML.text() =~ "Publish approval"
+    assert settings |> LazyHTML.query("section h2") |> LazyHTML.text() =~ "Staged publishing"
 
     assert settings
            |> LazyHTML.query(~s(#package-settings-nav a[href="#{ctx.path}"] span:last-child))
@@ -80,16 +80,16 @@ defmodule HexpmWeb.PackagePublishApprovalControllerTest do
 
     assert settings
            |> LazyHTML.query(~s(section button[type="button"][phx-click]))
-           |> LazyHTML.text() =~ "Disable publish approval"
+           |> LazyHTML.text() =~ "Disable staged publishing"
 
     assert settings |> LazyHTML.query(~s(a[href="#{ctx.path}/disable"])) |> Enum.empty?()
 
-    modal = LazyHTML.query(settings, "#disable-publish-approval-modal")
+    modal = LazyHTML.query(settings, "#disable-staged-publishing-modal")
     assert modal |> LazyHTML.attribute("class") |> hd() =~ "hidden"
     assert modal |> LazyHTML.query(~s([role="dialog"])) |> Enum.count() == 1
 
     assert LazyHTML.text(modal) =~
-             "Publish approval is currently enabled for #{ctx.package.name}."
+             "Staged publishing is currently enabled for #{ctx.package.name}."
 
     assert modal |> LazyHTML.query("strong") |> LazyHTML.text() == ctx.package.name
 
@@ -111,14 +111,14 @@ defmodule HexpmWeb.PackagePublishApprovalControllerTest do
       |> html_response(200)
       |> LazyHTML.from_document()
 
-    assert LazyHTML.text(page) =~ "Publish approval is disabled for this package."
-    assert page |> LazyHTML.query("#disable-publish-approval-modal") |> Enum.empty?()
+    assert LazyHTML.text(page) =~ "Staged publishing is disabled for this package."
+    assert page |> LazyHTML.query("#disable-staged-publishing-modal") |> Enum.empty?()
     assert page |> LazyHTML.query(~s(form[action="#{ctx.path}/disable"])) |> Enum.empty?()
     assert page |> LazyHTML.query(~s(form[action="#{ctx.path}/enable"])) |> Enum.count() == 1
   end
 
   test "a token from enabling can't authorize disabling", ctx do
-    Repo.update!(Ecto.Changeset.change(ctx.package, require_publish_approval: true))
+    Repo.update!(Ecto.Changeset.change(ctx.package, require_staged_publishing: true))
 
     conn =
       build_conn()
@@ -132,7 +132,7 @@ defmodule HexpmWeb.PackagePublishApprovalControllerTest do
     assert conn |> post(ctx.path <> "/disable", %{_sudo_token: token}) |> redirected_to() ==
              "/sudo"
 
-    assert Repo.get!(Package, ctx.package.id).require_publish_approval
+    assert Repo.get!(Package, ctx.package.id).require_staged_publishing
   end
 
   test "disabling is audited and notifies full owners and owning organization admins", ctx do
@@ -142,20 +142,20 @@ defmodule HexpmWeb.PackagePublishApprovalControllerTest do
     admin = insert(:user)
     insert(:organization_user, organization: organization, user: admin, role: "admin")
     insert(:package_owner, package: ctx.package, user: organization.user)
-    Repo.update!(Ecto.Changeset.change(ctx.package, require_publish_approval: true))
+    Repo.update!(Ecto.Changeset.change(ctx.package, require_staged_publishing: true))
 
     assert build_conn() |> test_login(ctx.user) |> post(ctx.path <> "/disable") |> redirected_to() ==
              ctx.path
 
-    refute Repo.get!(Package, ctx.package.id).require_publish_approval
+    refute Repo.get!(Package, ctx.package.id).require_staged_publishing
 
-    refute Repo.get_by!(AuditLog, action: "package.publish_approval.configure").params[
-             "require_publish_approval"
+    refute Repo.get_by!(AuditLog, action: "package.staged_publishing.configure").params[
+             "require_staged_publishing"
            ]
 
     email =
       Repo.one!(
-        from(e in Hexpm.Emails.OutboxEntry, where: e.category == "publish_approval.disabled")
+        from(e in Hexpm.Emails.OutboxEntry, where: e.category == "staged_publishing.disabled")
       )
 
     assert Enum.sort(email.recipients) ==
@@ -171,7 +171,7 @@ defmodule HexpmWeb.PackagePublishApprovalControllerTest do
     audit_page =
       build_conn() |> get("/packages/#{ctx.package.name}/audit-logs") |> html_response(200)
 
-    assert audit_page =~ "Disable publish approval"
+    assert audit_page =~ "Disable staged publishing"
   end
 
   test "maintainers can view the setting but can't change it", ctx do
@@ -180,7 +180,7 @@ defmodule HexpmWeb.PackagePublishApprovalControllerTest do
     refute page =~ ctx.path <> "/enable"
     conn |> post(ctx.path <> "/enable") |> response(403)
     conn |> post(ctx.path <> "/disable") |> response(403)
-    refute Repo.get!(Package, ctx.package.id).require_publish_approval
+    refute Repo.get!(Package, ctx.package.id).require_staged_publishing
   end
 
   test "non-owners can't view or change the setting", ctx do
@@ -193,7 +193,7 @@ defmodule HexpmWeb.PackagePublishApprovalControllerTest do
     user = insert(:user)
     insert(:package_owner, package: ctx.package, user: user)
     build_conn() |> test_login(user) |> post(ctx.path <> "/enable") |> response(403)
-    refute Repo.get!(Package, ctx.package.id).require_publish_approval
+    refute Repo.get!(Package, ctx.package.id).require_staged_publishing
   end
 
   test "the setting is unavailable outside the staging rollout", ctx do
@@ -222,13 +222,13 @@ defmodule HexpmWeb.PackagePublishApprovalControllerTest do
                audit: test_audit_data(ctx.user)
              )
 
-    refute Repo.get!(Package, ctx.package.id).require_publish_approval
+    refute Repo.get!(Package, ctx.package.id).require_staged_publishing
   end
 
   test "private repository admins manage package approval and organization requirements still apply",
        ctx do
     repository =
-      insert(:repository, organization: build(:organization, require_publish_approval: true))
+      insert(:repository, organization: build(:organization, require_staged_publishing: true))
 
     insert(:organization_user,
       organization: repository.organization,
@@ -242,8 +242,8 @@ defmodule HexpmWeb.PackagePublishApprovalControllerTest do
       role: "write"
     )
 
-    package = insert(:package, repository_id: repository.id, require_publish_approval: false)
-    path = "/packages/#{repository.name}/#{package.name}/publish-approval"
+    package = insert(:package, repository_id: repository.id, require_staged_publishing: false)
+    path = "/packages/#{repository.name}/#{package.name}/staged-publishing"
 
     page = build_conn() |> test_login(ctx.user) |> get(path) |> html_response(200)
 
@@ -256,7 +256,7 @@ defmodule HexpmWeb.PackagePublishApprovalControllerTest do
     assert build_conn() |> test_login(ctx.user) |> post(path <> "/disable") |> redirected_to() ==
              path
 
-    refute Repo.get!(Package, package.id).require_publish_approval
+    refute Repo.get!(Package, package.id).require_staged_publishing
     key = insert(:key, user: ctx.user)
 
     assert StagedReleases.required?(repository, Repo.get!(Package, package.id), %{

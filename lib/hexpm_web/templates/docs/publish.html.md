@@ -179,9 +179,9 @@ f48ac236bca15c3271e077c15c5320c4
 
 Pass `--permission publish` instead to publish every package in the organization. See [keys](/docs/keys) for the other permissions and which roles can grant them.
 
-Only a person signed in to Hex.pm can create a key, and an account with 2FA needs its 2FA code to do it. The keys pages ask for the code, or for your password if your account doesn't have 2FA, unless you verified in the last hour. `mix hex.organization key` creates keys with the OAuth token from `mix hex.user auth`, which needs the 2FA code for every change. An API key can't create other keys. [Publish approval](#publish-approval) doesn't add a step to creating a key; it applies when the key publishes.
+Only a person signed in to Hex.pm can create a key, and an account with 2FA needs its 2FA code to do it. The keys pages ask for the code, or for your password if your account doesn't have 2FA, unless you verified in the last hour. `mix hex.organization key` creates keys with the OAuth token from `mix hex.user auth`, which needs the 2FA code for every change. An API key can't create other keys. [Staged publishing](#staged-publishing) doesn't add a step to creating a key; it applies when the key publishes.
 
-Publish approval doesn't stop a key with `api:write`, `owners`, `package:name` or `members` from adding an owner or organization member. The new owner or member can then publish with OAuth and their own 2FA code, and those releases aren't staged. Publish approval only holds releases from keys that can't change owners or members.
+Staged publishing doesn't stop a key with `api:write`, `owners`, `package:name` or `members` from adding an owner or organization member. The new owner or member can then publish with OAuth and their own 2FA code, and those releases aren't staged. Staged publishing only holds releases from keys that can't change owners or members.
 
 We recommend publishing from CI with [Workload Identity](/docs/workload-identity) instead of an API key. If you have to use a key, give it only `publish:name` (`publish:acme/name` for an organization's package) and `api:read`, as in the example above.
 
@@ -193,11 +193,11 @@ $ HEX_API_KEY=f48ac236bca15c3271e077c15c5320c4 mix hex.publish --yes
 
 *Note that care should be used when automating publishing because Hex can output important warnings or even recommendations on how to improve your package that will easily be missed when the process is automated. Also note that Hex is still pre 1.0 so breaking changes can happen between any releases and CI will usually install the latest version.*
 
-### Publish approval
+### Staged publishing
 
-Publish approval holds releases and documentation published with an API key or a workload identity until a person approves them. It's a package setting, and an organization can also require it for every package in its private repository, whatever the package setting. Publishing with your own account, which uses an OAuth token and your 2FA code, isn't held.
+Staged publishing holds releases and documentation published with an API key or a workload identity until a person approves them. It's a package setting, and an organization can also require it for every package in its private repository, whatever the package setting. Publishing with your own account, which uses an OAuth token and your 2FA code, isn't held.
 
-New packages require approval by default, and existing packages start with it off. Full package owners and owning organization admins change it under Settings > Publish approval, which requires enrolled 2FA and fresh verification. Turning it off emails the full owners and owning organization admins.
+New packages require approval by default, and existing packages start with it off. Full package owners and owning organization admins change it under Settings > Staged publishing, which requires enrolled 2FA and fresh verification. Turning it off emails the full owners and owning organization admins.
 
 While approval is required, Hex keeps each release and its documentation private as a staged release. A maintainer with 2FA opens it under Staged releases in the dashboard, checks the package and documentation checksums, and approves or rejects it. Staged releases expire after seven days. `mix hex.publish --wait` opens the approval page and waits for the result.
 
@@ -207,7 +207,7 @@ During an incident, [emergency publishing mode](#emergency-publishing-mode) can 
 
 During an incident, registry operators can enable emergency publishing mode. All API keys, organization-key OAuth exchanges and workload identities then require human approval with fresh 2FA for releases and documentation of public packages, regardless of package settings or rollout lists. They can't revert public releases or documentation. Private repositories keep their package and organization settings. Human OAuth publishing with an OTP remains direct. A banner at the top of the website explains these requirements while the mode is active.
 
-Staged releases are reviewed and approved as described under [publish approval](#publish-approval).
+Staged releases are reviewed and approved as described under [staged publishing](#staged-publishing).
 
 Adding owners and organization members works as it does outside emergency mode.
 

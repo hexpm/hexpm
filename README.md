@@ -185,9 +185,9 @@ mix test --only integration
 mix test test/hexpm_web/integration/sca_test.exs --include integration
 ```
 
-## Publish approval
+## Staged publishing
 
-Publish approval follows the Workload Identity rollout flag:
+Staged publishing follows the Workload Identity rollout flag:
 `HEXPM_WORKLOAD_IDENTITY_MODE`, with `HEXPM_WORKLOAD_IDENTITY_BETA_USERS` and
 `HEXPM_WORKLOAD_IDENTITY_BETA_ORGANIZATIONS` in `beta`. Public packages follow their
 owners in beta; private packages follow their organization.
@@ -199,28 +199,28 @@ approved for seven days; approval, rejection, restaging and expiry enqueue artif
 cleanup.
 S3 lifecycle rules expire remaining current objects after 14 days and noncurrent
 versions after one day. Lifecycle deletion is asynchronous. Deploy the
-hexpm-ops storage rules and backup exclusion before publish approval reaches an
+hexpm-ops storage rules and backup exclusion before staged publishing reaches an
 environment where the Workload Identity flag is on.
 Development and test use the existing local and memory repo stores.
 
 Each package has an optional approval setting covering all API keys and workload
 identities that publish it, on by default for new packages. Existing packages keep
 direct publishing until approval is enabled. Full owners configure it under
-Settings > Publish approval; changes require two-factor authentication and fresh
+Settings > Staged publishing; changes require two-factor authentication and fresh
 sudo, and disabling sends a notification to full owners and owning organization
 administrators.
 These settings take effect where the Workload Identity flag is on. Both public and
 private publishing follow the package's setting.
 An organization administrator can require approval for API keys and workload
-identities in its private repository under Publish approval in the dashboard.
+identities in its private repository under Staged publishing in the dashboard.
 User OAuth publishes with an OTP remain direct.
 
-Publish approval doesn't change how API keys and workload identities are created
+Staged publishing doesn't change how API keys and workload identities are created
 or managed. A key is only created by a signed-in person: on the dashboard behind
 sudo, which asks for the 2FA code when the account has 2FA, or through the API with
 an OAuth token and a valid `X-Hex-OTP`. API keys can't create keys.
 
-Publish approval doesn't change who can add owners or organization members. An API
+Staged publishing doesn't change who can add owners or organization members. An API
 key with `api:write`, `owners`, `package:name` or `members` can add an owner or
 member, who can then publish from their own account with OAuth and an OTP without
 being staged. The publishing guide and the keys docs recommend Workload Identity
@@ -233,7 +233,7 @@ after seven days, and a periodic worker removes them and queues artifact deletio
 
 ## Emergency publishing mode
 
-Registry operators can set `HEXPM_FORCE_PUBLISH_APPROVAL=true` to require human
+Registry operators can set `HEXPM_FORCE_STAGED_PUBLISHING=true` to require human
 approval with fresh 2FA for every API-key, organization-key OAuth exchange, and
 workload-identity publish of a public package, including documentation. This
 applies regardless of package settings or Workload Identity rollout lists. None of

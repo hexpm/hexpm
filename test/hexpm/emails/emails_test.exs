@@ -993,7 +993,7 @@ defmodule Hexpm.EmailsTest do
       package =
         build(:package, name: "decimal", repository: %Hexpm.Repository.Repository{name: "hexpm"})
 
-      email = Emails.publish_approval_disabled([build(:user)], package)
+      email = Emails.staged_publishing_disabled([build(:user)], package)
 
       assert email.html_body =~ "disabled for package <strong>decimal</strong>."
       assert email.text_body =~ "disabled for package decimal."

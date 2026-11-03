@@ -273,14 +273,14 @@ defmodule HexpmWeb.Router do
       get "/docs.tar.gz", StagedReleaseController, :docs
     end
 
-    get "/dashboard/orgs/:dashboard_org/publish-approval", PublishApprovalController, :show
+    get "/dashboard/orgs/:dashboard_org/staged-publishing", StagedPublishingController, :show
 
-    post "/dashboard/orgs/:dashboard_org/publish-approval/enable",
-         PublishApprovalController,
+    post "/dashboard/orgs/:dashboard_org/staged-publishing/enable",
+         StagedPublishingController,
          :enable
 
-    post "/dashboard/orgs/:dashboard_org/publish-approval/disable",
-         PublishApprovalController,
+    post "/dashboard/orgs/:dashboard_org/staged-publishing/disable",
+         StagedPublishingController,
          :disable
 
     get "/dashboard", DashboardController, :index
@@ -350,10 +350,10 @@ defmodule HexpmWeb.Router do
     post "/packages/:name/owners", PackageOwnerController, :create
     put "/packages/:name/owners/:username", PackageOwnerController, :update
     delete "/packages/:name/owners/:username", PackageOwnerController, :delete
-    get "/packages/:name/publish-approval", PackagePublishApprovalController, :show
-    post "/packages/:name/publish-approval/enable", PackagePublishApprovalController, :enable
+    get "/packages/:name/staged-publishing", PackageStagedPublishingController, :show
+    post "/packages/:name/staged-publishing/enable", PackageStagedPublishingController, :enable
 
-    post "/packages/:name/publish-approval/disable", PackagePublishApprovalController, :disable
+    post "/packages/:name/staged-publishing/disable", PackageStagedPublishingController, :disable
     get "/packages/:name/workload-identities", PackageWorkloadIdentityController, :index
     post "/packages/:name/workload-identities", PackageWorkloadIdentityController, :create
 
@@ -390,14 +390,14 @@ defmodule HexpmWeb.Router do
     post "/packages/:repository/:name/owners", PackageOwnerController, :create
     put "/packages/:repository/:name/owners/:username", PackageOwnerController, :update
     delete "/packages/:repository/:name/owners/:username", PackageOwnerController, :delete
-    get "/packages/:repository/:name/publish-approval", PackagePublishApprovalController, :show
+    get "/packages/:repository/:name/staged-publishing", PackageStagedPublishingController, :show
 
-    post "/packages/:repository/:name/publish-approval/enable",
-         PackagePublishApprovalController,
+    post "/packages/:repository/:name/staged-publishing/enable",
+         PackageStagedPublishingController,
          :enable
 
-    post "/packages/:repository/:name/publish-approval/disable",
-         PackagePublishApprovalController,
+    post "/packages/:repository/:name/staged-publishing/disable",
+         PackageStagedPublishingController,
          :disable
 
     get "/packages/:repository/:name/workload-identities",

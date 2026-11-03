@@ -195,7 +195,7 @@ defmodule HexpmWeb.DocsControllerTest do
     document = LazyHTML.from_document(html)
 
     assert [_] =
-             LazyHTML.query(document, ~s(a[href="/docs/publish#publish-approval"]))
+             LazyHTML.query(document, ~s(a[href="/docs/publish#staged-publishing"]))
              |> Enum.to_list()
 
     assert [link] =
@@ -248,23 +248,23 @@ defmodule HexpmWeb.DocsControllerTest do
     assert html =~ "Workload Identity"
   end
 
-  test "publish docs explain publish approval" do
+  test "publish docs explain staged publishing" do
     document =
       build_conn()
       |> get("/docs/publish")
       |> html_response(200)
       |> LazyHTML.from_document()
 
-    assert [_] = document |> LazyHTML.query("#publish-approval") |> Enum.to_list()
+    assert [_] = document |> LazyHTML.query("#staged-publishing") |> Enum.to_list()
 
     assert [_, _] =
-             document |> LazyHTML.query(~s(p a[href="#publish-approval"])) |> Enum.to_list()
+             document |> LazyHTML.query(~s(p a[href="#staged-publishing"])) |> Enum.to_list()
 
     text = LazyHTML.text(document)
     assert text =~ "published with an API key or a workload identity until a person approves them"
     assert text =~ "every package in its private repository, whatever the package setting"
     assert text =~ "New packages require approval by default"
-    assert text =~ "Settings > Publish approval"
+    assert text =~ "Settings > Staged publishing"
     assert text =~ "Full package owners and owning organization admins"
     assert text =~ "Staged releases expire after seven days"
   end

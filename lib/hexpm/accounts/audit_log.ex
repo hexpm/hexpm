@@ -269,14 +269,17 @@ defmodule Hexpm.Accounts.AuditLog do
     }
   end
 
-  defp extract_params("organization.publish_approval.configure", organization),
+  defp extract_params("organization.staged_publishing.configure", organization),
     do: %{
       organization: serialize(organization),
-      require_publish_approval: organization.require_publish_approval
+      require_staged_publishing: organization.require_staged_publishing
     }
 
-  defp extract_params("package.publish_approval.configure", package),
-    do: %{package: serialize(package), require_publish_approval: package.require_publish_approval}
+  defp extract_params("package.staged_publishing.configure", package),
+    do: %{
+      package: serialize(package),
+      require_staged_publishing: package.require_staged_publishing
+    }
 
   defp extract_params("release.publish", {package, release}),
     do: %{package: serialize(package), release: serialize(release)}
