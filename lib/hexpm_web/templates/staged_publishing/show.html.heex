@@ -8,17 +8,17 @@
         <section class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-4 sm:p-6 text-grey-700 dark:text-grey-200">
           <div class="flex flex-wrap items-center justify-between gap-3">
             <h2 class="text-xl font-semibold text-grey-900 dark:text-white">
-              Publish approval
+              Staged publishing
             </h2>
             <.badge
-              variant={if @organization.require_publish_approval, do: "green", else: "default"}
+              variant={if @organization.require_staged_publishing, do: "green", else: "default"}
               class={
-                if @organization.require_publish_approval,
+                if @organization.require_staged_publishing,
                   do: "dark:bg-green-950 dark:text-green-200",
                   else: "dark:bg-grey-700 dark:text-grey-200"
               }
             >
-              {if @organization.require_publish_approval, do: "Enabled", else: "Disabled"}
+              {if @organization.require_staged_publishing, do: "Enabled", else: "Disabled"}
             </.badge>
           </div>
           <p class="mt-4">
@@ -30,39 +30,39 @@
             Publishing with OAuth and an OTP stays direct.
           </p>
           <div class="mt-6 pt-5 border-t border-grey-200 dark:border-grey-700">
-            <%= if @organization.require_publish_approval do %>
+            <%= if @organization.require_staged_publishing do %>
               <p class="text-sm text-grey-600 dark:text-grey-300 mb-4">
-                Publish approval is enabled.
+                Staged publishing is enabled.
               </p>
               <.button
                 type="button"
-                phx-click={show_modal("disable-publish-approval-modal")}
+                phx-click={show_modal("disable-staged-publishing-modal")}
                 variant="danger"
               >
-                Disable publish approval
+                Disable staged publishing
               </.button>
             <% else %>
               <p class="text-sm text-grey-600 dark:text-grey-300 mb-4">
-                Publish approval is disabled.
+                Staged publishing is disabled.
               </p>
               <.sudo_form
                 current_user={@current_user}
-                action={~p"/dashboard/orgs/#{@organization}/publish-approval/enable"}
+                action={~p"/dashboard/orgs/#{@organization}/staged-publishing/enable"}
               >
-                <.button type="submit">Enable publish approval</.button>
+                <.button type="submit">Enable staged publishing</.button>
               </.sudo_form>
             <% end %>
           </div>
         </section>
 
         <.modal
-          :if={@organization.require_publish_approval}
-          id="disable-publish-approval-modal"
+          :if={@organization.require_staged_publishing}
+          id="disable-staged-publishing-modal"
           title="Disable organization approval"
           max_width="md"
         >
           <p class="font-medium text-grey-900 dark:text-white">
-            Publish approval is currently enabled for {@organization.name}.
+            Staged publishing is currently enabled for {@organization.name}.
           </p>
           <p class="mt-3 text-grey-700 dark:text-grey-300">
             Disabling it allows direct publishing to the private repository unless a package policy requires approval.
@@ -74,13 +74,13 @@
             <.button
               type="button"
               variant="secondary"
-              phx-click={hide_modal("disable-publish-approval-modal")}
+              phx-click={hide_modal("disable-staged-publishing-modal")}
             >
               Cancel
             </.button>
             <.sudo_form
               current_user={@current_user}
-              action={~p"/dashboard/orgs/#{@organization}/publish-approval/disable"}
+              action={~p"/dashboard/orgs/#{@organization}/staged-publishing/disable"}
               class="m-0"
             >
               <.button type="submit" variant="danger">Disable approval</.button>

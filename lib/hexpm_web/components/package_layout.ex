@@ -25,7 +25,7 @@ defmodule HexpmWeb.Components.PackageLayout do
   alias Hexpm.WorkloadIdentities
   alias HexpmWeb.ViewHelpers
 
-  @settings_tabs [:owners, :workload_identities, :publish_approval]
+  @settings_tabs [:owners, :workload_identities, :staged_publishing]
 
   # All assigns below (except per-page ones) come from
   # `HexpmWeb.PackageLayoutAssigns.for_package/3`. Use that helper in every
@@ -701,11 +701,11 @@ defmodule HexpmWeb.Components.PackageLayout do
     if Hexpm.Repository.StagedReleases.enabled?(assigns.package) do
       [
         %{
-          active: assigns.active_tab == :publish_approval,
+          active: assigns.active_tab == :staged_publishing,
           icon: "shield-check",
-          label: "Publish approval",
+          label: "Staged publishing",
           new?: true,
-          path: ViewHelpers.path_for_publish_approval(assigns.package)
+          path: ViewHelpers.path_for_staged_publishing(assigns.package)
         }
       ]
     else

@@ -88,7 +88,7 @@ defmodule HexpmWeb.PackageOwnerControllerTest do
 
       assert links(document, "#package-settings-nav a") == [
                {"Owners", "/packages/#{package.name}/owners", "page"},
-               {"Publish approval NEW", "/packages/#{package.name}/publish-approval", nil},
+               {"Staged publishing NEW", "/packages/#{package.name}/staged-publishing", nil},
                {"Workload identities", "/packages/#{package.name}/workload-identities", nil}
              ]
 
@@ -97,7 +97,7 @@ defmodule HexpmWeb.PackageOwnerControllerTest do
       assert links(document, ".package-tabs-mobile-menu a") |> Enum.take(-4) == [
                {"Settings", "/packages/#{package.name}/owners", nil},
                {"Owners", "/packages/#{package.name}/owners", nil},
-               {"Publish approval", "/packages/#{package.name}/publish-approval", nil},
+               {"Staged publishing", "/packages/#{package.name}/staged-publishing", nil},
                {"Workload identities", "/packages/#{package.name}/workload-identities", nil}
              ]
 

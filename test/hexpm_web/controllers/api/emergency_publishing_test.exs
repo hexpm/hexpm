@@ -7,7 +7,7 @@ defmodule HexpmWeb.API.EmergencyPublishingTest do
   setup :verify_on_exit!
 
   setup do
-    app_env(:hexpm, :force_publish_approval, true)
+    app_env(:hexpm, :force_staged_publishing, true)
     put_feature_flag(:workload_identity, mode: :off)
     WorkloadIdentityHelpers.stub_oidc_discovery()
     user = insert(:user_with_tfa)
@@ -74,7 +74,7 @@ defmodule HexpmWeb.API.EmergencyPublishingTest do
 
   test "the override ignores a package's opt-out and beta lists", ctx do
     put_feature_flag(:workload_identity, mode: :enabled)
-    Repo.update!(Ecto.Changeset.change(ctx.package, require_publish_approval: false))
+    Repo.update!(Ecto.Changeset.change(ctx.package, require_staged_publishing: false))
 
     assert publish(ctx, mint(ctx.package)) |> json_response(201) |> Map.fetch!("status") ==
              "staged"
@@ -220,14 +220,14 @@ defmodule HexpmWeb.API.EmergencyPublishingTest do
 
   test "public package settings explain the active override and private settings don't", ctx do
     put_feature_flag(:workload_identity, mode: :enabled)
-    package = Repo.update!(Ecto.Changeset.change(ctx.package, require_publish_approval: false))
-    path = "/packages/#{ctx.package.name}/publish-approval"
+    package = Repo.update!(Ecto.Changeset.change(ctx.package, require_staged_publishing: false))
+    path = "/packages/#{ctx.package.name}/staged-publishing"
     page = build_conn() |> test_login(ctx.user) |> get(path) |> html_response(200)
     assert page =~ "The registry requires approval"
     assert page =~ "Emergency publishing mode is active."
 
     package
-    |> Ecto.Changeset.change(require_publish_approval: true)
+    |> Ecto.Changeset.change(require_staged_publishing: true)
     |> Repo.update!()
 
     confirmation =
@@ -239,12 +239,12 @@ defmodule HexpmWeb.API.EmergencyPublishingTest do
     modal =
       confirmation
       |> LazyHTML.from_document()
-      |> LazyHTML.query("#disable-publish-approval-modal")
+      |> LazyHTML.query("#disable-staged-publishing-modal")
 
-    assert LazyHTML.text(modal) =~ "Disable publish approval"
+    assert LazyHTML.text(modal) =~ "Disable staged publishing"
 
     assert LazyHTML.text(modal) =~
-             "Publish approval is currently enabled for #{ctx.package.name}."
+             "Staged publishing is currently enabled for #{ctx.package.name}."
 
     assert LazyHTML.text(modal) =~ "The registry requires approval"
 
@@ -261,16 +261,16 @@ defmodule HexpmWeb.API.EmergencyPublishingTest do
     page =
       build_conn()
       |> test_login(ctx.user)
-      |> get("/packages/#{repository.name}/#{private_package.name}/publish-approval")
+      |> get("/packages/#{repository.name}/#{private_package.name}/staged-publishing")
       |> html_response(200)
 
-    assert page =~ "Disable publish approval"
+    assert page =~ "Disable staged publishing"
     refute page =~ "The registry requires approval"
 
     page =
       build_conn()
       |> test_login(ctx.user)
-      |> get("/dashboard/orgs/#{repository.name}/publish-approval")
+      |> get("/dashboard/orgs/#{repository.name}/staged-publishing")
       |> html_response(200)
 
     refute page =~ "The registry"
@@ -279,12 +279,12 @@ defmodule HexpmWeb.API.EmergencyPublishingTest do
   test "approval settings outside the rollout stay hidden while the override is active", ctx do
     build_conn()
     |> test_login(ctx.user)
-    |> get("/packages/#{ctx.package.name}/publish-approval")
+    |> get("/packages/#{ctx.package.name}/staged-publishing")
     |> response(404)
   end
 
   test "public API-key docs replacements stage and automated reverts are refused", ctx do
-    package = Repo.update!(Ecto.Changeset.change(ctx.package, require_publish_approval: false))
+    package = Repo.update!(Ecto.Changeset.change(ctx.package, require_staged_publishing: false))
     release = insert(:release, package: package, version: "1.0.0")
     key = insert(:key, user: ctx.user)
     {:ok, docs} = :hex_tarball.create_docs([{~c"index.html", "Replacement docs"}])
@@ -315,7 +315,7 @@ defmodule HexpmWeb.API.EmergencyPublishingTest do
         role: "write"
       )
 
-      package = insert(:package, repository_id: repository.id, require_publish_approval: false)
+      package = insert(:package, repository_id: repository.id, require_staged_publishing: false)
 
       authorization =
         case unquote(credential) do

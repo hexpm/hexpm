@@ -1,4 +1,4 @@
-defmodule HexpmWeb.PackagePublishApprovalController do
+defmodule HexpmWeb.PackageStagedPublishingController do
   use HexpmWeb, :controller
 
   alias Hexpm.Repository.StagedReleases
@@ -20,12 +20,12 @@ defmodule HexpmWeb.PackagePublishApprovalController do
          ) do
       {:ok, package} ->
         conn
-        |> put_flash(:info, "Publish approval setting updated.")
-        |> redirect(to: ViewHelpers.path_for_publish_approval(package))
+        |> put_flash(:info, "Staged publishing setting updated.")
+        |> redirect(to: ViewHelpers.path_for_staged_publishing(package))
 
       {:error, :tfa_required} ->
         render_error(conn, 403,
-          message: "Enable two-factor authentication before configuring publish approval."
+          message: "Enable two-factor authentication before configuring staged publishing."
         )
 
       {:error, :forbidden} ->
@@ -68,7 +68,7 @@ defmodule HexpmWeb.PackagePublishApprovalController do
     render(
       conn,
       :show,
-      [title: "Publish approval", container: "container"] ++
+      [title: "Staged publishing", container: "container"] ++
         PackageLayoutAssigns.for_package(conn, conn.assigns.package)
     )
   end

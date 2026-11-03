@@ -1,4 +1,4 @@
-defmodule HexpmWeb.PackagePublishApprovalView do
+defmodule HexpmWeb.PackageStagedPublishingView do
   use HexpmWeb, :view
   import HexpmWeb.Components.PackageLayout
   import HexpmWeb.Components.Badge

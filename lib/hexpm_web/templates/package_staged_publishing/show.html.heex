@@ -1,17 +1,17 @@
-<.package_layout {@package_layout} active_tab={:publish_approval}>
+<.package_layout {@package_layout} active_tab={:staged_publishing}>
   <:inner_content>
     <section class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-4 sm:p-6 text-grey-700 dark:text-grey-200">
       <div class="flex flex-wrap items-center justify-between gap-3">
-        <h2 class="text-xl font-semibold text-grey-900 dark:text-white">Publish approval</h2>
+        <h2 class="text-xl font-semibold text-grey-900 dark:text-white">Staged publishing</h2>
         <.badge
-          variant={if @package.require_publish_approval, do: "green", else: "default"}
+          variant={if @package.require_staged_publishing, do: "green", else: "default"}
           class={
-            if @package.require_publish_approval,
+            if @package.require_staged_publishing,
               do: "dark:bg-green-950 dark:text-green-200",
               else: "dark:bg-grey-700 dark:text-grey-200"
           }
         >
-          {if @package.require_publish_approval, do: "Enabled", else: "Disabled"}
+          {if @package.require_staged_publishing, do: "Enabled", else: "Disabled"}
         </.badge>
       </div>
       <p class="mt-4">
@@ -27,48 +27,48 @@
       <p
         :if={
           @package.repository_id != 1 &&
-            @package.repository.organization.require_publish_approval
+            @package.repository.organization.require_staged_publishing
         }
         class="mt-5 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 p-4 text-sm text-blue-900 dark:text-blue-100"
       >
         Your organization requires approval for publishes from API keys and workload identities, regardless of this setting.
       </p>
       <div class="mt-6 pt-5 border-t border-grey-200 dark:border-grey-700">
-        <%= if @package.require_publish_approval do %>
+        <%= if @package.require_staged_publishing do %>
           <p class="text-sm text-grey-600 dark:text-grey-300 mb-4">
-            Publish approval is enabled for this package.
+            Staged publishing is enabled for this package.
           </p>
           <.button
             :if={@manage?}
             type="button"
-            phx-click={show_modal("disable-publish-approval-modal")}
+            phx-click={show_modal("disable-staged-publishing-modal")}
             variant="danger"
           >
-            Disable publish approval
+            Disable staged publishing
           </.button>
         <% else %>
           <p class="text-sm text-grey-600 dark:text-grey-300 mb-4">
-            Publish approval is disabled for this package.
+            Staged publishing is disabled for this package.
           </p>
           <.sudo_form
             :if={@manage?}
             current_user={@current_user}
-            action={ViewHelpers.path_for_publish_approval(@package) <> "/enable"}
+            action={ViewHelpers.path_for_staged_publishing(@package) <> "/enable"}
           >
-            <.button type="submit">Enable publish approval</.button>
+            <.button type="submit">Enable staged publishing</.button>
           </.sudo_form>
         <% end %>
       </div>
     </section>
 
     <.modal
-      :if={@manage? && @package.require_publish_approval}
-      id="disable-publish-approval-modal"
-      title="Disable publish approval"
+      :if={@manage? && @package.require_staged_publishing}
+      id="disable-staged-publishing-modal"
+      title="Disable staged publishing"
       max_width="md"
     >
       <p class="font-medium text-grey-900 dark:text-white">
-        Publish approval is currently enabled for <strong class="font-semibold">{@package.name}</strong>.
+        Staged publishing is currently enabled for <strong class="font-semibold">{@package.name}</strong>.
       </p>
       <p class="mt-3 text-grey-700 dark:text-grey-300">
         Disabling it lets API keys and workload identities publish without this package's approval requirement.
@@ -81,7 +81,8 @@
       </p>
       <p
         :if={
-          @package.repository_id != 1 && @package.repository.organization.require_publish_approval
+          @package.repository_id != 1 &&
+            @package.repository.organization.require_staged_publishing
         }
         class="mt-5 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 p-4 text-sm text-blue-900 dark:text-blue-100"
       >
@@ -94,13 +95,13 @@
         <.button
           type="button"
           variant="secondary"
-          phx-click={hide_modal("disable-publish-approval-modal")}
+          phx-click={hide_modal("disable-staged-publishing-modal")}
         >
           Cancel
         </.button>
         <.sudo_form
           current_user={@current_user}
-          action={ViewHelpers.path_for_publish_approval(@package) <> "/disable"}
+          action={ViewHelpers.path_for_staged_publishing(@package) <> "/disable"}
           class="m-0"
         >
           <.button type="submit" variant="danger">Disable approval</.button>

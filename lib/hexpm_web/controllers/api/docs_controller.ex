@@ -5,7 +5,7 @@ defmodule HexpmWeb.API.DocsController do
 
   @tarball_max_size 16 * 1024 * 1024
   @tarball_max_uncompressed_size 128 * 1024 * 1024
-  @revert_blocked "This package requires publish approval, so API keys can't revert it. " <>
+  @revert_blocked "This package uses staged publishing, so API keys can't revert it. " <>
                     "Revert with your Hex account and a two-factor code."
 
   plug :maybe_fetch_release

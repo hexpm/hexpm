@@ -18,7 +18,7 @@ defmodule HexpmWeb.API.WorkloadIdentityPublishTest do
         :package,
         package_owners: [build(:package_owner, user: user)],
         meta: build(:package_metadata, description: "original"),
-        require_publish_approval: false
+        require_staged_publishing: false
       )
 
     workload_identity =
@@ -37,7 +37,7 @@ defmodule HexpmWeb.API.WorkloadIdentityPublishTest do
         :package,
         package_owners: [build(:package_owner, user: user)],
         meta: build(:package_metadata, description: "other"),
-        require_publish_approval: false
+        require_staged_publishing: false
       )
 
     %{package: package, other: other, user: user, workload_identity: workload_identity}
@@ -280,7 +280,7 @@ defmodule HexpmWeb.API.WorkloadIdentityPublishTest do
     setup do
       repository = insert(:repository)
       organization = repository.organization
-      package = insert(:package, repository_id: repository.id, require_publish_approval: false)
+      package = insert(:package, repository_id: repository.id, require_staged_publishing: false)
 
       workload_identity =
         insert(:organization_workload_identity,
@@ -538,7 +538,7 @@ defmodule HexpmWeb.API.WorkloadIdentityPublishTest do
         insert(:package,
           package_owners: [build(:package_owner, user: organization.user, level: "full")],
           meta: build(:package_metadata, description: "original"),
-          require_publish_approval: false
+          require_staged_publishing: false
         )
 
       identity =

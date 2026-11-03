@@ -97,7 +97,7 @@ defmodule Hexpm.Repository.StagedReleasesConcurrencyTest do
           assert {:ok, %{demotion: %{role: "read"}}} = Task.await(demoting, 15_000)
 
           if unquote(operation) == :configure do
-            refute Repo.get!(Hexpm.Repository.Package, ctx.package.id).require_publish_approval
+            refute Repo.get!(Hexpm.Repository.Package, ctx.package.id).require_staged_publishing
           else
             refute StagedReleases.get(ctx.staged.id)
 
@@ -187,7 +187,7 @@ defmodule Hexpm.Repository.StagedReleasesConcurrencyTest do
           %{
             ctx
             | package:
-                Repo.update!(Ecto.Changeset.change(ctx.package, require_publish_approval: false))
+                Repo.update!(Ecto.Changeset.change(ctx.package, require_staged_publishing: false))
           }
         end,
         fn ctx ->
@@ -203,7 +203,7 @@ defmodule Hexpm.Repository.StagedReleasesConcurrencyTest do
                   )
                 )
 
-                Repo.update!(Ecto.Changeset.change(ctx.package, require_publish_approval: true))
+                Repo.update!(Ecto.Changeset.change(ctx.package, require_staged_publishing: true))
                 send(parent, :policy_uncommitted)
                 receive do: (:commit -> :ok)
               end)
@@ -264,7 +264,7 @@ defmodule Hexpm.Repository.StagedReleasesConcurrencyTest do
     committed(&build_context/0, fn ctx ->
       # Private repository policy stages a user API key.
       repository =
-        insert(:repository, organization: build(:organization, require_publish_approval: true))
+        insert(:repository, organization: build(:organization, require_staged_publishing: true))
 
       insert(:organization_user,
         organization: repository.organization,
@@ -273,7 +273,7 @@ defmodule Hexpm.Repository.StagedReleasesConcurrencyTest do
       )
 
       package =
-        insert(:package, repository_id: repository.id, require_publish_approval: false)
+        insert(:package, repository_id: repository.id, require_staged_publishing: false)
         |> Repo.preload(repository: :organization)
 
       ctx = %{ctx | repository: repository, package: package} |> with_tarball("first")
@@ -356,7 +356,7 @@ defmodule Hexpm.Repository.StagedReleasesConcurrencyTest do
       )
 
       package =
-        insert(:package, repository_id: repository.id, require_publish_approval: false)
+        insert(:package, repository_id: repository.id, require_staged_publishing: false)
         |> Repo.preload(repository: :organization)
 
       ctx = %{ctx | repository: repository, package: package} |> with_tarball("policy race")
@@ -374,7 +374,7 @@ defmodule Hexpm.Repository.StagedReleasesConcurrencyTest do
         unboxed_task(fn ->
           Repo.transaction(fn ->
             Repo.update!(
-              Ecto.Changeset.change(repository.organization, require_publish_approval: true)
+              Ecto.Changeset.change(repository.organization, require_staged_publishing: true)
             )
 
             send(parent, :policy_enabled)
@@ -417,7 +417,7 @@ defmodule Hexpm.Repository.StagedReleasesConcurrencyTest do
       )
 
       package =
-        insert(:package, repository_id: repository.id, require_publish_approval: false)
+        insert(:package, repository_id: repository.id, require_staged_publishing: false)
         |> Repo.preload(repository: :organization)
 
       ctx = %{ctx | repository: repository, package: package} |> with_tarball("first")
@@ -427,7 +427,7 @@ defmodule Hexpm.Repository.StagedReleasesConcurrencyTest do
         unboxed_task(fn ->
           Repo.transaction(fn ->
             Repo.update!(
-              Ecto.Changeset.change(repository.organization, require_publish_approval: true)
+              Ecto.Changeset.change(repository.organization, require_staged_publishing: true)
             )
 
             send(parent, :enabled)
@@ -448,7 +448,7 @@ defmodule Hexpm.Repository.StagedReleasesConcurrencyTest do
   test "a failed staged API request doesn't log bytes after the policy is disabled" do
     committed(&build_context/0, fn ctx ->
       repository =
-        insert(:repository, organization: build(:organization, require_publish_approval: true))
+        insert(:repository, organization: build(:organization, require_staged_publishing: true))
 
       insert(:organization_user,
         organization: repository.organization,
@@ -457,7 +457,7 @@ defmodule Hexpm.Repository.StagedReleasesConcurrencyTest do
       )
 
       package =
-        insert(:package, repository_id: repository.id, require_publish_approval: false)
+        insert(:package, repository_id: repository.id, require_staged_publishing: false)
         |> Repo.preload(repository: :organization)
 
       ctx = %{ctx | repository: repository, package: package} |> with_tarball("reserved")
@@ -493,7 +493,7 @@ defmodule Hexpm.Repository.StagedReleasesConcurrencyTest do
       assert_receive {:storing, uploader}, 15_000
 
       Repo.update!(
-        Ecto.Changeset.change(repository.organization, require_publish_approval: false)
+        Ecto.Changeset.change(repository.organization, require_staged_publishing: false)
       )
 
       send(uploader, :continue)
@@ -509,7 +509,7 @@ defmodule Hexpm.Repository.StagedReleasesConcurrencyTest do
   test "a docs request reports a staging error when approval is enabled during publishing" do
     committed(&build_context/0, fn ctx ->
       repository =
-        insert(:repository, organization: build(:organization, require_publish_approval: true))
+        insert(:repository, organization: build(:organization, require_staged_publishing: true))
 
       insert(:organization_user,
         organization: repository.organization,
@@ -518,7 +518,7 @@ defmodule Hexpm.Repository.StagedReleasesConcurrencyTest do
       )
 
       package =
-        insert(:package, repository_id: repository.id, require_publish_approval: false)
+        insert(:package, repository_id: repository.id, require_staged_publishing: false)
         |> Repo.preload(repository: :organization)
 
       insert(:release, package: package, version: "1.0.0")
@@ -537,7 +537,7 @@ defmodule Hexpm.Repository.StagedReleasesConcurrencyTest do
 
       organization =
         Repo.update!(
-          Ecto.Changeset.change(repository.organization, require_publish_approval: false)
+          Ecto.Changeset.change(repository.organization, require_staged_publishing: false)
         )
 
       other_key = insert(:key, user: ctx.user)
@@ -546,7 +546,7 @@ defmodule Hexpm.Repository.StagedReleasesConcurrencyTest do
       enabling =
         unboxed_task(fn ->
           Repo.transaction(fn ->
-            Repo.update!(Ecto.Changeset.change(organization, require_publish_approval: true))
+            Repo.update!(Ecto.Changeset.change(organization, require_staged_publishing: true))
 
             send(parent, :policy_enabled)
             receive do: (:commit -> :ok)
@@ -581,7 +581,7 @@ defmodule Hexpm.Repository.StagedReleasesConcurrencyTest do
   test "approval and a policy change take organization and user locks in the same order" do
     committed(&build_context/0, fn ctx ->
       repository =
-        insert(:repository, organization: build(:organization, require_publish_approval: true))
+        insert(:repository, organization: build(:organization, require_staged_publishing: true))
 
       insert(:organization_user,
         organization: repository.organization,
@@ -590,7 +590,7 @@ defmodule Hexpm.Repository.StagedReleasesConcurrencyTest do
       )
 
       package =
-        insert(:package, repository_id: repository.id, require_publish_approval: false)
+        insert(:package, repository_id: repository.id, require_staged_publishing: false)
         |> Repo.preload(repository: :organization)
 
       ctx = %{ctx | repository: repository, package: package} |> with_tarball("first")

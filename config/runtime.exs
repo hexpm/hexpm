@@ -18,8 +18,8 @@ env_list = fn name ->
 end
 
 config :hexpm,
-  force_publish_approval:
-    (case System.get_env("HEXPM_FORCE_PUBLISH_APPROVAL", "false") do
+  force_staged_publishing:
+    (case System.get_env("HEXPM_FORCE_STAGED_PUBLISHING", "false") do
        "false" ->
          false
 
@@ -27,7 +27,7 @@ config :hexpm,
          true
 
        value ->
-         raise "invalid HEXPM_FORCE_PUBLISH_APPROVAL #{inspect(value)}; expected true or false"
+         raise "invalid HEXPM_FORCE_STAGED_PUBLISHING #{inspect(value)}; expected true or false"
      end)
 
 config :hexpm, :feature_flags,

@@ -639,31 +639,31 @@ defmodule Hexpm.Emails do
     |> render_body(:staged_release)
   end
 
-  def publish_approval_disabled(users, %Package{} = package) do
+  def staged_publishing_disabled(users, %Package{} = package) do
     name = HexpmWeb.ViewHelpers.package_name(package)
 
-    base_email(:publish_approval_disabled)
+    base_email(:staged_publishing_disabled)
     |> email_to(users)
-    |> subject("Hex.pm - Publish approval disabled for package #{name}")
+    |> subject("Hex.pm - Staged publishing disabled for package #{name}")
     |> assign(:package, name)
     |> assign(
       :remaining_requirements,
       "Organization and registry policies may still require approval."
     )
-    |> render_body(:publish_approval_disabled)
+    |> render_body(:staged_publishing_disabled)
   end
 
-  def publish_approval_disabled(users, organization) do
-    base_email(:publish_approval_disabled)
+  def staged_publishing_disabled(users, organization) do
+    base_email(:staged_publishing_disabled)
     |> email_to(users)
-    |> subject("Hex.pm - Publish approval disabled for organization #{organization.name}")
+    |> subject("Hex.pm - Staged publishing disabled for organization #{organization.name}")
     |> assign(:package, nil)
     |> assign(:organization, organization.name)
     |> assign(
       :remaining_requirements,
       "Package and registry policies may still require approval."
     )
-    |> render_body(:publish_approval_disabled)
+    |> render_body(:staged_publishing_disabled)
   end
 
   def package_published(owners, publisher, name, version) do

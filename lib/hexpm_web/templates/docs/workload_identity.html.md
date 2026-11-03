@@ -20,9 +20,9 @@ Transferring a package (`mix hex.owner transfer`, or "Transfer ownership" on the
 
 An organization that owns a public package publishes it with its own workload identities that cover public packages. Transferring the package to the organization makes them publish it, and removing the organization as an owner or transferring the package away stops them. The email to the package's owners lists the organization workload identities that start or stop publishing the package, and so does the confirmation on the Owners tab when an organization is removed.
 
-### Publish approval
+### Staged publishing
 
-A release or documentation a workload identity publishes waits for [publish approval](/docs/publish#publish-approval) when the package or its organization requires it.
+When [staged publishing](/docs/publish#staged-publishing) is on for the package or its organization, a release or documentation a workload identity publishes waits for approval.
 
 ### Before you begin
 

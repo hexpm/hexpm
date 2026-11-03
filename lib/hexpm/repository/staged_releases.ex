@@ -11,7 +11,7 @@ defmodule Hexpm.Repository.StagedReleases do
   @lifetime 7 * 24 * 60 * 60
   @publish_timeout 60_000
 
-  def forced?, do: Application.get_env(:hexpm, :force_publish_approval, false)
+  def forced?, do: Application.get_env(:hexpm, :force_staged_publishing, false)
 
   def enabled?(target),
     do: not is_nil(target) && FeatureFlags.enabled?(:workload_identity, target)
@@ -28,7 +28,7 @@ defmodule Hexpm.Repository.StagedReleases do
     (forced?() && repository.id == 1) ||
       (enabled?(target) &&
          (package_approval?(package) ||
-            (repository.id != 1 && repository.organization.require_publish_approval)))
+            (repository.id != 1 && repository.organization.require_staged_publishing)))
   end
 
   defp automated?(audit) do
@@ -39,8 +39,8 @@ defmodule Hexpm.Repository.StagedReleases do
       )
   end
 
-  defp package_approval?(nil), do: %Package{}.require_publish_approval
-  defp package_approval?(%Package{require_publish_approval: required}), do: required
+  defp package_approval?(nil), do: %Package{}.require_staged_publishing
+  defp package_approval?(%Package{require_staged_publishing: required}), do: required
 
   defp policy_target(%{id: 1}, nil, audit) do
     case audit.auth_credential do
@@ -589,13 +589,13 @@ defmodule Hexpm.Repository.StagedReleases do
            AuthHelpers.package_owner(conn, user, owner_level: "full") != :ok,
          do: Repo.rollback(:forbidden)
 
-      updated = Repo.update!(change(package, require_publish_approval: enabled))
-      audit!(opts[:audit], "package.publish_approval.configure", updated)
+      updated = Repo.update!(change(package, require_staged_publishing: enabled))
+      audit!(opts[:audit], "package.staged_publishing.configure", updated)
 
-      if package.require_publish_approval && not enabled do
+      if package.require_staged_publishing && not enabled do
         package_policy_recipients(package)
-        |> Emails.publish_approval_disabled(package)
-        |> enqueue_email("publish_approval.disabled")
+        |> Emails.staged_publishing_disabled(package)
+        |> enqueue_email("staged_publishing.disabled")
       end
 
       updated
@@ -619,10 +619,10 @@ defmodule Hexpm.Repository.StagedReleases do
            not Hexpm.Accounts.Organizations.access?(organization, user, "admin"),
          do: Repo.rollback(:forbidden)
 
-      updated = Repo.update!(change(organization, require_publish_approval: enabled))
-      audit!(opts[:audit], "organization.publish_approval.configure", updated)
+      updated = Repo.update!(change(organization, require_staged_publishing: enabled))
+      audit!(opts[:audit], "organization.staged_publishing.configure", updated)
 
-      if organization.require_publish_approval && not enabled do
+      if organization.require_staged_publishing && not enabled do
         Repo.all(
           from(m in OrganizationUser,
             join: u in assoc(m, :user),
@@ -631,8 +631,8 @@ defmodule Hexpm.Repository.StagedReleases do
           )
         )
         |> Repo.preload(:emails)
-        |> Emails.publish_approval_disabled(organization)
-        |> enqueue_email("publish_approval.disabled")
+        |> Emails.staged_publishing_disabled(organization)
+        |> enqueue_email("staged_publishing.disabled")
       end
 
       updated

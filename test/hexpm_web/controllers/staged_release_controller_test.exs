@@ -1,7 +1,7 @@
 defmodule HexpmWeb.StagedReleaseControllerTest do
   use HexpmWeb.ConnCase
 
-  @revert_blocked "This package requires publish approval, so API keys can't revert it. " <>
+  @revert_blocked "This package uses staged publishing, so API keys can't revert it. " <>
                     "Revert with your Hex account and a two-factor code."
 
   alias Hexpm.Accounts.{AuditLog, Key}
@@ -12,7 +12,7 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
     user = insert(:user_with_tfa)
 
     repository =
-      insert(:repository, organization: build(:organization, require_publish_approval: true))
+      insert(:repository, organization: build(:organization, require_staged_publishing: true))
 
     insert(:organization_user, organization: repository.organization, user: user, role: "write")
     key = insert(:key, user: user)
@@ -756,7 +756,7 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
 
     package =
       insert(:package,
-        require_publish_approval: true,
+        require_staged_publishing: true,
         inserted_at: NaiveDateTime.add(now, -2 * 24 * 60 * 60),
         package_owners: [build(:package_owner, user: ctx.user)]
       )
