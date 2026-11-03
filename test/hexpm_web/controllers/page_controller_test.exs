@@ -116,6 +116,26 @@ defmodule HexpmWeb.PageControllerTest do
     assert html =~ "Paid organizations can also publish private policies"
   end
 
+  test "sponsors lists each sponsor with a logo served from priv/static" do
+    html = build_conn() |> get("/sponsors") |> response(200)
+
+    logos =
+      html
+      |> LazyHTML.from_document()
+      |> LazyHTML.query("article img")
+      |> Enum.map(&{LazyHTML.attribute(&1, "alt"), LazyHTML.attribute(&1, "src")})
+
+    assert [
+             {["Dashbit logo"], ["/images/dashbit.png"]},
+             {["Fastly logo"], ["/images/fastly.png"]},
+             {["Typesense logo"], ["/images/typesense.svg"]}
+           ] = logos
+
+    for {_alt, [src]} <- logos do
+      assert File.exists?(Application.app_dir(:hexpm, Path.join("priv/static", src)))
+    end
+  end
+
   test "index renders long package names without overlapping version and time" do
     long_name = "opentelemetry_semantic_conventions"
 
