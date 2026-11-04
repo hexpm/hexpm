@@ -56,7 +56,7 @@ Organization admins configure workload identities for the whole organization on 
 
 Hex 2.6 uses a `read` workload identity to fetch private dependencies in CI without an organization key. When a job with `id-token: write` has no organization key or `mix hex.user auth` session configured, Hex exchanges the job's OIDC token for a token that can fetch the organization's packages.
 
-A common setup is one `read` workload identity without repositories, so every repository under your GitHub organization can fetch private dependencies, and one `write` workload identity naming the repositories that release packages. [Workload Identity](/docs/workload-identity) covers the rest.
+A recommended setup is one `read` workload identity without repositories, so every repository under your GitHub organization can fetch private dependencies, and one `write` workload identity naming the repositories that release packages. [Workload Identity](/docs/workload-identity) covers the rest.
 
 ### Staged publishing
 
@@ -64,7 +64,7 @@ Staged publishing holds releases and documentation published with a key or a wor
 
 It's a setting on each package, under Settings > Staged publishing. It's on by default for new packages, including when a key publishes their first release, and off for existing ones, so nothing changes for your current packages until you turn it on. Organization admins can also turn it on for every package in the organization's private repository.
 
-A held release is a staged release. It isn't in the registry until someone approves it, and hex.pm emails the people who can. They review it under Staged releases on their dashboard, and approving or rejecting it asks for a fresh 2FA code. Staged releases expire after seven days.
+A staged release isn't in the registry until someone approves it, and hex.pm emails the people who can. They review it under Staged releases on their dashboard, and approving or rejecting it asks for a fresh 2FA code. Staged releases expire after seven days.
 
 <img class="blog-img-light" src="/images/blog/028_staged_release.png" srcset="/images/blog/028_staged_release.png 2x" alt="A staged release of widget 1.1.0 awaiting approval, with the repository, workflow, git ref and commit of the workload identity that published it">
 <img class="blog-img-dark" src="/images/blog/028_staged_release_dark.png" srcset="/images/blog/028_staged_release_dark.png 2x" alt="A staged release of widget 1.1.0 awaiting approval, with the repository, workflow, git ref and commit of the workload identity that published it">
@@ -82,7 +82,7 @@ If you publish with a key, give it only `publish:name` and `api:read`. A key tha
 
 ### Emergency publishing mode
 
-If stolen keys are being used to publish packages, we can turn on emergency publishing mode. Releases and documentation of public packages published with a key or a workload identity then wait for approval, whatever the package setting, and a banner on hex.pm shows that the mode is on.
+If stolen keys are being used to publish packages, we can globally turn on emergency publishing mode for all packages. This is intended as a cooldown period to contain potential lateral movement between packages while we investigate. Releases and documentation of public packages published with a key or a workload identity then wait for approval, whatever the package setting, and a banner on hex.pm shows that the mode is on.
 
 ### Thanks
 
