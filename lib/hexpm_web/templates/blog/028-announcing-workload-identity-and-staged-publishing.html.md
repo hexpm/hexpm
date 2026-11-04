@@ -45,6 +45,9 @@ jobs:
 
 To add a workload identity, open the package on hex.pm and go to Settings > Workload identities. You need to be a full owner of the package and have 2FA enabled. Enter the GitHub user or organization that owns the repositories, the repositories, the workflow file and a GitHub environment. The environment is required when a repository is public. It's where GitHub lets you require reviewers, add a wait timer or restrict which branches can deploy, so those checks run before the job gets its token. hex.pm pins the GitHub IDs of the owner and the repositories, so a repository that's deleted and created again under the same name doesn't match.
 
+<img class="blog-img-light" src="/images/blog/028_workload_identity.png" srcset="/images/blog/028_workload_identity.png 2x" alt="The Add workload identity form on a package's settings, with repository owner acme, repository widget, workflow release.yml and environment release">
+<img class="blog-img-dark" src="/images/blog/028_workload_identity_dark.png" srcset="/images/blog/028_workload_identity_dark.png 2x" alt="The Add workload identity form on a package's settings, with repository owner acme, repository widget, workflow release.yml and environment release">
+
 A workload identity can't create a public package, so publish the first release of a new public package with your account or a key as before. hex.pm emails every owner of the package when a workload identity is added, removed or changed to trust more, and transferring the package removes its workload identities.
 
 A release published with a workload identity shows a Provenance card on its package page. It links to the source commit, the workflow file, the branch or tag, the environment, the GitHub user who triggered the run and the run itself. The release API returns the same information in `oidc_claims`.
@@ -73,6 +76,9 @@ It's a setting on each package, under Settings > Staged publishing. It's on by d
 A release that waits for approval is a staged release. It isn't in the registry, so `mix deps.get` can't fetch it, and hex.pm emails everyone who can approve it: the package's owners and maintainers, and for a package owned by an organization, its admins and members with write access. Only users with 2FA enabled can approve. Staged releases are listed under Staged releases on your dashboard and expire after seven days.
 
 The staged release page shows the credential that published it and, for a workload identity, the repository, workflow, git ref and commit with a link to the workflow run. It lists the package's dependencies and files, has links to download the package and documentation, and shows their SHA-256 checksums so you can compare them with what the publishing command printed. Opening the page and approving or rejecting the release ask for a fresh 2FA code.
+
+<img class="blog-img-light" src="/images/blog/028_staged_release.png" srcset="/images/blog/028_staged_release.png 2x" alt="A staged release of widget 1.1.0 awaiting approval, with the repository, workflow, git ref and commit of the workload identity that published it">
+<img class="blog-img-dark" src="/images/blog/028_staged_release_dark.png" srcset="/images/blog/028_staged_release_dark.png 2x" alt="A staged release of widget 1.1.0 awaiting approval, with the repository, workflow, git ref and commit of the workload identity that published it">
 
 Hex 2.6.1 adds `mix hex.publish --wait`, which opens the staged release page and waits until the release is approved, rejected or expires. The command fails if the release is rejected or expires, so a CI job running it fails too, and a workload identity token that expires while waiting is exchanged again. With Hex 2.6.0 and earlier, `mix hex.publish` succeeds when the release is staged and prints the staged release page as the URL the package was published to.
 
