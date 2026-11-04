@@ -2003,7 +2003,7 @@ defmodule Hexpm.Accounts.SSO do
   defp send_seats_notice!(connection, kind, stage, group_key) do
     organization = connection.organization
 
-    case Enforcement.admin_emails(organization) do
+    case Enforcement.admin_emails(organization, :sso_seats) do
       [] ->
         :ok
 

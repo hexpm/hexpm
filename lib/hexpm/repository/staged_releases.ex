@@ -973,11 +973,10 @@ defmodule Hexpm.Repository.StagedReleases do
       |> Repo.preload(:emails)
       |> Enum.filter(&eligible_approver?(staged, package, &1))
 
-    if approvers != [],
-      do:
-        approvers
-        |> Emails.staged_release(staged, event)
-        |> enqueue_email("staged_release.#{event}")
+    email = Emails.staged_release(approvers, staged, event)
+
+    if email.to != [],
+      do: enqueue_email(email, "staged_release.#{event}")
   end
 
   defp eligible_approver?(staged, package, user) do

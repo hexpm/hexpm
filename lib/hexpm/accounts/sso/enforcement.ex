@@ -12,7 +12,7 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
 
   use Hexpm.Context
 
-  alias Hexpm.Accounts.{AuditLog, Key, Keys, Organization, OrganizationUser, User}
+  alias Hexpm.Accounts.{AuditLog, Key, Keys, OptionalEmails, Organization, OrganizationUser, User}
   alias Hexpm.Accounts.SSO.{Connection, Features, Identity, OrgSession}
   alias Hexpm.Emails
   alias Hexpm.Emails.Outbox
@@ -914,6 +914,20 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
   # Where a notice about an organization goes.
   @doc false
   def admin_emails(organization) do
+    organization
+    |> admin_addresses()
+    |> Enum.map(fn {_user, address} -> address end)
+  end
+
+  # The same addresses without the admins who turned off the `optional` email.
+  @doc false
+  def admin_emails(organization, optional) do
+    for {user, address} <- admin_addresses(organization),
+        OptionalEmails.allowed?(user, optional),
+        do: address
+  end
+
+  defp admin_addresses(organization) do
     from(
       member in OrganizationUser,
       join: user in assoc(member, :user),
@@ -921,7 +935,7 @@ defmodule Hexpm.Accounts.SSO.Enforcement do
       where: member.organization_id == ^organization.id,
       where: member.role == "admin",
       where: address.primary and address.verified,
-      select: address.email
+      select: {user, address.email}
     )
     |> Repo.all()
   end

@@ -30,6 +30,30 @@ defmodule Hexpm.Accounts.OptionalEmails do
       id: :package_published,
       title: "Package published",
       description: "You’ll be notified whenever a package you own is published."
+    },
+    %{
+      id: :api_keys,
+      title: "API keys",
+      description:
+        "You’ll be notified whenever a key is created or revoked on your account or on an organization you administer."
+    },
+    %{
+      id: :workload_identity_changed,
+      title: "Workload identity changes",
+      description:
+        "You’ll be notified whenever a workload identity is added, changed or removed on a package you own or an organization you administer."
+    },
+    %{
+      id: :staged_releases,
+      title: "Staged releases",
+      description:
+        "You’ll be notified when a release you can approve is staged, and when it expires without being approved."
+    },
+    %{
+      id: :sso_seats,
+      title: "Organization SSO seats",
+      description:
+        "You’ll be notified when an organization you administer runs out of SSO seats, can’t add a seat, or can’t read its seat count."
     }
   ]
 

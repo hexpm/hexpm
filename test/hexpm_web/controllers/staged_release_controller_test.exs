@@ -4,7 +4,7 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
   @revert_blocked "This package uses staged publishing, so API keys can't revert it. " <>
                     "Revert with your Hex account and a two-factor code."
 
-  alias Hexpm.Accounts.{AuditLog, Key}
+  alias Hexpm.Accounts.{AuditLog, Key, User}
   alias Hexpm.Repository.{Assets, Package, Release, StagedRelease, StagedReleases}
 
   setup do
@@ -378,6 +378,42 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
     refute Hexpm.Store.get(:repo_bucket, staged.storage_key)
     assert read(ctx, result) |> json_response(200) |> Map.fetch!("status") == "expired"
     assert Repo.exists?(from(l in AuditLog, where: l.action == "release.stage_expire"))
+  end
+
+  test "staging and expiry leave out approvers who turned them off", ctx do
+    other = insert(:user_with_tfa, optional_emails: %{"staged_releases" => false})
+
+    insert(:organization_user,
+      organization: ctx.repository.organization,
+      user: other,
+      role: "write"
+    )
+
+    {result, _} = stage(ctx)
+
+    assert [staged_entry] = Repo.all(Hexpm.Emails.OutboxEntry)
+    assert staged_entry.category == "staged_release.staged"
+    assert staged_entry.recipients == [User.email(ctx.user, :primary)]
+
+    staged = staged(ctx, result)
+    Repo.update!(Ecto.Changeset.change(staged, expires_at: DateTime.add(DateTime.utc_now(), -1)))
+    assert :ok = Hexpm.Repository.StagedReleaseExpiryWorker.perform(%Oban.Job{})
+
+    expired_entry = Repo.get_by!(Hexpm.Emails.OutboxEntry, category: "staged_release.expired")
+    assert expired_entry.recipients == [User.email(ctx.user, :primary)]
+  end
+
+  test "staging and expiry send nothing when every approver turned them off", ctx do
+    ctx.user
+    |> Ecto.Changeset.change(optional_emails: %{"staged_releases" => false})
+    |> Repo.update!()
+
+    {result, _} = stage(ctx)
+    staged = staged(ctx, result)
+    Repo.update!(Ecto.Changeset.change(staged, expires_at: DateTime.add(DateTime.utc_now(), -1)))
+    assert :ok = Hexpm.Repository.StagedReleaseExpiryWorker.perform(%Oban.Job{})
+
+    assert Repo.all(Hexpm.Emails.OutboxEntry) == []
   end
 
   test "a user without 2FA or with only read access can't review or approve", ctx do

@@ -2,7 +2,7 @@ defmodule Hexpm.Emails do
   use Phoenix.Swoosh, view: HexpmWeb.EmailView
 
   alias HexpmWeb.EmailView.{Common, PackageSearchDisabled}
-  alias Hexpm.Accounts.{Email, Organization, User}
+  alias Hexpm.Accounts.{Email, OptionalEmails, Organization, User}
   alias Hexpm.Repository.Package
 
   @coverage_fields [:covers_private, :packages, :covers_public, :public_packages]
@@ -75,7 +75,7 @@ defmodule Hexpm.Emails do
 
   defp workload_identity_email(type, workload_identity, owners, actor) do
     base_email(type)
-    |> email_to(owners)
+    |> email_to(owners, :workload_identity_changed)
     |> assign(:username, actor.username)
     |> assign(:package, workload_identity.package.name)
     |> assign(:current, trusted_workflows(workload_identity))
@@ -128,7 +128,7 @@ defmodule Hexpm.Emails do
 
   defp organization_workload_identity_email(type, workload_identity, organization, actor) do
     base_email(type)
-    |> email_to(organization)
+    |> email_to(organization, :workload_identity_changed)
     |> assign_organization_workload_identity(workload_identity, organization, actor)
   end
 
@@ -138,7 +138,7 @@ defmodule Hexpm.Emails do
   """
   def public_workload_identity_added(workload_identity, organization, owner, packages, actor) do
     base_email(:public_workload_identity_added)
-    |> email_to(owner)
+    |> email_to(owner, :workload_identity_changed)
     |> subject(
       "Hex.pm - Workload identity of organization #{organization.name} " <>
         "can publish #{Enum.join(packages, ", ")}"
@@ -151,7 +151,7 @@ defmodule Hexpm.Emails do
 
   def public_workload_identity_removed(workload_identity, organization, owner, packages, actor) do
     base_email(:public_workload_identity_removed)
-    |> email_to(owner)
+    |> email_to(owner, :workload_identity_changed)
     |> subject(
       "Hex.pm - Workload identity of organization #{organization.name} " <>
         "can no longer publish #{Enum.join(packages, ", ")}"
@@ -182,7 +182,7 @@ defmodule Hexpm.Emails do
     names = Enum.sort(started ++ stopped ++ kept)
 
     base_email(:public_workload_identity_changed)
-    |> email_to(owner)
+    |> email_to(owner, :workload_identity_changed)
     |> subject(
       "Hex.pm - Workload identity of organization #{organization.name} " <>
         "changed for #{Enum.join(names, ", ")}"
@@ -374,7 +374,7 @@ defmodule Hexpm.Emails do
 
   def api_key_created(user_or_org, key) do
     base_email(:api_key_created)
-    |> email_to(user_or_org)
+    |> email_to(user_or_org, :api_keys)
     |> subject("Hex.pm - A new key was created on your account")
     |> assign(:username, display_name(user_or_org))
     |> assign(:key_name, key.name)
@@ -383,7 +383,7 @@ defmodule Hexpm.Emails do
 
   def api_key_revoked(user_or_org, key) do
     base_email(:api_key_revoked)
-    |> email_to(user_or_org)
+    |> email_to(user_or_org, :api_keys)
     |> subject("Hex.pm - A key was revoked on your account")
     |> assign(:username, display_name(user_or_org))
     |> assign(:key_name, key.name)
@@ -392,7 +392,7 @@ defmodule Hexpm.Emails do
 
   def api_keys_all_revoked(user_or_org) do
     base_email(:api_keys_all_revoked)
-    |> email_to(user_or_org)
+    |> email_to(user_or_org, :api_keys)
     |> subject("Hex.pm - All keys have been revoked on your account")
     |> assign(:username, display_name(user_or_org))
     |> render_body(:api_keys_all_revoked)
@@ -628,7 +628,7 @@ defmodule Hexpm.Emails do
 
   def staged_release(users, staged, event) do
     base_email(:staged_release)
-    |> email_to(users)
+    |> email_to(users, :staged_releases)
     |> subject("Hex.pm - #{staged.name} #{staged.version} #{event}")
     |> assign(:staged, staged)
     |> assign(:event, event)
@@ -695,11 +695,14 @@ defmodule Hexpm.Emails do
     |> render_body(:announcement)
   end
 
-  defp email_to(email, to) do
+  # Leaves out the users who turned off the `optional` email, including
+  # organization admins it reaches through their organization.
+  defp email_to(email, to, optional \\ nil) do
     recipients =
       to
       |> List.wrap()
       |> Enum.flat_map(&expand_organization/1)
+      |> Enum.filter(&wants?(&1, optional))
       |> Enum.reject(&is_nil(recipient_email(&1)))
       |> Enum.sort_by(&recipient_email/1)
       |> Enum.uniq_by(&recipient_email/1)
@@ -708,14 +711,21 @@ defmodule Hexpm.Emails do
     Swoosh.Email.to(email, recipients)
   end
 
+  defp wants?(_recipient, nil), do: true
+  defp wants?(%User{} = user, optional), do: OptionalEmails.allowed?(user, optional)
+  defp wants?({:member, user}, optional), do: OptionalEmails.allowed?(user, optional)
+  defp wants?(_recipient, _optional), do: true
+
   defp to_recipient(email) when is_binary(email), do: email
   defp to_recipient(%Email{} = email), do: {email.user.username, email.email}
   defp to_recipient(%User{} = user), do: {user.username, User.email(user, :primary)}
+  defp to_recipient({:member, user}), do: User.email(user, :primary)
 
   defp recipient_email(nil), do: nil
   defp recipient_email(email) when is_binary(email), do: email
   defp recipient_email(%Email{email: email}), do: email
   defp recipient_email(%User{} = user), do: User.email(user, :primary)
+  defp recipient_email({:member, user}), do: User.email(user, :primary)
 
   defp expand_organization(email) when is_binary(email), do: [email]
   defp expand_organization(%Email{} = email), do: [email]
@@ -735,16 +745,9 @@ defmodule Hexpm.Emails do
     do: expand_organization(organization)
 
   defp expand_organization(%Organization{organization_users: org_users}) do
-    admins =
-      org_users
-      |> Enum.filter(&(&1.role == "admin"))
-      |> Enum.map(&User.email(&1.user, :primary))
-
-    if admins == [] do
-      Enum.map(org_users, &User.email(&1.user, :primary))
-    else
-      admins
-    end
+    admins = Enum.filter(org_users, &(&1.role == "admin"))
+    members = if admins == [], do: org_users, else: admins
+    Enum.map(members, &{:member, &1.user})
   end
 
   defp display_name(%User{username: username}), do: username
