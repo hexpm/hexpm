@@ -2,13 +2,13 @@
 
 <div class="subtitle"><time datetime="2026-11-03T00:00:00Z">3 November, 2026</time> · by Eric Meadows-Jönsson</div>
 
-In the [Hex 2.6 announcement](/blog/hex-v26-released) we said we were testing Workload Identity. It's now available to every package and organization on hex.pm. Workload Identity, sometimes also known as "Trusted Publishing", lets a GitHub Actions job publish packages and fetch an organization's private packages without storing an API key. It comes with staged publishing, which holds releases published with an API key or a workload identity until a person with two-factor authentication approves them on hex.pm.
+In the [Hex 2.6 announcement](/blog/hex-v26-released) we said we were testing Workload Identity. It's now available to every package and organization on hex.pm. Workload Identity, sometimes also known as "Trusted Publishing", lets a GitHub Actions job publish packages and fetch an organization's private packages without storing a key. It comes with staged publishing, which holds releases published with a key or a workload identity until a person with two-factor authentication approves them on hex.pm.
 
-When you publish with your own account through `mix hex.user auth`, Hex asks for your 2FA code on every publish, so a stolen session can't publish by itself. An API key has no second factor. Anyone who gets the key can publish a release that `mix deps.get` picks up as soon as the registry is updated. In September 2025 the [Shai-Hulud worm](https://github.blog/security/supply-chain-security/our-plan-for-a-more-secure-npm-supply-chain/) spread through npm this way. It stole npm tokens and other secrets, and used compromised maintainer accounts to add malicious install scripts to popular packages.
+When you publish with your own account through `mix hex.user auth`, Hex asks for your 2FA code on every publish, so a stolen session can't publish by itself. A key has no second factor. Anyone who gets the key can publish a release that `mix deps.get` picks up as soon as the registry is updated. In September 2025 the [Shai-Hulud worm](https://github.blog/security/supply-chain-security/our-plan-for-a-more-secure-npm-supply-chain/) spread through npm this way. It stole npm tokens and other secrets, and used compromised maintainer accounts to add malicious install scripts to popular packages.
 
-Workload Identity takes the key out of CI. Anyone who can push to the repository can still run the release workflow unless its GitHub environment requires a reviewer, so staged publishing adds a second factor: a release published with a key or a workload identity stays private until a person approves it with 2FA. Staged publishing is on by default for new packages, and existing packages have it off until an owner turns it on.
+Workload Identity takes the key out of CI. Anyone who can push to the repository can still run the release workflow unless its GitHub environment requires a reviewer, so staged publishing adds a second factor: a release published with a key or a workload identity stays private until a person approves it with 2FA. Staged publishing is on by default for new packages, and existing packages have it off until an owner turns it on. We recommend publishing from CI with Workload Identity and turning on staged publishing for your packages, instead of publishing with keys.
 
-That includes the first release of a new package published with an API key. If you create packages from CI with an API key, read [Staged publishing](#staged-publishing) before you publish the next one.
+That includes the first release of a new package published with a key. If you create packages from CI with a key, read [Staged publishing](#staged-publishing) before you publish the next one.
 
 ### Workload Identity
 
@@ -69,7 +69,7 @@ Neither role can retire releases, revert, or change owners, keys, members or set
 
 ### Staged publishing
 
-Staged publishing holds releases and documentation published with an API key or a workload identity until a person approves them. Releases you publish with your own account, where Hex asks for your 2FA code, are never held.
+Staged publishing holds releases and documentation published with a key or a workload identity until a person approves them. Releases you publish with your own account, where Hex asks for your 2FA code, are never held.
 
 It's a setting on each package, under Settings > Staged publishing. It's on by default for new packages and off for existing ones, so nothing changes for your current packages until you turn it on. Organization admins can also turn on staged publishing for every package in the organization's private repository, whatever the package setting, on the Staged publishing page of the organization dashboard. Changing either setting requires 2FA. Turning staged publishing off for a package emails its full owners and the admins of an organization that owns it, and turning it off for an organization emails its admins.
 
@@ -82,11 +82,15 @@ The staged release page shows the credential that published it and, for a worklo
 
 Hex 2.6.1 adds `mix hex.publish --wait`, which opens the staged release page and waits until the release is approved, rejected or expires. The command fails if the release is rejected or expires, so a CI job running it fails too, and a workload identity token that expires while waiting is exchanged again. With Hex 2.6.0 and earlier, `mix hex.publish` succeeds when the release is staged and prints the staged release page as the URL the package was published to.
 
-Staged publishing doesn't cover adding owners or members. A key with the `api:write`, `owners`, `package:name` or `members` permission can add an owner or organization member, who can then publish with their own account without approval. We recommend publishing from CI with Workload Identity. If you have to use a key, give it only `publish:name` and `api:read`.
+### Key permissions
+
+Keys can now have narrower permissions than `api:read` and `api:write`. `publish` covers publishing, reverting and retiring releases and publishing documentation, and `publish:name` limits that to one package. `owners` and `owners:name` add and remove package owners, `package:name` publishes and changes owners for one package, `keys` revokes keys, and `members` and `administration` manage an organization's members and seats. `api:write` still includes every write permission. [Keys](/docs/keys) lists what each permission allows for personal and organization keys.
+
+Staged publishing doesn't cover adding owners or members. A key with the `api:write`, `owners`, `owners:name`, `package:name` or `members` permission can add an owner or organization member, who can then publish with their own account without approval. If you have to publish with a key, give it only `publish:name` and `api:read`.
 
 ### Emergency publishing mode
 
-If stolen keys are being used to publish packages, we can turn on emergency publishing mode. Releases and documentation of public packages published with an API key or a workload identity then wait for approval whatever the package setting, and those credentials can't revert public releases or documentation. A banner at the top of hex.pm shows when the mode is on. Publishing with your own account and 2FA code works as usual, and packages in organization repositories keep their package and organization settings.
+If stolen keys are being used to publish packages, we can turn on emergency publishing mode. Releases and documentation of public packages published with a key or a workload identity then wait for approval whatever the package setting, and those credentials can't revert public releases or documentation. A banner at the top of hex.pm shows when the mode is on. Publishing with your own account and 2FA code works as usual, and packages in organization repositories keep their package and organization settings.
 
 ### Thanks
 
