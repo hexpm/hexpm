@@ -51,8 +51,6 @@ A release published with a workload identity shows a Provenance card on its pack
 
 GitHub Actions is the only supported CI provider.
 
-Yordis Prieto built the first version of Workload Identity on hex.pm, then called Trusted Publishing, and its support in Hex and hex_core.
-
 ### Organization workload identities
 
 Organization admins configure workload identities for the whole organization on the Workload identities page of the organization dashboard. Each one has a role:
@@ -83,6 +81,10 @@ Staged publishing doesn't cover adding owners or members. A key with the `api:wr
 ### Emergency publishing mode
 
 If stolen keys are being used to publish packages, we can turn on emergency publishing mode. Releases and documentation of public packages published with an API key or a workload identity then wait for approval whatever the package setting, and those credentials can't revert public releases or documentation. A banner at the top of hex.pm shows when the mode is on. Publishing with your own account and 2FA code works as usual, and packages in organization repositories keep their package and organization settings.
+
+### Thanks
+
+Thanks to [Yordis Prieto](https://github.com/yordis), who built the first version of Workload Identity on hex.pm, then called Trusted Publishing, and its support in Hex and hex_core. Thanks also to [Jonatan Männchen](https://github.com/maennchen) for reviewing it and the design of organization workload identities.
 
 ### Upgrading
 
