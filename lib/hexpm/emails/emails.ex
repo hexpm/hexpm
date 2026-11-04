@@ -374,7 +374,7 @@ defmodule Hexpm.Emails do
 
   def api_key_created(user_or_org, key) do
     base_email(:api_key_created)
-    |> email_to(user_or_org, :api_key_created)
+    |> email_to(user_or_org, :api_keys)
     |> subject("Hex.pm - A new key was created on your account")
     |> assign(:username, display_name(user_or_org))
     |> assign(:key_name, key.name)
@@ -383,7 +383,7 @@ defmodule Hexpm.Emails do
 
   def api_key_revoked(user_or_org, key) do
     base_email(:api_key_revoked)
-    |> email_to(user_or_org, :api_key_revoked)
+    |> email_to(user_or_org, :api_keys)
     |> subject("Hex.pm - A key was revoked on your account")
     |> assign(:username, display_name(user_or_org))
     |> assign(:key_name, key.name)
@@ -392,7 +392,7 @@ defmodule Hexpm.Emails do
 
   def api_keys_all_revoked(user_or_org) do
     base_email(:api_keys_all_revoked)
-    |> email_to(user_or_org, :api_key_revoked)
+    |> email_to(user_or_org, :api_keys)
     |> subject("Hex.pm - All keys have been revoked on your account")
     |> assign(:username, display_name(user_or_org))
     |> render_body(:api_keys_all_revoked)
@@ -628,7 +628,7 @@ defmodule Hexpm.Emails do
 
   def staged_release(users, staged, event) do
     base_email(:staged_release)
-    |> email_to(users, staged_release_optional_email(event))
+    |> email_to(users, :staged_releases)
     |> subject("Hex.pm - #{staged.name} #{staged.version} #{event}")
     |> assign(:staged, staged)
     |> assign(:event, event)
@@ -638,9 +638,6 @@ defmodule Hexpm.Emails do
     )
     |> render_body(:staged_release)
   end
-
-  defp staged_release_optional_email(:staged), do: :staged_release_ready
-  defp staged_release_optional_email(:expired), do: :staged_release_expired
 
   def staged_publishing_disabled(users, %Package{} = package) do
     name = HexpmWeb.ViewHelpers.package_name(package)

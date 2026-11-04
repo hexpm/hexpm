@@ -380,8 +380,8 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
     assert Repo.exists?(from(l in AuditLog, where: l.action == "release.stage_expire"))
   end
 
-  test "expiry notifies approvers unless they turned it off", ctx do
-    other = insert(:user_with_tfa, optional_emails: %{"staged_release_expired" => false})
+  test "staging and expiry leave out approvers who turned them off", ctx do
+    other = insert(:user_with_tfa, optional_emails: %{"staged_releases" => false})
 
     insert(:organization_user,
       organization: ctx.repository.organization,
@@ -393,9 +393,7 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
 
     assert [staged_entry] = Repo.all(Hexpm.Emails.OutboxEntry)
     assert staged_entry.category == "staged_release.staged"
-
-    assert Enum.sort(staged_entry.recipients) ==
-             Enum.sort([User.email(ctx.user, :primary), User.email(other, :primary)])
+    assert staged_entry.recipients == [User.email(ctx.user, :primary)]
 
     staged = staged(ctx, result)
     Repo.update!(Ecto.Changeset.change(staged, expires_at: DateTime.add(DateTime.utc_now(), -1)))
@@ -405,9 +403,9 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
     assert expired_entry.recipients == [User.email(ctx.user, :primary)]
   end
 
-  test "expiry sends nothing when every approver turned it off", ctx do
+  test "staging and expiry send nothing when every approver turned them off", ctx do
     ctx.user
-    |> Ecto.Changeset.change(optional_emails: %{"staged_release_expired" => false})
+    |> Ecto.Changeset.change(optional_emails: %{"staged_releases" => false})
     |> Repo.update!()
 
     {result, _} = stage(ctx)
@@ -415,33 +413,6 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
     Repo.update!(Ecto.Changeset.change(staged, expires_at: DateTime.add(DateTime.utc_now(), -1)))
     assert :ok = Hexpm.Repository.StagedReleaseExpiryWorker.perform(%Oban.Job{})
 
-    assert [%{category: "staged_release.staged"}] = Repo.all(Hexpm.Emails.OutboxEntry)
-  end
-
-  test "staging notifies approvers unless they turned it off", ctx do
-    other = insert(:user_with_tfa, optional_emails: %{"staged_release_ready" => false})
-
-    insert(:organization_user,
-      organization: ctx.repository.organization,
-      user: other,
-      role: "write"
-    )
-
-    stage(ctx)
-
-    assert [entry] = Repo.all(Hexpm.Emails.OutboxEntry)
-    assert entry.category == "staged_release.staged"
-    assert entry.recipients == [User.email(ctx.user, :primary)]
-  end
-
-  test "staging sends nothing when every approver turned it off", ctx do
-    ctx.user
-    |> Ecto.Changeset.change(optional_emails: %{"staged_release_ready" => false})
-    |> Repo.update!()
-
-    {result, _} = stage(ctx)
-
-    assert staged(ctx, result)
     assert Repo.all(Hexpm.Emails.OutboxEntry) == []
   end
 

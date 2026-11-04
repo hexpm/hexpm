@@ -32,16 +32,10 @@ defmodule Hexpm.Accounts.OptionalEmails do
       description: "You’ll be notified whenever a package you own is published."
     },
     %{
-      id: :api_key_created,
-      title: "API key created",
+      id: :api_keys,
+      title: "API keys",
       description:
-        "You’ll be notified whenever a key is created on your account or on an organization you administer."
-    },
-    %{
-      id: :api_key_revoked,
-      title: "API key revoked",
-      description:
-        "You’ll be notified whenever a key is revoked on your account or on an organization you administer."
+        "You’ll be notified whenever a key is created or revoked on your account or on an organization you administer."
     },
     %{
       id: :workload_identity_changed,
@@ -50,15 +44,10 @@ defmodule Hexpm.Accounts.OptionalEmails do
         "You’ll be notified whenever a workload identity is added, changed or removed on a package you own or an organization you administer."
     },
     %{
-      id: :staged_release_ready,
-      title: "Staged release ready to approve",
-      description: "You’ll be notified when a release you can approve is staged."
-    },
-    %{
-      id: :staged_release_expired,
-      title: "Staged release expired",
+      id: :staged_releases,
+      title: "Staged releases",
       description:
-        "You’ll be notified when a staged release you could approve expires without being approved."
+        "You’ll be notified when a release you can approve is staged, and when it expires without being approved."
     },
     %{
       id: :sso_seats,

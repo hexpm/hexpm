@@ -269,10 +269,7 @@ defmodule Hexpm.Accounts.KeysTest do
     @params %{"name" => "keyname", "permissions" => [%{"domain" => "api", "resource" => "read"}]}
 
     test "a user who turned off key emails gets none" do
-      user =
-        insert(:user,
-          optional_emails: %{"api_key_created" => false, "api_key_revoked" => false}
-        )
+      user = insert(:user, optional_emails: %{"api_keys" => false})
 
       assert {:ok, _} = Keys.create(user, @params, audit: audit_data(user))
       assert {:ok, _} = Keys.revoke(user, "keyname", audit: audit_data(user))
@@ -281,21 +278,8 @@ defmodule Hexpm.Accounts.KeysTest do
       assert_no_email_sent()
     end
 
-    test "turning off created keeps revoked" do
-      user = insert(:user, optional_emails: %{"api_key_created" => false})
-
-      assert {:ok, _} = Keys.create(user, @params, audit: audit_data(user))
-      assert {:ok, _} = Keys.revoke(user, "keyname", audit: audit_data(user))
-
-      assert_email_sent(fn email ->
-        assert email.subject =~ "A key was revoked"
-      end)
-
-      assert_no_email_sent()
-    end
-
     test "organization admins who turned them off are left out" do
-      opted_out = insert(:user, optional_emails: %{"api_key_created" => false})
+      opted_out = insert(:user, optional_emails: %{"api_keys" => false})
       admin = insert(:user)
 
       organization =
@@ -315,7 +299,7 @@ defmodule Hexpm.Accounts.KeysTest do
     end
 
     test "an organization whose admins all turned them off sends none" do
-      opted_out = insert(:user, optional_emails: %{"api_key_created" => false})
+      opted_out = insert(:user, optional_emails: %{"api_keys" => false})
 
       organization =
         insert(:organization,
