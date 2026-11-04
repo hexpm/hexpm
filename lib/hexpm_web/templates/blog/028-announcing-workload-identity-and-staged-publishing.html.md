@@ -8,7 +8,7 @@ When you publish with your own account through `mix hex.user auth`, Hex asks for
 
 Workload Identity takes the key out of CI. Anyone who can push to the repository can still run the release workflow unless its GitHub environment requires a reviewer, so staged publishing adds a second factor: a release published with a key or a workload identity stays private until a person approves it with 2FA. Staged publishing is on by default for new packages, and existing packages have it off until an owner turns it on. We recommend publishing from CI with Workload Identity and turning on staged publishing for your packages, instead of publishing with keys.
 
-That includes the first release of a new package published with a key. If you create packages from CI with a key, read [Staged publishing](#staged-publishing) before you publish the next one.
+The default also covers the first release of a new package published with a key. If you create packages from CI with a key, read [Staged publishing](#staged-publishing) before you publish the next one.
 
 ### Workload Identity
 
