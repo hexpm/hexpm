@@ -49,7 +49,7 @@ A workload identity can't create a public package, so publish the first release 
 
 A release published with a workload identity shows a Provenance card on its package page. It links to the source commit, the workflow file, the branch or tag, the environment, the GitHub user who triggered the run and the run itself. The release API returns the same information in `oidc_claims`.
 
-GitHub Actions is the only supported CI provider.
+GitHub Actions is the only CI provider we support for now. We plan to add more providers based on interest from users and the community.
 
 ### Organization workload identities
 
