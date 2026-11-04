@@ -19,7 +19,7 @@ defmodule HexpmWeb.Dashboard.Key.Components.GenerateKeyModal do
   @capabilities [
     {"publish", "Publish", "Publish, revert, retire and unretire releases, and publish docs"},
     {"owners", "Owners", "Add and remove package owners"},
-    {"keys", "Keys", "Create keys with a subset of these permissions, and revoke keys"},
+    {"keys", "Keys", "Revoke keys"},
     {"members", "Members", "Add and remove members and change their roles"},
     {"administration", "Administration", "Change the number of seats"}
   ]

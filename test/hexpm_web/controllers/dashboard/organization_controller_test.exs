@@ -325,7 +325,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
 
       body = response(conn, 200)
       assert body =~ "ci"
-      refute body =~ "Revoke key"
+      refute body =~ ~s(aria-label="Revoke key")
       assert body =~ "Requires admin"
     end
 
