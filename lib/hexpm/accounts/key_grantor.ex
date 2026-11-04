@@ -15,7 +15,7 @@ defmodule Hexpm.Accounts.KeyGrantor do
   @type t :: %__MODULE__{}
 
   @read_domains ~w(repository repositories docs)
-  @write_capabilities ~w(publish keys)
+  @write_capabilities ~w(publish)
 
   @doc """
   A grantor for a key owned by `owner`, created by `principal` authenticated
@@ -91,7 +91,7 @@ defmodule Hexpm.Accounts.KeyGrantor do
       case grantor.role do
         "read" -> ["api:read"]
         "write" -> ["api:read" | @write_capabilities]
-        _other -> ["api:read" | Permissions.capability_domains()]
+        _other -> ["api:read" | Permissions.capability_domains() -- ["keys"]]
       end
 
     candidates

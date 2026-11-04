@@ -439,17 +439,10 @@ defmodule HexpmWeb.API.KeyControllerTest do
 
       conn =
         build_conn()
-        |> put_req_header("authorization", key_a.user_secret)
+        |> test_oauth_login(c.eric)
         |> delete("/api/keys")
 
-      assert conn.status == 200
-      body = JSON.decode!(conn.resp_body)
-      assert body["name"] == key_a.name
-      assert body["revoke_at"]
-      assert body["updated_at"]
-      assert body["inserted_at"]
-      refute body["secret"]
-      assert body["authing_key"]
+      assert json_response(conn, 200) == nil
       refute Repo.one(Key.get(c.eric, "key_a"))
       refute Repo.one(Key.get(c.eric, "key_b"))
 
@@ -498,15 +491,33 @@ defmodule HexpmWeb.API.KeyControllerTest do
     end
 
     test "revoking all keys sends a single consolidated notification", c do
-      key_a = Key.build(c.eric, %{name: "notif-key-a"}) |> Repo.insert!()
-      _key_b = Key.build(c.eric, %{name: "notif-key-b"}) |> Repo.insert!()
+      Key.build(c.eric, %{name: "notif-key-a"}) |> Repo.insert!()
+      Key.build(c.eric, %{name: "notif-key-b"}) |> Repo.insert!()
 
       build_conn()
-      |> put_req_header("authorization", key_a.user_secret)
+      |> test_oauth_login(c.eric)
       |> delete("/api/keys")
 
       user = Hexpm.Repo.preload(c.eric, :emails)
       assert_email_sent(Hexpm.Emails.api_keys_all_revoked(user))
+    end
+
+    test "a key cannot revoke keys", c do
+      key = Key.build(c.eric, %{name: "computer"}) |> Repo.insert!()
+      Key.build(c.eric, %{name: "macbook"}) |> Repo.insert!()
+
+      message =
+        build_conn()
+        |> put_req_header("authorization", key.user_secret)
+        |> delete("/api/keys")
+        |> json_response(403)
+        |> Map.fetch!("message")
+
+      assert message =~ "API keys cannot revoke API keys"
+      assert message =~ "/dashboard/keys"
+      assert Repo.one(Key.get(c.eric, "computer"))
+      assert Repo.one(Key.get(c.eric, "macbook"))
+      refute Repo.exists?(from(a in AuditLog, where: a.action == "key.remove"))
     end
   end
 
@@ -544,7 +555,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
 
       conn =
         build_conn()
-        |> put_req_header("authorization", key_for(c.eric))
+        |> test_oauth_login(c.eric)
         |> delete("/api/keys/computer")
 
       assert conn.status == 200
@@ -566,39 +577,42 @@ defmodule HexpmWeb.API.KeyControllerTest do
       assert %{"name" => "computer"} = log.params
     end
 
-    test "delete current key notifies client", c do
+    test "a key cannot revoke a key", c do
       key = Key.build(c.eric, %{name: "current"}) |> Repo.insert!()
 
-      conn =
+      message =
         build_conn()
         |> put_req_header("authorization", key.user_secret)
         |> delete("/api/keys/current")
+        |> json_response(403)
+        |> Map.fetch!("message")
 
-      assert conn.status == 200
-      body = JSON.decode!(conn.resp_body)
-      assert body["name"] == "current"
-      assert body["revoke_at"]
-      assert body["updated_at"]
-      assert body["inserted_at"]
-      refute body["secret"]
-      assert body["authing_key"]
-      refute Repo.one(Key.get(c.eric, "current"))
+      assert message =~ "API keys cannot revoke API keys"
+      assert Repo.one(Key.get(c.eric, "current"))
+      refute Repo.exists?(from(a in AuditLog, where: a.action == "key.remove"))
+    end
 
-      assert Repo.one(Key.get_revoked(c.eric, "current"))
+    test "a token exchanged for a key cannot revoke a key", c do
+      key = Key.build(c.eric, %{name: "computer"}) |> Repo.insert!()
+      client = insert(:oauth_client)
 
-      log = Repo.one!(from(a in AuditLog, where: a.action == "key.remove"))
-      assert log.user_id == c.eric.id
-      assert log.action == "key.remove"
-      assert %{"name" => "current"} = log.params
+      %{"access_token" => access_token} =
+        build_conn()
+        |> post("/api/oauth/token", %{
+          "grant_type" => "client_credentials",
+          "client_id" => client.client_id,
+          "client_secret" => key.user_secret,
+          "scope" => "api"
+        })
+        |> json_response(200)
 
       conn =
         build_conn()
-        |> put_req_header("authorization", key.user_secret)
-        |> get("/api/keys")
+        |> put_req_header("authorization", "Bearer #{access_token}")
+        |> delete("/api/keys/computer")
 
-      assert conn.status == 401
-      body = JSON.decode!(conn.resp_body)
-      assert %{"message" => "API key revoked", "status" => 401} == body
+      assert json_response(conn, 403)["message"] =~ "API keys cannot revoke API keys"
+      assert Repo.one(Key.get(c.eric, "computer"))
     end
   end
 

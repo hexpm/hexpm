@@ -11,6 +11,8 @@ Use an organization key for automation that acts for an organization, and a pers
 
 `api:write` includes every write permission, so a key with `api:write` can do everything the narrower write permissions below allow. Neither `api:write` nor `api:read` allows fetching from private repositories, which needs an organization key with `repository:acme` or `repositories`.
 
+Keys can't create or revoke keys, whatever their permissions. Create and revoke keys on the dashboard, or with `mix hex.organization key` after signing in with `mix hex.user auth`.
+
 A key with `api:write`, `owners`, `package:name` or `members` can add an owner or organization member, and that person can then publish from their own account without [staged publishing](/docs/publish#staged-publishing). For publishing from CI we recommend [Workload Identity](/docs/workload-identity) over API keys. If you have to use a key, give it only the permissions the job needs.
 
 ### Personal keys
@@ -26,7 +28,6 @@ Create a personal key on the [keys page](/dashboard/keys) of your dashboard and 
 | `owners` | Adding and removing owners on packages you fully own. |
 | `owners:name` | The same as `owners`, for one package. |
 | `package:name` | Publishing and changing owners for one package, and every API read. The dashboard calls this "Manage". |
-| `keys` | Revoking keys. A key can't create other keys, create them on the keys page. |
 | `members` | Adding and removing members and changing their roles, in organizations where you're an admin. |
 | `administration` | Changing the number of seats, in organizations where you're an admin. |
 
@@ -50,7 +51,6 @@ The key gets `repository:acme` unless you pass `--permission`, which you can rep
 | `docs:acme` | Fetching the organization's documentation from hexdocs.pm. |
 | `publish` | Publishing, reverting, retiring and unretiring releases, and publishing documentation, on any package the organization can act on. It can't change package owners. |
 | `publish:acme/name` | The same as `publish`, for one package. |
-| `keys` | Revoking the organization's keys. A key can't create other keys. |
 | `owners` | Adding and removing owners on any package the organization can act on. |
 | `owners:acme/name` | The same as `owners`, for one package. |
 | `package:acme/name` | Publishing and changing owners for one package, and every API read. |
@@ -69,7 +69,7 @@ A member can only give a key the permissions their organization role allows them
 | Role | Can grant |
 |---|---|
 | read | `api:read`, `repository:acme`, `docs:acme` |
-| write | The above, and `publish`, `publish:acme/name` and `keys` |
+| write | The above, and `publish` and `publish:acme/name` |
 | admin | Every permission |
 
-When a write member asks for `api` or `api:write`, the key gets `api:read`, `publish` and `keys`. A read member gets `api:read`. A member's sign-in never grants more than the member's role allows. Revoking keys requires the write role.
+When a write member asks for `api` or `api:write`, the key gets `api:read` and `publish`. A read member gets `api:read`. A member's sign-in never grants more than the member's role allows. Revoking keys requires the write role.

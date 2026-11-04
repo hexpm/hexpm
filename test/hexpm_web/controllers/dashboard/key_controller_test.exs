@@ -71,6 +71,24 @@ defmodule HexpmWeb.Dashboard.KeyControllerTest do
              ]
     end
 
+    test "doesn't offer the keys permission", c do
+      capabilities =
+        build_conn()
+        |> test_login(c.user)
+        |> get("/dashboard/keys")
+        |> html_response(200)
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#capability-permissions input")
+        |> Enum.map(&(LazyHTML.attribute(&1, "name") |> List.first()))
+
+      assert capabilities == [
+               "key[permissions][capabilities][publish]",
+               "key[permissions][capabilities][owners]",
+               "key[permissions][capabilities][members]",
+               "key[permissions][capabilities][administration]"
+             ]
+    end
+
     test "shows revoke all keys only when there are keys", c do
       body =
         build_conn()

@@ -179,7 +179,7 @@ f48ac236bca15c3271e077c15c5320c4
 
 Pass `--permission publish` instead to publish every package in the organization. See [keys](/docs/keys) for the other permissions and which roles can grant them.
 
-Only a person signed in to Hex.pm can create a key, and an account with 2FA needs its 2FA code to do it. The keys pages ask for the code, or for your password if your account doesn't have 2FA, unless you verified in the last hour. `mix hex.organization key` creates keys with the OAuth token from `mix hex.user auth`, which needs the 2FA code for every change. An API key can't create other keys. [Staged publishing](#staged-publishing) doesn't add a step to creating a key; it applies when the key publishes.
+Only a person signed in to Hex.pm can create a key, and an account with 2FA needs its 2FA code to do it. The keys pages ask for the code, or for your password if your account doesn't have 2FA, unless you verified in the last hour. `mix hex.organization key` creates keys with the OAuth token from `mix hex.user auth`, which needs the 2FA code for every change. A key can't create or revoke keys. [Staged publishing](#staged-publishing) doesn't add a step to creating a key; it applies when the key publishes.
 
 Staged publishing doesn't stop a key with `api:write`, `owners`, `package:name` or `members` from adding an owner or organization member. The new owner or member can then publish with OAuth and their own 2FA code, and those releases aren't staged. Staged publishing only holds releases from keys that can't change owners or members.
 
