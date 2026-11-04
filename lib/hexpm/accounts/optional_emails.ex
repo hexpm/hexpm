@@ -50,6 +50,11 @@ defmodule Hexpm.Accounts.OptionalEmails do
         "You’ll be notified whenever a workload identity is added, changed or removed on a package you own or an organization you administer."
     },
     %{
+      id: :staged_release_ready,
+      title: "Staged release ready to approve",
+      description: "You’ll be notified when a release you can approve is staged."
+    },
+    %{
       id: :staged_release_expired,
       title: "Staged release expired",
       description:

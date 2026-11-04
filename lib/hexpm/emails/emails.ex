@@ -628,7 +628,7 @@ defmodule Hexpm.Emails do
 
   def staged_release(users, staged, event) do
     base_email(:staged_release)
-    |> email_to(users, if(event == :expired, do: :staged_release_expired))
+    |> email_to(users, staged_release_optional_email(event))
     |> subject("Hex.pm - #{staged.name} #{staged.version} #{event}")
     |> assign(:staged, staged)
     |> assign(:event, event)
@@ -638,6 +638,9 @@ defmodule Hexpm.Emails do
     )
     |> render_body(:staged_release)
   end
+
+  defp staged_release_optional_email(:staged), do: :staged_release_ready
+  defp staged_release_optional_email(:expired), do: :staged_release_expired
 
   def staged_publishing_disabled(users, %Package{} = package) do
     name = HexpmWeb.ViewHelpers.package_name(package)

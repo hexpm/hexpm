@@ -418,6 +418,33 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
     assert [%{category: "staged_release.staged"}] = Repo.all(Hexpm.Emails.OutboxEntry)
   end
 
+  test "staging notifies approvers unless they turned it off", ctx do
+    other = insert(:user_with_tfa, optional_emails: %{"staged_release_ready" => false})
+
+    insert(:organization_user,
+      organization: ctx.repository.organization,
+      user: other,
+      role: "write"
+    )
+
+    stage(ctx)
+
+    assert [entry] = Repo.all(Hexpm.Emails.OutboxEntry)
+    assert entry.category == "staged_release.staged"
+    assert entry.recipients == [User.email(ctx.user, :primary)]
+  end
+
+  test "staging sends nothing when every approver turned it off", ctx do
+    ctx.user
+    |> Ecto.Changeset.change(optional_emails: %{"staged_release_ready" => false})
+    |> Repo.update!()
+
+    {result, _} = stage(ctx)
+
+    assert staged(ctx, result)
+    assert Repo.all(Hexpm.Emails.OutboxEntry) == []
+  end
+
   test "a user without 2FA or with only read access can't review or approve", ctx do
     {result, _} = stage(ctx)
 
