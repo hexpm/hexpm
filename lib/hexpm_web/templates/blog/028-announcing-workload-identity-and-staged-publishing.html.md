@@ -84,7 +84,10 @@ Hex 2.6.1 adds `mix hex.publish --wait`, which opens the staged release page and
 
 ### Key permissions
 
-Keys can now have narrower permissions than `api:read` and `api:write`. `publish` covers publishing, reverting and retiring releases and publishing documentation, and `publish:name` limits that to one package. `owners` and `owners:name` add and remove package owners, `package:name` publishes and changes owners for one package, `keys` revokes keys, and `members` and `administration` manage an organization's members and seats. `api:write` still includes every write permission. [Keys](/docs/keys) lists what each permission allows for personal and organization keys.
+Keys can now have narrower permissions than API read and write, such as publishing a single package. [Keys](/docs/keys) describes each permission.
+
+<img class="blog-img-light" src="/images/blog/028_key_permissions.png" srcset="/images/blog/028_key_permissions.png 2x" alt="The Generate New Key form with API, write and per-package key permissions">
+<img class="blog-img-dark" src="/images/blog/028_key_permissions_dark.png" srcset="/images/blog/028_key_permissions_dark.png 2x" alt="The Generate New Key form with API, write and per-package key permissions">
 
 Staged publishing doesn't cover adding owners or members. A key with the `api:write`, `owners`, `owners:name`, `package:name` or `members` permission can add an owner or organization member, who can then publish with their own account without approval. If you have to publish with a key, give it only `publish:name` and `api:read`.
 
