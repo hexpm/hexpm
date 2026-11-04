@@ -107,7 +107,7 @@ defmodule Hexpm.Accounts.Keys do
         user_or_organization
         |> preload_for_email()
         |> Emails.api_key_created(key)
-        |> Mailer.deliver!()
+        |> deliver()
 
       _ ->
         :ok
@@ -133,7 +133,7 @@ defmodule Hexpm.Accounts.Keys do
         user_or_organization
         |> preload_for_email()
         |> Emails.api_key_revoked(key)
-        |> Mailer.deliver!()
+        |> deliver()
       end
 
       result
@@ -210,7 +210,7 @@ defmodule Hexpm.Accounts.Keys do
         user_or_organization
         |> preload_for_email()
         |> Emails.api_keys_all_revoked()
-        |> Mailer.deliver!()
+        |> deliver()
 
       _ ->
         :ok
@@ -248,6 +248,9 @@ defmodule Hexpm.Accounts.Keys do
     do: Repo.preload(org, organization_users: [user: :emails])
 
   defp preload_for_email(user), do: user
+
+  defp deliver(%Swoosh.Email{to: []}), do: :ok
+  defp deliver(email), do: Mailer.deliver!(email)
 
   defp should_update_last_use?(%Key{last_use: %{used_at: used_at}})
        when not is_nil(used_at) do

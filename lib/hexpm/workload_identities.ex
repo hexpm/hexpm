@@ -610,8 +610,6 @@ defmodule Hexpm.WorkloadIdentities do
     Repo.preload(workload_identity, [:organization, package: :repository])
   end
 
-  # Not an optional email: a workload identity grants publish rights to whoever can run
-  # the workflow, so every owner, or every organization admin, hears about it.
   defp notify(event, %WorkloadIdentity{organization: %Organization{} = organization} = tp, audit) do
     organization = %{
       organization
@@ -637,13 +635,11 @@ defmodule Hexpm.WorkloadIdentities do
       |> Owners.all(user: [:emails, organization: [organization_users: [user: :emails]]])
       |> Enum.map(& &1.user)
 
-    if owners != [] do
-      case event do
-        :added -> Emails.workload_identity_added(workload_identity, owners, audit_data.user)
-        :removed -> Emails.workload_identity_removed(workload_identity, owners, audit_data.user)
-      end
-      |> Mailer.deliver!()
+    case event do
+      :added -> Emails.workload_identity_added(workload_identity, owners, audit_data.user)
+      :removed -> Emails.workload_identity_removed(workload_identity, owners, audit_data.user)
     end
+    |> deliver()
   end
 
   defp notify_change(
@@ -677,11 +673,9 @@ defmodule Hexpm.WorkloadIdentities do
       |> Owners.all(user: [:emails, organization: [organization_users: [user: :emails]]])
       |> Enum.map(& &1.user)
 
-    if owners != [] do
-      previous
-      |> Emails.workload_identity_changed(updated, owners, audit_data.user)
-      |> Mailer.deliver!()
-    end
+    previous
+    |> Emails.workload_identity_changed(updated, owners, audit_data.user)
+    |> deliver()
   end
 
   # The other owners of the public packages an organization workload identity
@@ -714,7 +708,7 @@ defmodule Hexpm.WorkloadIdentities do
             actor
           )
       end
-      |> Mailer.deliver!()
+      |> deliver()
     end)
   end
 
@@ -745,10 +739,13 @@ defmodule Hexpm.WorkloadIdentities do
       if Map.has_key?(packages, :started) or Map.has_key?(packages, :kept) do
         previous
         |> Emails.public_workload_identity_changed(updated, organization, user, packages, actor)
-        |> Mailer.deliver!()
+        |> deliver()
       end
     end)
   end
+
+  defp deliver(%Swoosh.Email{to: []}), do: :ok
+  defp deliver(email), do: Mailer.deliver!(email)
 
   # Calls `fun` once for each person who owns some of the packages, other than
   # through the organization or as one of `notified`, with their package names

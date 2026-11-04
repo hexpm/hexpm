@@ -1,7 +1,8 @@
 defmodule Hexpm.Accounts.KeysTest do
   use Hexpm.DataCase, async: true
+  import Swoosh.TestAssertions
 
-  alias Hexpm.Accounts.{Key, Keys}
+  alias Hexpm.Accounts.{Key, Keys, User}
 
   setup do
     user = insert(:user)
@@ -261,6 +262,68 @@ defmodule Hexpm.Accounts.KeysTest do
 
       assert Enum.map(Keys.personal_reaching_organization(organization), & &1.name) ==
                ["every-package"]
+    end
+  end
+
+  describe "optional emails" do
+    @params %{"name" => "keyname", "permissions" => [%{"domain" => "api", "resource" => "read"}]}
+
+    test "a user who turned off key emails gets none" do
+      user =
+        insert(:user,
+          optional_emails: %{"api_key_created" => false, "api_key_revoked" => false}
+        )
+
+      assert {:ok, _} = Keys.create(user, @params, audit: audit_data(user))
+      assert {:ok, _} = Keys.revoke(user, "keyname", audit: audit_data(user))
+      assert {:ok, _} = Keys.create(user, @params, audit: audit_data(user))
+      assert {:ok, _} = Keys.revoke_all(user, audit: audit_data(user))
+      assert_no_email_sent()
+    end
+
+    test "turning off created keeps revoked" do
+      user = insert(:user, optional_emails: %{"api_key_created" => false})
+
+      assert {:ok, _} = Keys.create(user, @params, audit: audit_data(user))
+      assert {:ok, _} = Keys.revoke(user, "keyname", audit: audit_data(user))
+
+      assert_email_sent(fn email ->
+        assert email.subject =~ "A key was revoked"
+      end)
+
+      assert_no_email_sent()
+    end
+
+    test "organization admins who turned them off are left out" do
+      opted_out = insert(:user, optional_emails: %{"api_key_created" => false})
+      admin = insert(:user)
+
+      organization =
+        insert(:organization,
+          organization_users: [
+            build(:organization_user, user: opted_out, role: "admin"),
+            build(:organization_user, user: admin, role: "admin")
+          ]
+        )
+
+      assert {:ok, _} = Keys.create(organization, @params, audit: audit_data(admin))
+
+      assert_email_sent(fn email ->
+        assert email.subject =~ "A new key was created"
+        assert email.to == [{"", User.email(admin, :primary)}]
+      end)
+    end
+
+    test "an organization whose admins all turned them off sends none" do
+      opted_out = insert(:user, optional_emails: %{"api_key_created" => false})
+
+      organization =
+        insert(:organization,
+          organization_users: [build(:organization_user, user: opted_out, role: "admin")]
+        )
+
+      assert {:ok, _} = Keys.create(organization, @params, audit: audit_data(opted_out))
+      assert_no_email_sent()
     end
   end
 end

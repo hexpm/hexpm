@@ -2,7 +2,7 @@ defmodule Hexpm.Accounts.SSOJITTest do
   use Hexpm.DataCase
   use Oban.Testing, repo: Hexpm.RepoBase
 
-  alias Hexpm.Accounts.{OrganizationDomains, Organizations, Seats, SSO}
+  alias Hexpm.Accounts.{OrganizationDomains, Organizations, Seats, SSO, User}
   alias Hexpm.Accounts.SSO.{Connection, Failure, Identity, OIDC}
   alias Hexpm.Emails.OutboxEntry
 
@@ -242,6 +242,31 @@ defmodule Hexpm.Accounts.SSOJITTest do
       assert failure.code == "seats_exhausted"
       assert [entry] = Repo.all(OutboxEntry)
       assert entry.category == "sso.seats_exhausted"
+    end
+
+    test "leaves out administrators who turned off seat notices", context do
+      context.admin
+      |> Ecto.Changeset.change(optional_emails: %{"sso_seats" => false})
+      |> Repo.update!()
+
+      other_admin = insert(:user)
+
+      insert(:organization_user,
+        organization: context.organization,
+        user: other_admin,
+        role: "admin"
+      )
+
+      insert(:organization_user, organization: context.organization, user: insert(:user))
+      newcomer = insert(:user)
+      transaction = start_login(context, newcomer)
+
+      assert {:error, :seats_exhausted} =
+               complete(transaction, claims("newcomer@example.com"), newcomer)
+
+      assert [entry] = Repo.all(OutboxEntry)
+      assert entry.category == "sso.seats_exhausted"
+      assert entry.recipients == [User.email(other_admin, :primary)]
     end
 
     test "reports a seat count it cannot read as such", context do

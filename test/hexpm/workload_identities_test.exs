@@ -567,6 +567,65 @@ defmodule Hexpm.WorkloadIdentitiesTest do
       assert identity.package_id == package.id
     end
 
+    test "leaves out owners who turned off workload identity emails", %{user: user} do
+      opted_out = insert(:user, optional_emails: %{"workload_identity_changed" => false})
+
+      package =
+        insert(:package,
+          package_owners: [
+            build(:package_owner, user: user, level: "full"),
+            build(:package_owner, user: opted_out, level: "maintainer")
+          ]
+        )
+
+      expect(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/widget", _, _ ->
+        {:ok, 200, [], %{"id" => 99, "owner" => %{"id" => 42}}}
+      end)
+
+      assert {:ok, _identity} =
+               WorkloadIdentities.create(
+                 package,
+                 %{
+                   "provider" => "github",
+                   "repository_owner" => "acme",
+                   "repositories" => "widget",
+                   "workflow" => "release.yml"
+                 },
+                 audit: audit_data(user)
+               )
+
+      assert_email_sent(fn email ->
+        assert Enum.map(email.to, &elem(&1, 1)) == [Hexpm.Accounts.User.email(user, :primary)]
+      end)
+
+      refute_email_sent()
+    end
+
+    test "sends nothing when every owner turned off workload identity emails" do
+      user = insert(:user, optional_emails: %{"workload_identity_changed" => false})
+
+      package =
+        insert(:package, package_owners: [build(:package_owner, user: user, level: "full")])
+
+      expect(Hexpm.HTTP.Mock, :get, fn "https://api.github.com/repos/acme/widget", _, _ ->
+        {:ok, 200, [], %{"id" => 99, "owner" => %{"id" => 42}}}
+      end)
+
+      assert {:ok, _identity} =
+               WorkloadIdentities.create(
+                 package,
+                 %{
+                   "provider" => "github",
+                   "repository_owner" => "acme",
+                   "repositories" => "widget",
+                   "workflow" => "release.yml"
+                 },
+                 audit: audit_data(user)
+               )
+
+      refute_email_sent()
+    end
+
     test "allows the same configuration on several packages", %{user: user} do
       params = %{
         "provider" => "github",
@@ -2127,6 +2186,33 @@ defmodule Hexpm.WorkloadIdentitiesTest do
         assert email.text_body =~ "#{admin.username} added a workload identity"
         assert email.text_body =~ "owned_one\nowned_two"
         assert email.text_body =~ "GitHub repository: acme/widget"
+      end)
+
+      refute_email_sent()
+    end
+
+    test "leaves out admins and owners who turned off workload identity emails", %{
+      admin: admin,
+      co_owner: co_owner,
+      admin_co_owner: admin_co_owner,
+      organization: organization
+    } do
+      for user <- [co_owner, admin_co_owner] do
+        user
+        |> Ecto.Changeset.change(optional_emails: %{"workload_identity_changed" => false})
+        |> Repo.update!()
+      end
+
+      expect_github_lookup()
+
+      assert {:ok, _identity} =
+               WorkloadIdentities.create(organization, public_params(%{}),
+                 audit: audit_data(admin)
+               )
+
+      assert_email_sent(fn email ->
+        assert email.subject =~ "Workload identity added to organization #{organization.name}"
+        assert Enum.map(email.to, &elem(&1, 1)) == [Hexpm.Accounts.User.email(admin, :primary)]
       end)
 
       refute_email_sent()
