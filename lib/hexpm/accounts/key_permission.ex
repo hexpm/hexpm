@@ -14,6 +14,7 @@ defmodule Hexpm.Accounts.KeyPermission do
   def changeset(struct, user_or_organization, grantor, refusals, params) do
     cast(struct, params, ~w(domain resource)a)
     |> validate_inclusion(:domain, Permissions.valid_domains())
+    |> validate_exclusion(:domain, ["keys"], message: "keys can't create or revoke keys")
     |> validate_user_key_domain(user_or_organization)
     |> normalize_resource()
     |> validate_length(:resource, count: :bytes, max: 512)

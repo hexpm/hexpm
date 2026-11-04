@@ -101,14 +101,14 @@ defmodule HexpmWeb.KeyCapabilitiesTest do
   end
 
   describe "write member" do
-    test "asking for api:write gets api:read, publish and keys", c do
+    test "asking for api:write gets api:read and publish", c do
       conn =
         create_key(signed_in(c.writer), c.organization, [%{domain: "api", resource: "write"}])
 
-      assert permissions(conn) == ["api:read", "keys", "publish"]
+      assert permissions(conn) == ["api:read", "publish"]
 
       conn = create_key(signed_in(c.writer), c.organization, :omitted)
-      assert permissions(conn) == ["api:read", "keys", "publish"]
+      assert permissions(conn) == ["api:read", "publish"]
     end
 
     test "grants only the permissions of the write role", c do
@@ -181,8 +181,7 @@ defmodule HexpmWeb.KeyCapabilitiesTest do
     test "can't revoke keys", c do
       org_key(c.organization, ["api:read"])
 
-      build_conn()
-      |> put_req_header("authorization", key_for(c.reader))
+      signed_in(c.reader)
       |> delete("/api/orgs/#{c.organization.name}/keys/org")
       |> response(404)
 
@@ -197,7 +196,7 @@ defmodule HexpmWeb.KeyCapabilitiesTest do
         assert permissions(conn) == ["api:read"]
 
         conn = create_key(signed_in(c.writer), c.organization, permissions)
-        assert permissions(conn) == ["api:read", "keys", "publish"]
+        assert permissions(conn) == ["api:read", "publish"]
       end
     end
   end
@@ -226,6 +225,11 @@ defmodule HexpmWeb.KeyCapabilitiesTest do
                ["administration", "members", "owners:#{resource}", "package:#{resource}"]
     end
 
+    test "can't give a key the keys permission", c do
+      conn = create_key(signed_in(c.admin), c.organization, [%{domain: "keys"}])
+      assert errors(conn) =~ "keys can't create or revoke keys"
+    end
+
     test "is limited by the scopes it signs in with", c do
       conn = create_key(signed_in(c.admin, ["keys"]), c.organization, [%{domain: "members"}])
       assert errors(conn) =~ "members is not held by the authenticating token"
@@ -234,10 +238,27 @@ defmodule HexpmWeb.KeyCapabilitiesTest do
 
   describe "organization key" do
     test "can't create keys, whatever it holds", c do
-      secret = org_key(c.organization, ["keys", "publish"])
+      secret = org_key(c.organization, ["api:write"])
 
       conn = create_key(with_key(secret), c.organization, [%{domain: "publish"}])
       assert json_response(conn, 403)["message"] =~ "API keys cannot create API keys"
+    end
+
+    test "can't revoke keys, whatever it holds", c do
+      secret = org_key(c.organization, ["api:write"])
+
+      for path <- [
+            "/api/orgs/#{c.organization.name}/keys/org",
+            "/api/orgs/#{c.organization.name}/keys"
+          ] do
+        message =
+          secret |> with_key() |> delete(path) |> json_response(403) |> Map.fetch!("message")
+
+        assert message =~ "API keys cannot revoke API keys"
+        assert message =~ "mix hex.organization key #{c.organization.name} revoke"
+      end
+
+      assert Hexpm.Accounts.Keys.get(c.organization, "org")
     end
 
     test "gets the same answer for an organization that exists and one that doesn't", c do
@@ -252,13 +273,13 @@ defmodule HexpmWeb.KeyCapabilitiesTest do
   end
 
   describe "personal keys" do
-    test "a sign-in holding only keys can't create a full API key", c do
+    test "a sign-in holding only keys can't give a key any other permission", c do
       for params <- [
             %{name: "laptop", permissions: [%{domain: "api", resource: "write"}]},
             %{name: "laptop"}
           ] do
         conn = c.writer |> signed_in(["keys"]) |> post("/api/keys", params)
-        assert permissions(conn) == ["keys"]
+        assert errors(conn) =~ "is not held by the authenticating token"
       end
 
       conn =
@@ -457,7 +478,7 @@ defmodule HexpmWeb.KeyCapabilitiesTest do
     end
 
     test "a capability key asking for api:write gets its capabilities", c do
-      secret = org_key(c.organization, ["publish", "keys", "api:read"])
+      secret = org_key(c.organization, ["publish", "api:read"])
 
       response =
         build_conn()
@@ -469,7 +490,7 @@ defmodule HexpmWeb.KeyCapabilitiesTest do
         })
         |> json_response(200)
 
-      assert response["scope"] |> String.split() |> Enum.sort() == ["api:read", "keys", "publish"]
+      assert response["scope"] |> String.split() |> Enum.sort() == ["api:read", "publish"]
 
       token = response["access_token"]
 

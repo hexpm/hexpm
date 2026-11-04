@@ -71,23 +71,22 @@ defmodule HexpmWeb.Dashboard.KeyControllerTest do
              ]
     end
 
-    test "describes the keys permission as revoking keys", c do
-      label =
+    test "doesn't offer the keys permission", c do
+      capabilities =
         build_conn()
         |> test_login(c.user)
         |> get("/dashboard/keys")
         |> html_response(200)
         |> LazyHTML.from_document()
-        |> LazyHTML.query("#capability-permissions label")
-        |> Enum.find(fn label ->
-          LazyHTML.attribute(LazyHTML.query(label, "input"), "name") ==
-            ["key[permissions][capabilities][keys]"]
-        end)
-        |> LazyHTML.text()
-        |> String.replace(~r/\s+/, " ")
-        |> String.trim()
+        |> LazyHTML.query("#capability-permissions input")
+        |> Enum.map(&(LazyHTML.attribute(&1, "name") |> List.first()))
 
-      assert label == "Keys Revoke keys"
+      assert capabilities == [
+               "key[permissions][capabilities][publish]",
+               "key[permissions][capabilities][owners]",
+               "key[permissions][capabilities][members]",
+               "key[permissions][capabilities][administration]"
+             ]
     end
 
     test "shows revoke all keys only when there are keys", c do

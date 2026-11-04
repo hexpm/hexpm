@@ -5,7 +5,7 @@ defmodule HexpmWeb.API.KeyController do
 
   # Before the organization is looked up, so a key gets the same answer for an
   # organization that exists and one that doesn't.
-  plug :refuse_key_credential when action == :create
+  plug :refuse_key_credential when action in [:create, :delete, :delete_all]
 
   plug :fetch_organization
 
@@ -84,14 +84,13 @@ defmodule HexpmWeb.API.KeyController do
 
   def delete(conn, %{"name" => name}) do
     user_or_organization = conn.assigns.organization || conn.assigns.current_user
-    authing_key = authing_key(conn)
 
     case Keys.revoke(user_or_organization, name, audit: audit_data(conn)) do
       {:ok, %{key: key}} ->
         conn
         |> api_cache(:private)
         |> put_status(200)
-        |> render(:delete, key: key, authing_key: authing_key)
+        |> render(:delete, key: key, authing_key: nil)
 
       _ ->
         not_found(conn)
@@ -100,41 +99,47 @@ defmodule HexpmWeb.API.KeyController do
 
   def delete_all(conn, _params) do
     user_or_organization = conn.assigns.organization || conn.assigns.current_user
-    authing_key = authing_key(conn)
     {:ok, _} = Keys.revoke_all(user_or_organization, audit: audit_data(conn))
 
     conn
     |> put_status(200)
-    |> render(:delete, key: authing_key && Keys.get(authing_key.id), authing_key: authing_key)
+    |> render(:delete, key: nil, authing_key: nil)
   end
 
   defp authing_key(%{assigns: %{auth_credential: %Key{} = key}}), do: key
   defp authing_key(_conn), do: nil
 
-  # Keys only come from a sign-in, so revoking a key leaves behind no key it
-  # created. A client credentials token was exchanged for a key and counts as one.
+  # Only a signed-in person creates or revokes keys, so a leaked key can't create
+  # keys that outlive it or revoke the owner's other keys. A client credentials
+  # token was exchanged for a key and counts as one.
   defp refuse_key_credential(conn, _opts) do
-    case conn.assigns.auth_credential do
-      %Key{} -> refuse_key_credential(conn)
-      %Token{grant_type: "client_credentials"} -> refuse_key_credential(conn)
-      _credential -> conn
+    if key_credential?(conn.assigns.auth_credential) do
+      forbidden(conn, refusal(action_name(conn), conn.params["organization"]))
+    else
+      conn
     end
   end
 
-  defp refuse_key_credential(%{params: %{"organization" => organization}} = conn) do
-    forbidden(
-      conn,
-      "API keys cannot create API keys, create the key on " <>
-        url(~p"/dashboard/orgs/#{organization}") <>
-        " or with mix hex.organization key #{organization} generate after mix hex.user auth"
-    )
+  defp key_credential?(%Key{}), do: true
+  defp key_credential?(%Token{grant_type: "client_credentials"}), do: true
+  defp key_credential?(_credential), do: false
+
+  defp refusal(:create, nil),
+    do: "API keys cannot create API keys, create the key on " <> url(~p"/dashboard/keys")
+
+  defp refusal(:create, organization) do
+    "API keys cannot create API keys, create the key on " <>
+      url(~p"/dashboard/orgs/#{organization}") <>
+      " or with mix hex.organization key #{organization} generate after mix hex.user auth"
   end
 
-  defp refuse_key_credential(conn) do
-    forbidden(
-      conn,
-      "API keys cannot create API keys, create the key on " <> url(~p"/dashboard/keys")
-    )
+  defp refusal(_revoke, nil),
+    do: "API keys cannot revoke API keys, revoke the key on " <> url(~p"/dashboard/keys")
+
+  defp refusal(_revoke, organization) do
+    "API keys cannot revoke API keys, revoke the key on " <>
+      url(~p"/dashboard/orgs/#{organization}") <>
+      " or with mix hex.organization key #{organization} revoke after mix hex.user auth"
   end
 
   defp require_organization_path(conn, _opts) do
