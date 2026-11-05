@@ -27,11 +27,18 @@ defmodule Hexpm.Accounts.OrganizationTest do
       end
     end
 
-    test "bounds the name in bytes" do
-      assert Organization.changeset(%Organization{}, %{name: String.duplicate("a", 255)}).valid?
+    test "rejects a leading or trailing underscore" do
+      for name <- ["_globex", "globex_", "globex__"] do
+        changeset = Organization.changeset(%Organization{}, %{name: name})
+        assert errors_on(changeset).name == "can't start or end with an underscore"
+      end
+    end
 
-      changeset = Organization.changeset(%Organization{}, %{name: String.duplicate("a", 256)})
-      assert errors_on(changeset).name == "should be at most 255 byte(s)"
+    test "bounds the name to a DNS label" do
+      assert Organization.changeset(%Organization{}, %{name: String.duplicate("a", 63)}).valid?
+
+      changeset = Organization.changeset(%Organization{}, %{name: String.duplicate("a", 64)})
+      assert errors_on(changeset).name == "should be at most 63 byte(s)"
     end
   end
 

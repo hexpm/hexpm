@@ -42,8 +42,11 @@ defmodule Hexpm.Accounts.Organization do
     |> unique_constraint(:name)
     |> update_change(:name, &String.downcase/1)
     |> validate_length(:name, min: 3)
-    |> validate_length(:name, count: :bytes, max: 255)
+    |> validate_length(:name, count: :bytes, max: 63)
     |> validate_format(:name, @name_regex)
+    |> validate_format(:name, ~r"\A[^_](.*[^_])?\z",
+      message: "can't start or end with an underscore"
+    )
     |> validate_exclusion(:name, @reserved_names)
     |> validate_name_not_reserved()
   end
