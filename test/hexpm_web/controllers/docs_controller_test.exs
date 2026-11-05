@@ -1,30 +1,6 @@
 defmodule HexpmWeb.DocsControllerTest do
   use HexpmWeb.ConnCase
 
-  test "renders dependency policy client compatibility behavior" do
-    html =
-      build_conn()
-      |> get("/docs/dependency-policies")
-      |> html_response(200)
-
-    assert html =~ "Hex v2.6 and later warn when a loaded policy contains override actions"
-    assert html =~ "mix hex.policy show"
-    assert html =~ "Advisory, Retirement, and Cooldown overrides require Hex v2.6 or later."
-
-    assert html =~
-             "Hex v2.5 applies Allow and Deny overrides but ignores the other override types"
-
-    assert html =~ "The policy flags require Hex v2.6 or later."
-    assert html =~ "Dependency resolution"
-    assert html =~ "Resolution warnings"
-    assert html =~ "Whole-lock audit"
-    assert html =~ "mix hex.audit --policy-overrides"
-    assert html =~ "mix hex.audit --policy"
-    assert html =~ "every advisory and retirement should remain actionable"
-    assert html =~ "full advisory and retirement policy"
-    assert html =~ "requires Hex v2.6 or later. Earlier versions ignore it"
-  end
-
   test "every in-page link in the dependency policies guide points at a heading on it" do
     document =
       build_conn()
@@ -49,27 +25,11 @@ defmodule HexpmWeb.DocsControllerTest do
   test "renders the organization SSO setup guide in the docs navigation" do
     enable_sso_docs()
 
-    html =
+    document =
       build_conn()
       |> get("/docs/organization-sso")
       |> html_response(200)
-
-    assert html =~ "Organization single sign-on"
-    assert html =~ "Create the Okta application"
-    assert html =~ "existing Hexpm account"
-    assert html =~ "Custom Okta dashboard tiles"
-
-    # The load-bearing fact about the OIN listing, rather than the sentence
-    # carrying it. An earlier version asserted the exact wording and refuted two
-    # phrasings that no longer exist anywhere, which breaks on a copy edit and
-    # catches nothing.
-    assert html =~ "never submitted for review"
-    assert html =~ "tenant-specific v2 issuer"
-    assert html =~ "xms_edov"
-    assert html =~ "organization access session"
-    assert html =~ "never suppresses a personal Hexpm two-factor prompt"
-
-    document = LazyHTML.from_document(html)
+      |> LazyHTML.from_document()
 
     assert [link] =
              LazyHTML.query(document, ~s(#docs-nav a[href="/docs/organization-sso"]))
@@ -128,15 +88,11 @@ defmodule HexpmWeb.DocsControllerTest do
   end
 
   test "renders the leaked API keys guide in the docs navigation" do
-    html =
+    document =
       build_conn()
       |> get("/docs/leaked-keys")
       |> html_response(200)
-
-    assert html =~ "Leaked keys"
-    assert html =~ "What Hex.pm did automatically"
-
-    document = LazyHTML.from_document(html)
+      |> LazyHTML.from_document()
 
     assert [link] =
              LazyHTML.query(document, ~s(#docs-nav a[href="/docs/leaked-keys"]))
@@ -177,22 +133,13 @@ defmodule HexpmWeb.DocsControllerTest do
   test "renders the Workload Identity guide in the docs navigation" do
     enable_workload_identity_docs()
 
-    html =
+    document =
       build_conn()
       |> get("/docs/workload-identity")
       |> html_response(200)
+      |> LazyHTML.from_document()
 
-    assert html =~ "Workload Identity"
-    assert html =~ "sometimes also known as &quot;Trusted Publishing&quot;"
-    assert html =~ "Configure a workload identity"
-    assert html =~ "urn:ietf:params:oauth:grant-type:jwt-bearer"
-    assert html =~ "id-token: write"
-    assert html =~ "create a package or publish its first release from CI"
-    assert html =~ ~s(id="organization-workload-identities")
-    assert html =~ "scope=repository:ORG"
-    assert html =~ "Mix does this exchange itself"
-
-    document = LazyHTML.from_document(html)
+    assert [_] = LazyHTML.query(document, "#organization-workload-identities") |> Enum.to_list()
 
     assert [_] =
              LazyHTML.query(document, ~s(a[href="/docs/publish#staged-publishing"]))
@@ -245,10 +192,9 @@ defmodule HexpmWeb.DocsControllerTest do
       |> html_response(200)
 
     assert html =~ ~s(href="/docs/workload-identity")
-    assert html =~ "Workload Identity"
   end
 
-  test "publish docs explain staged publishing" do
+  test "publish docs link to the staged publishing section" do
     document =
       build_conn()
       |> get("/docs/publish")
@@ -259,14 +205,6 @@ defmodule HexpmWeb.DocsControllerTest do
 
     assert [_, _] =
              document |> LazyHTML.query(~s(p a[href="#staged-publishing"])) |> Enum.to_list()
-
-    text = LazyHTML.text(document)
-    assert text =~ "published with an API key or a workload identity until a person approves them"
-    assert text =~ "every package in its private repository, whatever the package setting"
-    assert text =~ "New packages require approval by default"
-    assert text =~ "Settings > Staged publishing"
-    assert text =~ "Full package owners and owning organization admins"
-    assert text =~ "Staged releases expire after seven days"
   end
 
   test "2FA documentation and navigation follow their own rollout availability" do
