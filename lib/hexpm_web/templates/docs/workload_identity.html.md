@@ -9,10 +9,12 @@ GitHub Actions is the only supported CI provider.
 ### How it works
 
 1. A package owner configures a workload identity that names the GitHub repository, workflow file, and environment. The environment is optional for a private repository.
-2. The CI job requests an OIDC token from GitHub with audience `hexpm`.
+2. The CI job requests an OIDC token from GitHub with the audience it was configured with, `hexpm` for hex.pm.
 3. The job exchanges that token at Hex's OAuth token endpoint for a token for one package.
 4. Hex verifies the token, matches a workload identity, and returns a Hex access token that expires in 15 minutes and can only publish that package.
-5. The job publishes with `Authorization: Bearer <token>` (for Mix, `HEX_API_KEY="Bearer <token>"`, since Mix sends `HEX_API_KEY` as the raw `Authorization` header value).
+5. The job publishes with that token.
+
+`mix hex.publish` and `rebar3 hex publish` perform steps 2, 3 and 5. They exchange a token when the job runs on a supported CI provider and no Hex credential is configured, so a workflow with the `id-token: write` permission needs no further steps. Without one of these build tools, a job can run steps 2 and 3 itself against the [token exchange API](#token-exchange-api).
 
 The package must already exist. Workload identities can't create a public package or publish its first release, so do that once with a normal Hex account or key. This is the same for an organization's workload identities, which only publish public packages the organization already owns.
 
@@ -63,6 +65,58 @@ The "Edit" button on a workload identity changes its repositories, workflow and 
 
 A package can have several workload identities, for example for several workflows, and one workload identity can name several repositories that publish with the same workflow and environment. The same GitHub repository and workflow can be attached to several packages as separate workload identities, which covers monorepos that release several packages from one repository. When one workflow run publishes several packages, exchange once per package and request a new OIDC token for each exchange, because an OIDC token can only be exchanged once.
 
+### GitHub Actions workflow
+
+The workflow grants the `id-token: write` permission and publishes. Mix and Rebar3 perform the exchange:
+
+```yaml
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    # The GitHub Environment the workload identity names. Required for a public
+    # repository.
+    environment: release
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: '27'
+          elixir-version: '1.17'
+
+      - name: Publish with Mix
+        run: |
+          mix deps.get
+          mix hex.publish --yes
+
+      - name: Publish with Rebar3
+        run: rebar3 hex publish --yes
+```
+
+A job that publishes another way exchanges the token itself, against the [token exchange API](#token-exchange-api). [Fetch token in a workflow](#fetch-token-in-a-workflow) shows that as a workflow step.
+
+Notes:
+
+* The job needs `permissions.id-token: write` to request an OIDC token.
+* The client exchanges a token only when no Hex credential is configured. `HEX_API_KEY`, a key from `mix hex.organization auth`, and a `mix hex.user auth` session all take precedence, so remove them from a job that should publish with its workload identity. A leftover key publishes under that key instead, and the job prints no "Authenticated with Workload Identity" line.
+* Workload Identity needs OTP 27 or later in the job, because the client reads the OIDC token as JSON.
+* The client sets the audience it requests, `hexpm` by default, from the `workload_identity_audience` config or `HEX_WORKLOAD_IDENTITY_AUDIENCE`. It reads `GET /api/oidc/audience` only to check that the server expects the same value, and requests no OIDC token when the two differ.
+* A job that exchanges a token itself takes the audience from its own configuration, and stops when the server reports a different one. GitHub issues an OIDC token for any audience a job asks for. A job that asks for whatever the server reports lets the server choose the audience, so reaching an untrusted API URL yields a token that another service accepts, such as another package registry or a cloud provider.
+* Each OIDC token can be exchanged at most once, and Hex rejects a replayed `jti`. Hex refuses OIDC tokens that are valid for more than 15 minutes, because it keeps the record of a used token for that long. GitHub's are valid for 5 minutes. The client requests a new OIDC token per exchange.
+* The Hex token can only publish the package named in the `scope` parameter. It isn't a general-purpose key. The client scopes it to the package it publishes, and the same token publishes that release's docs.
+* A workload identity for a public repository names a GitHub Environment, so only jobs in that environment can get a token. For a private repository the environment is optional, and still the only way to put protection rules in front of a publish.
+
 ### Organization workload identities
 
 An organization admin configures workload identities for the organization's private repository, and for the public packages the organization owns, on the "Workload identities" page of the organization dashboard. Every member can see the page. Adding one requires the admin role and two-factor authentication on the admin's account, and changing or removing one has the same requirements. The `read` role and private packages also need an active billing subscription. A `write` workload identity that only covers public packages doesn't, the same as an organization key publishing public packages, so the page stays usable without one and offers only public packages. Hex emails every organization admin when one is added or removed, or changed to trust more, and records every change in the organization's activity log. A package's own "Workload identities" tab lists the organization workload identities that can publish it and links to the organization page.
@@ -102,7 +156,7 @@ Adding or removing a workload identity with public packages also emails the othe
 
 Neither role can retire releases, revert, or change owners, keys, members, or settings. The organization's single sign-on and two-factor authentication requirements don't apply to organization workload identities, the same as for organization keys.
 
-To fetch, exchange the OIDC token for a repository token by setting the scope to the organization's repository:
+`mix deps.get` fetches an organization's packages with a workload identity. It exchanges a token when the job has the `id-token: write` permission, and neither an organization key nor an authenticated user is configured. A fetch token comes from the scope of the organization's repository:
 
 ```nohighlight
 scope=repository:ORG
@@ -110,9 +164,7 @@ scope=repository:ORG
 
 Send the access token to repo.hex.pm as `Authorization: Bearer <token>`. It can't call the Hex API.
 
-Mix does this exchange itself when it fetches packages from an organization's repository in a GitHub Actions job with the `id-token: write` permission, and neither an organization key nor an authenticated user is configured.
-
-To publish or create a private package, use a package scope in the organization's repository, the same as for a package workload identity:
+`mix hex.publish` and `rebar3 hex publish` scope the token to the package they publish, in the organization's repository when the project names the organization. Publishing or creating a private package uses a package scope in the organization's repository, the same as for a package workload identity:
 
 ```nohighlight
 scope=package:ORG/PACKAGE
@@ -130,43 +182,36 @@ Hex matches the package's own workload identities, and the `write` workload iden
 
 Removing a workload identity stops its tokens at the Hex API on the next request. repo.hex.pm verifies tokens without asking Hex, so a fetch token keeps working there until it expires, at most 15 minutes later. A lapsed billing subscription behaves the same, since Hex checks billing during the exchange for the organization's repository. Publishing public packages doesn't need an active subscription.
 
-### GitHub Actions workflow
+#### Fetch token in a workflow
 
-Request an OIDC token with audience `hexpm`, exchange it for a Hex token for the package, then publish:
+When something other than Mix fetches the organization's packages, such as a container build or a tool that reads `repo.hex.pm` directly, the job exchanges the token:
 
 ```yaml
-name: Release
-
-on:
-  push:
-    tags:
-      - 'v*'
-
 permissions:
   id-token: write
   contents: read
 
 jobs:
-  publish:
+  build:
     runs-on: ubuntu-latest
-    # The GitHub Environment the workload identity names. Required for a public
-    # repository.
-    environment: release
     steps:
       - uses: actions/checkout@v4
 
-      - uses: erlef/setup-beam@v1
-        with:
-          otp-version: '27'
-          elixir-version: '1.17'
-
-      - name: Exchange the OIDC token and publish
+      - name: Exchange a fetch token
         env:
           HEX_API_URL: https://hex.pm/api
+          AUDIENCE: hexpm
         run: |
           set -euo pipefail
 
-          AUDIENCE=$(curl -fsS "$HEX_API_URL/oidc/audience" | jq -r .audience)
+          # The audience comes from this job, never from the server. Stop
+          # when the server expects a different one.
+          SERVER_AUDIENCE=$(curl -fsS "$HEX_API_URL/oidc/audience" | jq -r .audience)
+          if [ "$SERVER_AUDIENCE" != "$AUDIENCE" ]; then
+            echo "Server expects audience $SERVER_AUDIENCE, not $AUDIENCE" >&2
+            exit 1
+          fi
+
           OIDC_TOKEN=$(curl -fsS \
             -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
             "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=${AUDIENCE}" \
@@ -176,33 +221,27 @@ jobs:
             -H "content-type: application/x-www-form-urlencoded" \
             --data-urlencode "grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer" \
             --data-urlencode "assertion=$OIDC_TOKEN" \
-            --data-urlencode "scope=package:hexpm/PACKAGE")
+            --data-urlencode "scope=repository:ORG")
 
           ACCESS_TOKEN=$(printf '%s' "$RESPONSE" | jq -r .access_token)
 
-          mix deps.get
-          HEX_API_KEY="Bearer $ACCESS_TOKEN" mix hex.publish --yes
+          echo "::add-mask::$ACCESS_TOKEN"
+          echo "HEX_ACCESS_TOKEN=$ACCESS_TOKEN" >> "$GITHUB_ENV"
 ```
 
-Replace `PACKAGE` with the Hex package name. For a private package, see [Organization workload identities](#organization-workload-identities).
-
-Notes:
-
-* The job needs `permissions.id-token: write` to request an OIDC token.
-* Discover the audience with `GET /api/oidc/audience` instead of hardcoding it. The current value is `hexpm`.
-* Each OIDC token can be exchanged at most once, and Hex rejects a replayed `jti`. Hex refuses OIDC tokens that are valid for more than 15 minutes, because it keeps the record of a used token for that long. GitHub's are valid for 5 minutes.
-* The Hex token can only publish the package named in the `scope` parameter. It isn't a general-purpose key.
-* A workload identity for a public repository names a GitHub Environment, so only jobs in that environment can get a token. For a private repository the environment is optional, and still the only way to put protection rules in front of a publish.
+Replace `ORG` with the organization name. Later steps send the token to repo.hex.pm as `Authorization: Bearer $HEX_ACCESS_TOKEN`. Swap the `scope` for `package:ORG/PACKAGE` to publish in the organization's repository instead, or `package:hexpm/PACKAGE` for a public package it owns.
 
 ### Token exchange API
 
-Discover the expected OIDC audience:
+Read the audience the server expects:
 
 ```nohighlight
 GET /api/oidc/audience
 
 {"audience":"hexpm"}
 ```
+
+This endpoint checks an audience the job already knows. The job sets its own audience, `hexpm` for hex.pm, compares it with the response, and requests no OIDC token when the two differ. A job that trusts the response instead lets the server choose the audience, and an untrusted server can name any service. Mix and Rebar3 take the audience from the `workload_identity_audience` config, or `HEX_WORKLOAD_IDENTITY_AUDIENCE`.
 
 Exchange a CI OIDC token for a Hex access token with the JWT bearer grant ([RFC 7523](https://www.rfc-editor.org/rfc/rfc7523)) on the standard OAuth token endpoint:
 
@@ -245,6 +284,7 @@ token=<hex-access-token>
 * Matching requires one of the configured repositories, the workflow basename from a workflow ref inside that repository, the immutable `repository_owner_id` and `repository_id`, and the environment when one is configured. A token without a `repository_id` claim never matches. A workload identity that can publish and has no environment matches no token whose `repository_visibility` claim is `public`. The workflow is compared exactly, including casing. The repository, owner, and environment are compared case-insensitively, and the repository and owner are pinned by their immutable GitHub IDs. A reusable workflow from another repository doesn't satisfy the workflow match by having the same basename.
 * Pinning the repository ID as well as the owner ID matters inside an organization. If the configured repository is deleted, anyone who can create a repository in that organization could otherwise recreate the name, add the configured workflow, and get a token. The owner ID alone wouldn't stop that.
 * Hex tokens issued this way expire after 15 minutes, cover one package or one organization repository, and are attributed to the workload identity. The release has no publishing user, and the audit log records the publish.
+* A job sets the audience it requests, and `GET /api/oidc/audience` only confirms that the server expects the same value. GitHub issues an OIDC token for any audience a job asks for, so a job that took the audience from the server could be made to mint a token for another service, such as another package registry or a cloud provider. A pinned audience bounds what reaching an untrusted API URL costs: the token is only valid for hex.pm, and only for the workload identity's scope. It remains a usable hex.pm token, replayable there within its 15-minute lifetime.
 * Hex rejects tokens from `pull_request_target` and `workflow_run` workflows. A `workflow_run` run gets write permissions even when a pull request from a fork triggered the run that started it, and no OIDC claim says whether one did.
 * Adding, changing or removing a package workload identity requires full package ownership and two-factor authentication, because a workload identity grants publish rights the same way a personal key does. Hex emails every package owner when a workload identity is added or removed, or changed to trust more, and the email can't be turned off. Transferring the package removes its workload identities. An organization workload identity with public packages emails the owners of the public packages it covers in the same way. The CI exchange and publish don't require two-factor authentication, because the grant has no interactive user.
 * Hex records an allowlisted snapshot of the verified OIDC claims (repository, workflow ref, commit SHA, run id, and similar) on the Hex token and attaches it to the release published with that token. The release API exposes it as `oidc_claims`. The package page shows it in a Provenance card that links to the source commit, build file, branch or tag, environment, triggering actor, and workflow run, so anyone using the package can see that a release was published with Workload Identity and which workflow produced it.
@@ -266,7 +306,8 @@ token=<hex-access-token>
 * **The form reports that GitHub could not be reached:** GitHub was unreachable, rate-limited, or answered with something unexpected. Nothing was stored, so you can submit the same form again.
 * **The form reports too many attempts in the last hour:** each account can save workload identities 20 times an hour, and the GitHub calls those saves make count towards 100 an hour: one per repository looked up, and on an add one more for the owner's profile. A save that doesn't fit isn't counted. Try again later.
 * **The exchange returns no matching workload identity:** check the package name, Hex repository, GitHub `owner/repo`, workflow **filename**, and environment against the configured workload identity, including the exact casing of the workflow filename. The workflow file that requests the OIDC token must be in the configured repository. A workload identity that publishes without an environment stops matching a repository that's made public, so add an environment to it.
-* **The exchange rejects the OIDC token:** confirm `id-token: write`, audience `hexpm`, and that you aren't reusing a JWT that was already exchanged.
+* **The exchange rejects the OIDC token:** confirm `id-token: write`, audience `hexpm`, and that you aren't reusing a JWT that was already exchanged. With Mix or Rebar3, also confirm the job runs OTP 27 or later, which Workload Identity needs.
+* **Mix or Rebar3 publishes without Workload Identity, or asks for credentials:** the client exchanges a token only when it detects a supported CI job and no Hex credential is configured. Remove `HEX_API_KEY` and any key from `mix hex.organization auth` from the job. A successful exchange prints "Authenticated with Workload Identity".
 * **The exchange rejects a token from a `pull_request_target` or `workflow_run` workflow:** both events run with the base repository's permissions when a pull request from a fork triggered them, so code from a fork could request an OIDC token. Publish from `push`, `release`, or `workflow_dispatch` instead.
-* **Publish fails with package ownership or scope errors:** the Hex token only covers the package named in the exchange. Exchange again for that package name.
+* **Publish fails with package ownership or scope errors:** the Hex token only covers the package named in the exchange. Mix and Rebar3 scope the token to the package they publish, so check that the workload identity covers that package. A token from a manual exchange needs the scope of the package being published.
 * **The "Workload identities" tab is missing, or the token endpoint returns `unsupported_grant_type`:** Workload Identity may be disabled on that Hex deployment, or your account isn't a full owner of the package.
