@@ -238,9 +238,14 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
 
   test "an outdated review page can't approve identical bytes staged again by another credential",
        ctx do
-    {first, _} = stage(ctx)
+    {first, body} = stage(ctx)
     reject(ctx, first) |> response(302)
-    {second, _} = stage(%{ctx | key: insert(:key, user: ctx.user)})
+
+    second =
+      %{ctx | key: insert(:key, user: ctx.user)}
+      |> upload("/packages/#{ctx.name}/releases", body)
+      |> json_response(201)
+
     assert second["html_url"] == first["html_url"]
     assert second["checksum"] == first["checksum"]
     refute second["approval_checksum"] == first["approval_checksum"]
