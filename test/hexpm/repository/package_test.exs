@@ -194,9 +194,20 @@ defmodule Hexpm.Repository.PackageTest do
              changeset.changes.meta.errors
   end
 
-  test "bounds the package name in bytes", %{user: user, repository: repository} do
-    changeset = Package.build(repository, user, pkg_meta(%{name: String.duplicate("a", 256)}))
-    assert errors_on(changeset).name == "should be at most 255 byte(s)"
+  test "bounds the package name to a DNS label", %{user: user, repository: repository} do
+    assert Package.build(repository, user, pkg_meta(%{name: String.duplicate("a", 63)})).valid?
+
+    changeset = Package.build(repository, user, pkg_meta(%{name: String.duplicate("a", 64)}))
+    assert errors_on(changeset).name == "should be at most 63 byte(s)"
+  end
+
+  test "rejects a trailing underscore in the package name", %{user: user, repository: repository} do
+    assert Package.build(repository, user, pkg_meta(%{name: "foo_bar"})).valid?
+
+    for name <- ["foo_", "f__"] do
+      changeset = Package.build(repository, user, pkg_meta(%{name: name}))
+      assert errors_on(changeset).name == "can't end with an underscore"
+    end
   end
 
   test "bounds the description in codepoints", %{user: user, repository: repository} do
