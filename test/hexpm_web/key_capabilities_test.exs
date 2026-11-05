@@ -430,6 +430,58 @@ defmodule HexpmWeb.KeyCapabilitiesTest do
     end
   end
 
+  describe "dashboard without two-factor authentication" do
+    setup c do
+      writer = insert(:user)
+      reader = insert(:user)
+      insert(:organization_user, organization: c.organization, user: writer, role: "write")
+      insert(:organization_user, organization: c.organization, user: reader, role: "read")
+      mock_customer(c.organization)
+      %{writer: writer, reader: reader}
+    end
+
+    test "a write member can't create a key that publishes", c do
+      conn =
+        build_conn()
+        |> test_login(c.writer)
+        |> post("/dashboard/orgs/#{c.organization.name}/keys", %{
+          key: %{name: "ci", permissions: %{apis: "on"}}
+        })
+
+      assert response(conn, 400) =~ "publish requires two-factor authentication on your account"
+
+      conn =
+        build_conn()
+        |> test_login(c.writer)
+        |> post("/dashboard/orgs/#{c.organization.name}/keys", %{
+          key: %{name: "ci", permissions: %{repository: %{c.organization.name => "on"}}}
+        })
+
+      assert redirected_to(conn) == "/dashboard/orgs/#{c.organization.name}/keys"
+    end
+
+    test "the modal names the role before 2FA", c do
+      body =
+        build_conn()
+        |> test_login(c.writer)
+        |> get("/dashboard/orgs/#{c.organization.name}/keys")
+        |> html_response(200)
+
+      assert body =~ "Requires 2FA"
+      assert body =~ "Two-factor authentication is required to create keys that can publish"
+
+      body =
+        build_conn()
+        |> test_login(c.reader)
+        |> get("/dashboard/orgs/#{c.organization.name}/keys")
+        |> html_response(200)
+
+      refute body =~ "Requires 2FA"
+      refute body =~ "Two-factor authentication is required to create keys that can publish"
+      assert body =~ "Requires write"
+    end
+  end
+
   test "nobody creates keys for the public organization", c do
     conn =
       c.reader

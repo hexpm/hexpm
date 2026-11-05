@@ -13,6 +13,8 @@ Use an organization key for automation that acts for an organization, and a pers
 
 Keys can't create or revoke keys, whatever their permissions. Create and revoke keys on the dashboard, or with `mix hex.organization key` after signing in with `mix hex.user auth`.
 
+Creating a key that can publish, one with `api`, `api:write`, `publish`, `publish:name` or `package:name`, requires [two-factor authentication](/dashboard/security) on your account. This applies to personal and organization keys.
+
 A key with `api:write`, `owners`, `package:name` or `members` can add an owner or organization member, and that person can then publish from their own account without [staged publishing](/docs/publish#staged-publishing). For publishing from CI we recommend [Workload Identity](/docs/workload-identity) over API keys. If you have to use a key, give it only the permissions the job needs.
 
 ### Personal keys

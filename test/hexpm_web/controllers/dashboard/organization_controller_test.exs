@@ -38,7 +38,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
     repository = insert(:repository)
 
     %{
-      user: insert(:user),
+      user: insert(:user_with_tfa),
       organization: repository.organization,
       repository: repository
     }

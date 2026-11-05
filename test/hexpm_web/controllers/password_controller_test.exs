@@ -5,7 +5,7 @@ defmodule HexpmWeb.PasswordControllerTest do
 
   setup do
     mock_pwned()
-    user = insert(:user, password: Auth.gen_password("hunter42"))
+    user = insert(:user_with_tfa, password: Auth.gen_password("hunter42"))
     %{user: user}
   end
 

@@ -2,10 +2,10 @@ defmodule Hexpm.Accounts.KeysTest do
   use Hexpm.DataCase, async: true
   import Swoosh.TestAssertions
 
-  alias Hexpm.Accounts.{Key, Keys, User}
+  alias Hexpm.Accounts.{Key, KeyGrantor, Keys, User}
 
   setup do
-    user = insert(:user)
+    user = insert(:user_with_tfa)
     organization = insert(:organization)
 
     package =
@@ -262,6 +262,73 @@ defmodule Hexpm.Accounts.KeysTest do
 
       assert Enum.map(Keys.personal_reaching_organization(organization), & &1.name) ==
                ["every-package"]
+    end
+  end
+
+  describe "create/2 without two-factor authentication" do
+    setup %{package: package} do
+      user = insert(:user)
+      insert(:package_owner, package: package, user: user)
+      %{user: user}
+    end
+
+    test "refuses every permission that can publish", %{user: user, package: package} do
+      for permission <- [
+            %{"domain" => "api"},
+            %{"domain" => "api", "resource" => "write"},
+            %{"domain" => "publish"},
+            %{"domain" => "publish", "resource" => package.name},
+            %{"domain" => "package", "resource" => package.name}
+          ] do
+        params = %{"name" => "keyname", "permissions" => [permission]}
+        assert {:error, :key, changeset, _} = Keys.create(user, params, audit: audit_data(user))
+
+        assert errors_on(changeset)[:permissions][:domain] =~
+                 "requires two-factor authentication on your account"
+      end
+    end
+
+    test "refuses the default permission", %{user: user} do
+      assert {:error, :key, changeset, _} =
+               Keys.create(user, %{"name" => "keyname"}, audit: audit_data(user))
+
+      assert errors_on(changeset)[:permissions][:domain] ==
+               "api requires two-factor authentication on your account"
+    end
+
+    test "allows permissions that can't publish", %{user: user, package: package} do
+      for permission <- [
+            %{"domain" => "api", "resource" => "read"},
+            %{"domain" => "owners"},
+            %{"domain" => "owners", "resource" => package.name}
+          ] do
+        params = %{"name" => "keyname", "permissions" => [permission]}
+        assert {:ok, _} = Keys.create(user, params, audit: audit_data(user))
+      end
+    end
+
+    test "refuses a write member's organization key that publishes", %{
+      user: user,
+      organization: organization
+    } do
+      insert(:organization_user, organization: organization, user: user, role: "write")
+      grantor = KeyGrantor.new(organization, user, nil)
+
+      params = %{"name" => "keyname", "permissions" => [%{"domain" => "api"}]}
+
+      assert {:error, :key, changeset, _} =
+               Keys.create(organization, params, audit: audit_data(user), grantor: grantor)
+
+      assert errors_on(changeset)[:permissions][:domain] ==
+               "publish requires two-factor authentication on your account"
+
+      params = %{
+        "name" => "keyname",
+        "permissions" => [%{"domain" => "repository", "resource" => organization.name}]
+      }
+
+      assert {:ok, _} =
+               Keys.create(organization, params, audit: audit_data(user), grantor: grantor)
     end
   end
 

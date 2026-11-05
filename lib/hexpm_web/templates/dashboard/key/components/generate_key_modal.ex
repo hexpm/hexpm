@@ -6,6 +6,11 @@ defmodule HexpmWeb.Dashboard.Key.Components.GenerateKeyModal do
   import HexpmWeb.Components.Input
   import HexpmWeb.Components.Form, only: [sudo_form: 1]
 
+  use Phoenix.VerifiedRoutes,
+    endpoint: HexpmWeb.Endpoint,
+    router: HexpmWeb.Router,
+    statics: HexpmWeb.static_paths()
+
   alias Hexpm.Accounts.KeyGrantor
   alias Hexpm.Permissions
 
@@ -84,6 +89,12 @@ defmodule HexpmWeb.Dashboard.Key.Components.GenerateKeyModal do
           <div :if={permission_errors(@form) != []} class="mb-3">
             <.errors errors={permission_errors(@form)} />
           </div>
+          <p :if={publish_needs_tfa?(@grantor)} class="mb-3 text-sm text-grey-600 dark:text-grey-300">
+            Two-factor authentication is required to create keys that can publish. Enable it in your <a
+              href={~p"/dashboard/security"}
+              class="text-primary-600 dark:text-primary-300 hover:underline"
+            >security settings</a>.
+          </p>
 
           <%!-- API Permissions --%>
           <div
@@ -245,11 +256,11 @@ defmodule HexpmWeb.Dashboard.Key.Components.GenerateKeyModal do
     assigns =
       assign(assigns,
         locked: locked?(assigns.grantor, scope),
-        role: required_role(assigns.grantor, scope)
+        requirement: requirement(assigns.grantor, scope)
       )
 
     ~H"""
-    <label class="flex items-center" title={@role && "Requires #{@role}"}>
+    <label class="flex items-center" title={@requirement && "Requires #{@requirement}"}>
       <input
         type="checkbox"
         name={"key[permissions][#{@domain}][#{@resource}]"}
@@ -266,30 +277,38 @@ defmodule HexpmWeb.Dashboard.Key.Components.GenerateKeyModal do
   attr :scope, :string, required: true
 
   defp role_hint(assigns) do
-    assigns = assign(assigns, :role, required_role(assigns.grantor, assigns.scope))
+    assigns = assign(assigns, :requirement, requirement(assigns.grantor, assigns.scope))
 
     ~H"""
     <span
-      :if={@role}
+      :if={@requirement}
       class="ml-2 inline-flex items-center rounded-full bg-grey-100 dark:bg-grey-700 px-2 py-0.5 text-xs font-medium text-grey-600 dark:text-grey-300"
     >
-      Requires {@role}
+      Requires {@requirement}
     </span>
     """
   end
 
-  # The role a permission needs when the viewer's role is below it, otherwise
-  # nil. The server checks the same rule when the form is submitted.
-  defp required_role(%KeyGrantor{} = grantor, scope) do
+  # What the viewer is missing to grant a permission: 2FA, the role it needs
+  # when the viewer's role is below it, or nil. The server checks the same rules
+  # when the form is submitted.
+  defp requirement(%KeyGrantor{} = grantor, scope) do
     permission = Permissions.scope_to_permission(scope)
 
-    case KeyGrantor.check(grantor, permission) do
-      :ok -> nil
-      {:error, _message} -> if grantor.role, do: KeyGrantor.required_role(permission)
+    cond do
+      KeyGrantor.grantable?(grantor, permission) -> nil
+      KeyGrantor.tfa_required?(grantor, permission) -> "2FA"
+      grantor.role -> KeyGrantor.required_role(permission)
+      true -> nil
     end
   end
 
-  defp required_role(nil, _scope), do: nil
+  defp requirement(nil, _scope), do: nil
+
+  defp publish_needs_tfa?(%KeyGrantor{} = grantor),
+    do: KeyGrantor.tfa_required?(grantor, %{domain: "publish", resource: nil})
+
+  defp publish_needs_tfa?(nil), do: false
 
   defp locked?(%KeyGrantor{} = grantor, scope),
     do: not KeyGrantor.grantable?(grantor, Permissions.scope_to_permission(scope))

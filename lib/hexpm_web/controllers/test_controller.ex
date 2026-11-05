@@ -3,7 +3,7 @@ defmodule HexpmWeb.TestController do
 
   import HexpmWeb.RequestHelpers, only: [build_usage_info: 1]
 
-  alias Hexpm.Accounts.{Key, KeyPermission, Users}
+  alias Hexpm.Accounts.{Key, KeyGrantor, KeyPermission, Users}
   alias Hexpm.OAuth.{Client, DeviceCode, DeviceCodes, Tokens}
   alias Hexpm.Repo
   import Ecto.Query
@@ -85,20 +85,25 @@ defmodule HexpmWeb.TestController do
   # Hex's test suites authenticate with user keys that have repository
   # permissions. hex.pm no longer creates those but accepts the ones that exist,
   # so they're added to the key after its permissions are validated.
+  #
+  # Hex's test suites create keys that publish for users without 2FA, so the
+  # keys are created as if the user had it.
   defp create_key(user, params, opts) do
     {repository_permissions, permissions} =
       params["permissions"]
       |> List.wrap()
       |> Enum.split_with(&(&1["domain"] in ["repository", "repositories"]))
 
+    grantor = %{KeyGrantor.new(user, user, nil) | tfa_enabled: true}
+
     if repository_permissions == [] do
-      case Keys.create(user, params, opts) do
+      case Keys.create(user, params, Keyword.put(opts, :grantor, grantor)) do
         {:ok, %{key: key}} -> {:ok, key}
         {:error, :key, changeset, _} -> {:error, changeset}
       end
     else
       user
-      |> Key.build(%{params | "permissions" => permissions})
+      |> Key.build(grantor, %{params | "permissions" => permissions})
       |> put_repository_permissions(repository_permissions, permissions)
       |> Repo.insert()
     end

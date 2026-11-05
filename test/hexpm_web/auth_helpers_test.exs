@@ -6,7 +6,7 @@ defmodule HexpmWeb.AuthHelpersTest do
   alias HexpmWeb.AuthHelpers
 
   setup do
-    %{user: insert(:user)}
+    %{user: insert(:user_with_tfa)}
   end
 
   test "refuses Basic credentials", %{user: user} do

@@ -344,12 +344,16 @@ defmodule Hexpm.TestHelpers do
     Plug.Conn.get_req_header(conn, "x-forwarded-proto") == []
   end
 
+  # Created as if the user had 2FA, which only matters to tests of key creation.
   def key_for(user_or_organization, permissions \\ [%{domain: "api"}]) do
+    grantor = Hexpm.Accounts.KeyGrantor.new(user_or_organization, user_or_organization, nil)
+
     {:ok, %{key: key}} =
       Hexpm.Accounts.Keys.create(
         user_or_organization,
         %{name: "any_key_name", permissions: permissions},
-        audit: nil
+        audit: nil,
+        grantor: %{grantor | tfa_enabled: true}
       )
 
     key.user_secret
