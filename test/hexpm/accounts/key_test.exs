@@ -4,7 +4,7 @@ defmodule Hexpm.Accounts.KeyTest do
   alias Hexpm.Accounts.Key
 
   setup do
-    %{user: insert(:user)}
+    %{user: insert(:user_with_tfa)}
   end
 
   test "create key and get", %{user: user} do
@@ -61,7 +61,7 @@ defmodule Hexpm.Accounts.KeyTest do
   end
 
   test "all user keys", %{user: user1} do
-    user2 = insert(:user)
+    user2 = insert(:user_with_tfa)
 
     assert %Key{name: "computer"} = Key.build(user1, %{name: "computer"}) |> Hexpm.Repo.insert!()
     assert %Key{name: "macbook"} = Key.build(user1, %{name: "macbook"}) |> Hexpm.Repo.insert!()

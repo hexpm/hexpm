@@ -15,7 +15,7 @@ defmodule HexpmWeb.Dashboard.OrganizationSSOControllerTest do
   setup do
     organization = insert(:organization)
     admin = insert(:user)
-    member = insert(:user)
+    member = insert(:user_with_tfa)
     insert(:organization_user, organization: organization, user: admin, role: "admin")
     insert(:organization_user, organization: organization, user: member, role: "read")
     enable_beta_for(organization)

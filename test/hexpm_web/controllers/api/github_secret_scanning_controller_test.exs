@@ -36,7 +36,7 @@ defmodule HexpmWeb.API.GitHubSecretScanningControllerTest do
       end)
     end
 
-    user = insert(:user)
+    user = insert(:user_with_tfa)
 
     %{
       conn: conn,

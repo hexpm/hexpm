@@ -1057,7 +1057,7 @@ defmodule HexpmWeb.API.OAuthControllerTest do
 
   describe "POST /api/oauth/token with client_credentials grant" do
     setup do
-      user = insert(:user)
+      user = insert(:user_with_tfa)
 
       # Create API key for the user
       {:ok, %{key: key}} =

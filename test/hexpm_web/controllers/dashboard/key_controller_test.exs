@@ -4,7 +4,7 @@ defmodule HexpmWeb.Dashboard.KeyControllerTest do
 
   setup do
     %{
-      user: insert(:user)
+      user: insert(:user_with_tfa)
     }
   end
 
@@ -119,6 +119,65 @@ defmodule HexpmWeb.Dashboard.KeyControllerTest do
       assert document
              |> LazyHTML.query(~s(#revoke-all-keys-modal form))
              |> LazyHTML.attribute("action") == ["/dashboard/keys/all"]
+    end
+  end
+
+  describe "without two-factor authentication" do
+    setup do
+      %{user: insert(:user)}
+    end
+
+    test "the form locks the permissions that can publish", c do
+      document =
+        build_conn()
+        |> test_login(c.user)
+        |> get("/dashboard/keys")
+        |> html_response(200)
+        |> LazyHTML.from_document()
+
+      assert LazyHTML.text(document) =~
+               "Two-factor authentication is required to create keys that can publish"
+
+      assert LazyHTML.text(document) =~ "Requires 2FA"
+
+      for name <- [
+            "key[permissions][apis]",
+            "key[permissions][api][write]",
+            "key[permissions][capabilities][publish]"
+          ] do
+        assert [_] =
+                 document |> LazyHTML.query(~s(input[name="#{name}"][disabled])) |> Enum.to_list()
+      end
+
+      for name <- ["key[permissions][api][read]", "key[permissions][capabilities][owners]"] do
+        assert [] =
+                 document |> LazyHTML.query(~s(input[name="#{name}"][disabled])) |> Enum.to_list()
+      end
+    end
+
+    test "can't generate a key that publishes", c do
+      conn =
+        build_conn()
+        |> test_login(c.user)
+        |> post("/dashboard/keys", %{
+          key: %{name: "ci", expires_in: "30", permissions: %{capabilities: %{publish: "on"}}}
+        })
+
+      assert response(conn, 400) =~ "publish requires two-factor authentication on your account"
+      assert Hexpm.Accounts.Keys.all(c.user) == []
+    end
+
+    test "generates a read key", c do
+      conn =
+        build_conn()
+        |> test_login(c.user)
+        |> post("/dashboard/keys", %{
+          key: %{name: "ci", expires_in: "30", permissions: %{api: %{read: "on"}}}
+        })
+
+      assert redirected_to(conn) == "/dashboard/keys"
+      assert [key] = Hexpm.Accounts.Keys.all(c.user)
+      assert Enum.map(key.permissions, &{&1.domain, &1.resource}) == [{"api", "read"}]
     end
   end
 

@@ -3,14 +3,15 @@ defmodule Hexpm.Accounts.KeyGrantor do
   Who creates a key, and so which permissions it may be given.
 
   A member grants what their organization role lets them do themselves, and a
-  token grants what it holds.
+  token grants what it holds. A key that can publish needs two-factor
+  authentication on the account that creates it.
   """
 
   alias Hexpm.Accounts.{KeyPermission, Organization, Organizations, User}
   alias Hexpm.OAuth.Token
   alias Hexpm.Permissions
 
-  defstruct [:owner, :principal, :credential, :role]
+  defstruct [:owner, :principal, :credential, :role, :tfa_enabled]
 
   @type t :: %__MODULE__{}
 
@@ -26,7 +27,8 @@ defmodule Hexpm.Accounts.KeyGrantor do
       owner: owner,
       principal: principal,
       credential: credential,
-      role: member_role(owner, principal)
+      role: member_role(owner, principal),
+      tfa_enabled: User.tfa_enabled?(principal)
     }
   end
 
@@ -96,7 +98,7 @@ defmodule Hexpm.Accounts.KeyGrantor do
 
     candidates
     |> Enum.map(&Permissions.scope_to_permission/1)
-    |> Enum.filter(&grantable?(grantor, &1))
+    |> Enum.filter(&(delegable(grantor, &1) == :ok))
     |> Enum.map(&%{"domain" => &1.domain, "resource" => &1.resource})
   end
 
@@ -119,6 +121,20 @@ defmodule Hexpm.Accounts.KeyGrantor do
   `:ok`, or an error message naming the permission and why it can't be granted.
   """
   def check(%__MODULE__{} = grantor, permission) do
+    with :ok <- delegable(grantor, permission) do
+      tfa_allows(grantor, permission)
+    end
+  end
+
+  @doc """
+  Whether two-factor authentication on the grantor's account is all that stops
+  it from granting one permission.
+  """
+  def tfa_required?(%__MODULE__{} = grantor, permission) do
+    delegable(grantor, permission) == :ok and tfa_allows(grantor, permission) != :ok
+  end
+
+  defp delegable(grantor, permission) do
     if match?(%User{service: true}, grantor.principal) do
       :ok
     else
@@ -127,6 +143,21 @@ defmodule Hexpm.Accounts.KeyGrantor do
       end
     end
   end
+
+  # A key publishes without a one-time code, so only an account with 2FA may
+  # create one that publishes.
+  defp tfa_allows(%__MODULE__{principal: %User{service: false}, tfa_enabled: false}, permission) do
+    if publishes?(permission) do
+      {:error, "#{scope(permission)} requires two-factor authentication on your account"}
+    else
+      :ok
+    end
+  end
+
+  defp tfa_allows(_grantor, _permission), do: :ok
+
+  defp publishes?(%{domain: "api", resource: resource}), do: resource in [nil, "write"]
+  defp publishes?(%{domain: domain}), do: domain in ["publish", "package"]
 
   # The dashboard and the API both look the member's role up when the key is
   # created.

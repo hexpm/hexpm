@@ -1746,12 +1746,14 @@ defmodule HexpmWeb.SSOEnforcementTest do
         }
       ]
 
+      member = enable_tfa(context.member)
+
       for shape <- shapes do
         assert {:error, :key, changeset, _} =
                  Hexpm.Accounts.Keys.create(
-                   context.member,
+                   member,
                    %{name: "k-#{System.unique_integer([:positive])}", permissions: [shape]},
-                   audit: audit_data(context.member)
+                   audit: audit_data(member)
                  )
 
         assert %{resource: message} =

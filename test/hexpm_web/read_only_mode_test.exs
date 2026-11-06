@@ -260,7 +260,7 @@ defmodule HexpmWeb.ReadOnlyModeTest do
   end
 
   test "client credentials are unavailable in read-only mode" do
-    user = insert(:user)
+    user = insert(:user_with_tfa)
     {:ok, %{key: key}} = Keys.create(user, %{name: "ci"}, audit: audit_data(user))
     client = oauth_client(["client_credentials"], ["api"])
     token_count = Repo.aggregate(Token, :count)

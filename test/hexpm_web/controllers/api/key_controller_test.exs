@@ -8,7 +8,7 @@ defmodule HexpmWeb.API.KeyControllerTest do
 
   setup do
     eric = insert(:user_with_tfa)
-    other = insert(:user)
+    other = insert(:user_with_tfa)
     organization = insert(:organization)
     unowned_organization = insert(:organization)
     insert(:organization_user, organization: organization, user: eric)
