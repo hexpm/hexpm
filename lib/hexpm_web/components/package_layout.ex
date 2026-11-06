@@ -689,6 +689,7 @@ defmodule HexpmWeb.Components.PackageLayout do
             active: assigns.active_tab == :workload_identities,
             icon: "key",
             label: "Workload identities",
+            new?: true,
             path: ViewHelpers.path_for_workload_identities(assigns.package)
           }
         ]
