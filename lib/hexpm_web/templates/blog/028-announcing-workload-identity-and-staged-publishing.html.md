@@ -1,6 +1,6 @@
 ## Announcing Workload Identity and staged publishing
 
-<div class="subtitle"><time datetime="2026-11-03T00:00:00Z">3 November, 2026</time> · by Eric Meadows-Jönsson</div>
+<div class="subtitle"><time datetime="2026-11-06T00:00:00Z">6 November, 2026</time> · by Eric Meadows-Jönsson</div>
 
 In the [Hex 2.6 announcement](/blog/hex-v26-released) we said we were testing Workload Identity. It's now available to every package and organization on hex.pm. Workload Identity, sometimes also known as "Trusted Publishing", lets a GitHub Actions job publish packages and fetch an organization's private packages without storing a key. It comes with staged publishing, which holds releases published with a key or a workload identity until a person with two-factor authentication approves them on hex.pm.
 
