@@ -225,6 +225,9 @@ defmodule Hexpm.Accounts.Organizations do
       )
       |> Multi.delete_all(:keys, from(k in Key, where: k.organization_id == ^organization.id))
       |> Multi.delete_all(:organization_users, assoc(organization, :organization_users))
+      |> Multi.run(:owned_staged_releases, fn _, _ ->
+        {:ok, Hexpm.Repository.StagedReleases.delete_owner(organization)}
+      end)
       |> delete_repository(organization.repository)
       |> delete_organization_user(organization.user)
       |> Multi.insert(:reserved_name, %ReservedUsername{name: organization.name},

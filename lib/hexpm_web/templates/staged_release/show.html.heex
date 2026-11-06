@@ -53,6 +53,10 @@
                   else: @staged_release.user.username}
               </dd>
             </div>
+            <div :if={@staged_release.owner} class="min-w-0">
+              <dt class="text-grey-500 dark:text-grey-300">Package owner</dt>
+              <dd class="mt-1 font-medium break-all">{@staged_release.owner.name}</dd>
+            </div>
             <div>
               <dt class="text-grey-500 dark:text-grey-300">First staged</dt>
               <dd class="mt-1">{ViewHelpers.pretty_utc_datetime(@staged_release.inserted_at)}</dd>

@@ -156,6 +156,7 @@ defmodule Hexpm.Repository.StagedReleases do
             kind: "release",
             meta: metadata_snapshot(meta),
             replace: opts[:replace] || false,
+            owner_id: opts[:owner] && opts[:owner].id,
             inner_checksum: inner,
             outer_checksum: outer,
             storage_key: storage_key,
@@ -230,7 +231,7 @@ defmodule Hexpm.Repository.StagedReleases do
   def get(id) do
     with {id, ""} <- Integer.parse(to_string(id)),
          %StagedRelease{} = staged <- Repo.get(StagedRelease, id) do
-      Repo.preload(staged, [:user, :organization, repository: :organization])
+      Repo.preload(staged, [:user, :organization, owner: :user, repository: :organization])
     else
       _ -> nil
     end
@@ -239,7 +240,7 @@ defmodule Hexpm.Repository.StagedReleases do
   def get(repository_name, name, version, kind) do
     with %Repository{} = repository <- Repositories.get(repository_name),
          %StagedRelease{} = staged <- find(repository, name, version, kind) do
-      Repo.preload(staged, [:user, :organization, repository: :organization])
+      Repo.preload(staged, [:user, :organization, owner: :user, repository: :organization])
     end
   end
 
@@ -389,6 +390,7 @@ defmodule Hexpm.Repository.StagedReleases do
         staged.outer_checksum,
         audit: audit,
         replace: staged.replace,
+        owner: staged.owner,
         workload_identity: wi_context,
         staged_release_id: staged.id,
         approved_by_id: user.id
@@ -670,6 +672,16 @@ defmodule Hexpm.Repository.StagedReleases do
     )
     |> Repo.all()
     |> Repo.preload(:emails)
+  end
+
+  # A staged new package that the organization would own can't be published
+  # without it.
+  def delete_owner(organization) do
+    Repo.all(from(s in StagedRelease, where: s.owner_id == ^organization.id))
+    |> Enum.each(&enqueue_cleanup/1)
+
+    Repo.delete_all(from(s in StagedRelease, where: s.owner_id == ^organization.id))
+    :ok
   end
 
   def delete_repository(repository) do
@@ -997,11 +1009,17 @@ defmodule Hexpm.Repository.StagedReleases do
         "write"
       )
 
-  defp new_package_access?(%{repository_id: 1, organization_id: id}, nil, user, session_id)
-       when not is_nil(id),
-       do:
-         Hexpm.Accounts.OrganizationAuth.check(Repo.get!(Organization, id), user, nil, session_id) ==
-           :ok
+  # Approving a new public package acts for the organization behind the staging
+  # credential and for the organization that will own the package.
+  defp new_package_access?(%{repository_id: 1} = staged, nil, user, session_id) do
+    [staged.organization_id, staged.owner_id]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.uniq()
+    |> Enum.all?(fn id ->
+      Hexpm.Accounts.OrganizationAuth.check(Repo.get!(Organization, id), user, nil, session_id) ==
+        :ok
+    end)
+  end
 
   defp new_package_access?(_staged, _package, _user, _session_id), do: true
 

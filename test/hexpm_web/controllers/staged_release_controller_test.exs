@@ -791,6 +791,72 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
            |> Map.fetch!("kind") == "release"
   end
 
+  test "approval creates a staged new public package owned by the chosen organization", ctx do
+    organization = ctx.repository.organization
+    name = Fake.sequence(:package)
+    body = create_tar(%{name: name, version: "1.0.0", description: "Staged package"})
+
+    result =
+      public_upload(ctx.key, "/api/publish?owner=#{organization.name}", body)
+      |> json_response(201)
+
+    assert result["status"] == "staged"
+    staged = StagedReleases.get("hexpm", name, "1.0.0", "release")
+    assert staged.owner_id == organization.id
+
+    page =
+      build_conn()
+      |> test_login(ctx.user)
+      |> get(html_path(result))
+      |> html_response(200)
+      |> LazyHTML.from_document()
+
+    assert LazyHTML.text(page) =~ "Package owner"
+    assert LazyHTML.text(page) =~ organization.name
+
+    approve(ctx, result) |> response(302)
+
+    package = Repo.get_by!(Package, repository_id: 1, name: name)
+    assert [owner] = Repo.all(assoc(package, :package_owners))
+    assert owner.user_id == organization.user.id
+    assert Hexpm.Repository.Releases.get(package, "1.0.0").publisher_id == ctx.user.id
+  end
+
+  test "a restage that changes the owner invalidates the displayed checksum", ctx do
+    organization = ctx.repository.organization
+    name = Fake.sequence(:package)
+    body = create_tar(%{name: name, version: "1.0.0", description: "Staged package"})
+
+    first =
+      public_upload(ctx.key, "/api/publish?owner=#{organization.name}", body)
+      |> json_response(201)
+
+    second = public_upload(ctx.key, "/api/publish", body) |> json_response(201)
+    refute first["approval_checksum"] == second["approval_checksum"]
+
+    approve(ctx, first) |> response(409)
+    refute Repo.get_by(Package, repository_id: 1, name: name)
+  end
+
+  test "approval refuses an owner the publisher lost write access to", ctx do
+    organization = ctx.repository.organization
+    name = Fake.sequence(:package)
+    body = create_tar(%{name: name, version: "1.0.0", description: "Staged package"})
+
+    result =
+      public_upload(ctx.key, "/api/publish?owner=#{organization.name}", body)
+      |> json_response(201)
+
+    Repo.update_all(
+      from(m in Hexpm.Accounts.OrganizationUser, where: m.user_id == ^ctx.user.id),
+      set: [role: "read"]
+    )
+
+    assert approve(ctx, result) |> response(409) =~ "no longer passes publish validation"
+    refute Repo.get_by(Package, repository_id: 1, name: name)
+    assert StagedReleases.get("hexpm", name, "1.0.0", "release")
+  end
+
   test "a staged replacement of a public release expires when the release stops being editable",
        ctx do
     now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
@@ -906,6 +972,21 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
       refute Hexpm.Store.get(:repo_bucket, staged.storage_key)
       refute Hexpm.Store.get(:repo_bucket, staged.docs_storage_key)
     end
+  end
+
+  test "deleting an organization removes the staged new packages it would own", ctx do
+    organization = ctx.repository.organization
+    name = Fake.sequence(:package)
+    body = create_tar(%{name: name, version: "1.0.0", description: "Staged package"})
+    public_upload(ctx.key, "/api/publish?owner=#{organization.name}", body) |> json_response(201)
+    staged = StagedReleases.get("hexpm", name, "1.0.0", "release")
+
+    assert :ok =
+             Hexpm.Accounts.Organizations.delete(organization, audit: audit_data(ctx.user))
+
+    refute StagedReleases.get(staged.id)
+    Oban.drain_queue(queue: :heavy)
+    refute Hexpm.Store.get(:repo_bucket, staged.storage_key)
   end
 
   test "the settings navigation marks staged releases as new", ctx do

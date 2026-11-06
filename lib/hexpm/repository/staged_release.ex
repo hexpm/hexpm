@@ -21,6 +21,7 @@ defmodule Hexpm.Repository.StagedRelease do
     belongs_to :repository, Repository
     belongs_to :user, User
     belongs_to :organization, Organization
+    belongs_to :owner, Organization
     belongs_to :key, Key
     belongs_to :workload_identity, Hexpm.WorkloadIdentities.WorkloadIdentity
     timestamps()
@@ -56,10 +57,15 @@ defmodule Hexpm.Repository.StagedRelease do
         &to_string/1
       )
 
+    # The organization that will own a new package is part of what the approver
+    # reviews, so approving it under another owner has to fail.
+    owner = if staged.owner_id, do: "owner:#{staged.owner_id}", else: ""
+
     :crypto.hash(:sha256, [
       staged.outer_checksum || <<>>,
       staged.docs_checksum || <<>>,
-      credential
+      credential,
+      owner
     ])
     |> Base.encode16(case: :lower)
   end
