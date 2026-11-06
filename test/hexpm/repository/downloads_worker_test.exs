@@ -3,7 +3,7 @@ defmodule Hexpm.Repository.DownloadsWorkerTest do
   use Oban.Testing, repo: Hexpm.RepoBase
 
   alias Hexpm.CronMonitor.SentryMock
-  alias Hexpm.Repository.Download
+  alias Hexpm.Repository.{Download, ReleaseDownloadBreakdown}
   alias Hexpm.Store
   alias Hexpm.Repository.DownloadsWorker
 
@@ -121,6 +121,9 @@ defmodule Hexpm.Repository.DownloadsWorkerTest do
     assert Enum.find(downloads, &(&1.release_id == rel3.id)).downloads == 1
     assert Enum.find(downloads, &(&1.release_id == rel5.id)).downloads == 1
     refute Enum.find(downloads, &(&1.release_id == rel4.id))
+
+    breakdowns = Hexpm.Repo.all(ReleaseDownloadBreakdown)
+    assert Enum.find(breakdowns, &(&1.release_id == rel1.id and &1.view == "all")).downloads == 6
   end
 
   test "counts a multi-member gzip object in full", %{
