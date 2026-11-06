@@ -41,7 +41,37 @@ defmodule Hexpm.Store.S3Test do
       %{status_code: 200, headers: [], body: binary_part(object_body(), first, last - first + 1)}
     end
 
+    defp respond(:get, %URI{path: "/bucket/", query: query}, _headers) do
+      case URI.decode_query(query) do
+        %{"prefix" => "docs/", "delimiter" => "/"} = params
+        when not is_map_key(params, "marker") ->
+          list_result("""
+          <IsTruncated>true</IsTruncated>
+          <NextMarker>docs/1.0.0/</NextMarker>
+          <Contents><Key>docs/a.html</Key><LastModified>2026-11-06T13:06:25.194Z</LastModified></Contents>
+          <CommonPrefixes><Prefix>docs/1.0.0/</Prefix></CommonPrefixes>
+          """)
+
+        %{"prefix" => "docs/", "delimiter" => "/", "marker" => "docs/1.0.0/"} ->
+          list_result("""
+          <IsTruncated>false</IsTruncated>
+          <Contents><Key>docs/b.html</Key><LastModified>2026-11-06T13:06:26.000Z</LastModified></Contents>
+          """)
+      end
+    end
+
     defp respond(method, uri, _headers), do: respond(method, uri)
+
+    defp list_result(entries) do
+      %{
+        status_code: 200,
+        headers: [],
+        body: """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <ListBucketResult><Name>bucket</Name><Prefix>docs/</Prefix>#{entries}</ListBucketResult>
+        """
+      }
+    end
 
     defp respond(:put, %URI{query: nil}) do
       %{status_code: 200, headers: [{"ETag", ~s("9a0364b9e99bb480dd25e1f0284c8555")}]}
@@ -92,6 +122,13 @@ defmodule Hexpm.Store.S3Test do
     assert Enum.map(chunks, &byte_size/1) == [1_048_576, 1_048_576, 4]
     assert IO.iodata_to_binary(chunks) == FakeClient.object_body()
     assert S3.stream("us-east-1,bucket", "logs/missing.log.gz") == nil
+  end
+
+  test "lists the objects directly under a prefix, across pages" do
+    objects = S3.list_direct_objects("us-east-1,bucket", "docs/") |> Enum.to_list()
+
+    assert Enum.map(objects, & &1.key) == ["docs/a.html", "docs/b.html"]
+    assert [%DateTime{}, %DateTime{}] = Enum.map(objects, & &1.last_modified)
   end
 
   test "put returns the ETag from the response header" do

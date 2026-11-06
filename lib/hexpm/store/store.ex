@@ -33,6 +33,15 @@ defmodule Hexpm.Store do
     impl.list_objects(bucket, prefix)
   end
 
+  @doc """
+  The objects directly under `prefix`, as `list_objects/2` reports them,
+  leaving out the objects under the prefixes `list_prefixes/2` returns.
+  """
+  def list_direct_objects(bucket, prefix) do
+    {impl, bucket} = impl_bucket(bucket)
+    impl.list_direct_objects(bucket, prefix)
+  end
+
   def list_prefixes(bucket, prefix) do
     {impl, bucket} = impl_bucket(bucket)
     impl.list_prefixes(bucket, prefix)

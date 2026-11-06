@@ -17,6 +17,12 @@ defmodule Hexpm.Store.Local do
     |> Enum.sort()
   end
 
+  def list_direct_objects(bucket, prefix) do
+    bucket
+    |> list_objects(prefix)
+    |> Enum.reject(&String.contains?(String.replace_prefix(&1.key, prefix, ""), "/"))
+  end
+
   def list_objects(bucket, prefix) do
     bucket_dir = Path.join([dir(), bucket])
     paths = Path.join(bucket_dir, "**") |> Path.wildcard()

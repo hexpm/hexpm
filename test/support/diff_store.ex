@@ -3,6 +3,8 @@ defmodule Hexpm.Diff.TestStore do
 
   defdelegate list_prefixes(bucket, prefix), to: Hexpm.Store.Memory
 
+  defdelegate list_direct_objects(bucket, prefix), to: Hexpm.Store.Memory
+
   defdelegate list_objects(bucket, prefix), to: Hexpm.Store.Memory
   defdelegate size(bucket, key), to: Hexpm.Store.Memory
   defdelegate stream(bucket, key), to: Hexpm.Store.Memory

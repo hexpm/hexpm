@@ -3,6 +3,27 @@ defmodule Hexpm.Hexdocs.BucketTest do
 
   alias Hexpm.Hexdocs.Bucket
 
+  defmodule ListingStore do
+    @behaviour Hexpm.Store.Behaviour
+
+    # Reports each recursive listing to the test process.
+    def list_objects(bucket, prefix) do
+      send(self(), {:listed, prefix})
+      Hexpm.Store.Memory.list_objects(bucket, prefix)
+    end
+
+    defdelegate list_direct_objects(bucket, prefix), to: Hexpm.Store.Memory
+    defdelegate list_prefixes(bucket, prefix), to: Hexpm.Store.Memory
+    defdelegate get(bucket, key, opts), to: Hexpm.Store.Memory
+    defdelegate size(bucket, key), to: Hexpm.Store.Memory
+    defdelegate stream(bucket, key), to: Hexpm.Store.Memory
+    defdelegate get_to_file(bucket, key, path, opts), to: Hexpm.Store.Memory
+    defdelegate put(bucket, key, body, opts), to: Hexpm.Store.Memory
+    defdelegate put_file(bucket, key, path, opts), to: Hexpm.Store.Memory
+    defdelegate delete(bucket, key), to: Hexpm.Store.Memory
+    defdelegate delete_many(bucket, keys), to: Hexpm.Store.Memory
+  end
+
   test "uploads versioned and current private docs" do
     version = Version.parse!("1.0.0")
     {dir, files} = create_files([{"index.html", "1.0.0"}])
@@ -39,6 +60,40 @@ defmodule Hexpm.Hexdocs.BucketTest do
     assert Hexpm.Store.get(:docs_private_bucket, "acme/package/index.html") == "1.0.0"
     assert Hexpm.Store.get(:docs_private_bucket, "acme/package/0.9.0/index.html") == "0.9.0"
     refute Hexpm.Store.get(:docs_private_bucket, "acme/package/removed.html")
+  end
+
+  test "the unversioned pages are replaced without listing the pages of other versions" do
+    version = Version.parse!("1.0.0")
+    Hexpm.Store.put(:docs_private_bucket, "acme/package/0.9.0/index.html", "0.9.0", [])
+    Hexpm.Store.put(:docs_private_bucket, "acme/package/removed.html", "removed", [])
+    Hexpm.Store.put(:docs_private_bucket, "acme/package/dist/removed.js", "removed", [])
+    {dir, files} = create_files([{"index.html", "1.0.0"}, {"dist/app.js", "app"}])
+    app_env(:hexpm, :docs_private_bucket, {ListingStore, "docs_private_bucket"})
+
+    Bucket.upload_unversioned("acme", "package", version, dir, files)
+
+    assert_received {:listed, "acme/package/dist/"}
+    refute_received {:listed, _prefix}
+    assert Hexpm.Store.get(:docs_private_bucket, "acme/package/dist/app.js") == "app"
+    assert Hexpm.Store.get(:docs_private_bucket, "acme/package/0.9.0/index.html") == "0.9.0"
+    refute Hexpm.Store.get(:docs_private_bucket, "acme/package/removed.html")
+    refute Hexpm.Store.get(:docs_private_bucket, "acme/package/dist/removed.js")
+  end
+
+  test "deleting the latest version lists only its own pages and the unversioned pages" do
+    version = Version.parse!("1.0.0")
+    Hexpm.Store.put(:docs_private_bucket, "acme/package/0.9.0/index.html", "0.9.0", [])
+    Hexpm.Store.put(:docs_private_bucket, "acme/package/1.0.0/index.html", "1.0.0", [])
+    Hexpm.Store.put(:docs_private_bucket, "acme/package/index.html", "1.0.0", [])
+    app_env(:hexpm, :docs_private_bucket, {ListingStore, "docs_private_bucket"})
+
+    Bucket.delete("acme", "package", version, :both)
+
+    assert_received {:listed, "acme/package/1.0.0/"}
+    refute_received {:listed, _prefix}
+    assert Hexpm.Store.get(:docs_private_bucket, "acme/package/0.9.0/index.html") == "0.9.0"
+    refute Hexpm.Store.get(:docs_private_bucket, "acme/package/1.0.0/index.html")
+    refute Hexpm.Store.get(:docs_private_bucket, "acme/package/index.html")
   end
 
   test "replacing docs removes stale files without affecting prefix-matching packages" do

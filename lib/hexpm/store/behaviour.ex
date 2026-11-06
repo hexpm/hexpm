@@ -16,6 +16,11 @@ defmodule Hexpm.Store.Behaviour do
 
   @callback list_objects(bucket, prefix) :: Enumerable.t()
   @doc """
+  The objects directly under `prefix`, without the objects under the
+  prefixes one level below it.
+  """
+  @callback list_direct_objects(bucket, prefix) :: Enumerable.t()
+  @doc """
   The distinct key prefixes one level below `prefix`, each ending in `/`,
   without listing the objects under them.
   """
