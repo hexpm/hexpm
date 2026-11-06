@@ -753,6 +753,36 @@ defmodule HexpmWeb.SSOEnforcementTest do
       assert [owner] = Repo.all(Ecto.assoc(package, :owners))
       assert owner.id == context.organization.user.id
     end
+
+    test "refuses approving its staged release from a session that hasn't authenticated",
+         context do
+      member = enable_tfa(context.member)
+      result = stage_for_organization(context, member)
+      {conn, _session} = login(member)
+
+      post(conn, URI.parse(result["html_url"]).path <> "/approve", %{
+        checksum: result["approval_checksum"]
+      })
+
+      refute Repo.get_by(Hexpm.Repository.Package, name: result["name"])
+    end
+
+    test "approves its staged release once that session has authenticated", context do
+      member = enable_tfa(context.member)
+      result = stage_for_organization(context, member)
+      {conn, session} = login(member)
+      authenticate(context, member, session)
+
+      conn =
+        post(conn, URI.parse(result["html_url"]).path <> "/approve", %{
+          checksum: result["approval_checksum"]
+        })
+
+      assert redirected_to(conn) == "/dashboard/staged-releases"
+      package = Repo.get_by!(Hexpm.Repository.Package, name: result["name"])
+      assert [owner] = Repo.all(Ecto.assoc(package, :owners))
+      assert owner.id == context.organization.user.id
+    end
   end
 
   describe "a public package the organization owns" do
@@ -2221,5 +2251,21 @@ defmodule HexpmWeb.SSOEnforcementTest do
       files_changed: count,
       files: Enum.map(0..(count - 1), &"file-#{&1}.bin")
     })
+  end
+
+  defp stage_for_organization(context, member) do
+    put_feature_flag(:workload_identity, mode: :enabled)
+    require_sso(context, "allow")
+    meta = %{name: Fake.sequence(:package), version: "1.0.0", description: "New"}
+
+    result =
+      build_conn()
+      |> put_req_header("content-type", "application/octet-stream")
+      |> put_req_header("authorization", key_for(member, api_write()))
+      |> post("/api/publish?owner=#{context.organization.name}", create_tar(meta))
+      |> json_response(201)
+
+    assert result["status"] == "staged"
+    result
   end
 end

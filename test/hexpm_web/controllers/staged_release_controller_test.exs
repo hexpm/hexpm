@@ -974,6 +974,21 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
     end
   end
 
+  test "deleting an organization removes the staged new packages it would own", ctx do
+    organization = ctx.repository.organization
+    name = Fake.sequence(:package)
+    body = create_tar(%{name: name, version: "1.0.0", description: "Staged package"})
+    public_upload(ctx.key, "/api/publish?owner=#{organization.name}", body) |> json_response(201)
+    staged = StagedReleases.get("hexpm", name, "1.0.0", "release")
+
+    assert :ok =
+             Hexpm.Accounts.Organizations.delete(organization, audit: audit_data(ctx.user))
+
+    refute StagedReleases.get(staged.id)
+    Oban.drain_queue(queue: :heavy)
+    refute Hexpm.Store.get(:repo_bucket, staged.storage_key)
+  end
+
   test "the settings navigation marks staged releases as new", ctx do
     nav =
       build_conn()
