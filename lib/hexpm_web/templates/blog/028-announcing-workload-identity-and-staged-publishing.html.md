@@ -12,7 +12,7 @@ Workload Identity takes the key out of CI. Anyone who can push to the repository
 
 A GitHub Actions job can request an OpenID Connect (OIDC) token from GitHub that names the repository, workflow and environment the job runs in. hex.pm checks the token against a workload identity you configured on the package, and returns a token that expires after 15 minutes and can only publish that package. There's no key in your repository secrets to leak or rotate.
 
-Hex 2.6 does the exchange for you. When the job has the `id-token: write` permission and no `HEX_API_KEY` or other Hex credential is set, `mix hex.publish` exchanges the job's OIDC token and publishes with the token it gets back. This requires OTP 27 or later.
+Hex 2.6 does the exchange for you. When the job has the `id-token: write` permission and no `HEX_API_KEY` or other Hex credential is set, `mix hex.publish` exchanges the job's OIDC token and publishes with the token it gets back. rebar3_hex 7.5 does the same for `rebar3 hex publish`. Both require OTP 27 or later.
 
 ```yaml
 name: Release
@@ -69,7 +69,7 @@ A staged release isn't in the registry until someone approves it, and hex.pm ema
 <img class="blog-img-light" src="/images/blog/028_staged_release.png" srcset="/images/blog/028_staged_release.png 2x" alt="A staged release of widget 1.1.0 awaiting approval, with the repository, workflow, git ref and commit of the workload identity that published it">
 <img class="blog-img-dark" src="/images/blog/028_staged_release_dark.png" srcset="/images/blog/028_staged_release_dark.png 2x" alt="A staged release of widget 1.1.0 awaiting approval, with the repository, workflow, git ref and commit of the workload identity that published it">
 
-Hex 2.6.1 adds `mix hex.publish --wait`, which opens the staged release page, waits until the release is approved, rejected or expires, and fails unless it's approved. With Hex 2.6.0 and earlier, `mix hex.publish` succeeds when the release is staged and prints the staged release page as the URL the package was published to.
+Hex 2.7 adds `mix hex.publish --wait`, which opens the staged release page, waits until the release is approved, rejected or expires, and fails unless it's approved. rebar3_hex 7.5 adds the same option to `rebar3 hex publish`. With Hex 2.6 and earlier, `mix hex.publish` succeeds when the release is staged and prints the staged release page as the URL the package was published to.
 
 ### Key permissions
 
@@ -86,8 +86,8 @@ If stolen keys are being used to publish packages, we can globally turn on emerg
 
 ### Thanks
 
-Thanks to [Yordis Prieto](https://github.com/yordis), who built the first version of Workload Identity on hex.pm, then called Trusted Publishing, and its support in Hex and hex_core. Thanks also to [Jonatan Männchen](https://github.com/maennchen) for reviewing it and the design of organization workload identities.
+Thanks to [Yordis Prieto](https://github.com/yordis), who built the first version of Workload Identity on hex.pm, then called Trusted Publishing, and its support in Hex and hex_core. Thanks also to [Jonatan Männchen](https://github.com/maennchen) for reviewing it and the design of organization workload identities, and for adding both features to rebar3_hex.
 
 ### Upgrading
 
-Update Hex to the latest version by running `mix local.hex`. [Workload Identity](/docs/workload-identity) and [staged publishing](/docs/publish#staged-publishing) in the docs have the details.
+Update Hex to the latest version by running `mix local.hex`, and rebar3_hex by running `rebar3 plugins upgrade rebar3_hex`. [Workload Identity](/docs/workload-identity) and [staged publishing](/docs/publish#staged-publishing) in the docs have the details.
