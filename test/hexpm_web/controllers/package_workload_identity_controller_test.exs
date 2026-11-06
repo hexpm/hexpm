@@ -70,7 +70,7 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
       assert settings_nav(document) == [
                {"Owners", nil},
                {"Staged publishing NEW", nil},
-               {"Workload identities", "page"}
+               {"Workload identities NEW", "page"}
              ]
     end
 
@@ -351,7 +351,7 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
       assert settings_nav(document) == [
                {"Owners", nil},
                {"Staged publishing NEW", nil},
-               {"Workload identities", "page"}
+               {"Workload identities NEW", "page"}
              ]
     end
 
@@ -1347,7 +1347,7 @@ defmodule HexpmWeb.PackageWorkloadIdentityControllerTest do
       assert settings_nav(document) == [
                {"Owners", nil},
                {"Staged publishing NEW", nil},
-               {"Workload identities", "page"}
+               {"Workload identities NEW", "page"}
              ]
     end
 
