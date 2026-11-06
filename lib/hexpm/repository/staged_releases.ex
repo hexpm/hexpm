@@ -156,6 +156,7 @@ defmodule Hexpm.Repository.StagedReleases do
             kind: "release",
             meta: metadata_snapshot(meta),
             replace: opts[:replace] || false,
+            owner_id: opts[:owner] && opts[:owner].id,
             inner_checksum: inner,
             outer_checksum: outer,
             storage_key: storage_key,
@@ -230,7 +231,7 @@ defmodule Hexpm.Repository.StagedReleases do
   def get(id) do
     with {id, ""} <- Integer.parse(to_string(id)),
          %StagedRelease{} = staged <- Repo.get(StagedRelease, id) do
-      Repo.preload(staged, [:user, :organization, repository: :organization])
+      Repo.preload(staged, [:user, :organization, owner: :user, repository: :organization])
     else
       _ -> nil
     end
@@ -239,7 +240,7 @@ defmodule Hexpm.Repository.StagedReleases do
   def get(repository_name, name, version, kind) do
     with %Repository{} = repository <- Repositories.get(repository_name),
          %StagedRelease{} = staged <- find(repository, name, version, kind) do
-      Repo.preload(staged, [:user, :organization, repository: :organization])
+      Repo.preload(staged, [:user, :organization, owner: :user, repository: :organization])
     end
   end
 
@@ -389,6 +390,7 @@ defmodule Hexpm.Repository.StagedReleases do
         staged.outer_checksum,
         audit: audit,
         replace: staged.replace,
+        owner: staged.owner,
         workload_identity: wi_context,
         staged_release_id: staged.id,
         approved_by_id: user.id

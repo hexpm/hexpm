@@ -60,7 +60,7 @@ defmodule Hexpm.Repository.Package do
 
   def reserved_names(), do: @reserved_names
 
-  def build(repository, user, params) do
+  def build(repository, user, params, owner \\ nil) do
     package =
       build_assoc(repository, :packages)
       |> Map.put(:repository, repository)
@@ -75,7 +75,7 @@ defmodule Hexpm.Repository.Package do
     |> validate_format(:name, ~r"[^_]\z", message: "can't end with an underscore")
     |> validate_exclusion(:name, @reserved_names)
     |> cast_embed(:meta, with: &PackageMetadata.changeset(&1, &2, package), required: true)
-    |> put_first_owner(user, repository)
+    |> put_first_owner(user, repository, owner)
   end
 
   @spec delete({map, any} | %{__struct__: atom | %{__changeset__: any}}) :: Ecto.Changeset.t()
@@ -369,11 +369,11 @@ defmodule Hexpm.Repository.Package do
     )
   end
 
-  defp put_first_owner(changeset, user, repository) do
-    if repository.id == 1 do
-      put_assoc(changeset, :package_owners, [%PackageOwner{user_id: user.id}])
-    else
-      changeset
+  defp put_first_owner(changeset, user, repository, owner) do
+    cond do
+      repository.id != 1 -> changeset
+      owner -> put_assoc(changeset, :package_owners, [%PackageOwner{user_id: owner.user.id}])
+      true -> put_assoc(changeset, :package_owners, [%PackageOwner{user_id: user.id}])
     end
   end
 

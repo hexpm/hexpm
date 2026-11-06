@@ -718,6 +718,43 @@ defmodule HexpmWeb.SSOEnforcementTest do
     end
   end
 
+  describe "a new public package created for the organization" do
+    test "refuses a personal key the organization turns away", context do
+      require_sso(context)
+      meta = %{name: Fake.sequence(:package), version: "1.0.0", description: "New"}
+
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", key_for(context.member, api_write()))
+        |> post("/api/publish?owner=#{context.organization.name}", create_tar(meta))
+
+      assert json_response(conn, 403)["message"] =~ "does not accept personal API keys"
+      refute Repo.get_by(Hexpm.Repository.Package, name: meta.name)
+    end
+
+    test "publishes once that session has authenticated", context do
+      require_sso(context)
+      member = enable_tfa(context.member)
+      session = oauth_session(member)
+      authenticate(context, member, session)
+      token = oauth_token(member, ["api:write"], session)
+      meta = %{name: Fake.sequence(:package), version: "1.0.0", description: "New"}
+
+      conn =
+        build_conn()
+        |> put_req_header("content-type", "application/octet-stream")
+        |> put_req_header("authorization", "Bearer #{token.access_token}")
+        |> put_req_header("x-hex-otp", otp(member))
+        |> post("/api/publish?owner=#{context.organization.name}", create_tar(meta))
+
+      assert json_response(conn, 201)["version"] == "1.0.0"
+      package = Repo.get_by!(Hexpm.Repository.Package, name: meta.name)
+      assert [owner] = Repo.all(Ecto.assoc(package, :owners))
+      assert owner.id == context.organization.user.id
+    end
+  end
+
   describe "a public package the organization owns" do
     setup context do
       package = insert(:package, repository_id: 1)

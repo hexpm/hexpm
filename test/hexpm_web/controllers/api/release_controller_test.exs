@@ -220,6 +220,126 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
     end
   end
 
+  describe "POST /api/publish?owner=ORGANIZATION" do
+    test "creates the package owned by the organization", %{
+      user: user,
+      organization: organization
+    } do
+      insert(:organization_user, organization: organization, user: user, role: "write")
+      meta = %{name: Fake.sequence(:package), version: "1.0.0", description: "Description"}
+
+      build_conn()
+      |> publish_as(user, "/api/publish?owner=#{organization.name}", meta)
+      |> json_response(201)
+
+      package = Repo.get_by!(Package, name: meta.name)
+      assert [owner] = Repo.all(assoc(package, :package_owners))
+      assert owner.user_id == organization.user.id
+      assert owner.level == "full"
+      assert Repo.get_by!(Release, package_id: package.id).publisher_id == user.id
+    end
+
+    test "creates the package owned by the organization from the package path", %{
+      user: user,
+      organization: organization
+    } do
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+      meta = %{name: Fake.sequence(:package), version: "1.0.0", description: "Description"}
+      path = "/api/packages/#{meta.name}/releases?owner=#{organization.name}"
+
+      build_conn()
+      |> publish_as(user, path, meta)
+      |> json_response(201)
+
+      package = Repo.get_by!(Package, name: meta.name)
+      assert [owner] = Repo.all(assoc(package, :owners))
+      assert owner.id == organization.user.id
+    end
+
+    test "requires write access to the organization", %{user: user, organization: organization} do
+      insert(:organization_user, organization: organization, user: user, role: "read")
+      meta = %{name: Fake.sequence(:package), version: "1.0.0", description: "Description"}
+
+      result =
+        build_conn()
+        |> publish_as(user, "/api/publish?owner=#{organization.name}", meta)
+        |> json_response(422)
+
+      assert result["errors"]["owner"] == "must be an organization where you have write access"
+      refute Repo.get_by(Package, name: meta.name)
+    end
+
+    test "requires membership of the organization", %{user: user, organization: organization} do
+      meta = %{name: Fake.sequence(:package), version: "1.0.0", description: "Description"}
+
+      result =
+        build_conn()
+        |> publish_as(user, "/api/publish?owner=#{organization.name}", meta)
+        |> json_response(422)
+
+      assert result["errors"]["owner"] == "must be an organization where you have write access"
+      refute Repo.get_by(Package, name: meta.name)
+    end
+
+    test "refuses an organization that doesn't exist", %{user: user} do
+      meta = %{name: Fake.sequence(:package), version: "1.0.0", description: "Description"}
+
+      result =
+        build_conn()
+        |> publish_as(user, "/api/publish?owner=#{Fake.sequence(:package)}", meta)
+        |> json_response(422)
+
+      assert result["errors"]["owner"] == "doesn't exist"
+      refute Repo.get_by(Package, name: meta.name)
+    end
+
+    test "refuses an existing package", %{user: user, package: package, organization: org} do
+      insert(:organization_user, organization: org, user: user, role: "write")
+      meta = %{name: package.name, version: "1.0.0", description: "Description"}
+
+      result =
+        build_conn()
+        |> publish_as(user, "/api/publish?owner=#{org.name}", meta)
+        |> json_response(422)
+
+      assert result["errors"]["owner"] == "can only be set when the package is created"
+      assert [owner] = Repo.all(assoc(package, :owners))
+      assert owner.id == user.id
+    end
+
+    test "refuses an organization key", %{organization: organization} do
+      meta = %{name: Fake.sequence(:package), version: "1.0.0", description: "Description"}
+
+      result =
+        build_conn()
+        |> publish_as(organization, "/api/publish?owner=#{organization.name}", meta)
+        |> json_response(422)
+
+      assert result["errors"]["owner"] == "can only be set when a user publishes the package"
+      refute Repo.get_by(Package, name: meta.name)
+    end
+
+    test "refuses a package in an organization's repository", %{
+      user: user,
+      repository: repository,
+      organization: organization
+    } do
+      insert(:organization_user, organization: organization, user: user, role: "write")
+      meta = %{name: Fake.sequence(:package), version: "1.0.0", description: "Description"}
+      path = "/api/repos/#{repository.name}/publish?owner=#{organization.name}"
+
+      result =
+        build_conn()
+        |> publish_as(user, path, meta)
+        |> json_response(422)
+
+      assert result["errors"]["owner"] ==
+               "can only be set for packages in the hexpm repository"
+
+      refute Repo.get_by(Package, name: meta.name)
+    end
+  end
+
   describe "POST /api/publish" do
     test "create release and new package as user", %{user: user} do
       meta = %{
@@ -2387,5 +2507,12 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
     after
       Hexpm.TmpDir.cleanup()
     end
+  end
+
+  defp publish_as(conn, user_or_organization, path, meta) do
+    conn
+    |> put_req_header("content-type", "application/octet-stream")
+    |> put_req_header("authorization", key_for(user_or_organization))
+    |> post(path, create_tar(meta))
   end
 end

@@ -270,7 +270,7 @@ defmodule Hexpm.Repository.Releases do
       )
     end)
     |> Multi.run(:reserved_packages, fn _, _ -> {:ok, reserved_packages(repository, meta)} end)
-    |> create_package(repository, package, user, meta)
+    |> create_package(repository, package, user, meta, opts[:owner])
     |> create_release(
       package,
       user,
@@ -530,14 +530,45 @@ defmodule Hexpm.Repository.Releases do
 
   defp revert_result(result), do: result
 
+  defp package_changeset(repository, nil, user, meta, owner) do
+    repository
+    |> Package.build(user, %{"name" => meta["name"], "meta" => meta}, owner)
+    |> validate_owner(repository, user, owner)
+  end
+
+  defp package_changeset(_repository, package, _user, meta, owner) do
+    changeset = Package.update(package, %{"meta" => meta})
+
+    if owner,
+      do: add_error(changeset, :owner, "can only be set when the package is created"),
+      else: changeset
+  end
+
+  # The publisher creates the package on the organization's behalf, so it has to
+  # be a person who can publish the organization's packages.
+  defp validate_owner(changeset, _repository, _user, nil), do: changeset
+
+  defp validate_owner(changeset, repository, user, owner) do
+    cond do
+      repository.id != 1 ->
+        add_error(changeset, :owner, "can only be set for packages in the hexpm repository")
+
+      not match?(%User{}, user) or User.organization?(user) ->
+        add_error(changeset, :owner, "can only be set when a user publishes the package")
+
+      not Organizations.access?(owner, user, "write") ->
+        add_error(changeset, :owner, "must be an organization where you have write access")
+
+      true ->
+        changeset
+    end
+  end
+
   @doc false
   def validate_staged(repository, package, user, meta, inner_checksum, outer_checksum, opts) do
     reserved = reserved_packages(repository, meta)
 
-    package_changeset =
-      if package,
-        do: Package.update(package, %{"meta" => meta}),
-        else: Package.build(repository, user, %{"name" => meta["name"], "meta" => meta})
+    package_changeset = package_changeset(repository, package, user, meta, opts[:owner])
 
     with {:ok, package} <-
            apply_action(validate_reserved_package(package_changeset, reserved), :insert) do
@@ -586,15 +617,8 @@ defmodule Hexpm.Repository.Releases do
     end
   end
 
-  defp create_package(multi, repository, package, user, meta) do
-    changeset =
-      if package do
-        params = %{"meta" => meta}
-        Package.update(package, params)
-      else
-        params = %{"name" => meta["name"], "meta" => meta}
-        Package.build(repository, user, params)
-      end
+  defp create_package(multi, repository, package, user, meta, owner) do
+    changeset = package_changeset(repository, package, user, meta, owner)
 
     Multi.insert_or_update(
       multi,

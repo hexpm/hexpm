@@ -49,6 +49,8 @@ defmodule HexpmWeb.API.ReleaseController do
        ]
        when action in [:publish]
 
+  plug :fetch_owner when action in [:create, :publish]
+
   @download_period_params ~w(day month all)
 
   def publish(conn, %{"body" => body_path} = params) do
@@ -66,6 +68,7 @@ defmodule HexpmWeb.API.ReleaseController do
           outer_checksum,
           audit: audit_data(conn),
           replace: replace?,
+          owner: conn.assigns.owner,
           workload_identity: workload_identity_context(conn)
         )
 
@@ -181,6 +184,7 @@ defmodule HexpmWeb.API.ReleaseController do
               outer_checksum,
               audit: audit_data(conn),
               replace: replace?,
+              owner: conn.assigns.owner,
               workload_identity: workload_identity_context(conn)
             )
         end
@@ -340,6 +344,43 @@ defmodule HexpmWeb.API.ReleaseController do
     if Hexpm.Utils.storable_text?(metadata),
       do: :ok,
       else: {:error, "metadata must be valid UTF-8 without NUL bytes"}
+  end
+
+  # A new package can be created owned by an organization instead of by the
+  # publisher. The organization's SSO and 2FA requirements apply to creating it,
+  # the same as to publishing a package it already owns.
+  defp fetch_owner(conn, _opts) do
+    case conn.params["owner"] do
+      nil ->
+        assign(conn, :owner, nil)
+
+      name when is_binary(name) ->
+        case Organizations.get(name, [:user]) do
+          nil -> validation_failed(conn, %{owner: "doesn't exist"})
+          organization -> check_owner_access(conn, organization)
+        end
+
+      _ ->
+        validation_failed(conn, %{owner: "is invalid"})
+    end
+  end
+
+  defp check_owner_access(conn, organization) do
+    user = conn.assigns.current_user
+
+    with %User{} <- user,
+         {:error, refusal} <- HexpmWeb.SSOEnforcement.check(conn, organization, user) do
+      message =
+        Hexpm.Accounts.OrganizationAuth.refusal_message(
+          refusal,
+          organization,
+          conn.assigns[:auth_credential]
+        )
+
+      AuthHelpers.error(conn, {:error, :auth, message})
+    else
+      _ -> assign(conn, :owner, organization)
+    end
   end
 
   defp publisher_for(conn) do
