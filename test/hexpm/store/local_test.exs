@@ -201,6 +201,20 @@ defmodule Hexpm.Store.LocalTest do
     end
   end
 
+  describe "list_direct_objects/2" do
+    @tag :tmp_dir
+    test "leaves out the objects under nested prefixes", %{tmp_dir: tmp_dir} do
+      bucket_dir = Path.join([tmp_dir, "store", "bucket"])
+      File.mkdir_p!(Path.join([bucket_dir, "docs", "1.0.0"]))
+      File.write!(Path.join([bucket_dir, "docs", "index.html"]), "index")
+      File.write!(Path.join([bucket_dir, "docs", "1.0.0", "index.html"]), "versioned")
+
+      result = Local.list_direct_objects("bucket", "docs/")
+
+      assert Enum.map(result, & &1.key) == ["docs/index.html"]
+    end
+  end
+
   describe "list_objects/2" do
     @tag :tmp_dir
     test "works for valid paths", %{tmp_dir: tmp_dir} do

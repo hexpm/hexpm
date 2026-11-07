@@ -5,7 +5,11 @@ defmodule Hexpm.Store.GCS do
   @default_gs_xml_url "https://storage.googleapis.com"
 
   def list_objects(bucket, prefix) do
-    list_stream(&do_list(bucket, prefix, &1))
+    list_stream(&do_list(bucket, %{"prefix" => prefix}, &1))
+  end
+
+  def list_direct_objects(bucket, prefix) do
+    list_stream(&do_list(bucket, %{"prefix" => prefix, "delimiter" => "/"}, &1))
   end
 
   def list_prefixes(bucket, prefix) do
@@ -135,8 +139,8 @@ defmodule Hexpm.Store.GCS do
     Stream.resource(start_fun, next_fun, after_fun)
   end
 
-  defp do_list(bucket, prefix, marker) do
-    {doc, marker} = list_page(bucket, %{"prefix" => prefix}, marker)
+  defp do_list(bucket, params, marker) do
+    {doc, marker} = list_page(bucket, params, marker)
 
     items =
       SweetXml.xpath(doc, ~x"/ListBucketResult/Contents"l,

@@ -310,7 +310,7 @@ defmodule Hexpm.Hexdocs.Bucket do
           Hexpm.Store.list(bucket, repository_path(repository, "#{package}/#{version}/"))
 
         {_both_or_unversioned, _} ->
-          Hexpm.Store.list(bucket, repository_path(repository, "#{package}/"))
+          list_package_docs(bucket, repository, package, versions, upload_type)
       end
 
     keys =
@@ -319,23 +319,40 @@ defmodule Hexpm.Hexdocs.Bucket do
     Hexpm.Store.delete_many(bucket, keys)
   end
 
+  # The package prefix holds the pages of every version, so only the
+  # directories that can hold a key to delete are listed.
+  defp list_package_docs(bucket, repository, package, versions, upload_type) do
+    prefix = repository_path(repository, "#{package}/")
+    direct = bucket |> Hexpm.Store.list_direct_objects(prefix) |> Stream.map(& &1.key)
+
+    nested =
+      bucket
+      |> Hexpm.Store.list_prefixes(prefix)
+      |> Stream.filter(&delete_segment?(Path.basename(&1), package, versions, upload_type))
+      |> Stream.flat_map(&Hexpm.Store.list(bucket, &1))
+
+    Stream.concat(direct, nested)
+  end
+
   defp delete_key?(key, paths, repository, package, versions, upload_type) do
-    if key in paths do
-      false
-    else
-      first =
-        key |> Path.relative_to(repository_path(repository, package)) |> Path.split() |> hd()
+    key not in paths and
+      key
+      |> Path.relative_to(repository_path(repository, package))
+      |> Path.split()
+      |> hd()
+      |> delete_segment?(package, versions, upload_type)
+  end
 
-      case Version.parse(first) do
-        {:ok, _version} ->
-          Enum.any?(versions, &(is_struct(&1, Version) and Version.compare(first, &1) == :eq))
+  defp delete_segment?(first, package, versions, upload_type) do
+    case Version.parse(first) do
+      {:ok, _version} ->
+        Enum.any?(versions, &(is_struct(&1, Version) and Version.compare(first, &1) == :eq))
 
-        :error when package in @special_package_names ->
-          first != "main" and Version.parse(first <> ".0") == :error
+      :error when package in @special_package_names ->
+        first != "main" and Version.parse(first <> ".0") == :error
 
-        :error ->
-          upload_type in [:both, :unversioned]
-      end
+      :error ->
+        upload_type in [:both, :unversioned]
     end
   end
 

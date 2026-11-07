@@ -32,6 +32,12 @@ defmodule Hexpm.Store.Memory do
     |> Enum.sort()
   end
 
+  def list_direct_objects(bucket, prefix) do
+    bucket
+    |> list_objects(prefix)
+    |> Enum.reject(&String.contains?(String.replace_prefix(&1.key, prefix, ""), "/"))
+  end
+
   def list_objects(bucket, prefix) do
     owner = owner_pid()
 

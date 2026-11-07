@@ -10,6 +10,19 @@ defmodule Hexpm.Store.S3 do
   end
 
   def list_prefixes(bucket, prefix) do
+    list_level(bucket, prefix, fn body -> Enum.map(body.common_prefixes, & &1.prefix) end)
+  end
+
+  def list_direct_objects(bucket, prefix) do
+    list_level(bucket, prefix, fn body ->
+      Enum.map(
+        body.contents,
+        &%{key: &1.key, last_modified: parse_last_modified(&1.last_modified)}
+      )
+    end)
+  end
+
+  defp list_level(bucket, prefix, items) do
     Stream.unfold(:start, fn
       nil ->
         nil
@@ -22,9 +35,8 @@ defmodule Hexpm.Store.S3 do
           S3.list_objects(bucket(bucket), opts)
           |> ExAws.request!(region: region(bucket))
 
-        prefixes = Enum.map(body.common_prefixes, & &1.prefix)
         next = if body.is_truncated == "true", do: body.next_marker
-        {prefixes, next}
+        {items.(body), next}
     end)
     |> Stream.flat_map(& &1)
   end

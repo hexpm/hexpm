@@ -198,6 +198,36 @@ defmodule Hexpm.Store.GCSTest do
              ["org=acme/", "org=beta/", "org=gamma/"]
   end
 
+  test "lists the objects directly under a prefix, across pages" do
+    expect(Hexpm.HTTP.Mock, :get, 2, fn url, headers ->
+      assert headers == [{"authorization", "Bearer token"}]
+      %URI{path: "/bucket", query: query} = URI.parse(url)
+
+      case URI.decode_query(query) do
+        %{"prefix" => "docs/", "delimiter" => "/", "marker" => ""} ->
+          {:ok, 200, [],
+           """
+           <ListBucketResult>
+             <Contents><Key>docs/a.html</Key><LastModified>2026-11-06T13:06:25.194Z</LastModified></Contents>
+             <CommonPrefixes><Prefix>docs/1.0.0/</Prefix></CommonPrefixes>
+             <NextMarker>docs/1.0.0/</NextMarker>
+           </ListBucketResult>
+           """}
+
+        %{"prefix" => "docs/", "delimiter" => "/", "marker" => "docs/1.0.0/"} ->
+          {:ok, 200, [],
+           """
+           <ListBucketResult>
+             <Contents><Key>docs/b.html</Key><LastModified>2026-11-06T13:06:26.000Z</LastModified></Contents>
+           </ListBucketResult>
+           """}
+      end
+    end)
+
+    assert GCS.list_direct_objects("bucket", "docs/") |> Enum.map(& &1.key) ==
+             ["docs/a.html", "docs/b.html"]
+  end
+
   test "treats missing objects as successfully deleted" do
     expect(Hexpm.HTTP.Mock, :delete, fn url, headers ->
       assert url == "https://storage.example/bucket/docs/missing.html"
