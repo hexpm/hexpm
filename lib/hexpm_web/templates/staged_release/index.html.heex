@@ -13,10 +13,10 @@
             </p>
           </div>
           <div :if={@staged_releases == []} class="p-6 sm:p-8 text-grey-600 dark:text-grey-300">
-            There are no staged releases you can approve.
+            There are no staged releases.
           </div>
           <ul class="divide-y divide-grey-200 dark:divide-grey-700">
-            <li :for={staged <- @staged_releases} class="p-4 sm:p-6">
+            <li :for={{staged, blocker} <- @staged_releases} class="p-4 sm:p-6">
               <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div class="min-w-0">
                   <p class="text-xs text-grey-500 dark:text-grey-300 mb-1">
@@ -46,8 +46,12 @@
                   >
                     Publication in progress
                   </p>
+                  <p :if={blocker} class="mt-2 text-sm text-grey-700 dark:text-grey-200">
+                    {approval_blocker_message(blocker, staged)}
+                  </p>
                 </div>
                 <.button_link
+                  :if={is_nil(blocker)}
                   href={ViewHelpers.path_for_staged_release(staged)}
                   variant="outline"
                   size="sm"

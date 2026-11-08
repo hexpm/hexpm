@@ -489,6 +489,32 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
     refute html_response(conn, 200) =~ html_path(result)
   end
 
+  test "the dashboard explains why a member can't approve a staged release", ctx do
+    {result, _} = stage(ctx)
+
+    for {user, role, message} <- [
+          {insert(:user), "admin", "Enable two-factor authentication"},
+          {insert(:user_with_tfa), "read", "Approving requires the write or admin role"}
+        ] do
+      insert(:organization_user,
+        organization: ctx.repository.organization,
+        user: user,
+        role: role
+      )
+
+      page =
+        build_conn()
+        |> test_login(user)
+        |> get("/dashboard/staged-releases")
+        |> html_response(200)
+        |> LazyHTML.from_document()
+
+      assert LazyHTML.text(page) =~ ctx.name
+      assert LazyHTML.text(page) =~ message
+      assert page |> LazyHTML.query(~s(a[href="#{html_path(result)}"])) |> Enum.empty?()
+    end
+  end
+
   test "organization keys stage and retain the organization's publisher", ctx do
     key = insert(:key, organization: ctx.repository.organization)
     {result, _} = stage(%{ctx | key: key})

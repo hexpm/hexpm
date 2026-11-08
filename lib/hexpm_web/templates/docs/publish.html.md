@@ -197,7 +197,7 @@ $ HEX_API_KEY=f48ac236bca15c3271e077c15c5320c4 mix hex.publish --yes
 
 Staged publishing holds releases and documentation published with an API key or a workload identity until a person approves them. It's a package setting, and an organization can also require it for every package in its private repository, whatever the package setting. Publishing with your own account, which uses an OAuth token and your 2FA code, isn't held.
 
-New packages require approval by default, and existing packages start with it off. Full package owners and owning organization admins change it under Settings > Staged publishing, which requires enrolled 2FA and fresh verification. Turning it off emails the full owners and owning organization admins.
+New public packages require approval by default. New packages in an organization's private repository start with it off, so they're held only when the organization requires it. Full package owners and owning organization admins change it under Settings > Staged publishing, which requires enrolled 2FA and fresh verification. Turning it off emails the full owners and owning organization admins.
 
 While approval is required, Hex keeps each release and its documentation private as a staged release. A maintainer with 2FA opens it under Staged releases in the dashboard, checks the package and documentation checksums, and approves or rejects it. Staged releases expire after seven days. `mix hex.publish --wait` opens the approval page and waits for the result.
 

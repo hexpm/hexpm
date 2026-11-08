@@ -60,9 +60,13 @@ defmodule Hexpm.Repository.Package do
 
   def reserved_names(), do: @reserved_names
 
+  def staged_publishing_default(%{id: id}), do: id == 1
+
   def build(repository, user, params, owner \\ nil) do
     package =
-      build_assoc(repository, :packages)
+      build_assoc(repository, :packages,
+        require_staged_publishing: staged_publishing_default(repository)
+      )
       |> Map.put(:repository, repository)
 
     package

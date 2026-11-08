@@ -27,7 +27,7 @@ defmodule Hexpm.Repository.StagedReleases do
   defp policy_required?(repository, package, target) do
     (forced?() && repository.id == 1) ||
       (enabled?(target) &&
-         (package_approval?(package) ||
+         (package_approval?(repository, package) ||
             (repository.id != 1 && repository.organization.require_staged_publishing)))
   end
 
@@ -39,8 +39,8 @@ defmodule Hexpm.Repository.StagedReleases do
       )
   end
 
-  defp package_approval?(nil), do: %Package{}.require_staged_publishing
-  defp package_approval?(%Package{require_staged_publishing: required}), do: required
+  defp package_approval?(repository, nil), do: Package.staged_publishing_default(repository)
+  defp package_approval?(_repository, %Package{require_staged_publishing: required}), do: required
 
   defp policy_target(%{id: 1}, nil, audit) do
     case audit.auth_credential do
@@ -262,13 +262,16 @@ defmodule Hexpm.Repository.StagedReleases do
   end
 
   def for_user(user, session_id) do
-    organizations =
+    memberships =
       Repo.all(
         from(m in OrganizationUser,
-          where: m.user_id == ^user.id and m.role in ["write", "admin"],
-          select: m.organization_id
+          where: m.user_id == ^user.id,
+          select: {m.organization_id, m.role}
         )
       )
+
+    members = Enum.map(memberships, &elem(&1, 0))
+    organizations = for {id, role} <- memberships, role in ["write", "admin"], do: id
 
     from(s in StagedRelease,
       join: r in assoc(s, :repository),
@@ -280,7 +283,7 @@ defmodule Hexpm.Repository.StagedReleases do
       on: owner.id == o.user_id,
       where: not is_nil(s.publication) or s.expires_at > ^DateTime.utc_now(),
       where:
-        (r.id != 1 and r.organization_id in ^organizations) or
+        (r.id != 1 and r.organization_id in ^members) or
           (is_nil(p.id) and r.id == 1 and
              (s.user_id == ^user.id or s.organization_id in ^organizations)) or
           (o.level in ^PackageOwner.level_or_higher("maintainer") and
@@ -290,8 +293,43 @@ defmodule Hexpm.Repository.StagedReleases do
     )
     |> Repo.all()
     |> Repo.preload(repository: :organization)
-    |> Enum.filter(&can_approve?(&1, user, session_id))
+    |> Enum.map(&{&1, approval_blocker(&1, user, session_id)})
+    |> Enum.reject(&match?({_, :hidden}, &1))
   end
+
+  @doc """
+  Why the user can't approve a staged release: `nil` when they can, `:hidden`
+  when they shouldn't see it, otherwise `:tfa`, `:email`, `:role` or
+  `:billing`.
+  """
+  def approval_blocker(staged, user, session_id) do
+    user = Repo.preload(user, :emails)
+    repository = staged.repository
+    package = Packages.get(repository, staged.name)
+
+    cond do
+      can_approve?(staged, user, session_id) -> nil
+      not reachable?(staged, package, user, session_id) -> :hidden
+      not approver_role?(staged, package, user) -> :role
+      not User.tfa_enabled?(user) -> :tfa
+      not User.verified_primary_email?(user) -> :email
+      AuthHelpers.organization_billing_active(repository.organization, user) != :ok -> :billing
+      true -> :hidden
+    end
+  end
+
+  defp reachable?(%{repository_id: 1} = staged, nil, user, session_id),
+    do: new_package_access?(staged, nil, user, session_id)
+
+  defp reachable?(%{repository_id: 1} = staged, package, user, session_id) do
+    conn = authorization_conn(staged.repository, package, nil, session_id)
+    HexpmWeb.SSOEnforcement.check_package(conn, package, user, "maintainer") == :ok
+  end
+
+  defp reachable?(staged, _package, user, session_id),
+    do:
+      Hexpm.Accounts.OrganizationAuth.check(staged.repository.organization, user, nil, session_id) ==
+        :ok
 
   def can_approve?(staged, user, session_id \\ nil)
   def can_approve?(_staged, nil, _session_id), do: false
@@ -993,10 +1031,14 @@ defmodule Hexpm.Repository.StagedReleases do
 
   defp eligible_approver?(staged, package, user) do
     User.tfa_enabled?(user) && is_nil(user.deactivated_at) && User.verified_primary_email?(user) &&
-      if is_nil(package) and staged.repository_id == 1,
-        do: new_public_package_approver?(staged, user),
-        else: AuthHelpers.package_owner(staged.repository, package, user, []) == :ok
+      approver_role?(staged, package, user)
   end
+
+  defp approver_role?(%{repository_id: 1} = staged, nil, user),
+    do: new_public_package_approver?(staged, user)
+
+  defp approver_role?(staged, package, user),
+    do: AuthHelpers.package_owner(staged.repository, package, user, []) == :ok
 
   defp new_public_package_approver?(%{organization_id: nil, user_id: id}, user),
     do: id == user.id

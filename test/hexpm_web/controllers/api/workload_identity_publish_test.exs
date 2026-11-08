@@ -307,6 +307,9 @@ defmodule HexpmWeb.API.WorkloadIdentityPublishTest do
       |> then(fn {:ok, token} -> token end)
     end
 
+    defp require_staged_publishing(organization),
+      do: Hexpm.Repo.update!(Ecto.Changeset.change(organization, require_staged_publishing: true))
+
     defp approve(organization, staged) do
       admin = insert(:user_with_tfa)
       insert(:organization_user, organization: organization, user: admin, role: "admin")
@@ -347,6 +350,7 @@ defmodule HexpmWeb.API.WorkloadIdentityPublishTest do
       organization: organization,
       org_publisher: tp
     } do
+      require_staged_publishing(organization)
       token = mint(repository: repository.name, package: "new_package")
 
       staged = json_response(publish(token, repository, "new_package"), 201)
@@ -371,6 +375,7 @@ defmodule HexpmWeb.API.WorkloadIdentityPublishTest do
       repository: repository,
       organization: organization
     } do
+      require_staged_publishing(organization)
       token = mint(repository: repository.name, package: "new_package")
       meta = %{name: "new_package", version: "1.0.0", description: "from CI"}
 

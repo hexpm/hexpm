@@ -370,6 +370,7 @@ defmodule HexpmWeb.API.StagedWorkloadIdentityPublishTest do
     |> response(302)
 
     package = Repo.get_by!(Package, name: name, repository_id: repository.id)
+    refute package.require_staged_publishing
     release = Repo.get_by!(Release, package_id: package.id)
     assert release.workload_identity_id == wi.id
     assert release.has_docs
@@ -475,12 +476,52 @@ defmodule HexpmWeb.API.StagedWorkloadIdentityPublishTest do
         workflow: "release.yml"
       )
 
-    assert StagedReleases.required?(repository, nil, %{user: wi, auth_credential: nil})
+    package = insert(:package, repository_id: repository.id, require_staged_publishing: true)
+    audit = %{user: wi, auth_credential: nil}
+    assert StagedReleases.required?(repository, package, audit)
+    refute StagedReleases.required?(repository, nil, audit)
     refute repository.organization.require_staged_publishing
+  end
+
+  test "an organization key publishes a new private package directly without the organization policy" do
+    repository = insert(:repository)
+    key = insert(:key, organization: repository.organization, user: nil)
+    name = Fake.sequence(:package)
+
+    result =
+      build_conn()
+      |> put_req_header("content-type", "application/octet-stream")
+      |> put_req_header("authorization", key.user_secret)
+      |> post(
+        "/api/repos/#{repository.name}/publish",
+        create_tar(%{name: name, version: "1.0.0", description: "Private CI"})
+      )
+      |> json_response(201)
+
+    refute result["status"] == "staged"
+    package = Repo.get_by!(Package, name: name, repository_id: repository.id)
+    refute package.require_staged_publishing
+    assert Repo.get_by!(Release, package_id: package.id)
+
+    result =
+      build_conn()
+      |> put_req_header("content-type", "application/octet-stream")
+      |> put_req_header("authorization", key.user_secret)
+      |> post(
+        "/api/repos/#{repository.name}/publish",
+        create_tar(%{name: name, version: "1.1.0", description: "Private CI"})
+      )
+      |> json_response(201)
+
+    refute result["status"] == "staged"
+    assert Repo.aggregate(from(r in Release, where: r.package_id == ^package.id), :count) == 2
   end
 
   test "the package policy stages organization-key exchanges and their docs", ctx do
     repository = insert(:repository)
+
+    %{name: name} =
+      insert(:package, repository_id: repository.id, require_staged_publishing: true)
 
     insert(:organization_user,
       organization: repository.organization,
@@ -507,7 +548,6 @@ defmodule HexpmWeb.API.StagedWorkloadIdentityPublishTest do
       |> json_response(200)
       |> Map.fetch!("access_token")
 
-    name = Fake.sequence(:package)
     path = "/api/repos/#{repository.name}/packages/#{name}/releases"
 
     conn =
