@@ -9,7 +9,7 @@
           <div class="p-4 sm:p-6 border-b border-grey-200 dark:border-grey-700">
             <h2 class="text-xl font-semibold text-grey-900 dark:text-white">Staged releases</h2>
             <p class="mt-2 text-sm text-grey-600 dark:text-grey-300">
-              Review staged releases waiting for your approval. They remain private until approved and expire after seven days.
+              Staged releases waiting for approval. They remain private until approved and expire after seven days.
             </p>
           </div>
           <div :if={@staged_releases == []} class="p-6 sm:p-8 text-grey-600 dark:text-grey-300">
@@ -46,7 +46,10 @@
                   >
                     Publication in progress
                   </p>
-                  <p :if={blocker} class="mt-2 text-sm text-grey-700 dark:text-grey-200">
+                  <p
+                    :if={blocker && is_nil(staged.publication)}
+                    class="mt-2 text-sm text-grey-700 dark:text-grey-200"
+                  >
                     {approval_blocker_message(blocker, staged)}
                   </p>
                 </div>

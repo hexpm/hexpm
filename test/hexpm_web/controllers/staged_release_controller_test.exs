@@ -491,10 +491,12 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
 
   test "the dashboard explains why a member can't approve a staged release", ctx do
     {result, _} = stage(ctx)
+    admin = insert(:user)
+    reader = insert(:user_with_tfa)
 
     for {user, role, message} <- [
-          {insert(:user), "admin", "Enable two-factor authentication"},
-          {insert(:user_with_tfa), "read", "Approving requires the write or admin role"}
+          {admin, "admin", "Enable two-factor authentication"},
+          {reader, "read", "Approving requires the write or admin role"}
         ] do
       insert(:organization_user,
         organization: ctx.repository.organization,
@@ -502,17 +504,16 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
         role: role
       )
 
-      page =
-        build_conn()
-        |> test_login(user)
-        |> get("/dashboard/staged-releases")
-        |> html_response(200)
-        |> LazyHTML.from_document()
-
+      page = dashboard(user)
       assert LazyHTML.text(page) =~ ctx.name
       assert LazyHTML.text(page) =~ message
       assert page |> LazyHTML.query(~s(a[href="#{html_path(result)}"])) |> Enum.empty?()
     end
+
+    Repo.update!(Ecto.Changeset.change(staged(ctx, result), publication: %{}))
+    page = dashboard(admin)
+    assert LazyHTML.text(page) =~ "Publication in progress"
+    refute LazyHTML.text(page) =~ "Enable two-factor authentication"
   end
 
   test "organization keys stage and retain the organization's publisher", ctx do
@@ -1028,6 +1029,14 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
     assert link |> LazyHTML.query("span:last-child") |> LazyHTML.text() |> String.trim() == "NEW"
     assert [class] = LazyHTML.attribute(link, "class")
     assert class =~ "text-purple-600"
+  end
+
+  defp dashboard(user) do
+    build_conn()
+    |> test_login(user)
+    |> get("/dashboard/staged-releases")
+    |> html_response(200)
+    |> LazyHTML.from_document()
   end
 
   defp stage(ctx, text \\ "first") do
