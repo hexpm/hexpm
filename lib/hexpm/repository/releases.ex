@@ -269,6 +269,9 @@ defmodule Hexpm.Repository.Releases do
         opts[:approved_by_id]
       )
     end)
+    |> Multi.run(:superseded_staged_release, fn _, %{staged_reservation: staged} ->
+      Hexpm.Repository.StagedReleases.remove_superseded(staged)
+    end)
     |> Multi.run(:reserved_packages, fn _, _ -> {:ok, reserved_packages(repository, meta)} end)
     |> create_package(repository, package, user, meta, opts[:owner])
     |> create_release(

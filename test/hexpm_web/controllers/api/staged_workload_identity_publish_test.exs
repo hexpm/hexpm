@@ -1,7 +1,15 @@
 defmodule HexpmWeb.API.StagedWorkloadIdentityPublishTest do
   use HexpmWeb.ConnCase
+  use Oban.Testing, repo: Hexpm.RepoBase
 
-  alias Hexpm.Repository.{Package, Release, StagedReleases}
+  alias Hexpm.Repository.{
+    Package,
+    Release,
+    StagedRelease,
+    StagedReleaseCleanupWorker,
+    StagedReleases
+  }
+
   alias Hexpm.WorkloadIdentityHelpers
 
   setup :verify_on_exit!
@@ -616,6 +624,78 @@ defmodule HexpmWeb.API.StagedWorkloadIdentityPublishTest do
     assert Repo.get_by!(Hexpm.Repository.PackageOwner,
              package_id: Repo.get_by!(Package, name: name).id
            ).user_id == repository.organization.user.id
+  end
+
+  test "a key publish after the package turns off staged publishing replaces the staged release",
+       ctx do
+    assert key_publish(ctx, "1.0.0") |> json_response(201) |> Map.fetch!("status") == "staged"
+    staged = Repo.one!(StagedRelease)
+
+    {:ok, _} = StagedReleases.configure(ctx.package, ctx.user, false, audit: audit_data(ctx.user))
+
+    result = key_publish(ctx, "1.0.0") |> json_response(201)
+    refute result["status"] == "staged"
+    assert result["version"] == "1.0.0"
+    assert Repo.get_by!(Release, package_id: ctx.package.id).version == Version.parse!("1.0.0")
+    refute Repo.exists?(StagedRelease)
+
+    assert_enqueued(
+      worker: StagedReleaseCleanupWorker,
+      args: %{keys: [staged.storage_key]}
+    )
+  end
+
+  test "an organization key publish after the organization turns off staged publishing replaces the staged release",
+       ctx do
+    repository =
+      insert(:repository, organization: build(:organization, require_staged_publishing: true))
+
+    insert(:organization_user,
+      organization: repository.organization,
+      user: ctx.user,
+      role: "admin"
+    )
+
+    name = Fake.sequence(:package)
+
+    publish = fn ->
+      build_conn()
+      |> put_req_header("content-type", "application/octet-stream")
+      |> put_req_header("authorization", key_for(repository.organization))
+      |> post(
+        "/api/repos/#{repository.name}/publish",
+        create_tar(%{name: name, version: "1.0.0", description: "Private CI"})
+      )
+    end
+
+    assert publish.() |> json_response(201) |> Map.fetch!("status") == "staged"
+
+    {:ok, _} =
+      StagedReleases.configure(repository.organization, ctx.user, false,
+        audit: audit_data(ctx.user)
+      )
+
+    refute publish.() |> json_response(201) |> Map.get("status") == "staged"
+    package = Repo.get_by!(Package, name: name, repository_id: repository.id)
+    assert Repo.get_by!(Release, package_id: package.id).version == Version.parse!("1.0.0")
+    refute Repo.exists?(StagedRelease)
+  end
+
+  test "a direct publish can't replace a staged release that is being published", ctx do
+    assert key_publish(ctx, "1.0.0") |> json_response(201) |> Map.fetch!("status") == "staged"
+
+    Repo.one!(StagedRelease)
+    |> Ecto.Changeset.change(publication: %{"release_id" => 0, "approver_id" => ctx.user.id})
+    |> Repo.update!()
+
+    {:ok, _} = StagedReleases.configure(ctx.package, ctx.user, false, audit: audit_data(ctx.user))
+
+    assert key_publish(ctx, "1.0.0") |> json_response(422) |> Map.fetch!("errors") == %{
+             "version" => "is awaiting approval"
+           }
+
+    assert Repo.exists?(StagedRelease)
+    refute Repo.exists?(Release)
   end
 
   defp mint(package) do

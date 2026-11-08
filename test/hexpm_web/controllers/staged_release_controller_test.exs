@@ -466,7 +466,7 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
     |> response(404)
   end
 
-  test "a direct publish can't replace a reserved version after the rollout is turned off", ctx do
+  test "a direct publish replaces a staged release after the rollout is turned off", ctx do
     {result, _} = stage(ctx)
     put_feature_flag(:workload_identity, mode: :off)
 
@@ -475,9 +475,10 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
       "/packages/#{ctx.name}/releases",
       create_tar(%{name: ctx.name, version: "1.0.0", description: "Direct"})
     )
-    |> response(422)
+    |> response(201)
 
-    assert staged(ctx, result)
+    refute staged(ctx, result)
+    assert Repo.get_by!(Package, repository_id: ctx.repository.id, name: ctx.name)
   end
 
   test "validation rejects invalid metadata without reserving the package", ctx do
