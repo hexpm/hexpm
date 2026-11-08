@@ -121,9 +121,19 @@ defmodule Hexpm.Repository.StagedReleases do
 
     staged = Repo.one(query)
 
-    if is_nil(staged) || staged.id == allowed_id,
-      do: {:ok, :available},
-      else: {:error, version_error("is awaiting approval")}
+    cond do
+      is_nil(staged) || staged.id == allowed_id -> {:ok, nil}
+      is_nil(staged.publication) -> {:ok, staged}
+      true -> {:error, version_error("is awaiting approval")}
+    end
+  end
+
+  def remove_superseded(nil), do: {:ok, nil}
+
+  def remove_superseded(staged) do
+    Repo.delete!(staged)
+    enqueue_cleanup(staged)
+    {:ok, staged}
   end
 
   def stage(repository, body, meta, inner, outer, opts) do

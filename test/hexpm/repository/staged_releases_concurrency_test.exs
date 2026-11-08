@@ -230,7 +230,7 @@ defmodule Hexpm.Repository.StagedReleasesConcurrencyTest do
     end
   end
 
-  test "a direct publish waits for staging to commit before checking its reservation" do
+  test "a direct publish waits for staging to commit, then replaces the staged release" do
     committed(&build_context/0, fn ctx ->
       parent = self()
 
@@ -248,9 +248,9 @@ defmodule Hexpm.Repository.StagedReleasesConcurrencyTest do
       assert await_lock_wait() == :waiting
       send(staging.pid, :commit)
       assert {:ok, {:ok, %{staged_release: _}}} = Task.await(staging, 15_000)
-      assert {:error, :staged_reservation, %Ecto.Changeset{}, _} = Task.await(direct, 15_000)
-      assert committed_count(ctx, StagedRelease) == 1
-      assert committed_count(ctx, Release) == 0
+      assert {:ok, %{release: _}} = Task.await(direct, 15_000)
+      assert committed_count(ctx, StagedRelease) == 0
+      assert committed_count(ctx, Release) == 1
     end)
   end
 
