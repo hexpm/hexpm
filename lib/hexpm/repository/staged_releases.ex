@@ -309,6 +309,7 @@ defmodule Hexpm.Repository.StagedReleases do
 
     cond do
       can_approve?(staged, user, session_id) -> nil
+      not related?(staged, package, user) -> :hidden
       not reachable?(staged, package, user, session_id) -> :hidden
       not approver_role?(staged, package, user) -> :role
       not User.tfa_enabled?(user) -> :tfa
@@ -317,6 +318,14 @@ defmodule Hexpm.Repository.StagedReleases do
       true -> :hidden
     end
   end
+
+  defp related?(%{repository_id: 1} = staged, package, user),
+    do: approver_role?(staged, package, user)
+
+  defp related?(staged, package, user),
+    do:
+      not is_nil(Organizations.get_role(staged.repository.organization, user)) ||
+        approver_role?(staged, package, user)
 
   defp reachable?(%{repository_id: 1} = staged, nil, user, session_id),
     do: new_package_access?(staged, nil, user, session_id)

@@ -421,28 +421,49 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
     assert Repo.all(Hexpm.Emails.OutboxEntry) == []
   end
 
-  test "a user without 2FA or with only read access can't review or approve", ctx do
+  test "a user without 2FA or with only read access can review but not approve", ctx do
     {result, _} = stage(ctx)
 
-    for user <- [insert(:user), insert(:user_with_tfa)] do
+    for {user, message} <- [
+          {insert(:user), "Approving requires the write or admin role"},
+          {insert(:user_with_tfa), "Approving requires the write or admin role"}
+        ] do
       insert(:organization_user,
         organization: ctx.repository.organization,
         user: user,
         role: "read"
       )
 
-      build_conn()
-      |> test_login(user)
-      |> get(html_path(result))
-      |> response(404)
+      page =
+        build_conn()
+        |> test_login(user)
+        |> get(html_path(result))
+        |> html_response(200)
+        |> LazyHTML.from_document()
+
+      assert page |> LazyHTML.query("#approval-blocker") |> LazyHTML.text() =~ message
+      buttons = LazyHTML.query(page, "#review-actions button")
+      assert Enum.count(buttons) == 2
+      assert Enum.all?(buttons, &(LazyHTML.attribute(&1, "disabled") != []))
+      assert page |> LazyHTML.query("#review-actions form") |> Enum.empty?()
 
       approve(%{ctx | user: user}, result) |> response(404)
+      reject(%{ctx | user: user}, result) |> response(404)
 
       build_conn()
       |> test_login(user)
       |> get(html_path(result) <> "/release.tar")
-      |> response(404)
+      |> response(200)
     end
+
+    assert staged(ctx, result)
+    outsider = insert(:user_with_tfa)
+    build_conn() |> test_login(outsider) |> get(html_path(result)) |> response(404)
+
+    build_conn()
+    |> test_login(outsider)
+    |> get(html_path(result) <> "/release.tar")
+    |> response(404)
   end
 
   test "a direct publish can't replace a reserved version after the rollout is turned off", ctx do
@@ -507,7 +528,7 @@ defmodule HexpmWeb.StagedReleaseControllerTest do
       page = dashboard(user)
       assert LazyHTML.text(page) =~ ctx.name
       assert LazyHTML.text(page) =~ message
-      assert page |> LazyHTML.query(~s(a[href="#{html_path(result)}"])) |> Enum.empty?()
+      assert page |> LazyHTML.query(~s(a[href="#{html_path(result)}"])) |> Enum.count() == 1
     end
 
     Repo.update!(Ecto.Changeset.change(staged(ctx, result), publication: %{}))

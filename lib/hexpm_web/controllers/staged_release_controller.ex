@@ -28,7 +28,8 @@ defmodule HexpmWeb.StagedReleaseController do
       replacement?:
         staged.kind == "release" && staged.replace && is_nil(staged.publication) &&
           Releases.exists?(staged.repository.name, staged.name, to_string(staged.version)),
-      approval_checksum: StagedRelease.checksum(staged)
+      approval_checksum: StagedRelease.checksum(staged),
+      approval_blocker: conn.assigns.approval_blocker
     )
   end
 
@@ -95,14 +96,19 @@ defmodule HexpmWeb.StagedReleaseController do
         conn.assigns.staged_kind
       )
 
-    if staged &&
-         StagedReleases.can_approve?(
-           staged,
-           conn.assigns.current_user,
-           conn.assigns.current_session.id
-         ) do
+    blocker =
+      staged &&
+        StagedReleases.approval_blocker(
+          staged,
+          conn.assigns.current_user,
+          conn.assigns.current_session.id
+        )
+
+    if staged && blocker != :hidden &&
+         (is_nil(blocker) or action_name(conn) in [:show, :tarball, :docs]) do
       conn
       |> assign(:staged_release, staged)
+      |> assign(:approval_blocker, blocker)
       |> put_resp_header("cache-control", "private, no-store")
     else
       conn |> not_found() |> halt()

@@ -48,13 +48,12 @@
                   </p>
                   <p
                     :if={blocker && is_nil(staged.publication)}
-                    class="mt-2 text-sm text-grey-700 dark:text-grey-200"
+                    class="mt-3 rounded-lg border border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-900/20 px-3 py-2 text-sm font-medium text-yellow-800 dark:text-yellow-200"
                   >
                     {approval_blocker_message(blocker, staged)}
                   </p>
                 </div>
                 <.button_link
-                  :if={is_nil(blocker)}
                   href={ViewHelpers.path_for_staged_release(staged)}
                   variant="outline"
                   size="sm"

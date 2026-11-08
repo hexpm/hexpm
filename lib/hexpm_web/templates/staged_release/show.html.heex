@@ -95,6 +95,38 @@
             </.button_link>
           </div>
           <div
+            :if={@approval_blocker}
+            id="approval-blocker"
+            class="mt-6 rounded-lg border border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-900/20 p-4 text-sm font-medium text-yellow-800 dark:text-yellow-200"
+          >
+            {approval_blocker_message(@approval_blocker, @staged_release)}
+          </div>
+          <div
+            :if={@approval_blocker}
+            id="review-actions"
+            class="flex flex-wrap items-center gap-3 mt-6 pt-5 border-t border-grey-200 dark:border-grey-700"
+          >
+            <.button
+              disabled
+              title={approval_blocker_message(@approval_blocker, @staged_release)}
+              aria-describedby="approval-blocker"
+            >
+              {if @staged_release.publication,
+                do: "Retry publication",
+                else: "Approve publication"}
+            </.button>
+            <.button
+              :if={is_nil(@staged_release.publication)}
+              disabled
+              variant="danger-outline"
+              title={approval_blocker_message(@approval_blocker, @staged_release)}
+              aria-describedby="approval-blocker"
+            >
+              Reject publication
+            </.button>
+          </div>
+          <div
+            :if={is_nil(@approval_blocker)}
             id="review-actions"
             class="flex flex-wrap items-center gap-3 mt-6 pt-5 border-t border-grey-200 dark:border-grey-700"
           >
