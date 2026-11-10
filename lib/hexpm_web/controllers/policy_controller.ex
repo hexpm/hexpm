@@ -37,11 +37,20 @@ defmodule HexpmWeb.PolicyController do
     )
   end
 
-  def dispute(conn, _params) do
+  def package_transfer(conn, _params) do
     render(
       conn,
-      "dispute.html",
-      title: "Dispute policy",
+      "package_transfer.html",
+      title: "Package Transfer Policy",
+      container: "flex-1 flex flex-col"
+    )
+  end
+
+  def account_recovery(conn, _params) do
+    render(
+      conn,
+      "account_recovery.html",
+      title: "Account Recovery Policy",
       container: "flex-1 flex flex-col"
     )
   end
