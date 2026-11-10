@@ -225,26 +225,6 @@ defmodule HexpmWeb.Dashboard.AdminView do
         ]
       },
       %{
-        id: "email",
-        title: "Email",
-        tasks: [
-          task(
-            "send_email",
-            "Send email",
-            "Queues one email per address. An address already sent this subject in the last 90 days is skipped.",
-            danger: true,
-            fields: [
-              textarea_field("recipients", "Recipients", placeholder: "One address per line"),
-              text_field("subject", "Subject", placeholder: "Hex.pm - Subject"),
-              textarea_field("body", "Body",
-                placeholder: "Blank lines separate paragraphs, bare URLs become links",
-                rows: "8"
-              )
-            ]
-          )
-        ]
-      },
-      %{
         id: "maintenance",
         title: "Maintenance",
         tasks: [
@@ -292,16 +272,6 @@ defmodule HexpmWeb.Dashboard.AdminView do
       required: Keyword.get(opts, :required, true),
       placeholder: Keyword.get(opts, :placeholder, ""),
       value: Keyword.get(opts, :value)
-    }
-  end
-
-  defp textarea_field(name, label, opts) do
-    %{
-      kind: :textarea,
-      name: name,
-      label: label,
-      placeholder: Keyword.get(opts, :placeholder, ""),
-      rows: Keyword.get(opts, :rows, "4")
     }
   end
 
@@ -373,7 +343,7 @@ defmodule HexpmWeb.Dashboard.AdminView do
   def task_path(task, prefill) when prefill == %{}, do: ~p"/dashboard/admin/tasks/#{task.id}"
   def task_path(task, prefill), do: ~p"/dashboard/admin/tasks/#{task.id}?#{%{args: prefill}}"
 
-  # Only the text fields take a prefill, and a long body would not fit in a URL.
+  # Only the text fields take a prefill.
   def back_path(task, args) do
     names = for %{kind: :text, name: name} <- task.fields, do: name
     task_path(task, Map.new(for {key, value} <- args, key in names, do: {key, value}))
@@ -449,15 +419,6 @@ defmodule HexpmWeb.Dashboard.AdminView do
     |> Enum.filter(& &1)
   end
 
-  def consequences("send_email", preview) do
-    count = length(preview.recipients)
-
-    [
-      "Queues one email to each of #{count} #{plural(count, "address", "addresses")}. " <>
-        "An address already sent this subject in the last 90 days is skipped."
-    ]
-  end
-
   defp owner_email(%{reason: nil}), do: "Sends no email."
 
   defp owner_email(%{lookup: %{owners: []}}),
@@ -477,7 +438,6 @@ defmodule HexpmWeb.Dashboard.AdminView do
 
   defp names(names), do: Enum.join(names, ", ")
 
-  defp plural(count, singular, plural \\ nil)
-  defp plural(1, singular, _plural), do: singular
-  defp plural(_count, singular, plural), do: plural || singular <> "s"
+  defp plural(1, word), do: word
+  defp plural(_count, word), do: word <> "s"
 end

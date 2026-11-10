@@ -7,7 +7,6 @@ defmodule HexpmWeb.Dashboard.AdminControllerTest do
   alias Hexpm.AdminTasks
   alias Hexpm.AdminTasks.AuditLog, as: AdminAuditLog
   alias Hexpm.Accounts.{BlockedEmailDomain, Organization, OrganizationUser, PasswordReset, User}
-  alias Hexpm.Emails.OutboxEntry
   alias Hexpm.Repository.{Package, PackageOwner, Release}
   alias HexpmWeb.Dashboard.AdminView
 
@@ -170,6 +169,9 @@ defmodule HexpmWeb.Dashboard.AdminControllerTest do
       assert response(conn, 404)
 
       conn = build_conn() |> test_login(c.moderator) |> get("/dashboard/admin/tasks/eval")
+      assert response(conn, 404)
+
+      conn = run_task(c, "send_email", %{"recipients" => "bob@example.com"})
       assert response(conn, 404)
     end
 
@@ -620,25 +622,6 @@ defmodule HexpmWeb.Dashboard.AdminControllerTest do
     end
   end
 
-  describe "email tasks" do
-    test "send_email", c do
-      conn =
-        run_task(
-          c,
-          "send_email",
-          %{
-            "recipients" => "bob@example.com\njane@example.com, bob@example.com",
-            "subject" => "Hex.pm - Update",
-            "body" => "Body"
-          },
-          "yes"
-        )
-
-      assert info(conn) == "Send email: done, 2."
-      assert Repo.aggregate(OutboxEntry, :count) == 2
-    end
-  end
-
   describe "maintenance tasks" do
     test "retry_oban_jobs", c do
       {:ok, job} = Oban.insert(Hexpm.Hexdocs.Workers.Upload.new(%{key: "docs/a-1.0.0.tar.gz"}))
@@ -794,22 +777,6 @@ defmodule HexpmWeb.Dashboard.AdminControllerTest do
 
       html = response(run_task(c, "delete_organization_data", args), 200)
       assert html =~ "Refused, billing is trialing."
-    end
-
-    test "shows the email and how many it goes to", c do
-      conn =
-        run_task(c, "send_email", %{
-          "recipients" => "bob@example.com\njane@example.com, bob@example.com",
-          "subject" => "Hex.pm - Update",
-          "body" => "First line\n\nSecond paragraph"
-        })
-
-      html = response(conn, 200)
-      assert html =~ "Queues one email to each of 2 addresses."
-      assert html =~ "First line\n\nSecond paragraph"
-      assert html =~ ~s(name="confirm" value="yes")
-      refute html =~ "to confirm"
-      refute Repo.exists?(OutboxEntry)
     end
   end
 
