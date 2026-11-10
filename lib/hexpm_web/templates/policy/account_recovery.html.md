@@ -8,7 +8,7 @@ This document describes how you can regain access to your Hex account, and what 
 
 Request a reset link on the [password reset page](/password/reset). The link is sent to your primary email address only and is valid for 24 hours. Resetting your password signs out all your sessions, and you can choose to revoke your API keys at the same time.
 
-If your account is linked to GitHub you can sign in with GitHub instead. Two-factor authentication is still required after signing in with a password or with GitHub.
+If your account is linked to GitHub you can sign in with GitHub instead. If you have enabled two-factor authentication, it is still required after signing in with a password or with GitHub.
 
 #### Lost authenticator app
 
@@ -24,15 +24,15 @@ The Hex team doesn't restore access to accounts. We won't disable two-factor aut
 
 If you have permanently lost access to your account:
 
-1. Create a new account. If you want to use the same email address, email [support@hex.pm](mailto:support@hex.pm) and we will remove it from the old account after you confirm a message we send to that address.
-2. Ask the other owners of your packages to add your new account as an owner. If you were the only owner, follow [If you lost access to your account](/policies/package-transfer#if-you-lost-access-to-your-account) in the Package Transfer Policy.
-3. Ask an administrator of each organization you were a member of to add your new account.
+1. Create a new account with a different email address. An address that is verified on the old account can't be verified on another account.
+2. Ask another owner at the full level of each of your packages to add your new account as an owner and remove the old one. If you were the only owner at the full level, follow [If you lost access to your account](/policies/package-transfer#if-you-lost-access-to-your-account) in the Package Transfer Policy.
+3. Ask an administrator of each organization you were a member of to add your new account and remove the old one.
 
-The old account and the releases it published stay as they are.
+The releases published by the old account stay as they are.
 
 ### Avoiding a lockout
 
-Store your recovery codes somewhere other than the device that runs your authenticator app. Link your GitHub account in your [security settings](/dashboard/security) so you can sign in without your password. Add a second owner to the packages you maintain so someone else can add your new account if you lose access.
+Store your recovery codes somewhere other than the device that runs your authenticator app. Link your GitHub account in your [security settings](/dashboard/security) so you can sign in without your password. Add a second owner at the full level to the packages you maintain, and a second administrator to your organizations, so someone else can add your new account if you lose access.
 
 ### Changes
 
