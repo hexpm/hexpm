@@ -356,7 +356,6 @@ defmodule HexpmWeb.Dashboard.AdminControllerTest do
 
       conn =
         run_task(c, "change_password", %{
-          "type" => "email",
           "user" => email,
           "password" => "new password"
         })
@@ -371,13 +370,14 @@ defmodule HexpmWeb.Dashboard.AdminControllerTest do
 
       conn =
         run_task(c, "change_password", %{
-          "type" => "username",
           "user" => user.username,
           "password" => "short12"
         })
 
       assert error(conn) == "Change password: failed, password should be at least 8 character(s)."
-      refute audit_log!("change_password").result =~ "short12"
+      log = audit_log!("change_password")
+      assert log.params == %{"type" => "username", "user" => user.username}
+      refute log.result =~ "short12"
     end
 
     test "rename_user", c do
@@ -759,6 +759,66 @@ defmodule HexpmWeb.Dashboard.AdminControllerTest do
       html = response(run_task(c, "remove_release", Map.put(args, "version", "1.0.0")), 200)
       assert html =~ "Deletes #{package.name} 1.0.0, published"
       assert html =~ "1 release remain"
+    end
+
+    test "names only the verified primary address a user removal emails", c do
+      user =
+        insert(:user,
+          emails: [
+            build(:email, email: "primary@example.com"),
+            build(:email,
+              email: "secondary@example.com",
+              primary: false,
+              public: false,
+              gravatar: false
+            )
+          ]
+        )
+
+      html =
+        response(
+          run_task(c, "remove_user", %{"user" => user.username, "reason" => "spam_account"}),
+          200
+        )
+
+      assert html =~ "Emails the reason to primary@example.com."
+      refute html =~ "secondary@example.com."
+
+      user =
+        insert(:user,
+          emails: [
+            build(:email, email: "unverified@example.com", verified: false),
+            build(:email,
+              email: "verified@example.com",
+              primary: false,
+              public: false,
+              gravatar: false
+            )
+          ]
+        )
+
+      html =
+        response(
+          run_task(c, "remove_user", %{"user" => user.username, "reason" => "spam_account"}),
+          200
+        )
+
+      assert html =~ "Sends no email, #{user.username} has no verified primary address."
+    end
+
+    test "says a package without owners gets no removal email", c do
+      package = insert(:package)
+      args = %{"repository" => "hexpm", "package" => package.name, "reason" => "malware"}
+
+      html = response(run_task(c, "remove_package", args), 200)
+      assert html =~ "Sends no email, the package has no owners."
+
+      repository = insert(:repository)
+      private = insert(:package, repository_id: repository.id)
+      args = %{"repository" => repository.name, "package" => private.name, "reason" => "malware"}
+
+      html = response(run_task(c, "remove_package", args), 200)
+      assert html =~ "Emails the reason to the organization&#39;s admins."
     end
 
     test "shows the billing an organization deletion meets", c do
