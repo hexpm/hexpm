@@ -29,21 +29,6 @@ defmodule HexpmWeb.Dashboard.Admin.Components.TaskField do
     """
   end
 
-  def task_field(%{field: %{kind: :textarea}} = assigns) do
-    ~H"""
-    <div class="md:col-span-2">
-      <.textarea_input
-        id={field_id(@task, @field.name)}
-        name={field_name(@field.name)}
-        label={@field.label}
-        required
-        placeholder={@field.placeholder}
-        rows={@field.rows}
-      />
-    </div>
-    """
-  end
-
   def task_field(%{field: %{kind: :select}} = assigns) do
     ~H"""
     <.select_input

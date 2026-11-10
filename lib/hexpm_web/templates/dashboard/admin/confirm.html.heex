@@ -27,20 +27,6 @@
             <.user_summary :if={@preview.kind == :user} lookup={@preview.lookup} />
             <.package_summary :if={@preview.kind == :package} lookup={@preview.lookup} />
             <.organization_summary :if={@preview.kind == :organization} lookup={@preview.lookup} />
-            <dl
-              :if={@preview.kind == :email}
-              class="grid grid-cols-[max-content_1fr] gap-x-6 gap-y-1 text-sm"
-            >
-              <dt class="text-grey-600 dark:text-grey-300">Subject</dt>
-              <dd class="text-grey-900 dark:text-grey-100">{@preview.subject}</dd>
-              <dt class="text-grey-600 dark:text-grey-300">Recipients</dt>
-              <dd class="text-grey-900 dark:text-grey-100">{length(@preview.recipients)}</dd>
-              <dt class="text-grey-600 dark:text-grey-300">Body</dt>
-              <dd
-                class="text-grey-900 dark:text-grey-100 whitespace-pre-wrap break-words"
-                phx-no-format
-              >{@preview.body}</dd>
-            </dl>
           </div>
         </div>
 
@@ -71,22 +57,18 @@
               name={"args[#{key}]"}
               value={value}
             />
-            <%= if @preview.name do %>
-              <div class="max-w-md">
-                <.text_input
-                  id="confirm-name"
-                  name="confirm"
-                  label={"Type #{@preview.name} to confirm"}
-                  required
-                  autocomplete="off"
-                />
-                <p :if={@mismatch} class="text-red-700 dark:text-red-400 text-sm mt-2">
-                  That isn't {@preview.name}.
-                </p>
-              </div>
-            <% else %>
-              <input type="hidden" name="confirm" value="yes" />
-            <% end %>
+            <div class="max-w-md">
+              <.text_input
+                id="confirm-name"
+                name="confirm"
+                label={"Type #{@preview.name} to confirm"}
+                required
+                autocomplete="off"
+              />
+              <p :if={@mismatch} class="text-red-700 dark:text-red-400 text-sm mt-2">
+                That isn't {@preview.name}.
+              </p>
+            </div>
             <div class="mt-6">
               <.button type="submit" variant="danger">{@task.title}</.button>
             </div>

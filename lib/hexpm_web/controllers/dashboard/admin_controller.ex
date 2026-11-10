@@ -146,7 +146,7 @@ defmodule HexpmWeb.Dashboard.AdminController do
     case preview(task.id, args) do
       {:ok, preview} ->
         case {params["confirm"], preview.name} do
-          {typed, name} when is_binary(typed) and (is_nil(name) or typed == name) ->
+          {name, name} ->
             run_task(conn, task, args)
 
           {typed, _name} ->
@@ -173,8 +173,7 @@ defmodule HexpmWeb.Dashboard.AdminController do
     )
   end
 
-  # The target the task is about to act on and the name to type to confirm,
-  # `nil` when there is no single target.
+  # The target the task is about to act on and the name to type to confirm.
   defp preview("remove_user", args) do
     with {:ok, lookup} <- AdminTasks.lookup_user(arg(args, "user")) do
       {:ok,
@@ -231,17 +230,6 @@ defmodule HexpmWeb.Dashboard.AdminController do
          unless_billing_live: checked?(args, "unless_billing_live")
        }}
     end
-  end
-
-  defp preview("send_email", args) do
-    {:ok,
-     %{
-       kind: :email,
-       name: nil,
-       recipients: Enum.uniq(list(args, "recipients")),
-       subject: arg(args, "subject"),
-       body: arg(args, "body")
-     }}
   end
 
   defp requires_mod(conn, _opts) do
@@ -398,15 +386,6 @@ defmodule HexpmWeb.Dashboard.AdminController do
     )
   end
 
-  defp execute("send_email", args, opts) do
-    AdminTasks.send_email(
-      list(args, "recipients"),
-      arg(args, "subject"),
-      arg(args, "body"),
-      opts
-    )
-  end
-
   defp execute("retry_oban_jobs", args, opts) do
     AdminTasks.retry_oban_jobs(
       [worker: optional(args, "worker"), uniq: checked?(args, "uniq")] ++ opts
@@ -460,12 +439,6 @@ defmodule HexpmWeb.Dashboard.AdminController do
   end
 
   defp checked?(args, key), do: args[key] == "true"
-
-  defp list(args, key) do
-    args
-    |> arg(key)
-    |> String.split(~r/[\s,]+/, trim: true)
-  end
 
   defp describe_result(:ok), do: {:info, "done."}
   defp describe_result({:ok, count}) when is_integer(count), do: {:info, "done, #{count}."}
