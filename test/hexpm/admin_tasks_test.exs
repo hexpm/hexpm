@@ -900,6 +900,133 @@ defmodule Hexpm.AdminTasksTest do
     end
   end
 
+  describe "lookup_user/1" do
+    test "finds a user by email with the packages and organizations" do
+      user = insert(:user)
+      other = insert(:user)
+      sole = insert(:package, name: "a_sole")
+      shared = insert(:package, name: "b_shared")
+      insert(:package_owner, package: sole, user: user)
+      insert(:package_owner, package: shared, user: user, level: "maintainer")
+      insert(:package_owner, package: shared, user: other)
+      organization = insert(:organization)
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      assert {:ok, lookup} = AdminTasks.lookup_user(hd(user.emails).email)
+      assert lookup.user.id == user.id
+
+      assert lookup.packages == [
+               %{repository: "hexpm", name: "a_sole", level: "full", owner_count: 1},
+               %{repository: "hexpm", name: "b_shared", level: "maintainer", owner_count: 2}
+             ]
+
+      assert lookup.organizations == [%{name: organization.name, role: "admin"}]
+      assert AdminTasks.lookup_user("nonexistent") == {:error, :user_not_found}
+    end
+  end
+
+  describe "lookup_package/2" do
+    test "finds a package with its owners and releases newest first" do
+      owner = insert(:user)
+      package = insert(:package)
+      insert(:package_owner, package: package, user: owner)
+      insert(:release, package: package, version: "1.0.0", inserted_at: ~U[2026-01-01 00:00:00Z])
+
+      insert(:release,
+        package: package,
+        version: "2.0.0",
+        inserted_at: ~U[2026-02-01 00:00:00Z],
+        retirement: %{reason: "security"}
+      )
+
+      assert {:ok, lookup} = AdminTasks.lookup_package("hexpm", package.name)
+      assert lookup.owners == [%{username: owner.username, level: "full"}]
+
+      assert [%{version: v2, retired: true}, %{version: v1, retired: false}] = lookup.releases
+      assert {to_string(v2), to_string(v1)} == {"2.0.0", "1.0.0"}
+
+      assert AdminTasks.lookup_package("hexpm", "nonexistent") == {:error, :package_not_found}
+
+      assert AdminTasks.lookup_package("nonexistent", package.name) ==
+               {:error, :repository_not_found}
+    end
+  end
+
+  describe "lookup_organization/1" do
+    test "finds an organization with members, packages and billing status" do
+      repository = insert(:repository)
+      organization = repository.organization
+      package = insert(:package, repository_id: repository.id)
+      member = insert(:user)
+      insert(:organization_user, organization: organization, user: member, role: "write")
+
+      expect(Hexpm.Billing.Mock, :get, fn _name, _opts ->
+        %{"subscription" => %{"status" => "past_due"}}
+      end)
+
+      assert {:ok, lookup} = AdminTasks.lookup_organization(organization.name)
+      assert lookup.repository == repository.name
+      assert lookup.members == [%{username: member.username, role: "write"}]
+      assert lookup.packages == [package.name]
+      assert lookup.billing_status == "past_due"
+
+      assert AdminTasks.lookup_organization("nonexistent") == {:error, :organization_not_found}
+    end
+
+    test "has no billing status without a customer" do
+      organization = insert(:organization)
+      expect(Hexpm.Billing.Mock, :get, fn _name, _opts -> nil end)
+
+      assert {:ok, %{billing_status: nil, repository: nil, packages: []}} =
+               AdminTasks.lookup_organization(organization.name)
+    end
+  end
+
+  describe "target_audit_logs/2" do
+    test "matches the runs on a user by username, email and rename" do
+      user = insert(:user, username: "bob")
+      email = hd(user.emails).email
+      AdminTasks.reset_tfa(email)
+      AdminTasks.rename_user("old_bob", "bob")
+      AdminTasks.reset_tfa("jane")
+      AdminTasks.rename_organization("bob", "acme")
+
+      actions =
+        AdminTasks.target_audit_logs(:user, ["bob", email])
+        |> Enum.map(&{&1.action, &1.params})
+
+      assert actions == [
+               {"rename_user", %{"old_name" => "old_bob", "new_name" => "bob"}},
+               {"reset_tfa", %{"user" => email}}
+             ]
+    end
+
+    test "matches the runs on a package in its repository" do
+      AdminTasks.disable_search("decimal")
+      AdminTasks.remove_package("hexpm", "decimal")
+      AdminTasks.remove_package("acme", "decimal")
+      AdminTasks.allow_republish("decimal", "1.0.0", organization: "acme")
+      AdminTasks.remove_package("hexpm", "jason")
+
+      assert AdminTasks.target_audit_logs(:package, {"hexpm", "decimal"})
+             |> Enum.map(& &1.action) == ["remove_package", "disable_search"]
+
+      assert AdminTasks.target_audit_logs(:package, {"acme", "decimal"})
+             |> Enum.map(& &1.action) == ["allow_republish", "remove_package"]
+    end
+
+    test "matches the runs on an organization by name and rename" do
+      stub(Hexpm.Billing.Mock, :get, fn _organization, _opts -> nil end)
+      AdminTasks.delete_organization_data("acme")
+      AdminTasks.rename_organization("old_acme", "acme")
+      AdminTasks.rename_user("acme", "someone")
+      AdminTasks.delete_organization_data("other")
+
+      assert AdminTasks.target_audit_logs(:organization, "acme")
+             |> Enum.map(& &1.action) == ["rename_organization", "delete_organization_data"]
+    end
+  end
+
   describe "search_disabled_packages/0" do
     test "lists the hexpm packages with search disabled" do
       disabled_at = ~U[2026-10-13 12:00:00.000000Z]
@@ -1116,6 +1243,14 @@ defmodule Hexpm.AdminTasksTest do
       assert package_owner.user_id == new_owner.id
     end
 
+    test "returns not found for an unknown package or user" do
+      package = insert(:package)
+      user = insert(:user)
+
+      assert {:error, :package_not_found} = AdminTasks.add_owner("nonexistent", user.username)
+      assert {:error, :user_not_found} = AdminTasks.add_owner(package.name, "nonexistent")
+    end
+
     test "refuses a user whose primary email is unverified" do
       package = insert(:package)
       owner = insert(:user)
@@ -1159,6 +1294,15 @@ defmodule Hexpm.AdminTasksTest do
       insert(:package_owner, package: package, user: owner)
 
       assert {:error, :last_owner} = AdminTasks.remove_owner(package.name, owner.username)
+    end
+
+    test "returns not found for an unknown package or user" do
+      package = insert(:package)
+      owner = insert(:user)
+      insert(:package_owner, package: package, user: owner)
+
+      assert {:error, :package_not_found} = AdminTasks.remove_owner("nonexistent", owner.username)
+      assert {:error, :user_not_found} = AdminTasks.remove_owner(package.name, "nonexistent")
     end
   end
 
@@ -2029,6 +2173,185 @@ defmodule Hexpm.AdminTasksTest do
         assert email.text_body =~
                  "https://hex.pm/policies/termsofservice\nhttps://hex.pm/policies/privacy"
       end)
+    end
+  end
+
+  describe "audit log" do
+    alias Hexpm.AdminTasks.AuditLog, as: AdminAuditLog
+
+    test "records the moderator, the arguments and the outcome" do
+      moderator = insert(:user, role: "mod")
+      user = insert(:user)
+      audit = audit_data(moderator, request_id: "request-1")
+
+      assert :ok = AdminTasks.rename_user(user.username, "renamed", audit: audit)
+
+      assert [log] = Repo.all(AdminAuditLog)
+      assert log.user_id == moderator.id
+      assert log.user_data == %{"id" => moderator.id, "username" => moderator.username}
+      assert log.action == "rename_user"
+      assert log.params == %{"old_name" => user.username, "new_name" => "renamed"}
+      assert log.status == "ok"
+      assert log.result == nil
+      assert log.user_agent == "TEST"
+      assert log.remote_ip == "127.0.0.1"
+      assert log.request_id == "request-1"
+    end
+
+    test "records a run from the console without a user" do
+      assert {:error, :user_not_found} = AdminTasks.reset_tfa("nonexistent")
+
+      assert [log] = Repo.all(AdminAuditLog)
+      assert log.user_id == nil
+      assert log.user_data == nil
+      assert log.user_agent == "CONSOLE"
+      assert log.action == "reset_tfa"
+      assert log.params == %{"user" => "nonexistent"}
+      assert log.status == "error"
+      assert log.result == ":user_not_found"
+    end
+
+    test "records a changeset error" do
+      assert :ok = AdminTasks.block_email_domain("example.com")
+      assert {:error, %Ecto.Changeset{}} = AdminTasks.block_email_domain("example.com")
+
+      assert [%{status: "error", result: result}, %{status: "ok"}] = AdminTasks.audit_logs(1, 10)
+      assert result =~ "domain"
+    end
+
+    test "records a task that raised and raises again" do
+      organization = insert(:organization)
+      expect(Hexpm.Billing.Mock, :get, fn _name, _opts -> %{"subscription" => %{}} end)
+      expect(Hexpm.Billing.Mock, :cancel, fn _name -> raise "billing service unavailable" end)
+
+      assert_raise RuntimeError, "billing service unavailable", fn ->
+        AdminTasks.delete_organization(organization.name, delete_data: true)
+      end
+
+      assert [log] = Repo.all(AdminAuditLog)
+      assert log.action == "delete_organization"
+      assert log.status == "raised"
+      assert log.result =~ "billing service unavailable"
+
+      assert log.params == %{
+               "organization" => organization.name,
+               "delete_data" => true,
+               "unless_billing_live" => false
+             }
+    end
+
+    test "leaves a rejected password out of the result" do
+      user = insert(:user)
+
+      assert {:error, %Ecto.Changeset{}} =
+               AdminTasks.change_password(:username, user.username, "short12")
+
+      assert [log] = Repo.all(AdminAuditLog)
+      assert log.status == "error"
+      assert log.result =~ "should be at least %{count} character(s)"
+      refute log.result =~ "short12"
+    end
+
+    test "leaves the password out" do
+      user = insert(:user)
+
+      assert :ok = AdminTasks.change_password(:username, user.username, "secret-password")
+
+      assert [log] = Repo.all(AdminAuditLog)
+      assert log.params == %{"type" => "username", "user" => user.username}
+      refute inspect(log) =~ "secret-password"
+    end
+
+    test "records the number of recipients and not the addresses" do
+      recipients = ["bob@example.com", "jane@example.com", "bob@example.com"]
+      assert {:ok, 2} = AdminTasks.send_email(recipients, "Hex.pm - Update", "Body")
+
+      assert [log] = Repo.all(AdminAuditLog)
+      assert log.params == %{"recipients" => 2, "subject" => "Hex.pm - Update", "body" => "Body"}
+      assert log.result == "2"
+    end
+
+    test "records the job a task queued" do
+      assert {:ok, job} = AdminTasks.backfill_doc_files()
+      assert [%{action: "backfill_doc_files", result: result}] = Repo.all(AdminAuditLog)
+      assert result == "job #{job.id}"
+    end
+
+    test "records the options and the report of delete_orphaned_objects" do
+      insert(:package, repository_id: 1)
+
+      AdminTasks.delete_orphaned_objects(buckets: [:diff_bucket], older_than: 0)
+
+      assert [log] = Repo.all(AdminAuditLog)
+      assert log.params == %{"buckets" => ["diff_bucket"], "older_than" => 0}
+      assert log.status == "ok"
+      assert log.result =~ "diff_bucket"
+    end
+
+    test "does not record the read-only tasks" do
+      insert(:package, repository_id: 1)
+
+      AdminTasks.blocked_email_domains()
+      AdminTasks.search_disabled_packages()
+      AdminTasks.reasons(:package)
+      AdminTasks.orphaned_objects(buckets: [:diff_bucket])
+
+      refute Repo.exists?(AdminAuditLog)
+    end
+
+    test "writes the entry before the task runs" do
+      organization = insert(:organization)
+      parent = self()
+
+      expect(Hexpm.Billing.Mock, :get, fn _name, _opts ->
+        send(parent, {:during, Repo.all(AdminAuditLog)})
+        nil
+      end)
+
+      assert :ok = AdminTasks.delete_organization(organization.name)
+
+      assert_received {:during, [%{action: "delete_organization", status: "started"}]}
+      assert [%{status: "ok"}] = Repo.all(AdminAuditLog)
+    end
+
+    test "records a moderator removing their own account" do
+      moderator = insert(:user, role: "mod")
+
+      assert :ok = AdminTasks.remove_user(moderator.username, audit: audit_data(moderator))
+
+      refute Repo.get(User, moderator.id)
+      assert [log] = Repo.all(AdminAuditLog)
+      assert log.action == "remove_user"
+      assert log.status == "ok"
+      assert log.user_id == nil
+      assert log.user_data == %{"id" => moderator.id, "username" => moderator.username}
+    end
+
+    test "keeps the moderator's username after their account is deleted" do
+      moderator = insert(:user, role: "mod")
+
+      AdminTasks.unblock_email_domain("example.com", audit: audit_data(moderator))
+
+      assert :ok =
+               Hexpm.Accounts.Users.delete(moderator, audit: audit_data(moderator), notify: false)
+
+      assert [log] = Repo.all(AdminAuditLog)
+      assert log.user_id == nil
+      assert log.user_data == %{"id" => moderator.id, "username" => moderator.username}
+    end
+
+    test "audit_logs/2 lists newest first and count_audit_logs/0 counts every entry" do
+      AdminTasks.unblock_email_domain("first.example")
+      AdminTasks.unblock_email_domain("second.example")
+
+      assert [
+               %{params: %{"domain" => "second.example"}},
+               %{params: %{"domain" => "first.example"}}
+             ] =
+               AdminTasks.audit_logs(1, 10)
+
+      assert [%{params: %{"domain" => "first.example"}}] = AdminTasks.audit_logs(2, 1)
+      assert AdminTasks.count_audit_logs() == 2
     end
   end
 

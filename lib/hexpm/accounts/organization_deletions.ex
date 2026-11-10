@@ -11,7 +11,7 @@ defmodule Hexpm.Accounts.OrganizationDeletions do
   ended, whichever is later), tells its admins, reminds
   them a week and a day before, and on the day deletes its packages,
   policies and stored objects through
-  `Hexpm.AdminTasks.delete_organization_data/1`. The organization, its
+  `Hexpm.AdminTasks.delete_organization_data/2`. The organization, its
   members and keys stay, and it can publish again once billing is back.
   Billing coming back clears the schedule, in the report as soon as it sees
   the subscription and here as a last check against the billing service
@@ -331,7 +331,9 @@ defmodule Hexpm.Accounts.OrganizationDeletions do
   defp delete_data(organization) do
     description = describe(organization)
 
-    case Hexpm.AdminTasks.delete_organization_data(organization.name) do
+    audit = Hexpm.Accounts.AuditLogs.system(organization)
+
+    case Hexpm.AdminTasks.delete_organization_data(organization.name, audit: audit) do
       :ok ->
         notify(organization, "deleted", fn recipients ->
           Emails.organization_data_deleted(organization.name, recipients)

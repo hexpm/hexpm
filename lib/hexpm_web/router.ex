@@ -609,6 +609,15 @@ defmodule HexpmWeb.Router do
     post "/delete-account", DeleteAccountController, :create
     get "/delete-account/confirm", DeleteAccountController, :confirm
     post "/delete-account/confirm", DeleteAccountController, :confirm_delete
+
+    get "/admin", AdminController, :index
+    get "/admin/audit-log", AdminController, :audit_log
+    get "/admin/lookup", AdminController, :lookup
+    get "/admin/users/:name", AdminController, :user
+    get "/admin/packages/:repository/:name", AdminController, :package
+    get "/admin/organizations/:name", AdminController, :organization
+    get "/admin/tasks/:task", AdminController, :show
+    post "/admin/tasks/:task", AdminController, :run
   end
 
   scope "/dashboard", HexpmWeb.Dashboard do

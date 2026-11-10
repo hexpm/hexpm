@@ -78,10 +78,28 @@ defmodule Hexpm.AdminTasks do
   The removal itself never depends on the mail. If the notice cannot be sent,
   because delivery failed or because nobody reachable is left to send it to,
   that is logged as an error and the removal still reports `:ok`.
+
+  ## Audit log
+
+  Every task that changes something writes a `Hexpm.AdminTasks.AuditLog`
+  entry with its arguments before it runs, and fills in the outcome when it
+  returns or raises. A task whose entry can't be written doesn't run, and an
+  entry still `"started"` is a run that never finished. Passwords are left
+  out. The `:audit` option takes the audit data of whoever
+  ran it, see `HexpmWeb.ControllerHelpers.audit_data/1`; without it the entry
+  is recorded as a console run. The read-only tasks, `reasons/1`,
+  `blocked_email_domains/0`, `search_disabled_packages/0` and
+  `orphaned_objects/1`, are not recorded.
+
+      iex> AdminTasks.audit_logs(1, 20)
+      [%Hexpm.AdminTasks.AuditLog{action: "remove_package", status: "ok", ...}]
   """
 
   use Hexpm.Context
 
+  import Ecto.Query, only: [from: 2, dynamic: 2]
+
+  alias Hexpm.AdminTasks.AuditLog, as: AdminAuditLog
   alias Hexpm.AdminTasks.Reasons
   alias Hexpm.Emails.{Outbox, OutboxEntry, OutboxLock}
   alias Hexpm.Hexdocs
@@ -93,7 +111,257 @@ defmodule Hexpm.AdminTasks do
 
   # Fastly takes at most 256 surrogate keys in one purge request.
 
+  @console_audit %{user: nil, auth_credential: nil, user_agent: "CONSOLE", remote_ip: nil}
+
   require Logger
+
+  @doc """
+  The audit log entries of every task run, newest first.
+  """
+  @spec audit_logs(pos_integer(), pos_integer()) :: [AdminAuditLog.t()]
+  def audit_logs(page, per_page) do
+    AdminAuditLog.newest_first()
+    |> Hexpm.Utils.paginate(page, per_page)
+    |> Repo.all()
+  end
+
+  @spec count_audit_logs() :: non_neg_integer()
+  def count_audit_logs() do
+    Repo.aggregate(AdminAuditLog, :count)
+  end
+
+  @doc """
+  The newest audit log entries of the tasks run on a user, package or
+  organization, matched on the names the tasks were given.
+
+  A user is matched on its username and emails, a package on its repository
+  and name, and an organization on its name.
+
+      iex> AdminTasks.target_audit_logs(:user, ["bob", "bob@example.com"])
+      [%Hexpm.AdminTasks.AuditLog{action: "reset_tfa", ...}]
+
+      iex> AdminTasks.target_audit_logs(:package, {"hexpm", "phoenix"})
+      [%Hexpm.AdminTasks.AuditLog{action: "add_owner", ...}]
+  """
+  @spec target_audit_logs(:user, [String.t()]) :: [AdminAuditLog.t()]
+  @spec target_audit_logs(:package, {String.t(), String.t()}) :: [AdminAuditLog.t()]
+  @spec target_audit_logs(:organization, String.t()) :: [AdminAuditLog.t()]
+  def target_audit_logs(kind, target) do
+    from(l in AdminAuditLog.newest_first(), where: ^target_filter(kind, target), limit: 20)
+    |> Repo.all()
+  end
+
+  defp target_filter(:user, names) do
+    dynamic(
+      [l],
+      fragment("?->>'user'", l.params) in ^names or
+        (l.action == "rename_user" and
+           (fragment("?->>'old_name'", l.params) in ^names or
+              fragment("?->>'new_name'", l.params) in ^names))
+    )
+  end
+
+  # The tasks on hexpm packages take no repository, and allow_republish names
+  # it as an organization.
+  defp target_filter(:package, {repository, name}) do
+    dynamic(
+      [l],
+      fragment("?->>'package'", l.params) == ^name and
+        fragment(
+          "coalesce(?->>'repository', ?->>'organization', 'hexpm')",
+          l.params,
+          l.params
+        ) == ^repository
+    )
+  end
+
+  defp target_filter(:organization, name) do
+    dynamic(
+      [l],
+      fragment("?->>'organization'", l.params) == ^name or
+        (l.action == "rename_organization" and
+           (fragment("?->>'old_name'", l.params) == ^name or
+              fragment("?->>'new_name'", l.params) == ^name))
+    )
+  end
+
+  @doc """
+  Looks up a user by username or email with their emails, the packages they
+  own and the organizations they are a member of. Records nothing.
+
+  `owner_count` is the number of owners the package has, 1 when the user is
+  its only owner.
+
+      iex> AdminTasks.lookup_user("bob")
+      {:ok, %{user: %User{}, packages: [%{repository: "hexpm", name: "decimal",
+       level: "full", owner_count: 1}], organizations: [%{name: "acme", role: "admin"}]}}
+  """
+  @spec lookup_user(String.t()) :: {:ok, map()} | {:error, :user_not_found}
+  def lookup_user(username_or_email) do
+    with {:ok, user} <- find_user(username_or_email) do
+      owner_counts =
+        from(po in PackageOwner,
+          group_by: po.package_id,
+          select: %{package_id: po.package_id, count: count()}
+        )
+
+      packages =
+        from(po in PackageOwner,
+          join: p in assoc(po, :package),
+          join: r in assoc(p, :repository),
+          join: c in subquery(owner_counts),
+          on: c.package_id == p.id,
+          where: po.user_id == ^user.id,
+          order_by: [r.name, p.name],
+          select: %{repository: r.name, name: p.name, level: po.level, owner_count: c.count}
+        )
+        |> Repo.all()
+
+      organizations =
+        from(ou in OrganizationUser,
+          join: o in assoc(ou, :organization),
+          where: ou.user_id == ^user.id,
+          order_by: o.name,
+          select: %{name: o.name, role: ou.role}
+        )
+        |> Repo.all()
+
+      {:ok, %{user: user, packages: packages, organizations: organizations}}
+    end
+  end
+
+  @doc """
+  Looks up a package with its owners and releases, newest first. Records
+  nothing.
+
+      iex> AdminTasks.lookup_package("hexpm", "decimal")
+      {:ok, %{package: %Package{}, owners: [%{username: "eric", level: "full"}],
+       releases: [%{version: #Version<2.0.0>, inserted_at: ~U[...], retired: false}]}}
+  """
+  @spec lookup_package(String.t(), String.t()) ::
+          {:ok, map()} | {:error, :repository_not_found | :package_not_found}
+  def lookup_package(repository, name) do
+    with {:ok, package} <- find_package(repository, name) do
+      owners =
+        from(po in PackageOwner,
+          join: u in assoc(po, :user),
+          where: po.package_id == ^package.id,
+          order_by: u.username,
+          select: %{username: u.username, level: po.level}
+        )
+        |> Repo.all()
+
+      releases =
+        from(r in Release,
+          where: r.package_id == ^package.id,
+          order_by: [desc: r.inserted_at],
+          select: %{
+            version: r.version,
+            inserted_at: r.inserted_at,
+            retired: not is_nil(r.retirement)
+          }
+        )
+        |> Repo.all()
+
+      {:ok, %{package: package, owners: owners, releases: releases}}
+    end
+  end
+
+  @doc """
+  Looks up an organization with its members, the packages in its repository
+  and the status of its billing subscription, `nil` without one. Records
+  nothing.
+
+      iex> AdminTasks.lookup_organization("acme")
+      {:ok, %{organization: %Organization{}, repository: "acme",
+       members: [%{username: "bob", role: "admin"}], packages: ["acme_api"],
+       billing_status: "active"}}
+  """
+  @spec lookup_organization(String.t()) :: {:ok, map()} | {:error, :organization_not_found}
+  def lookup_organization(name) do
+    with {:ok, organization} <- find_organization(name) do
+      organization = Repo.preload(organization, :repository)
+
+      members =
+        from(ou in OrganizationUser,
+          join: u in assoc(ou, :user),
+          where: ou.organization_id == ^organization.id,
+          order_by: u.username,
+          select: %{username: u.username, role: ou.role}
+        )
+        |> Repo.all()
+
+      packages =
+        case organization.repository do
+          nil ->
+            []
+
+          repository ->
+            from(p in Package,
+              where: p.repository_id == ^repository.id,
+              order_by: p.name,
+              select: p.name
+            )
+            |> Repo.all()
+        end
+
+      billing_status =
+        case Hexpm.Billing.get(organization.name) do
+          %{"subscription" => %{"status" => status}} -> status
+          _customer -> nil
+        end
+
+      {:ok,
+       %{
+         organization: organization,
+         repository: organization.repository && organization.repository.name,
+         members: members,
+         packages: packages,
+         billing_status: billing_status
+       }}
+    end
+  end
+
+  # The entry is written before the task and outside any transaction it opens,
+  # so a task that rolls back, raises or is killed half way is still recorded.
+  defp audited(action, params, opts, fun) do
+    audit_data = Keyword.get(opts, :audit, @console_audit)
+    log = Repo.insert!(AdminAuditLog.build(audit_data, action, params))
+
+    try do
+      fun.()
+    catch
+      kind, reason ->
+        finish(log, "raised", Exception.format_banner(kind, reason, __STACKTRACE__))
+        :erlang.raise(kind, reason, __STACKTRACE__)
+    else
+      result ->
+        {status, summary} = summarize_result(result)
+        finish(log, status, summary)
+        result
+    end
+  end
+
+  # The task has already run, so failing to record its outcome must not replace
+  # its result or its exception. The entry stays "started".
+  defp finish(log, status, summary) do
+    from(l in AdminAuditLog, where: l.id == ^log.id)
+    |> Repo.update_all(set: [status: status, result: summary])
+  rescue
+    exception ->
+      Logger.error(
+        "Could not record the outcome of admin task #{log.action} (audit log #{log.id}): " <>
+          Exception.message(exception)
+      )
+  end
+
+  defp summarize_result(:ok), do: {"ok", nil}
+  defp summarize_result({:ok, count}) when is_integer(count), do: {"ok", "#{count}"}
+  defp summarize_result({:ok, %Oban.Job{id: id}}), do: {"ok", "job #{id}"}
+  defp summarize_result({:ok, _value}), do: {"ok", nil}
+  defp summarize_result({:error, %Ecto.Changeset{errors: errors}}), do: {"error", inspect(errors)}
+  defp summarize_result({:error, reason}), do: {"error", inspect(reason)}
+  defp summarize_result(report) when is_map(report), do: {"ok", inspect(report, limit: 50)}
 
   defp find_user(username_or_email) do
     case Users.get(username_or_email, [:emails]) do
@@ -150,36 +418,31 @@ defmodule Hexpm.AdminTasks do
 
       iex> AdminTasks.change_password(:username, "nonexistent", "password")
       {:error, :user_not_found}
+
+      iex> AdminTasks.change_password(:username, "bob", "short")
+      {:error, %Ecto.Changeset{}}
   """
-  @spec change_password(:username | :email, String.t(), String.t()) :: :ok | {:error, atom()}
-  def change_password(type, identifier, password)
+  @spec change_password(:username | :email, String.t(), String.t(), keyword()) ::
+          :ok | {:error, atom() | Ecto.Changeset.t()}
+  def change_password(type, identifier, password, opts \\ [])
+      when type in [:username, :email] do
+    audited(:change_password, %{type: type, user: identifier}, opts, fn ->
+      case find_user_by(type, identifier) do
+        nil ->
+          {:error, :user_not_found}
 
-  def change_password(:username, username, password) do
-    case Repo.get_by(User, username: username) do
-      nil ->
-        {:error, :user_not_found}
-
-      user ->
-        User.update_password_no_check(user, %{password: password})
-        |> Repo.update!()
-
-        :ok
-    end
+        user ->
+          case Repo.update(User.update_password_no_check(user, %{password: password})) do
+            {:ok, _user} -> :ok
+            {:error, changeset} -> {:error, changeset}
+          end
+      end
+    end)
   end
 
-  def change_password(:email, email, password) do
-    # Users.get handles looking up by email through the emails table
-    case Users.get(email) do
-      nil ->
-        {:error, :user_not_found}
-
-      user ->
-        User.update_password_no_check(user, %{password: password})
-        |> Repo.update!()
-
-        :ok
-    end
-  end
+  defp find_user_by(:username, username), do: Repo.get_by(User, username: username)
+  # Users.get handles looking up by email through the emails table
+  defp find_user_by(:email, email), do: Users.get(email)
 
   @doc """
   Resets (disables) two-factor authentication for a user.
@@ -199,18 +462,22 @@ defmodule Hexpm.AdminTasks do
       iex> AdminTasks.reset_tfa("nonexistent")
       {:error, :user_not_found}
   """
-  @spec reset_tfa(String.t()) :: :ok | {:error, atom()}
-  def reset_tfa(username_or_email) do
-    with {:ok, user} <- find_user(username_or_email) do
-      cond do
-        not User.tfa_enabled?(user) ->
-          {:error, :tfa_not_enabled}
+  @spec reset_tfa(String.t(), keyword()) :: :ok | {:error, atom() | Ecto.Changeset.t()}
+  def reset_tfa(username_or_email, opts \\ []) do
+    audited(:reset_tfa, %{user: username_or_email}, opts, fn ->
+      with {:ok, user} <- find_user(username_or_email) do
+        cond do
+          not User.tfa_enabled?(user) ->
+            {:error, :tfa_not_enabled}
 
-        true ->
-          Users.tfa_disable(user, audit: AuditLogs.admin())
-          :ok
+          true ->
+            case Users.tfa_disable(user, audit: AuditLogs.admin()) do
+              %User{} -> :ok
+              {:error, reason} -> {:error, reason}
+            end
+        end
       end
-    end
+    end)
   end
 
   @doc """
@@ -239,18 +506,21 @@ defmodule Hexpm.AdminTasks do
   @spec remove_user(String.t(), keyword()) :: :ok | {:error, term()}
   def remove_user(username, opts \\ []) do
     deleted_packages? = Keyword.get(opts, :delete_packages, false)
+    params = %{user: username, delete_packages: deleted_packages?, reason: opts[:reason]}
 
-    with {:ok, user} <- find_user(username),
-         {:ok, reason} <- resolve_reason(:user, opts),
-         :ok <- delete_user(user, opts) do
-      notify_removal(
-        reason,
-        "user #{user.username}",
-        &Emails.account_removed(verified_only(user), deleted_packages?, &1)
-      )
+    audited(:remove_user, params, opts, fn ->
+      with {:ok, user} <- find_user(username),
+           {:ok, reason} <- resolve_reason(:user, opts),
+           :ok <- delete_user(user, opts) do
+        notify_removal(
+          reason,
+          "user #{user.username}",
+          &Emails.account_removed(verified_only(user), deleted_packages?, &1)
+        )
 
-      :ok
-    end
+        :ok
+      end
+    end)
   end
 
   # A removal notice accuses somebody. An unverified address was never proved to
@@ -319,16 +589,18 @@ defmodule Hexpm.AdminTasks do
       iex> AdminTasks.rename_user("oldname", "deleted_user")
       {:error, :name_reserved}
   """
-  @spec rename_user(String.t(), String.t()) :: :ok | {:error, atom()}
-  def rename_user(old_name, new_name) do
-    with {:ok, user} <- find_user(old_name),
-         :ok <- check_name_available(new_name) do
-      user
-      |> Ecto.Changeset.change(username: new_name)
-      |> Repo.update!()
+  @spec rename_user(String.t(), String.t(), keyword()) :: :ok | {:error, atom()}
+  def rename_user(old_name, new_name, opts \\ []) do
+    audited(:rename_user, %{old_name: old_name, new_name: new_name}, opts, fn ->
+      with {:ok, user} <- find_user(old_name),
+           :ok <- check_name_available(new_name) do
+        user
+        |> Ecto.Changeset.change(username: new_name)
+        |> Repo.update!()
 
-      :ok
-    end
+        :ok
+      end
+    end)
   end
 
   defp check_name_available(name) do
@@ -354,10 +626,12 @@ defmodule Hexpm.AdminTasks do
   def block_email_domain(domain, opts \\ []) do
     params = %{domain: domain, comment: Keyword.get(opts, :comment)}
 
-    case Repo.insert(BlockedEmailDomain.changeset(%BlockedEmailDomain{}, params)) do
-      {:ok, _blocked} -> :ok
-      {:error, changeset} -> {:error, changeset}
-    end
+    audited(:block_email_domain, params, opts, fn ->
+      case Repo.insert(BlockedEmailDomain.changeset(%BlockedEmailDomain{}, params)) do
+        {:ok, _blocked} -> :ok
+        {:error, changeset} -> {:error, changeset}
+      end
+    end)
   end
 
   @doc """
@@ -368,12 +642,14 @@ defmodule Hexpm.AdminTasks do
       iex> AdminTasks.unblock_email_domain("example.com")
       :ok
   """
-  @spec unblock_email_domain(String.t()) :: :ok | {:error, :not_found}
-  def unblock_email_domain(domain) do
-    case Repo.delete_all(BlockedEmailDomain.by_domain(domain)) do
-      {0, _} -> {:error, :not_found}
-      {_count, _} -> :ok
-    end
+  @spec unblock_email_domain(String.t(), keyword()) :: :ok | {:error, :not_found}
+  def unblock_email_domain(domain, opts \\ []) do
+    audited(:unblock_email_domain, %{domain: domain}, opts, fn ->
+      case Repo.delete_all(BlockedEmailDomain.by_domain(domain)) do
+        {0, _} -> {:error, :not_found}
+        {_count, _} -> :ok
+      end
+    end)
   end
 
   @doc """
@@ -414,7 +690,14 @@ defmodule Hexpm.AdminTasks do
   @spec allow_republish(String.t(), String.t(), keyword()) :: :ok | {:error, atom()}
   def allow_republish(package_name, version, opts \\ []) do
     org_name = Keyword.get(opts, :organization)
+    params = %{package: package_name, version: version, organization: org_name}
 
+    audited(:allow_republish, params, opts, fn ->
+      reset_release_inserted_at(package_name, version, org_name)
+    end)
+  end
+
+  defp reset_release_inserted_at(package_name, version, org_name) do
     # Find repository - either by organization name or default to hexpm (id: 1)
     repository =
       if org_name do
@@ -473,25 +756,29 @@ defmodule Hexpm.AdminTasks do
   """
   @spec remove_package(String.t(), String.t(), keyword()) :: :ok | {:error, term()}
   def remove_package(repo, package_name, opts \\ []) do
-    with {:ok, package} <- find_package(repo, package_name),
-         {:ok, reason} <- resolve_reason(:package, opts) do
-      owners = reason && removal_recipients(package)
+    params = %{repository: repo, package: package_name, reason: opts[:reason]}
 
-      {:ok, {releases, package}} =
-        Repo.transaction(fn ->
-          remove_package_db(package)
-        end)
+    audited(:remove_package, params, opts, fn ->
+      with {:ok, package} <- find_package(repo, package_name),
+           {:ok, reason} <- resolve_reason(:package, opts) do
+        owners = reason && removal_recipients(package)
 
-      run_package_removal_side_effects({releases, package})
+        {:ok, {releases, package}} =
+          Repo.transaction(fn ->
+            remove_package_db(package)
+          end)
 
-      notify_removal(
-        reason,
-        "owners of #{package.name}",
-        &Emails.package_removed(owners, package.name, &1)
-      )
+        run_package_removal_side_effects({releases, package})
 
-      :ok
-    end
+        notify_removal(
+          reason,
+          "owners of #{package.name}",
+          &Emails.package_removed(owners, package.name, &1)
+        )
+
+        :ok
+      end
+    end)
   end
 
   # Read before the package goes, otherwise there is nobody left to write to.
@@ -568,29 +855,33 @@ defmodule Hexpm.AdminTasks do
   """
   @spec remove_release(String.t(), String.t(), String.t(), keyword()) :: :ok | {:error, term()}
   def remove_release(repo, package_name, version, opts \\ []) do
-    with {:ok, package} <- find_package(repo, package_name),
-         {:ok, release} <- find_release(package, version),
-         {:ok, reason} <- resolve_reason(:release, opts) do
-      owners = reason && removal_recipients(package)
+    params = %{repository: repo, package: package_name, version: version, reason: opts[:reason]}
 
-      Release.delete(release, force: true)
-      |> Repo.delete!()
+    audited(:remove_release, params, opts, fn ->
+      with {:ok, package} <- find_package(repo, package_name),
+           {:ok, release} <- find_release(package, version),
+           {:ok, reason} <- resolve_reason(:release, opts) do
+        owners = reason && removal_recipients(package)
 
-      Assets.revert_release(release)
-      {:ok, _} = RegistryWorker.enqueue_package(package)
-      {:ok, _} = RegistryWorker.enqueue_repository(package.repository)
-      {:ok, _} = Hexpm.Diff.CacheDeleteWorker.enqueue(package.repository.name, package.name)
+        Release.delete(release, force: true)
+        |> Repo.delete!()
 
-      remaining = Repo.aggregate(assoc(package, :releases), :count)
+        Assets.revert_release(release)
+        {:ok, _} = RegistryWorker.enqueue_package(package)
+        {:ok, _} = RegistryWorker.enqueue_repository(package.repository)
+        {:ok, _} = Hexpm.Diff.CacheDeleteWorker.enqueue(package.repository.name, package.name)
 
-      notify_removal(
-        reason,
-        "owners of #{package.name}",
-        &Emails.release_removed(owners, package.name, version, remaining, &1)
-      )
+        remaining = Repo.aggregate(assoc(package, :releases), :count)
 
-      :ok
-    end
+        notify_removal(
+          reason,
+          "owners of #{package.name}",
+          &Emails.release_removed(owners, package.name, version, remaining, &1)
+        )
+
+        :ok
+      end
+    end)
   end
 
   @doc """
@@ -655,24 +946,27 @@ defmodule Hexpm.AdminTasks do
   def disable_search(package_name, opts \\ []) do
     delete_index? = Keyword.get(opts, :delete_index, false)
     notify? = Keyword.get(opts, :notify, false)
+    params = %{package: package_name, delete_index: delete_index?, notify: notify?}
 
-    with {:ok, package} <- find_package("hexpm", package_name) do
-      {:ok, _} =
-        Repo.transaction(fn ->
-          Packages.set_search_disabled(package, true)
+    audited(:disable_search, params, opts, fn ->
+      with {:ok, package} <- find_package("hexpm", package_name) do
+        {:ok, _} =
+          Repo.transaction(fn ->
+            Packages.set_search_disabled(package, true)
 
-          if delete_index? do
-            for version <- docs_versions(package) do
-              %{package: package.name, version: to_string(version)}
-              |> Hexdocs.Workers.DeleteSearch.new()
-              |> Oban.insert!()
+            if delete_index? do
+              for version <- docs_versions(package) do
+                %{package: package.name, version: to_string(version)}
+                |> Hexdocs.Workers.DeleteSearch.new()
+                |> Oban.insert!()
+              end
             end
-          end
-        end)
+          end)
 
-      if notify?, do: notify_search_disabled(package, delete_index?)
-      :ok
-    end
+        if notify?, do: notify_search_disabled(package, delete_index?)
+        :ok
+      end
+    end)
   end
 
   @doc """
@@ -694,22 +988,24 @@ defmodule Hexpm.AdminTasks do
   def enable_search(package_name, opts \\ []) do
     reindex? = Keyword.get(opts, :reindex, false)
 
-    with {:ok, package} <- find_package("hexpm", package_name) do
-      {:ok, _} =
-        Repo.transaction(fn ->
-          Packages.set_search_disabled(package, false)
+    audited(:enable_search, %{package: package_name, reindex: reindex?}, opts, fn ->
+      with {:ok, package} <- find_package("hexpm", package_name) do
+        {:ok, _} =
+          Repo.transaction(fn ->
+            Packages.set_search_disabled(package, false)
 
-          if reindex? do
-            for version <- docs_versions(package) do
-              %{key: Hexdocs.Bucket.archive_key("hexpm", package.name, version)}
-              |> Hexdocs.Workers.Search.new(priority: 9)
-              |> Oban.insert!()
+            if reindex? do
+              for version <- docs_versions(package) do
+                %{key: Hexdocs.Bucket.archive_key("hexpm", package.name, version)}
+                |> Hexdocs.Workers.Search.new(priority: 9)
+                |> Oban.insert!()
+              end
             end
-          end
-        end)
+          end)
 
-      :ok
-    end
+        :ok
+      end
+    end)
   end
 
   @doc """
@@ -770,18 +1066,21 @@ defmodule Hexpm.AdminTasks do
   @spec add_owner(String.t(), String.t(), keyword()) ::
           {:ok, PackageOwner.t()} | {:error, atom() | Ecto.Changeset.t()}
   def add_owner(package_name, username_or_email, opts \\ []) do
-    package =
-      Packages.get("hexpm", package_name)
-      |> Repo.preload(repository: :organization)
-
-    user = Users.get(username_or_email, [:emails])
-
     params =
       %{}
       |> maybe_put_param("level", Keyword.get(opts, :level))
       |> maybe_put_param("transfer", Keyword.get(opts, :transfer))
 
-    Owners.add(package, user, params, audit: AuditLogs.admin(), admin: true)
+    audit_params = Map.merge(%{"package" => package_name, "user" => username_or_email}, params)
+
+    audited(:add_owner, audit_params, opts, fn ->
+      with {:ok, package} <- find_package("hexpm", package_name),
+           {:ok, user} <- find_user(username_or_email) do
+        package
+        |> Repo.preload(repository: :organization)
+        |> Owners.add(user, params, audit: AuditLogs.admin(), admin: true)
+      end
+    end)
   end
 
   defp maybe_put_param(params, _key, nil), do: params
@@ -800,15 +1099,20 @@ defmodule Hexpm.AdminTasks do
       iex> AdminTasks.remove_owner("phoenix", "jose")
       :ok
 
-      iex> AdminTasks.remove_owner("phoenix", "nonexistent")
+      iex> AdminTasks.remove_owner("phoenix", "not_an_owner")
       {:error, :not_owner}
-  """
-  @spec remove_owner(String.t(), String.t()) :: :ok | {:error, atom()}
-  def remove_owner(package_name, username_or_email) do
-    package = Packages.get("hexpm", package_name)
-    user = Users.get(username_or_email, [:emails])
 
-    Owners.remove(package, user, audit: AuditLogs.admin(), admin: true)
+      iex> AdminTasks.remove_owner("phoenix", "nonexistent")
+      {:error, :user_not_found}
+  """
+  @spec remove_owner(String.t(), String.t(), keyword()) :: :ok | {:error, atom()}
+  def remove_owner(package_name, username_or_email, opts \\ []) do
+    audited(:remove_owner, %{package: package_name, user: username_or_email}, opts, fn ->
+      with {:ok, package} <- find_package("hexpm", package_name),
+           {:ok, user} <- find_user(username_or_email) do
+        Owners.remove(package, user, audit: AuditLogs.admin(), admin: true)
+      end
+    end)
   end
 
   @doc """
@@ -827,16 +1131,20 @@ defmodule Hexpm.AdminTasks do
       iex> AdminTasks.remove_organization_member("acme", "nonexistent")
       {:error, :user_not_found}
   """
-  @spec remove_organization_member(String.t(), String.t()) :: :ok | {:error, atom()}
-  def remove_organization_member(organization_name, username_or_email) do
-    with {:ok, organization} <- find_organization(organization_name),
-         {:ok, user} <- find_user(username_or_email) do
-      if Organizations.get_role(organization, user) do
-        Organizations.remove_member(organization, user, audit: AuditLogs.admin())
-      else
-        {:error, :member_not_found}
+  @spec remove_organization_member(String.t(), String.t(), keyword()) :: :ok | {:error, atom()}
+  def remove_organization_member(organization_name, username_or_email, opts \\ []) do
+    params = %{organization: organization_name, user: username_or_email}
+
+    audited(:remove_organization_member, params, opts, fn ->
+      with {:ok, organization} <- find_organization(organization_name),
+           {:ok, user} <- find_user(username_or_email) do
+        if Organizations.get_role(organization, user) do
+          Organizations.remove_member(organization, user, audit: AuditLogs.admin())
+        else
+          {:error, :member_not_found}
+        end
       end
-    end
+    end)
   end
 
   @doc """
@@ -863,8 +1171,14 @@ defmodule Hexpm.AdminTasks do
       iex> AdminTasks.rename_organization("old_org", "deleted_org")
       {:error, :name_reserved}
   """
-  @spec rename_organization(String.t(), String.t()) :: :ok | {:error, atom()}
-  def rename_organization(old_name, new_name) do
+  @spec rename_organization(String.t(), String.t(), keyword()) :: :ok | {:error, atom()}
+  def rename_organization(old_name, new_name, opts \\ []) do
+    audited(:rename_organization, %{old_name: old_name, new_name: new_name}, opts, fn ->
+      do_rename_organization(old_name, new_name)
+    end)
+  end
+
+  defp do_rename_organization(old_name, new_name) do
     with {:ok, organization} <- find_organization(old_name),
          :ok <- check_name_available(new_name) do
       user_changeset = Ecto.Changeset.change(organization.user, username: new_name)
@@ -955,13 +1269,21 @@ defmodule Hexpm.AdminTasks do
     delete_data? = Keyword.get(opts, :delete_data, false)
     unless_billing_live? = Keyword.get(opts, :unless_billing_live, false)
 
-    with {:ok, organization} <- find_organization(name),
-         :ok <- cancel_billing(organization, unless_billing_live?) do
-      # Read while the rows are still there, the CDN keys are built from them.
-      jobs = if delete_data?, do: [organization_data_job(organization)], else: []
+    params = %{
+      organization: name,
+      delete_data: delete_data?,
+      unless_billing_live: unless_billing_live?
+    }
 
-      Organizations.delete(organization, audit: AuditLogs.admin(), jobs: jobs)
-    end
+    audited(:delete_organization, params, opts, fn ->
+      with {:ok, organization} <- find_organization(name),
+           :ok <- cancel_billing(organization, unless_billing_live?) do
+        # Read while the rows are still there, the CDN keys are built from them.
+        jobs = if delete_data?, do: [organization_data_job(organization)], else: []
+
+        Organizations.delete(organization, audit: AuditLogs.admin(), jobs: jobs)
+      end
+    end)
   end
 
   # Before any row goes. A failure here raises with the organization as it
@@ -1008,18 +1330,28 @@ defmodule Hexpm.AdminTasks do
       iex> AdminTasks.delete_organization_data("acme")
       :ok
   """
-  @spec delete_organization_data(String.t()) :: :ok | {:error, term()}
-  def delete_organization_data(name) do
-    with {:ok, organization} <- find_organization(name),
-         :ok <- refuse_live_billing(organization) do
-      # Read while the rows are still there, the CDN keys are built from them.
-      # The store's times have whole seconds, and a package published from
-      # here on keeps its objects.
-      written_before = DateTime.utc_now() |> DateTime.truncate(:second)
-      job = organization_data_job(organization, written_before: written_before)
-      Organizations.delete_data(organization, audit: AuditLogs.admin(), jobs: [job])
-    end
+  @spec delete_organization_data(String.t(), keyword()) :: :ok | {:error, term()}
+  def delete_organization_data(name, opts \\ []) do
+    audited(:delete_organization_data, %{organization: name}, opts, fn ->
+      with {:ok, organization} <- find_organization(name),
+           :ok <- refuse_live_billing(organization) do
+        # Read while the rows are still there, the CDN keys are built from them.
+        # The store's times have whole seconds, and a package published from
+        # here on keeps its objects.
+        written_before = DateTime.utc_now() |> DateTime.truncate(:second)
+        job = organization_data_job(organization, written_before: written_before)
+        Organizations.delete_data(organization, audit: AuditLogs.admin(), jobs: [job])
+      end
+    end)
   end
+
+  @doc """
+  Whether a subscription in this billing status refuses
+  `delete_organization_data/2`, and `delete_organization/2` with
+  `unless_billing_live: true`.
+  """
+  @spec billing_live?(String.t() | nil) :: boolean()
+  def billing_live?(status), do: status in @live_billing_statuses
 
   defp refuse_live_billing(organization) do
     case Hexpm.Billing.get(organization.name) do
@@ -1095,7 +1427,13 @@ defmodule Hexpm.AdminTasks do
       %{repo_bucket: %{deleted: 0, ...}, ...}
   """
   @spec delete_orphaned_objects(keyword()) :: %{atom() => map()}
-  defdelegate delete_orphaned_objects(opts \\ []), to: Hexpm.OrphanedObjects, as: :delete
+  def delete_orphaned_objects(opts \\ []) do
+    {_audit, delete_opts} = Keyword.pop(opts, :audit)
+
+    audited(:delete_orphaned_objects, Map.new(delete_opts), opts, fn ->
+      Hexpm.OrphanedObjects.delete(delete_opts)
+    end)
+  end
 
   @doc """
   Initiates a security password reset for a user by sending a password reset email.
@@ -1128,11 +1466,23 @@ defmodule Hexpm.AdminTasks do
   """
   @spec security_password_reset(String.t(), keyword()) :: :ok | {:error, atom()}
   def security_password_reset(username_or_email, opts \\ []) do
+    disable_password = Keyword.get(opts, :disable_password, false)
+    revoke_all_access = Keyword.get(opts, :revoke_all_access, false)
+
+    params = %{
+      user: username_or_email,
+      disable_password: disable_password,
+      revoke_all_access: revoke_all_access
+    }
+
+    audited(:security_password_reset, params, opts, fn ->
+      reset_password_for_security(username_or_email, disable_password, revoke_all_access)
+    end)
+  end
+
+  defp reset_password_for_security(username_or_email, disable_password, revoke_all_access) do
     with {:ok, user} <- find_user(username_or_email),
          :ok <- check_not_organization(user) do
-      disable_password = Keyword.get(opts, :disable_password, false)
-      revoke_all_access = Keyword.get(opts, :revoke_all_access, false)
-
       Repo.transaction(fn ->
         # Disable password if requested
         if disable_password do
@@ -1189,6 +1539,14 @@ defmodule Hexpm.AdminTasks do
   """
   @spec add_install(String.t() | nil, [String.t()]) :: :ok
   def add_install(hex_version \\ nil, elixir_versions \\ []) do
+    params = %{hex_version: hex_version, elixir_versions: elixir_versions}
+
+    audited(:add_install, params, [], fn ->
+      upload_installs(hex_version, elixir_versions)
+    end)
+  end
+
+  defp upload_installs(hex_version, elixir_versions) do
     if hex_version do
       Install.build(hex_version, elixir_versions)
       |> Repo.insert!()
@@ -1232,6 +1590,11 @@ defmodule Hexpm.AdminTasks do
   """
   @spec retry_oban_jobs(keyword()) :: {:ok, non_neg_integer()}
   def retry_oban_jobs(opts \\ []) do
+    params = %{worker: opts[:worker], uniq: Keyword.get(opts, :uniq, false)}
+    audited(:retry_oban_jobs, params, opts, fn -> retry_discarded_jobs(opts) end)
+  end
+
+  defp retry_discarded_jobs(opts) do
     query = from(j in Oban.Job, where: j.state == "discarded")
 
     query =
@@ -1263,10 +1626,12 @@ defmodule Hexpm.AdminTasks do
       iex> AdminTasks.backfill_doc_files()
       {:ok, %Oban.Job{}}
   """
-  def backfill_doc_files() do
-    %{after_id: 0}
-    |> Hexpm.Preview.Workers.BackfillDocFiles.new()
-    |> Oban.insert()
+  def backfill_doc_files(opts \\ []) do
+    audited(:backfill_doc_files, %{}, opts, fn ->
+      %{after_id: 0}
+      |> Hexpm.Preview.Workers.BackfillDocFiles.new()
+      |> Oban.insert()
+    end)
   end
 
   @doc """
@@ -1308,8 +1673,14 @@ defmodule Hexpm.AdminTasks do
       iex> AdminTasks.send_email(["bob@example.com"], "Hex.pm - Service update", "We are ...")
       {:ok, 1}
   """
-  @spec send_email([String.t()], String.t(), String.t()) :: {:ok, non_neg_integer()}
-  def send_email(recipients, subject, body) do
+  @spec send_email([String.t()], String.t(), String.t(), keyword()) :: {:ok, non_neg_integer()}
+  def send_email(recipients, subject, body, opts \\ []) do
+    recipient_count = recipients |> List.wrap() |> Enum.uniq() |> length()
+    params = %{recipients: recipient_count, subject: subject, body: body}
+    audited(:send_email, params, opts, fn -> queue_announcement(recipients, subject, body) end)
+  end
+
+  defp queue_announcement(recipients, subject, body) do
     group_key = announcement_group_key(subject)
 
     Repo.transaction(

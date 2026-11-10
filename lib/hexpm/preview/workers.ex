@@ -61,7 +61,7 @@ end
 defmodule Hexpm.Preview.Workers.BackfillDocFiles do
   @moduledoc """
   Fills `release_doc_files` for releases published before it existed, one
-  batch per job. Started once with `Hexpm.AdminTasks.backfill_doc_files/0`.
+  batch per job. Started once with `Hexpm.AdminTasks.backfill_doc_files/1`.
   """
 
   use Oban.Worker,

@@ -275,6 +275,17 @@ defmodule Hexpm.Accounts.OrganizationTFATest do
     end
   end
 
+  test "the admin task refuses to reset 2FA an organization requires" do
+    c = context()
+    {:ok, _} = configure(c, %{"enforcement" => "transition", "grace_days" => "14"})
+
+    assert {:error, :organization_tfa_required} = Hexpm.AdminTasks.reset_tfa(c.admin.username)
+    assert Hexpm.Accounts.User.tfa_enabled?(Repo.get!(Hexpm.Accounts.User, c.admin.id))
+
+    assert %{status: "error", result: ":organization_tfa_required"} =
+             Repo.get_by!(Hexpm.AdminTasks.AuditLog, action: "reset_tfa")
+  end
+
   test "transition blocks disabling 2FA and removal of the last eligible administrator" do
     c = context()
 
