@@ -1,0 +1,64 @@
+<div class="bg-grey-50 dark:bg-grey-950 min-h-screen py-4 sm:py-8">
+  <div class="max-w-7xl mx-auto px-4">
+    <div class="flex flex-col gap-4 sm:gap-8 lg:flex-row">
+      <%!-- Left Sidebar --%>
+      <div class="w-full lg:w-64 flex-shrink-0">
+        {render(HexpmWeb.DashboardView, "_sidebar.html", assigns)}
+      </div>
+
+      <%!-- Right Content --%>
+      <div class="flex-1 min-w-0 flex flex-col gap-6">
+        <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-4 sm:p-8">
+          <a
+            href={~p"/dashboard/admin"}
+            class="inline-flex items-center gap-2 text-grey-600 dark:text-grey-300 text-sm mb-4 hover:text-grey-900 dark:hover:text-white"
+          >
+            {icon(:heroicon, "arrow-left", class: "w-4 h-4")} Admin tasks
+          </a>
+          <h2 class="text-grey-900 dark:text-white text-xl font-semibold mb-6">
+            {lookup_title(@kind, @lookup)}
+          </h2>
+          <.user_summary :if={@kind == :user} lookup={@lookup} />
+          <.package_summary :if={@kind == :package} lookup={@lookup} />
+          <.organization_summary :if={@kind == :organization} lookup={@lookup} />
+        </div>
+
+        <section
+          id="tasks"
+          class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-4 sm:p-8"
+        >
+          <h3 class="text-grey-900 dark:text-white text-lg font-semibold mb-4">Tasks</h3>
+          <ul class="divide-y divide-grey-200 dark:divide-grey-700">
+            <li :for={{task, prefill} <- lookup_tasks(@kind, @lookup)}>
+              <a href={task_path(task, prefill)} class="flex items-center gap-4 py-3 group">
+                <div class={[
+                  "flex-1 min-w-0 font-medium group-hover:underline",
+                  if(task.danger,
+                    do: "text-red-700 dark:text-red-400",
+                    else: "text-grey-900 dark:text-grey-100"
+                  )
+                ]}>
+                  {task.title}
+                </div>
+                {icon(:heroicon, "chevron-right", class: "w-5 h-5 text-grey-400 flex-shrink-0")}
+              </a>
+            </li>
+          </ul>
+        </section>
+
+        <section
+          id="audit-log"
+          class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-4 sm:p-8"
+        >
+          <h3 class="text-grey-900 dark:text-white text-lg font-semibold mb-4">
+            Admin audit log
+          </h3>
+          <p :if={@audit_logs == []} class="text-grey-600 dark:text-grey-300 text-sm">
+            No admin tasks have been run on it.
+          </p>
+          <.audit_table :if={@audit_logs != []} audit_logs={@audit_logs} />
+        </section>
+      </div>
+    </div>
+  </div>
+</div>

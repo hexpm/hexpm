@@ -76,6 +76,25 @@ defmodule HexpmWeb.DashboardView do
     icon(:heroicon, "trash", class: "w-5 h-5 #{color}")
   end
 
+  defp admin_pages() do
+    [
+      tasks: {"Tasks", ~p"/dashboard/admin", "wrench-screwdriver"},
+      audit_log: {"Audit log", ~p"/dashboard/admin/audit-log", "clipboard-document-list"}
+    ]
+  end
+
+  defp selected_admin_page(conn, page), do: admin_page(conn.path_info) == page
+
+  defp admin_page(["dashboard", "admin"]), do: :tasks
+  defp admin_page(["dashboard", "admin", "tasks" | _task]), do: :tasks
+
+  defp admin_page(["dashboard", "admin", kind | _name])
+       when kind in ~w(users packages organizations),
+       do: :tasks
+
+  defp admin_page(["dashboard", "admin", "audit-log"]), do: :audit_log
+  defp admin_page(_path), do: nil
+
   defp pending_invitations(user) do
     OrganizationInvitations.all_pending_for_user(user)
   end
