@@ -288,10 +288,12 @@ defmodule HexpmWeb.Dashboard.AdminController do
     )
   end
 
+  # A username can't contain "@".
   defp execute("change_password", args, opts) do
-    type = if args["type"] == "email", do: :email, else: :username
+    user = arg(args, "user")
+    type = if String.contains?(user, "@"), do: :email, else: :username
     password = if is_binary(args["password"]), do: args["password"], else: ""
-    AdminTasks.change_password(type, arg(args, "user"), password, opts)
+    AdminTasks.change_password(type, user, password, opts)
   end
 
   defp execute("rename_user", args, opts) do

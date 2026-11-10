@@ -51,7 +51,6 @@ defmodule HexpmWeb.Dashboard.AdminView do
             "Change password",
             "Sets a new password without asking for the old one.",
             fields: [
-              select_field("type", "Look up by", [{"Username", "username"}, {"Email", "email"}]),
               text_field("user", "Username or email"),
               text_field("password", "New password", type: "password")
             ]
@@ -364,13 +363,14 @@ defmodule HexpmWeb.Dashboard.AdminView do
         true -> "Leaves the packages only #{username} owns without an owner: #{names(sole)}."
       end
 
-    verified = for email <- lookup.user.emails, email.verified, do: email.email
+    # The notice goes to the primary address, and only once it is verified.
+    primary = Enum.find(lookup.user.emails, &(&1.primary and &1.verified))
 
     email =
       cond do
         is_nil(preview.reason) -> "Sends no email."
-        verified == [] -> "Sends no email, #{username} has no verified address."
-        true -> "Emails the reason to #{names(verified)}."
+        is_nil(primary) -> "Sends no email, #{username} has no verified primary address."
+        true -> "Emails the reason to #{primary.email}."
       end
 
     Enum.filter(["Deletes the account #{username}.", packages, email], & &1)
@@ -421,8 +421,11 @@ defmodule HexpmWeb.Dashboard.AdminView do
 
   defp owner_email(%{reason: nil}), do: "Sends no email."
 
+  defp owner_email(%{lookup: %{owners: [], package: %{repository: %{id: 1}}}}),
+    do: "Sends no email, the package has no owners."
+
   defp owner_email(%{lookup: %{owners: []}}),
-    do: "Emails the reason to the organization's members."
+    do: "Emails the reason to the organization's admins."
 
   defp owner_email(%{lookup: %{owners: owners}}),
     do: "Emails the reason to the owners: #{names(Enum.map(owners, & &1.username))}."
