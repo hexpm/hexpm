@@ -989,6 +989,30 @@ defmodule Hexpm.EmailsTest do
       end
     end
 
+    test "the staged release email builds without endpoint runtime state" do
+      endpoint_key = {Phoenix.Endpoint, HexpmWeb.Endpoint}
+      endpoint_state = :persistent_term.get(endpoint_key)
+      :persistent_term.erase(endpoint_key)
+
+      on_exit(fn -> :persistent_term.put(endpoint_key, endpoint_state) end)
+
+      for {kind, suffix} <- [{"release", ""}, {"docs", "/docs"}] do
+        staged = %Hexpm.Repository.StagedRelease{
+          name: "decimal",
+          version: "2.0.0",
+          kind: kind,
+          repository: %Hexpm.Repository.Repository{name: "acme"},
+          credential_name: "release-ci",
+          expires_at: ~U[2026-11-06 11:37:00.000000Z]
+        }
+
+        email = Emails.staged_release([build(:user)], staged, :expired)
+
+        assert email.text_body =~
+                 "http://localhost:5000/dashboard/staged-releases/acme/decimal/2.0.0#{suffix}\n"
+      end
+    end
+
     test "the disabled approval email emphasizes the package name" do
       package =
         build(:package, name: "decimal", repository: %Hexpm.Repository.Repository{name: "hexpm"})

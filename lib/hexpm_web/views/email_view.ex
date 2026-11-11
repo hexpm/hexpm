@@ -1,5 +1,6 @@
 defmodule HexpmWeb.EmailView do
   use HexpmWeb, :view
+  alias Hexpm.Repository.StagedRelease
 
   def email_uri() do
     Application.fetch_env!(:hexpm, :email_base_url)
@@ -12,6 +13,20 @@ defmodule HexpmWeb.EmailView do
 
   def keys_url(%User{}), do: email_url(~p"/dashboard/keys")
   def keys_url(%Organization{} = organization), do: email_url(~p"/dashboard/orgs/#{organization}")
+
+  def staged_release_url(%StagedRelease{kind: "release"} = staged) do
+    url(
+      email_uri(),
+      ~p"/dashboard/staged-releases/#{staged.repository}/#{staged.name}/#{to_string(staged.version)}"
+    )
+  end
+
+  def staged_release_url(%StagedRelease{kind: "docs"} = staged) do
+    url(
+      email_uri(),
+      ~p"/dashboard/staged-releases/#{staged.repository}/#{staged.name}/#{to_string(staged.version)}/docs"
+    )
+  end
 
   defmodule Common do
     import Phoenix.HTML, only: [html_escape: 1, safe_to_string: 1]
