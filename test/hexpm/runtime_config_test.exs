@@ -299,6 +299,31 @@ defmodule Hexpm.RuntimeConfigTest do
     end
   end
 
+  test "release download breakdowns default to off in every environment" do
+    for env <- [:dev, :test, :prod] do
+      assert read_runtime(@web_env, env)[:hexpm][:feature_flags][:release_download_breakdowns] ==
+               [mode: :off]
+    end
+  end
+
+  test "release download breakdowns accept each mode in every environment" do
+    for env <- [:dev, :test, :prod],
+        {value, mode} <- [{"off", :off}, {"beta", :beta}, {"enabled", :enabled}] do
+      config =
+        read_runtime(Map.put(@web_env, "HEXPM_RELEASE_DOWNLOAD_BREAKDOWNS_MODE", value), env)
+
+      assert config[:hexpm][:feature_flags][:release_download_breakdowns][:mode] == mode
+    end
+  end
+
+  test "release download breakdowns reject invalid modes in every environment" do
+    for env <- [:dev, :test, :prod], mode <- ["invalid", "true", "Beta", "enabled ", ""] do
+      assert_raise RuntimeError, ~r/invalid HEXPM_RELEASE_DOWNLOAD_BREAKDOWNS_MODE/, fn ->
+        read_runtime(Map.put(@web_env, "HEXPM_RELEASE_DOWNLOAD_BREAKDOWNS_MODE", mode), env)
+      end
+    end
+  end
+
   defp read_runtime(env, config_env \\ :prod) do
     env =
       Map.merge(
@@ -309,7 +334,8 @@ defmodule Hexpm.RuntimeConfigTest do
           "HEXPM_SSO_BETA_ORGANIZATIONS" => nil,
           "HEXPM_WORKLOAD_IDENTITY_MODE" => nil,
           "HEXPM_WORKLOAD_IDENTITY_BETA_USERS" => nil,
-          "HEXPM_WORKLOAD_IDENTITY_BETA_ORGANIZATIONS" => nil
+          "HEXPM_WORKLOAD_IDENTITY_BETA_ORGANIZATIONS" => nil,
+          "HEXPM_RELEASE_DOWNLOAD_BREAKDOWNS_MODE" => nil
         },
         env
       )

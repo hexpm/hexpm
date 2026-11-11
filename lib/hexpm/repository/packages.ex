@@ -109,8 +109,8 @@ defmodule Hexpm.Repository.Packages do
     Repo.all(Package.organization_memberships(package, user))
   end
 
-  def preload(package) do
-    package = Repo.preload(package, [:downloads, :releases])
+  def preload(package, releases \\ :releases) do
+    package = Repo.preload(package, [:downloads, releases])
     update_in(package.releases, &Release.sort/1)
   end
 

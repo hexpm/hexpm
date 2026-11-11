@@ -22,6 +22,7 @@ defmodule Hexpm.Repository.Release do
     has_many :requirements, Requirement, on_replace: :delete
     has_many :daily_downloads, Download
     has_one :downloads, ReleaseDownload
+    has_many :download_breakdowns, ReleaseDownloadBreakdown
 
     many_to_many :security_advisories, Hexpm.Security.Advisory,
       join_through: "security_advisory_affected_releases",

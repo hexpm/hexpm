@@ -54,6 +54,15 @@ defmodule HexpmWeb.API.ReleaseView do
       has_docs: release.has_docs,
       inserted_at: release.inserted_at
     }
+    |> ViewHelpers.include_if_loaded(
+      :downloads,
+      release.download_breakdowns,
+      &download_breakdowns/1
+    )
+  end
+
+  defp download_breakdowns(breakdowns) do
+    Map.new(breakdowns, fn breakdown -> {breakdown.view, breakdown.downloads} end)
   end
 
   defp oidc_claims(nil), do: nil
