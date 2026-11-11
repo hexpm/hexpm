@@ -179,7 +179,7 @@ defmodule HexpmWeb.Components.PackageLayout do
                 <strong>Security advisory:</strong>
                 This version has known vulnerabilities.
                 <a
-                  href={advisories_path(@package)}
+                  href={ViewHelpers.path_for_advisories(@package, @current_release)}
                   class="underline font-semibold hover:text-red-100"
                 >
                   View advisories
@@ -603,12 +603,6 @@ defmodule HexpmWeb.Components.PackageLayout do
   defp dependents_path(package),
     do: "/packages/#{package.repository.name}/#{package.name}/dependents"
 
-  defp advisories_path(%{repository: %{id: 1}} = package),
-    do: "/packages/#{package.name}/advisories"
-
-  defp advisories_path(package),
-    do: "/packages/#{package.repository.name}/#{package.name}/advisories"
-
   defp package_tabs(assigns, settings_sections) do
     [
       %{
@@ -742,7 +736,7 @@ defmodule HexpmWeb.Components.PackageLayout do
           active: assigns.active_tab == :advisories,
           icon: "shield-exclamation",
           label: "#{count} #{pluralize(count, "Advisory", "Advisories")}",
-          path: advisories_path(assigns.package)
+          path: ViewHelpers.path_for_advisories(assigns.package)
         }
       ]
     end
@@ -845,6 +839,9 @@ defmodule HexpmWeb.Components.PackageLayout do
 
   defp path_for_tab(:dependencies, package, release, _filename, _doc_kind),
     do: ViewHelpers.path_for_dependencies(package, release)
+
+  defp path_for_tab(:advisories, package, release, _filename, _doc_kind),
+    do: ViewHelpers.path_for_advisories(package, release)
 
   defp path_for_tab(:files, package, release, filename, _doc_kind) when is_binary(filename),
     do: source_version_path(package, release, filename)
