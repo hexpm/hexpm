@@ -632,10 +632,7 @@ defmodule Hexpm.Emails do
     |> subject("Hex.pm - #{staged.name} #{staged.version} #{event}")
     |> assign(:staged, staged)
     |> assign(:event, event)
-    |> assign(
-      :approval_url,
-      HexpmWeb.EmailView.email_url(HexpmWeb.ViewHelpers.path_for_staged_release(staged))
-    )
+    |> assign(:approval_url, HexpmWeb.EmailView.staged_release_url(staged))
     |> render_body(:staged_release)
   end
 
