@@ -8,12 +8,7 @@ defmodule HexpmWeb.Dashboard.AdminController do
 
   plug :requires_login
   plug :requires_mod
-  plug :requires_tfa
-  plug HexpmWeb.Plugs.Sudo when action in [:index, :lookup]
-
-  plug HexpmWeb.Plugs.Sudo,
-       [force: true]
-       when action in [:show, :run, :audit_log, :user, :package, :organization]
+  plug HexpmWeb.Plugs.Sudo
 
   @per_page 50
 
@@ -238,17 +233,6 @@ defmodule HexpmWeb.Dashboard.AdminController do
     else
       conn
       |> not_found()
-      |> halt()
-    end
-  end
-
-  defp requires_tfa(conn, _opts) do
-    if User.tfa_enabled?(conn.assigns.current_user) do
-      conn
-    else
-      conn
-      |> put_flash(:error, "Admin tasks require two-factor authentication.")
-      |> redirect(to: ~p"/dashboard/security")
       |> halt()
     end
   end
