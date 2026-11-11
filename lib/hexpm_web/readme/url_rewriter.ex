@@ -3,7 +3,8 @@ defmodule HexpmWeb.Readme.URLRewriter do
   Rewrites URLs in README HTML.
 
   - Resolves relative paths using the preview service (repo.hex.pm/preview/)
-  - Rewrites all image URLs to go through the img.hex.pm HMAC-signed proxy
+  - Rewrites all image URLs to go through the img.hex.pm HMAC-signed proxy,
+    upgrading HTTP URLs to HTTPS
 
   Private packages resolve relative links against the authenticated raw
   endpoint on the main host (session auth works when the user clicks), and
@@ -127,18 +128,22 @@ defmodule HexpmWeb.Readme.URLRewriter do
 
   @doc """
   Rewrites an image URL to go through the HMAC-signed image proxy.
+
+  The proxy only fetches HTTPS URLs, so HTTP URLs are upgraded to HTTPS.
   """
   def proxy_image_url(url) do
-    uri = URI.parse(url)
-
-    if uri.scheme in ["http", "https"] do
-      encoded = Base.encode16(url, case: :lower)
-      hmac = compute_hmac(encoded)
-      img_url = Application.fetch_env!(:hexpm, :img_url)
-      "#{img_url}/fetch/#{hmac}/#{encoded}"
-    else
-      url
+    case URI.parse(url).scheme do
+      "http" -> url |> String.replace(~r/\Ahttp:/i, "https:") |> sign_image_url()
+      "https" -> sign_image_url(url)
+      _ -> url
     end
+  end
+
+  defp sign_image_url(url) do
+    encoded = Base.encode16(url, case: :lower)
+    hmac = compute_hmac(encoded)
+    img_url = Application.fetch_env!(:hexpm, :img_url)
+    "#{img_url}/fetch/#{hmac}/#{encoded}"
   end
 
   defp compute_hmac(encoded_url) do

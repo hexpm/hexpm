@@ -24,7 +24,7 @@ defmodule HexpmWeb.Readme.URLRewriterTest do
       html = ~s[<img src="docs/logo.png">]
       result = rewrite(html, "my_package", "1.0.0")
 
-      expected = "http://localhost:5000/preview/my_package/1.0.0/docs/logo.png"
+      expected = "https://localhost:5000/preview/my_package/1.0.0/docs/logo.png"
       encoded = Base.encode16(expected, case: :lower)
       assert result =~ encoded
     end
@@ -70,8 +70,7 @@ defmodule HexpmWeb.Readme.URLRewriterTest do
 
       assert String.starts_with?(
                decoded,
-               HexpmWeb.Endpoint.url() <>
-                 "/packages/acme/my_package/1.0.0/readme-image/docs/logo.png?token="
+               "https://localhost:5000/packages/acme/my_package/1.0.0/readme-image/docs/logo.png?token="
              )
 
       token = decoded |> String.split("token=") |> List.last()
@@ -112,7 +111,7 @@ defmodule HexpmWeb.Readme.URLRewriterTest do
       html = ~s[<img src="./images/logo.png">]
       result = rewrite(html, "my_package", "1.0.0")
 
-      expected = "http://localhost:5000/preview/my_package/1.0.0/images/logo.png"
+      expected = "https://localhost:5000/preview/my_package/1.0.0/images/logo.png"
       encoded = Base.encode16(expected, case: :lower)
       assert result =~ encoded
     end
@@ -193,7 +192,7 @@ defmodule HexpmWeb.Readme.URLRewriterTest do
       html = ~s[<img src="/images/examples.png">]
       result = rewrite(html, "my_package", "1.0.0")
 
-      expected = "http://localhost:5000/preview/my_package/1.0.0/images/examples.png"
+      expected = "https://localhost:5000/preview/my_package/1.0.0/images/examples.png"
       encoded = Base.encode16(expected, case: :lower)
       assert result =~ encoded
     end
@@ -207,6 +206,15 @@ defmodule HexpmWeb.Readme.URLRewriterTest do
       assert result =~ "http://localhost:5000/img/fetch/"
       encoded = Base.encode16(url, case: :lower)
       assert result =~ encoded
+    end
+
+    test "upgrades HTTP URLs to HTTPS" do
+      result = URLRewriter.proxy_image_url("http://img.shields.io/hexpm/v/horde.svg?style=flat")
+
+      encoded = result |> String.split("/") |> List.last()
+
+      assert Base.decode16!(encoded, case: :lower) ==
+               "https://img.shields.io/hexpm/v/horde.svg?style=flat"
     end
 
     test "passes through non-http URLs" do
