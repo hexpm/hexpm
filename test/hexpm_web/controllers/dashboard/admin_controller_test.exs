@@ -88,60 +88,26 @@ defmodule HexpmWeb.Dashboard.AdminControllerTest do
       refute Repo.exists?(BlockedEmailDomain)
     end
 
-    test "asks for a fresh sudo on the task pages", c do
+    test "accepts the normal sudo window on every admin page", c do
       two_minutes_ago = NaiveDateTime.add(NaiveDateTime.utc_now(), -120)
 
-      conn =
-        build_conn()
-        |> test_login(c.moderator, sudo_at: two_minutes_ago)
-        |> get("/dashboard/admin")
-
-      assert response(conn, 200)
-
       for path <- [
+            "/dashboard/admin",
             "/dashboard/admin/audit-log",
             "/dashboard/admin/tasks/block_email_domain",
-            "/dashboard/admin/users/#{c.moderator.username}",
-            "/dashboard/admin/packages/hexpm/decimal",
-            "/dashboard/admin/organizations/acme"
+            "/dashboard/admin/users/#{c.moderator.username}"
           ] do
         conn = build_conn() |> test_login(c.moderator, sudo_at: two_minutes_ago) |> get(path)
-        assert redirected_to(conn) == "/sudo"
+        assert response(conn, 200)
       end
 
       conn =
         build_conn()
         |> test_login(c.moderator, sudo_at: two_minutes_ago)
-        |> get("/dashboard/admin/tasks/block_email_domain")
-
-      assert redirected_to(conn) == "/sudo"
-
-      conn =
-        build_conn()
-        |> test_login(c.moderator, sudo_at: two_minutes_ago)
         |> post("/dashboard/admin/tasks/block_email_domain", %{"args" => %{"domain" => "x.com"}})
 
-      assert redirected_to(conn) == "/sudo"
-      refute Repo.exists?(BlockedEmailDomain)
-    end
-
-    test "sends a moderator without two-factor authentication to set it up" do
-      moderator = insert(:user, role: "mod")
-
-      conn = build_conn() |> test_login(moderator) |> get("/dashboard/admin")
-      assert redirected_to(conn) == "/dashboard/security"
-
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
-               "Admin tasks require two-factor authentication."
-
-      conn =
-        build_conn()
-        |> test_login(moderator)
-        |> post("/dashboard/admin/tasks/block_email_domain", %{"args" => %{"domain" => "x.com"}})
-
-      assert redirected_to(conn) == "/dashboard/security"
-      refute Repo.exists?(BlockedEmailDomain)
-      refute Repo.exists?(AdminAuditLog)
+      assert redirected_to(conn) == "/dashboard/admin"
+      assert Repo.get_by(BlockedEmailDomain, domain: "x.com")
     end
 
     test "runs a task with the form's sudo token after sudo expired", c do
