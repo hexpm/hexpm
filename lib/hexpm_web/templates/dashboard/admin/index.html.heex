@@ -1,0 +1,125 @@
+<div class="bg-grey-50 dark:bg-grey-950 min-h-screen py-4 sm:py-8">
+  <div class="max-w-7xl mx-auto px-4">
+    <div class="flex flex-col gap-4 sm:gap-8 lg:flex-row">
+      <%!-- Left Sidebar --%>
+      <div class="w-full lg:w-64 flex-shrink-0">
+        {render(HexpmWeb.DashboardView, "_sidebar.html", assigns)}
+      </div>
+
+      <%!-- Right Content --%>
+      <div class="flex-1 min-w-0 flex flex-col gap-6">
+        <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-4 sm:p-8">
+          <h2 class="text-grey-900 dark:text-white text-xl font-semibold mb-2">Admin tasks</h2>
+          <p class="text-grey-600 dark:text-grey-300 text-sm">
+            Every task that changes something is recorded in the
+            <a href={~p"/dashboard/admin/audit-log"} class="text-primary-600 hover:underline">
+              audit log
+            </a>
+            with your username.
+          </p>
+
+          <form
+            id="lookup"
+            action={~p"/dashboard/admin/lookup"}
+            method="get"
+            class="mt-6 flex flex-col sm:flex-row gap-4 sm:items-end"
+          >
+            <div class="sm:w-48">
+              <.select_input
+                id="lookup-kind"
+                name="kind"
+                label="Look up"
+                options={[
+                  {"User", "user"},
+                  {"Package", "package"},
+                  {"Organization", "organization"}
+                ]}
+              />
+            </div>
+            <div class="flex-1">
+              <.text_input
+                id="lookup-name"
+                name="name"
+                label="Name"
+                placeholder="Username or email, package or repository/package, organization"
+                required
+                autocomplete="off"
+              />
+            </div>
+            <.button type="submit" variant="primary">Look up</.button>
+          </form>
+          <p class="text-grey-600 dark:text-grey-300 text-sm mt-3">
+            Tasks on a user, package or organization are linked from its page.
+          </p>
+        </div>
+
+        <section
+          :for={section <- @sections}
+          id={section.id}
+          class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-4 sm:p-8"
+        >
+          <h3 class="text-grey-900 dark:text-white text-lg font-semibold mb-4">
+            {section.title}
+          </h3>
+          <ul class="divide-y divide-grey-200 dark:divide-grey-700">
+            <li :for={task <- section.tasks}>
+              <a
+                href={~p"/dashboard/admin/tasks/#{task.id}"}
+                class="flex items-center gap-4 py-3 group"
+              >
+                <div class="flex-1 min-w-0">
+                  <div class={[
+                    "font-medium group-hover:underline",
+                    if(task.danger,
+                      do: "text-red-700 dark:text-red-400",
+                      else: "text-grey-900 dark:text-grey-100"
+                    )
+                  ]}>
+                    {task.title}
+                  </div>
+                  <p
+                    :if={task.description}
+                    class="text-grey-600 dark:text-grey-300 text-sm mt-0.5"
+                  >
+                    {task.description}
+                  </p>
+                </div>
+                {icon(:heroicon, "chevron-right", class: "w-5 h-5 text-grey-400 flex-shrink-0")}
+              </a>
+            </li>
+          </ul>
+
+          <div :if={section.id == "email-domains"} id="blocked-email-domains" class="mt-6">
+            <h4 class="text-grey-900 dark:text-grey-100 font-medium mb-2">Blocked domains</h4>
+            <p :if={@blocked_email_domains == []} class="text-grey-600 dark:text-grey-300 text-sm">
+              No domains are blocked.
+            </p>
+            <.table :if={@blocked_email_domains != []}>
+              <:header>
+                <th class="px-0 py-3 text-left text-sm font-medium">Domain</th>
+                <th class="px-4 py-3 text-left text-sm font-medium">Comment</th>
+                <th class="px-4 py-3"></th>
+              </:header>
+              <:row>
+                <tr :for={blocked <- @blocked_email_domains}>
+                  <td class="px-0 py-2 text-sm font-mono">{blocked.domain}</td>
+                  <td class="px-4 py-2 text-sm">{blocked.comment}</td>
+                  <td class="px-4 py-2 text-sm text-right">
+                    <a
+                      href={
+                        task_path(find_task("unblock_email_domain"), %{"domain" => blocked.domain})
+                      }
+                      class="text-primary-600 dark:text-primary-400 hover:underline"
+                    >
+                      Unblock
+                    </a>
+                  </td>
+                </tr>
+              </:row>
+            </.table>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+</div>

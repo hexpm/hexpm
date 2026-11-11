@@ -374,6 +374,9 @@ defmodule Hexpm.Accounts.OrganizationDeletionsTest do
                organization_id: organization.id
              )
 
+      assert %{user_id: nil, user_agent: "SYSTEM", status: "ok"} =
+               Repo.get_by!(Hexpm.AdminTasks.AuditLog, action: "delete_organization_data")
+
       assert Hexpm.Store.list(:repo_bucket, "repos/#{name}/") |> Enum.to_list() == []
       assert Hexpm.Store.get(:deletions_bucket, "organizations/#{name}", [])
       assert [%{type: "organization_data_deleted", recipients: [^email]}] = entries()
