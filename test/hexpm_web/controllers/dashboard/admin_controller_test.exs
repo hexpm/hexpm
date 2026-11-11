@@ -137,8 +137,10 @@ defmodule HexpmWeb.Dashboard.AdminControllerTest do
       conn = build_conn() |> test_login(c.moderator) |> get("/dashboard/admin/tasks/eval")
       assert response(conn, 404)
 
-      conn = run_task(c, "send_email", %{"recipients" => "bob@example.com"})
-      assert response(conn, 404)
+      for task <- ["send_email", "retry_oban_jobs", "backfill_doc_files"] do
+        conn = run_task(c, task, %{})
+        assert response(conn, 404)
+      end
     end
 
     test "the sidebar links the admin pages for moderators only", c do
@@ -166,7 +168,20 @@ defmodule HexpmWeb.Dashboard.AdminControllerTest do
       end
 
       assert html =~ "block_email_domain"
-      assert html =~ "retry_oban_jobs"
+    end
+
+    test "lists the blocked domains with a link to unblock each", c do
+      conn = get_page(c, "/dashboard/admin")
+      assert response(conn, 200) =~ "No domains are blocked."
+
+      :ok = AdminTasks.block_email_domain("farm.example", comment: "signup farm")
+
+      html = response(get_page(c, "/dashboard/admin"), 200)
+      assert html =~ "farm.example"
+      assert html =~ "signup farm"
+
+      assert html =~
+               ~s(href="/dashboard/admin/tasks/unblock_email_domain?args[domain]=farm.example")
     end
 
     test "every task left off the list is linked from a look up page" do
@@ -617,25 +632,6 @@ defmodule HexpmWeb.Dashboard.AdminControllerTest do
                "delete_data" => false,
                "unless_billing_live" => true
              }
-    end
-  end
-
-  describe "maintenance tasks" do
-    test "retry_oban_jobs", c do
-      {:ok, job} = Oban.insert(Hexpm.Hexdocs.Workers.Upload.new(%{key: "docs/a-1.0.0.tar.gz"}))
-      Repo.update_all(from(j in Oban.Job, where: j.id == ^job.id), set: [state: "discarded"])
-
-      conn = run_task(c, "retry_oban_jobs", %{"worker" => "Hexpm.Hexdocs.Workers.Upload"})
-
-      assert info(conn) == "Retry discarded jobs: done, 1."
-      assert Repo.get!(Oban.Job, job.id).state == "available"
-    end
-
-    test "backfill_doc_files", c do
-      conn = run_task(c, "backfill_doc_files", %{})
-
-      assert info(conn) =~ "job"
-      assert_enqueued(worker: Hexpm.Preview.Workers.BackfillDocFiles)
     end
   end
 
