@@ -22,6 +22,13 @@ defmodule HexpmWeb.Dashboard.Admin.Components.Lookup do
     ~H"""
     <.facts>
       <:fact label="Username">{@lookup.user.username}</:fact>
+      <:fact label="Public page">
+        <.public_link
+          :if={User.public_profile?(@lookup.user)}
+          href={~p"/users/#{@lookup.user.username}"}
+        />
+        <span :if={!User.public_profile?(@lookup.user)}>none, no verified primary address</span>
+      </:fact>
       <:fact :if={@lookup.user.full_name} label="Full name">{@lookup.user.full_name}</:fact>
       <:fact label="Role">{@lookup.user.role}</:fact>
       <:fact label="Joined">{pretty_datetime(@lookup.user.inserted_at)}</:fact>
@@ -105,6 +112,15 @@ defmodule HexpmWeb.Dashboard.Admin.Components.Lookup do
       <:fact label="Package">
         {package_label(@lookup.package.repository.name, @lookup.package.name)}
       </:fact>
+      <:fact label="Public page">
+        <.public_link
+          :if={@lookup.package.repository.name == "hexpm"}
+          href={~p"/packages/#{@lookup.package.name}"}
+        />
+        <span :if={@lookup.package.repository.name != "hexpm"}>
+          none, only members of the organization can open it
+        </span>
+      </:fact>
       <:fact label="Created">{pretty_datetime(@lookup.package.inserted_at)}</:fact>
       <:fact label="Releases">{length(@lookup.releases)}</:fact>
       <:fact :if={@lookup.package.repository.name == "hexpm"} label="HexDocs search">
@@ -177,6 +193,9 @@ defmodule HexpmWeb.Dashboard.Admin.Components.Lookup do
         label="Repository"
       >
         {@lookup.repository}
+      </:fact>
+      <:fact label="Public page">
+        <.public_link href={~p"/orgs/#{@lookup.organization.name}"} />
       </:fact>
       <:fact label="Created">{pretty_datetime(@lookup.organization.inserted_at)}</:fact>
       <:fact label="Billing">{@lookup.billing_status || "no subscription"}</:fact>
@@ -268,6 +287,16 @@ defmodule HexpmWeb.Dashboard.Admin.Components.Lookup do
         <dd class="text-grey-900 dark:text-grey-100">{render_slot(fact)}</dd>
       <% end %>
     </dl>
+    """
+  end
+
+  attr :href, :string, required: true
+
+  defp public_link(assigns) do
+    assigns = assign(assigns, :link, @link)
+
+    ~H"""
+    <a href={@href} target="_blank" rel="noopener" class={["font-mono", @link]}>{@href}</a>
     """
   end
 

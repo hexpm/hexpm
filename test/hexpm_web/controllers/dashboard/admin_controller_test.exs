@@ -864,6 +864,7 @@ defmodule HexpmWeb.Dashboard.AdminControllerTest do
       html = response(get_page(c, "/dashboard/admin/users/#{email}"), 200)
 
       assert html =~ "User #{user.username}"
+      assert html =~ ~s(href="/users/#{user.username}")
       assert html =~ email
       assert html =~ ~s(href="/dashboard/admin/packages/hexpm/#{package.name}")
       assert html =~ "only this user"
@@ -871,6 +872,15 @@ defmodule HexpmWeb.Dashboard.AdminControllerTest do
       assert html =~ ~s(href="/dashboard/admin/tasks/reset_tfa?args[user]=#{user.username}")
       assert html =~ "reset_tfa"
       refute html =~ "someone_else"
+    end
+
+    test "a user without a verified primary address has no public page", c do
+      user = insert(:user, emails: [build(:email, verified: false)])
+
+      html = response(get_page(c, "/dashboard/admin/users/#{user.username}"), 200)
+
+      assert html =~ "none, no verified primary address"
+      refute html =~ ~s(href="/users/#{user.username}")
     end
 
     test "a package page shows its owners and releases", c do
@@ -883,6 +893,7 @@ defmodule HexpmWeb.Dashboard.AdminControllerTest do
       html = response(get_page(c, "/dashboard/admin/packages/hexpm/#{package.name}"), 200)
 
       assert html =~ "Package #{package.name}"
+      assert html =~ ~s(href="/packages/#{package.name}")
       assert html =~ ~s(href="/dashboard/admin/users/#{owner.username}")
       assert html =~ "maintainer"
       assert html =~ "1.0.0"
@@ -899,6 +910,8 @@ defmodule HexpmWeb.Dashboard.AdminControllerTest do
         response(get_page(c, "/dashboard/admin/packages/#{repository.name}/#{package.name}"), 200)
 
       assert html =~ "Package #{repository.name}/#{package.name}"
+      assert html =~ "none, only members of the organization can open it"
+      refute html =~ ~s(href="/packages/#{repository.name}/#{package.name}")
       assert html =~ ~s(href="/dashboard/admin/organizations/#{repository.organization.name}")
       refute html =~ "/dashboard/admin/tasks/add_owner?"
     end
@@ -917,6 +930,7 @@ defmodule HexpmWeb.Dashboard.AdminControllerTest do
       html = response(get_page(c, "/dashboard/admin/organizations/#{organization.name}"), 200)
 
       assert html =~ "Organization #{organization.name}"
+      assert html =~ ~s(href="/orgs/#{organization.name}")
       assert html =~ ~s(href="/dashboard/admin/users/#{member.username}")
       assert html =~ ~s(href="/dashboard/admin/packages/#{repository.name}/#{package.name}")
       assert html =~ "active"
