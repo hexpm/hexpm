@@ -231,28 +231,6 @@ defmodule HexpmWeb.Dashboard.AdminView do
             ]
           )
         ]
-      },
-      %{
-        id: "maintenance",
-        title: "Maintenance",
-        lookup: nil,
-        tasks: [
-          task(
-            "retry_oban_jobs",
-            "Retry discarded jobs",
-            "Retries discarded Oban jobs at priority 8.",
-            fields: [
-              text_field("worker", "Worker", required: false, placeholder: "Hexpm.Diff.Worker"),
-              checkbox_field("uniq", "Retry one job per worker and arguments")
-            ]
-          ),
-          task(
-            "backfill_doc_files",
-            "Backfill doc files",
-            "Queues the job that fills release_doc_files for releases published before it existed.",
-            fields: []
-          )
-        ]
       }
     ]
   end

@@ -88,6 +88,36 @@
               </a>
             </li>
           </ul>
+
+          <div :if={section.id == "email-domains"} id="blocked-email-domains" class="mt-6">
+            <h4 class="text-grey-900 dark:text-grey-100 font-medium mb-2">Blocked domains</h4>
+            <p :if={@blocked_email_domains == []} class="text-grey-600 dark:text-grey-300 text-sm">
+              No domains are blocked.
+            </p>
+            <.table :if={@blocked_email_domains != []}>
+              <:header>
+                <th class="px-0 py-3 text-left text-sm font-medium">Domain</th>
+                <th class="px-4 py-3 text-left text-sm font-medium">Comment</th>
+                <th class="px-4 py-3"></th>
+              </:header>
+              <:row>
+                <tr :for={blocked <- @blocked_email_domains}>
+                  <td class="px-0 py-2 text-sm font-mono">{blocked.domain}</td>
+                  <td class="px-4 py-2 text-sm">{blocked.comment}</td>
+                  <td class="px-4 py-2 text-sm text-right">
+                    <a
+                      href={
+                        task_path(find_task("unblock_email_domain"), %{"domain" => blocked.domain})
+                      }
+                      class="text-primary-600 dark:text-primary-400 hover:underline"
+                    >
+                      Unblock
+                    </a>
+                  </td>
+                </tr>
+              </:row>
+            </.table>
+          </div>
         </section>
       </div>
     </div>

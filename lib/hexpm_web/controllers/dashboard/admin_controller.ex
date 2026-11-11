@@ -16,7 +16,8 @@ defmodule HexpmWeb.Dashboard.AdminController do
     render(conn, "index.html",
       title: "Admin",
       container: "container page dashboard",
-      sections: AdminView.listed_sections()
+      sections: AdminView.listed_sections(),
+      blocked_email_domains: AdminTasks.blocked_email_domains()
     )
   end
 
@@ -370,16 +371,6 @@ defmodule HexpmWeb.Dashboard.AdminController do
         unless_billing_live: checked?(args, "unless_billing_live")
       ] ++ opts
     )
-  end
-
-  defp execute("retry_oban_jobs", args, opts) do
-    AdminTasks.retry_oban_jobs(
-      [worker: optional(args, "worker"), uniq: checked?(args, "uniq")] ++ opts
-    )
-  end
-
-  defp execute("backfill_doc_files", _args, opts) do
-    AdminTasks.backfill_doc_files(opts)
   end
 
   # The canned reasons are looked up by their string so a form value never
