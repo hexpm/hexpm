@@ -40,6 +40,16 @@ defmodule Hexpm.Billing do
 
   def report(), do: impl().report()
 
+  def create_payment_verification(organization) do
+    Repo.write_mode!()
+    impl().create_payment_verification(organization)
+  end
+
+  def verify_payment(organization, code) do
+    Repo.write_mode!()
+    impl().verify_payment(organization, code)
+  end
+
   # TODO: Remove when all customers migrated to SCA/PaymentIntents
   def checkout(organization_name, data,
         audit: %{audit_data: audit_data, organization: organization}

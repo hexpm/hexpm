@@ -98,6 +98,7 @@ defmodule Hexpm.ObanConfigTest do
              {"45 3 * * *", Hexpm.Accounts.SSO.EnforcementWorker},
              {"*/15 * * * *", Hexpm.Accounts.OrganizationTFAWorker},
              {"0 5 * * *", Hexpm.Accounts.OrganizationDeletions.Worker},
+             {"*/15 * * * *", Hexpm.Accounts.OrganizationRecoveries.Worker},
              {"30 6 * * *", Hexpm.Accounts.PrivateAccessLogsSweep}
            ]
 

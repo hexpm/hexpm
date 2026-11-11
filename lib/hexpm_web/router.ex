@@ -241,6 +241,9 @@ defmodule HexpmWeb.Router do
     get "/invites", OrganizationInvitationController, :show, log: false
     post "/invites", OrganizationInvitationController, :accept, log: false
 
+    get "/organization-recovery", OrganizationRecoveryController, :show, log: false
+    post "/organization-recovery", OrganizationRecoveryController, :verify, log: false
+
     get "/sudo", SudoController, :show
     post "/sudo", SudoController, :create
     get "/sudo/github", SudoController, :github

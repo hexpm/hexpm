@@ -1,0 +1,7 @@
+<%= OrganizationRecoveryNotice.heading() %>
+
+<%= OrganizationRecoveryNotice.body(@organization, @username) %>
+
+<%= OrganizationRecoveryNotice.change(@username, @old_admin, @completes_at) %>
+
+<%= OrganizationRecoveryNotice.objection(:text) %>

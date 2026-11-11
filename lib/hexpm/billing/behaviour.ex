@@ -3,6 +3,8 @@ defmodule Hexpm.Billing.Behaviour do
 
   # TODO: Remove when all customers migrated to SCA/PaymentIntents
   @callback checkout(organization(), data :: map()) :: {:ok, map()} | {:error, map()}
+  @callback create_payment_verification(organization()) :: {:ok, map()} | {:error, map()}
+  @callback verify_payment(organization(), code :: String.t()) :: :ok | {:error, map()}
   @callback get(organization(), opts :: keyword()) :: map() | nil
   @callback cancel(organization()) :: map()
   @callback resume(organization()) :: {:ok, map()} | {:error, map()}

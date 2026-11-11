@@ -108,6 +108,26 @@ defmodule Hexpm.Billing.Local do
     {:ok, []}
   end
 
+  def create_payment_verification(_organization) do
+    expires_at = DateTime.utc_now() |> DateTime.add(30, :day) |> DateTime.to_iso8601()
+
+    {:ok,
+     %{
+       "brand" => "Visa",
+       "last4" => "4242",
+       "amount" => 100,
+       "currency" => "usd",
+       "expires_at" => expires_at
+     }}
+  end
+
+  # The statement code is always AAAAAA locally, since there is no statement to read it from.
+  def verify_payment(_organization, code) do
+    if code |> String.trim() |> String.upcase() == "AAAAAA",
+      do: :ok,
+      else: {:error, %{"errors" => %{"code" => "invalid"}}}
+  end
+
   defp quantity(organization) do
     case Organizations.get(organization) do
       %{billing_seats: quantity} when is_integer(quantity) -> quantity

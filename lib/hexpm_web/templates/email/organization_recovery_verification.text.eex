@@ -1,0 +1,13 @@
+<%= OrganizationRecoveryVerification.heading() %>
+
+<%= OrganizationRecoveryVerification.body(@organization, @username) %>
+
+<%= OrganizationRecoveryVerification.charge(@card_brand, @card_last4) %>
+
+<%= OrganizationRecoveryVerification.next_step(@username) %>
+
+<%= url(email_uri(), ~p"/organization-recovery?token=#{@token}") %>
+
+<%= OrganizationRecoveryVerification.expiry(@expires_at) %>
+
+<%= OrganizationRecoveryVerification.ignore_notice(:text) %>

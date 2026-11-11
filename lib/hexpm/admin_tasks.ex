@@ -99,6 +99,7 @@ defmodule Hexpm.AdminTasks do
 
   import Ecto.Query, only: [from: 2, dynamic: 2]
 
+  alias Hexpm.Accounts.{OrganizationRecoveries, OrganizationRecovery}
   alias Hexpm.AdminTasks.AuditLog, as: AdminAuditLog
   alias Hexpm.AdminTasks.Reasons
   alias Hexpm.Emails.{Outbox, OutboxEntry, OutboxLock}
@@ -1154,6 +1155,68 @@ defmodule Hexpm.AdminTasks do
           Organizations.remove_member(organization, user, audit: AuditLogs.admin())
         else
           {:error, :member_not_found}
+        end
+      end
+    end)
+  end
+
+  @doc """
+  Starts the recovery of an organization whose only administrator lost their
+  account, see `Hexpm.Accounts.OrganizationRecoveries`.
+
+  The billing service charges the organization's card a small amount with a
+  code in the statement descriptor, refunded once the code is entered or
+  expires, and the billing address gets a link. The account named here
+  follows the link and enters the code, and after the notice period it
+  becomes an administrator and the old administrator is removed.
+
+  ## Examples
+
+      iex> AdminTasks.start_organization_recovery("acme", "new_jose")
+      {:ok, %OrganizationRecovery{}}
+
+      iex> AdminTasks.start_organization_recovery("acme", "new_jose")
+      {:error, :recovery_in_progress}
+  """
+  @spec start_organization_recovery(String.t(), String.t(), keyword()) ::
+          {:ok, OrganizationRecovery.t()} | {:error, term()}
+  def start_organization_recovery(organization_name, username_or_email, opts \\ []) do
+    params = %{organization: organization_name, user: username_or_email}
+    started_by = opts |> Keyword.get(:audit, @console_audit) |> Map.get(:user)
+
+    audited(:start_organization_recovery, params, opts, fn ->
+      with {:ok, organization} <- find_organization(organization_name),
+           {:ok, user} <- find_user(username_or_email) do
+        OrganizationRecoveries.start(organization, user, started_by)
+      end
+    end)
+  end
+
+  @doc """
+  Cancels the open recovery of an organization, for example when a member
+  objects to it.
+  """
+  @spec cancel_organization_recovery(String.t(), keyword()) :: :ok | {:error, atom()}
+  def cancel_organization_recovery(organization_name, opts \\ []) do
+    audited(:cancel_organization_recovery, %{organization: organization_name}, opts, fn ->
+      with {:ok, organization} <- find_organization(organization_name) do
+        OrganizationRecoveries.cancel(organization)
+      end
+    end)
+  end
+
+  @doc """
+  Completes the recovery of an organization whose notice period has passed.
+  `Hexpm.Accounts.OrganizationRecoveries.Worker` runs it for every due
+  recovery.
+  """
+  @spec complete_organization_recovery(String.t(), keyword()) :: :ok | {:error, term()}
+  def complete_organization_recovery(organization_name, opts \\ []) do
+    audited(:complete_organization_recovery, %{organization: organization_name}, opts, fn ->
+      with {:ok, organization} <- find_organization(organization_name) do
+        case OrganizationRecoveries.get_open(organization) do
+          nil -> {:error, :no_recovery}
+          recovery -> OrganizationRecoveries.complete(recovery, audit: AuditLogs.admin())
         end
       end
     end)

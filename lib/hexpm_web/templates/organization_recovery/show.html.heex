@@ -1,0 +1,47 @@
+<.auth_layout
+  title="Organization recovery"
+  subtitle={"Become an administrator of #{@recovery.organization.name}"}
+  show_oauth={false}
+>
+  <%= if @recovery.verified_at do %>
+    <div class="space-y-5 text-sm text-grey-700 dark:text-grey-200">
+      <p>
+        The code has been confirmed. The members of <strong>{@recovery.organization.name}</strong>
+        have been told, and <strong>{@recovery.user.username}</strong>
+        becomes an administrator on {Calendar.strftime(@recovery.completes_at, "%B %-d, %Y")}.
+      </p>
+    </div>
+  <% else %>
+    <div class="space-y-5 text-sm text-grey-700 dark:text-grey-200">
+      <p>
+        We charged 1.00 USD to the {@recovery.card_brand} card ending in {@recovery.card_last4}, to be refunded once the code is entered. Enter the six-character code at the end of the charge's description on the
+        card statement.
+      </p>
+      <p>
+        Once the code is confirmed, the members of <strong>{@recovery.organization.name}</strong>
+        are told, and <strong>{@recovery.user.username}</strong>
+        becomes an administrator after {@notice_days} days.
+      </p>
+    </div>
+
+    <.form
+      for={%{}}
+      action={~p"/organization-recovery?token=#{@token}"}
+      id="organization-recovery-form"
+      class="mt-8 space-y-6"
+    >
+      <.text_input
+        id="code"
+        name="code"
+        label="Statement code"
+        placeholder="ABC123"
+        maxlength="16"
+        autocomplete="off"
+      />
+
+      <.button type="submit" variant="primary" full_width>
+        Confirm
+      </.button>
+    </.form>
+  <% end %>
+</.auth_layout>

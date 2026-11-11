@@ -97,6 +97,24 @@ defmodule Hexpm.Billing.Hexpm do
     end
   end
 
+  def create_payment_verification(organization) do
+    case post("/api/customers/#{organization}/payment_verification", %{}, retry: []) do
+      {:ok, 201, _headers, body} -> {:ok, body}
+      {:ok, status, _headers, body} when status in [404, 422] -> {:error, body}
+      other -> unexpected_response("create_payment_verification", organization, other)
+    end
+  end
+
+  def verify_payment(organization, code) do
+    case post("/api/customers/#{organization}/payment_verification/verify", %{"code" => code},
+           retry: []
+         ) do
+      {:ok, 204, _headers, _body} -> :ok
+      {:ok, 422, _headers, body} -> {:error, body}
+      other -> unexpected_response("verify_payment", organization, other)
+    end
+  end
+
   # The billing service reports the underlying failure to Sentry, hexpm only
   # needs enough to tie a customer report to a point in time
   defp unexpected_response(operation, context, response) do

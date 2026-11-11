@@ -462,6 +462,46 @@ defmodule Hexpm.AdminTasksTest do
     end
   end
 
+  describe "organization recovery" do
+    setup do
+      organization = insert(:organization)
+      insert(:organization_user, organization: organization, user: insert(:user), role: "admin")
+
+      stub(Hexpm.Billing.Mock, :get, fn _organization, _opts ->
+        %{"email" => "billing@example.com"}
+      end)
+
+      %{organization: organization, user: insert(:user)}
+    end
+
+    test "start_organization_recovery/3 records the moderator", c do
+      moderator = insert(:user)
+      audit = %{user: moderator, auth_credential: nil, user_agent: "TEST", remote_ip: nil}
+
+      expect(Hexpm.Billing.Mock, :create_payment_verification, fn _name ->
+        {:ok, %{"brand" => "visa", "last4" => "4242"}}
+      end)
+
+      assert {:ok, recovery} =
+               AdminTasks.start_organization_recovery(c.organization.name, c.user.username,
+                 audit: audit
+               )
+
+      assert recovery.started_by_user_id == moderator.id
+
+      assert %{action: "start_organization_recovery", status: "ok"} =
+               Repo.get_by!(Hexpm.AdminTasks.AuditLog, action: "start_organization_recovery")
+    end
+
+    test "cancel_organization_recovery/2 needs an open recovery", c do
+      assert AdminTasks.cancel_organization_recovery(c.organization.name) ==
+               {:error, :no_recovery}
+
+      assert AdminTasks.complete_organization_recovery(c.organization.name) ==
+               {:error, :no_recovery}
+    end
+  end
+
   describe "remove_organization_member/2" do
     test "removes an organization member and writes an admin audit log" do
       organization = insert(:organization)

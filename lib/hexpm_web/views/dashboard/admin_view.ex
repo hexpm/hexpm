@@ -204,6 +204,27 @@ defmodule HexpmWeb.Dashboard.AdminView do
             ]
           ),
           task(
+            "start_organization_recovery",
+            "Start organization recovery",
+            "For an organization whose only administrator lost their account. Charges the organization's card 1.00 USD, refunded once the code is entered or expires, with a code in the statement description and emails the billing address a link. The account follows the link, enters the code and becomes an administrator #{Hexpm.Accounts.OrganizationRecoveries.notice_days()} days later, replacing the old administrator.",
+            fields: [
+              text_field("organization", "Organization"),
+              text_field("user", "New administrator, username or email")
+            ]
+          ),
+          task(
+            "cancel_organization_recovery",
+            "Cancel organization recovery",
+            "Cancels the open recovery, for example when a member objects.",
+            fields: [text_field("organization", "Organization")]
+          ),
+          task(
+            "complete_organization_recovery",
+            "Complete organization recovery",
+            "Runs on its own once the notice period has passed. Refused before then.",
+            fields: [text_field("organization", "Organization")]
+          ),
+          task(
             "rename_organization",
             "Rename organization",
             "The old name is reserved, since stored objects keep the prefix they were written under.",
@@ -319,6 +340,9 @@ defmodule HexpmWeb.Dashboard.AdminView do
   def lookup_tasks(:organization, %{organization: organization}) do
     [
       {"remove_organization_member", %{"organization" => organization.name}},
+      {"start_organization_recovery", %{"organization" => organization.name}},
+      {"cancel_organization_recovery", %{"organization" => organization.name}},
+      {"complete_organization_recovery", %{"organization" => organization.name}},
       {"rename_organization", %{"old_name" => organization.name}},
       {"delete_organization_data", %{"organization" => organization.name}},
       {"delete_organization", %{"organization" => organization.name}}
