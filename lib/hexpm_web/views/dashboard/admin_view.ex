@@ -20,12 +20,17 @@ defmodule HexpmWeb.Dashboard.AdminView do
   Each task has its own page, and a task with `:list` shows that list above
   its form. A `danger: true` task shows what it is about to act on and runs
   once that is confirmed, see `HexpmWeb.Dashboard.AdminController`.
+
+  A section with `:lookup` holds tasks on a user, package or organization.
+  Those are linked from its look up page, see `lookup_tasks/2`, and the task
+  list shows only the sections without one.
   """
   def sections() do
     [
       %{
         id: "users",
         title: "Users",
+        lookup: :user,
         tasks: [
           task(
             "reset_tfa",
@@ -80,6 +85,7 @@ defmodule HexpmWeb.Dashboard.AdminView do
       %{
         id: "email-domains",
         title: "Email domains",
+        lookup: nil,
         tasks: [
           task(
             "block_email_domain",
@@ -103,6 +109,7 @@ defmodule HexpmWeb.Dashboard.AdminView do
       %{
         id: "packages",
         title: "Packages",
+        lookup: :package,
         tasks: [
           task("add_owner", "Add owner", "Adds an owner to a hexpm package.",
             fields: [
@@ -160,6 +167,7 @@ defmodule HexpmWeb.Dashboard.AdminView do
       %{
         id: "search",
         title: "HexDocs search",
+        lookup: :package,
         tasks: [
           task(
             "disable_search",
@@ -187,6 +195,7 @@ defmodule HexpmWeb.Dashboard.AdminView do
       %{
         id: "organizations",
         title: "Organizations",
+        lookup: :organization,
         tasks: [
           task("remove_organization_member", "Remove member", nil,
             fields: [
@@ -226,6 +235,7 @@ defmodule HexpmWeb.Dashboard.AdminView do
       %{
         id: "maintenance",
         title: "Maintenance",
+        lookup: nil,
         tasks: [
           task(
             "retry_oban_jobs",
@@ -246,6 +256,8 @@ defmodule HexpmWeb.Dashboard.AdminView do
       }
     ]
   end
+
+  def listed_sections(), do: Enum.filter(sections(), &is_nil(&1.lookup))
 
   def find_task(id) do
     Enum.find_value(sections(), fn section -> Enum.find(section.tasks, &(&1.id == id)) end)
