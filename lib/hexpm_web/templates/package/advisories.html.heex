@@ -1,12 +1,27 @@
-<.package_layout {@package_layout} active_tab={:advisories}>
+<.package_layout {@package_layout} active_tab={:advisories} version_pinned?={@version_pinned?}>
   <:inner_content>
+    <%= if @version_pinned? do %>
+      <p class="mb-4 text-sm text-grey-600 dark:text-grey-300">
+        Showing advisories affecting version <span class="font-mono">{@current_release.version}</span>.
+        <a
+          href={ViewHelpers.path_for_advisories(@package)}
+          class="text-blue-600 dark:text-blue-400 hover:underline"
+        >
+          View all advisories
+        </a>
+      </p>
+    <% end %>
     <%= if Enum.empty?(@advisories) do %>
       <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-12 text-center">
         <span class="flex justify-center mb-3 text-grey-300 dark:text-grey-500">
           {HexpmWeb.ViewIcons.icon(:heroicon, "shield-check", class: "size-10")}
         </span>
         <p class="text-grey-500 dark:text-grey-300">
-          No security advisories found for this package.
+          <%= if @version_pinned? do %>
+            No security advisories found for this version.
+          <% else %>
+            No security advisories found for this package.
+          <% end %>
         </p>
       </div>
     <% else %>

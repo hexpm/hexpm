@@ -161,29 +161,44 @@ defmodule HexpmWeb.PackageController do
   end
 
   def advisories(conn, params) do
+    params = fixup_params(params)
+
     access_package(conn, params, fn package, _repositories ->
       releases = Releases.all(package)
-      current_release = current_release(releases)
+      version = params["version"]
 
-      advisories =
-        package
-        |> Advisories.all()
-        |> Advisories.group_for_display()
+      {release, subject} =
+        if version do
+          release = matching_release(releases, version)
+          {release && preload_release(release), release}
+        else
+          {current_release(releases), package}
+        end
 
-      render(
-        conn,
-        "advisories.html",
-        [
-          title: "Security Advisories for #{package.name}",
-          container: "container",
-          releases: releases,
-          advisories: advisories
-        ] ++
-          PackageLayoutAssigns.for_package(conn, package,
+      if subject do
+        advisories =
+          subject
+          |> Advisories.all()
+          |> Advisories.group_for_display()
+
+        render(
+          conn,
+          "advisories.html",
+          [
+            title: "Security Advisories for #{package.name}",
+            container: "container",
             releases: releases,
-            current_release: current_release
-          )
-      )
+            advisories: advisories,
+            version_pinned?: version != nil
+          ] ++
+            PackageLayoutAssigns.for_package(conn, package,
+              releases: releases,
+              current_release: release
+            )
+        )
+      else
+        not_found(conn)
+      end
     end)
   end
 

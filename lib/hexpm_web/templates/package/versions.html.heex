@@ -95,7 +95,7 @@ compare_path =
                 <% end %>
                 <%= if row.release.vulnerable? do %>
                   <a
-                    href={ViewHelpers.path_for_package(@package) <> "/advisories"}
+                    href={ViewHelpers.path_for_advisories(@package, row.release)}
                     class="inline-flex shrink-0 whitespace-nowrap items-center justify-center rounded-md px-2.5 py-1 text-xs font-semibold leading-3 ring-1 ring-inset bg-red-100 text-red-900 ring-red-300 dark:bg-red-900/30 dark:text-red-100 dark:ring-red-700/60"
                   >
                     Vulnerable
@@ -233,7 +233,7 @@ compare_path =
                         Vulnerable
                       </span>
                       <a
-                        href={ViewHelpers.path_for_package(@package) <> "/advisories"}
+                        href={ViewHelpers.path_for_advisories(@package, row.release)}
                         class="text-red-600 underline hover:text-red-700 transition-colors"
                       >
                         Known security vulnerabilities
