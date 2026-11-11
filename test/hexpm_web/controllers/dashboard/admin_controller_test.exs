@@ -151,13 +151,45 @@ defmodule HexpmWeb.Dashboard.AdminControllerTest do
   end
 
   describe "GET /dashboard/admin" do
-    test "links every task to its own page", c do
+    test "lists only the tasks a look up page doesn't link", c do
       conn = build_conn() |> test_login(c.moderator) |> get("/dashboard/admin")
       html = response(conn, 200)
 
       for section <- AdminView.sections(), task <- section.tasks do
-        assert html =~ ~s(href="/dashboard/admin/tasks/#{task.id}")
+        if section.lookup do
+          refute html =~ ~s(href="/dashboard/admin/tasks/#{task.id}")
+        else
+          assert html =~ ~s(href="/dashboard/admin/tasks/#{task.id}")
+        end
+
         refute html =~ ~s(action="/dashboard/admin/tasks/#{task.id}")
+      end
+
+      assert html =~ "block_email_domain"
+      assert html =~ "retry_oban_jobs"
+    end
+
+    test "every task left off the list is linked from a look up page" do
+      hexpm = %Hexpm.Repository.Repository{name: "hexpm"}
+
+      linked =
+        [
+          AdminView.lookup_tasks(:user, %{user: %User{username: "bob"}}),
+          AdminView.lookup_tasks(:package, %{package: %Package{name: "a", repository: hexpm}}),
+          AdminView.lookup_tasks(:package, %{
+            package: %Package{
+              name: "a",
+              repository: hexpm,
+              search_disabled_at: DateTime.utc_now()
+            }
+          }),
+          AdminView.lookup_tasks(:organization, %{organization: %Organization{name: "acme"}})
+        ]
+        |> Enum.concat()
+        |> MapSet.new(fn {task, _prefill} -> task.id end)
+
+      for section <- AdminView.sections(), section.lookup, task <- section.tasks do
+        assert task.id in linked
       end
     end
   end

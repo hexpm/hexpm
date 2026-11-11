@@ -16,7 +16,7 @@ defmodule HexpmWeb.Dashboard.AdminController do
     render(conn, "index.html",
       title: "Admin",
       container: "container page dashboard",
-      sections: AdminView.sections()
+      sections: AdminView.listed_sections()
     )
   end
 
