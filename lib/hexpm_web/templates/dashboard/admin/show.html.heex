@@ -1,0 +1,87 @@
+<div class="bg-grey-50 dark:bg-grey-950 min-h-screen py-4 sm:py-8">
+  <div class="max-w-7xl mx-auto px-4">
+    <div class="flex flex-col gap-4 sm:gap-8 lg:flex-row">
+      <%!-- Left Sidebar --%>
+      <div class="w-full lg:w-64 flex-shrink-0">
+        {render(HexpmWeb.DashboardView, "_sidebar.html", assigns)}
+      </div>
+
+      <%!-- Right Content --%>
+      <div class="flex-1 min-w-0 flex flex-col gap-6">
+        <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-4 sm:p-8">
+          <a
+            href={~p"/dashboard/admin"}
+            class="inline-flex items-center gap-2 text-grey-600 dark:text-grey-300 text-sm mb-4 hover:text-grey-900 dark:hover:text-white"
+          >
+            {icon(:heroicon, "arrow-left", class: "w-4 h-4")} Admin tasks
+          </a>
+          <h2 class="text-grey-900 dark:text-white text-xl font-semibold">{@task.title}</h2>
+          <p :if={@task.description} class="text-grey-600 dark:text-grey-300 text-sm mt-2">
+            {@task.description}
+          </p>
+
+          <div :if={@task.list == :blocked_email_domains} class="mt-8">
+            <h3 class="text-grey-900 dark:text-grey-100 font-medium mb-2">Blocked domains</h3>
+            <p :if={@list == []} class="text-grey-600 dark:text-grey-300 text-sm">
+              No domains are blocked.
+            </p>
+            <.table :if={@list != []}>
+              <:header>
+                <th class="px-0 py-3 text-left text-sm font-medium">Domain</th>
+                <th class="px-4 py-3 text-left text-sm font-medium">Comment</th>
+              </:header>
+              <:row>
+                <tr :for={blocked <- @list}>
+                  <td class="px-0 py-2 text-sm font-mono">{blocked.domain}</td>
+                  <td class="px-4 py-2 text-sm">{blocked.comment}</td>
+                </tr>
+              </:row>
+            </.table>
+          </div>
+
+          <div :if={@task.list == :search_disabled_packages} class="mt-8">
+            <h3 class="text-grey-900 dark:text-grey-100 font-medium mb-2">
+              Packages out of search
+            </h3>
+            <p :if={@list == []} class="text-grey-600 dark:text-grey-300 text-sm">
+              Every package is in the search.
+            </p>
+            <.table :if={@list != []}>
+              <:header>
+                <th class="px-0 py-3 text-left text-sm font-medium">Package</th>
+                <th class="px-4 py-3 text-left text-sm font-medium">Disabled</th>
+              </:header>
+              <:row>
+                <tr :for={package <- @list}>
+                  <td class="px-0 py-2 text-sm font-mono">{package.name}</td>
+                  <td class="px-4 py-2 text-sm">{pretty_datetime(package.disabled_at)}</td>
+                </tr>
+              </:row>
+            </.table>
+          </div>
+
+          <.sudo_form
+            current_user={@current_user}
+            action={~p"/dashboard/admin/tasks/#{@task.id}"}
+            id={"#{@task.id}-form"}
+            class="mt-8"
+          >
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <.task_field
+                :for={field <- @task.fields}
+                task={@task}
+                field={field}
+                prefill={@prefill}
+              />
+            </div>
+            <div class="mt-6">
+              <.button type="submit" variant={if @task.danger, do: "danger", else: "primary"}>
+                {if @task.danger, do: "Review #{@task.title}", else: @task.title}
+              </.button>
+            </div>
+          </.sudo_form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

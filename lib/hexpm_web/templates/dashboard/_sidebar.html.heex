@@ -76,6 +76,34 @@
       </ul>
     </div>
 
+    <%!-- Admin Section, moderators only --%>
+    <div :if={User.has_role?(@current_user, "mod")} class="mb-8">
+      <h3 class="text-grey-600 dark:text-grey-300 text-xs font-semibold uppercase tracking-wider mb-3">
+        Admin
+      </h3>
+      <ul class="space-y-1">
+        <%= for {id, {name, path, icon_name}} <- admin_pages() do %>
+          <li>
+            <a
+              href={path}
+              class={[
+                "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors",
+                if(selected_admin_page(@conn, id),
+                  do:
+                    "bg-purple-50 dark:bg-primary-900/40 text-purple-600 dark:text-primary-200 font-medium",
+                  else:
+                    "text-grey-600 dark:text-grey-300 hover:text-grey-900 dark:hover:text-white"
+                )
+              ]}
+            >
+              {icon(:heroicon, icon_name, class: "w-5 h-5")}
+              {name}
+            </a>
+          </li>
+        <% end %>
+      </ul>
+    </div>
+
     <%!-- Organization Settings Section --%>
     <% invitations = pending_invitations(@current_user) %>
     <%= if @current_user.organizations != [] or invitations != [] do %>

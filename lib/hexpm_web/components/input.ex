@@ -39,7 +39,7 @@ defmodule HexpmWeb.Components.Input do
   attr :value, :string, default: nil
 
   attr :rest, :global,
-    include: ~w(min max pattern title),
+    include: ~w(autocomplete min max pattern title),
     doc: "Additional HTML attributes to pass to the input element"
 
   def text_input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
