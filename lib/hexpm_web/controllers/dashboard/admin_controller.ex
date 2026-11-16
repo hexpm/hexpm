@@ -363,6 +363,18 @@ defmodule HexpmWeb.Dashboard.AdminController do
     AdminTasks.remove_organization_member(arg(args, "organization"), arg(args, "user"), opts)
   end
 
+  defp execute("start_organization_recovery", args, opts) do
+    AdminTasks.start_organization_recovery(arg(args, "organization"), arg(args, "user"), opts)
+  end
+
+  defp execute("cancel_organization_recovery", args, opts) do
+    AdminTasks.cancel_organization_recovery(arg(args, "organization"), opts)
+  end
+
+  defp execute("complete_organization_recovery", args, opts) do
+    AdminTasks.complete_organization_recovery(arg(args, "organization"), opts)
+  end
+
   defp execute("rename_organization", args, opts) do
     AdminTasks.rename_organization(arg(args, "old_name"), arg(args, "new_name"), opts)
   end

@@ -1,0 +1,5 @@
+<%= OrganizationRecoveryCompleted.heading() %>
+
+<%= OrganizationRecoveryCompleted.body(@organization, @username, @old_admin) %>
+
+<%= Common.unauthorized_change_notice(:text) %>

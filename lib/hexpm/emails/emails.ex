@@ -433,6 +433,42 @@ defmodule Hexpm.Emails do
     |> render_body(:organization_invite)
   end
 
+  def organization_recovery_verification(recovery) do
+    base_email(:organization_recovery_verification)
+    |> email_to(recovery.billing_email)
+    |> subject("Hex.pm - Recovery of the #{recovery.organization.name} organization")
+    |> assign(:organization, recovery.organization.name)
+    |> assign(:username, recovery.user.username)
+    |> assign(:card_brand, recovery.card_brand)
+    |> assign(:card_last4, recovery.card_last4)
+    |> assign(:token, recovery.raw_token)
+    |> assign(:expires_at, recovery.expires_at)
+    |> render_body(:organization_recovery_verification)
+  end
+
+  def organization_recovery_notice(recovery, recipients) do
+    base_email(:organization_recovery_notice)
+    |> email_to(recipients)
+    |> subject("Hex.pm - A new administrator for the #{recovery.organization.name} organization")
+    |> assign(:organization, recovery.organization.name)
+    |> assign(:username, recovery.user.username)
+    |> assign(:old_admin, recovery.old_admin && recovery.old_admin.username)
+    |> assign(:completes_at, recovery.completes_at)
+    |> render_body(:organization_recovery_notice)
+  end
+
+  def organization_recovery_completed(recovery, recipients) do
+    base_email(:organization_recovery_completed)
+    |> email_to(recipients)
+    |> subject(
+      "Hex.pm - #{recovery.user.username} is now an administrator of #{recovery.organization.name}"
+    )
+    |> assign(:organization, recovery.organization.name)
+    |> assign(:username, recovery.user.username)
+    |> assign(:old_admin, recovery.old_admin && recovery.old_admin.username)
+    |> render_body(:organization_recovery_completed)
+  end
+
   def organization_invitation(invitation) do
     base_email(:organization_invitation)
     |> email_to(invitation.email)

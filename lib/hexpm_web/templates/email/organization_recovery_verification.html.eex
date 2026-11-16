@@ -1,0 +1,31 @@
+<%
+recovery_url = url(email_uri(), ~p"/organization-recovery?token=#{@token}")
+%>
+
+<h1 style="color: #030913; font-size: 24px; line-height: 32px; font-weight: 600; margin: 0 0 24px 0; text-align: center;">
+  <%= OrganizationRecoveryVerification.heading() %>
+</h1>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= OrganizationRecoveryVerification.body(@organization, @username) %>
+</p>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= OrganizationRecoveryVerification.charge(@card_brand, @card_last4) %>
+</p>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= OrganizationRecoveryVerification.next_step(@username) %>
+</p>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <a href="<%= recovery_url %>" style="color: #0f59d8; text-decoration: none; word-break: break-all;"><%= recovery_url %></a>
+</p>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= OrganizationRecoveryVerification.expiry(@expires_at) %>
+</p>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= raw(OrganizationRecoveryVerification.ignore_notice(:html)) %>
+</p>

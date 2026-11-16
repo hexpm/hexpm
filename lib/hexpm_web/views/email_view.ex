@@ -695,6 +695,60 @@ defmodule HexpmWeb.EmailView do
     end
   end
 
+  defmodule OrganizationRecoveryVerification do
+    def heading(), do: "Organization Recovery Requested"
+
+    def body(organization, username) do
+      "The Hex.pm team received a request to make the account #{username} an administrator of the #{organization} organization, because the organization's only administrator has lost access to their account. This email was sent to the organization's billing address."
+    end
+
+    def charge(brand, last4) do
+      "To confirm the request we charged 1.00 USD to the #{brand} card ending in #{last4}. It is refunded once the code is entered or expires. The description of the charge on the card statement ends with a six-character code."
+    end
+
+    def next_step(username) do
+      "Sign in to Hex.pm as #{username}, follow the link below and enter the code."
+    end
+
+    def expiry(expires_at), do: "The link and the code expire on #{Common.date(expires_at)}."
+
+    def ignore_notice(format) do
+      "If you didn't ask for this, contact #{Common.support_link(format)} so we can cancel the request. Nothing changes unless the code is entered."
+    end
+  end
+
+  defmodule OrganizationRecoveryNotice do
+    def heading(), do: "Organization Administrator Recovery"
+
+    def body(organization, username) do
+      "The account #{username} has confirmed control of the billing email and the payment card of the #{organization} organization on Hex.pm, to take over from an administrator who lost access to their account."
+    end
+
+    def change(username, nil, completes_at) do
+      "On #{Common.date(completes_at)}, #{username} becomes an administrator of the organization."
+    end
+
+    def change(username, old_admin, completes_at) do
+      "On #{Common.date(completes_at)}, #{username} becomes an administrator of the organization and #{old_admin} is removed from it."
+    end
+
+    def objection(format) do
+      "If you didn't expect this, contact #{Common.support_link(format)} before then and we will stop it."
+    end
+  end
+
+  defmodule OrganizationRecoveryCompleted do
+    def heading(), do: "Organization Administrator Recovered"
+
+    def body(organization, username, nil) do
+      "#{username} is now an administrator of the #{organization} organization on Hex.pm."
+    end
+
+    def body(organization, username, old_admin) do
+      "#{username} is now an administrator of the #{organization} organization on Hex.pm, and #{old_admin} has been removed from it."
+    end
+  end
+
   defmodule SSOSeats do
     def heading("seats_exhausted"), do: "Organization Has No Seats Left"
     def heading("expansion_failed"), do: "A Seat Could Not Be Added"

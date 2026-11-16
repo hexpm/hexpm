@@ -1,0 +1,11 @@
+<h1 style="color: #030913; font-size: 24px; line-height: 32px; font-weight: 600; margin: 0 0 24px 0; text-align: center;">
+  <%= OrganizationRecoveryCompleted.heading() %>
+</h1>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= OrganizationRecoveryCompleted.body(@organization, @username, @old_admin) %>
+</p>
+
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <%= raw(Common.unauthorized_change_notice(:html)) %>
+</p>
