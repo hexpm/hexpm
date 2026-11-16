@@ -17,7 +17,8 @@ defmodule HexpmWeb.Dashboard.AdminController do
       title: "Admin",
       container: "container page dashboard",
       sections: AdminView.listed_sections(),
-      blocked_email_domains: AdminTasks.blocked_email_domains()
+      blocked_email_domains: AdminTasks.blocked_email_domains(),
+      search_disabled_packages: AdminTasks.search_disabled_packages()
     )
   end
 
@@ -228,6 +229,13 @@ defmodule HexpmWeb.Dashboard.AdminController do
     end
   end
 
+  # The new name is typed twice, since a rename reserves the old name.
+  defp preview("rename_organization", args) do
+    with {:ok, lookup} <- AdminTasks.lookup_organization(arg(args, "old_name")) do
+      {:ok, %{kind: :organization, lookup: lookup, name: arg(args, "new_name")}}
+    end
+  end
+
   defp requires_mod(conn, _opts) do
     if User.has_role?(conn.assigns.current_user, "mod") do
       conn
@@ -418,8 +426,6 @@ defmodule HexpmWeb.Dashboard.AdminController do
   defp checked?(args, key), do: args[key] == "true"
 
   defp describe_result(:ok), do: {:info, "done."}
-  defp describe_result({:ok, count}) when is_integer(count), do: {:info, "done, #{count}."}
-  defp describe_result({:ok, %Oban.Job{id: id}}), do: {:info, "done, job #{id} queued."}
   defp describe_result({:ok, _value}), do: {:info, "done."}
 
   defp describe_result({:error, %Ecto.Changeset{} = changeset}) do

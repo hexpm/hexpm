@@ -119,6 +119,49 @@
             </.table>
           </div>
         </section>
+
+        <section
+          id="search-disabled-packages"
+          class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-4 sm:p-8"
+        >
+          <h3 class="text-grey-900 dark:text-white text-lg font-semibold mb-4">
+            Packages out of HexDocs search
+          </h3>
+          <p
+            :if={@search_disabled_packages == []}
+            class="text-grey-600 dark:text-grey-300 text-sm"
+          >
+            Every package is in the search.
+          </p>
+          <.table :if={@search_disabled_packages != []}>
+            <:header>
+              <th class="px-0 py-3 text-left text-sm font-medium">Package</th>
+              <th class="px-4 py-3 text-left text-sm font-medium">Disabled</th>
+              <th class="px-4 py-3"></th>
+            </:header>
+            <:row>
+              <tr :for={package <- @search_disabled_packages}>
+                <td class="px-0 py-2 text-sm font-mono">
+                  <a
+                    href={~p"/dashboard/admin/packages/hexpm/#{package.name}"}
+                    class="text-primary-600 dark:text-primary-400 hover:underline"
+                  >
+                    {package.name}
+                  </a>
+                </td>
+                <td class="px-4 py-2 text-sm">{pretty_datetime(package.disabled_at)}</td>
+                <td class="px-4 py-2 text-sm text-right">
+                  <a
+                    href={task_path(find_task("enable_search"), %{"package" => package.name})}
+                    class="text-primary-600 dark:text-primary-400 hover:underline"
+                  >
+                    Enable search
+                  </a>
+                </td>
+              </tr>
+            </:row>
+          </.table>
+        </section>
       </div>
     </div>
   </div>

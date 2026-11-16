@@ -170,6 +170,20 @@ defmodule HexpmWeb.Dashboard.AdminControllerTest do
       assert html =~ "block_email_domain"
     end
 
+    test "lists the packages out of search with a link to enable each", c do
+      conn = get_page(c, "/dashboard/admin")
+      assert response(conn, 200) =~ "Every package is in the search."
+
+      package = insert(:package, repository_id: 1)
+      :ok = AdminTasks.disable_search(package.name)
+
+      html = response(get_page(c, "/dashboard/admin"), 200)
+      assert html =~ ~s(href="/dashboard/admin/packages/hexpm/#{package.name}")
+
+      assert html =~
+               ~s(href="/dashboard/admin/tasks/enable_search?args[package]=#{package.name}")
+    end
+
     test "lists the blocked domains with a link to unblock each", c do
       conn = get_page(c, "/dashboard/admin")
       assert response(conn, 200) =~ "No domains are blocked."
@@ -593,11 +607,15 @@ defmodule HexpmWeb.Dashboard.AdminControllerTest do
     test "rename_organization", c do
       organization = insert(:organization)
 
-      run_task(c, "rename_organization", %{
-        "old_name" => organization.name,
-        "new_name" => "renamed"
-      })
+      args = %{"old_name" => organization.name, "new_name" => "renamed"}
 
+      html = response(run_task(c, "rename_organization", args), 200)
+      assert html =~ "Renames #{organization.name} to renamed."
+      assert html =~ "Reserves #{organization.name}, so it can&#39;t be renamed back"
+      assert html =~ "Type renamed to confirm"
+      assert Repo.get!(Organization, organization.id).name == organization.name
+
+      run_task(c, "rename_organization", args, "renamed")
       assert Repo.get!(Organization, organization.id).name == "renamed"
     end
 
@@ -935,6 +953,30 @@ defmodule HexpmWeb.Dashboard.AdminControllerTest do
       assert html =~ ~s(href="/dashboard/admin/packages/#{repository.name}/#{package.name}")
       assert html =~ "active"
       assert html =~ "/dashboard/admin/tasks/delete_organization?"
+    end
+
+    test "an organization page opens while the billing service is down", c do
+      organization = insert(:organization)
+      stub(Hexpm.Billing.Mock, :get, fn _name, _opts -> raise "billing service unavailable" end)
+
+      log =
+        capture_log(fn ->
+          html =
+            response(get_page(c, "/dashboard/admin/organizations/#{organization.name}"), 200)
+
+          assert html =~ "unknown, the billing service didn&#39;t answer"
+
+          html =
+            response(
+              run_task(c, "delete_organization", %{"organization" => organization.name}),
+              200
+            )
+
+          assert html =~
+                   "The billing service didn&#39;t answer, the task checks billing when it runs."
+        end)
+
+      assert log =~ "Could not look up billing for #{organization.name}"
     end
 
     test "something that does not exist goes back to the tasks", c do

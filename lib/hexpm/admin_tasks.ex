@@ -269,8 +269,8 @@ defmodule Hexpm.AdminTasks do
 
   @doc """
   Looks up an organization with its members, the packages in its repository
-  and the status of its billing subscription, `nil` without one. Records
-  nothing.
+  and the status of its billing subscription, `nil` without one and
+  `:unknown` when the billing service doesn't answer. Records nothing.
 
       iex> AdminTasks.lookup_organization("acme")
       {:ok, %{organization: %Organization{}, repository: "acme",
@@ -305,11 +305,7 @@ defmodule Hexpm.AdminTasks do
             |> Repo.all()
         end
 
-      billing_status =
-        case Hexpm.Billing.get(organization.name) do
-          %{"subscription" => %{"status" => status}} -> status
-          _customer -> nil
-        end
+      billing_status = billing_status(organization)
 
       {:ok,
        %{
@@ -320,6 +316,22 @@ defmodule Hexpm.AdminTasks do
          billing_status: billing_status
        }}
     end
+  end
+
+  # Only shown to the moderator, so a billing outage doesn't take down the
+  # page. The tasks that act on billing look it up again when they run.
+  defp billing_status(organization) do
+    case Hexpm.Billing.get(organization.name) do
+      %{"subscription" => %{"status" => status}} -> status
+      _customer -> nil
+    end
+  rescue
+    exception ->
+      Logger.warning(
+        "Could not look up billing for #{organization.name}: #{Exception.message(exception)}"
+      )
+
+      :unknown
   end
 
   # The entry is written before the task and outside any transaction it opens,

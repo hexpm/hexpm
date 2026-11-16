@@ -207,6 +207,7 @@ defmodule HexpmWeb.Dashboard.AdminView do
             "rename_organization",
             "Rename organization",
             "The old name is reserved, since stored objects keep the prefix they were written under.",
+            danger: true,
             fields: [text_field("old_name", "Current name"), text_field("new_name", "New name")]
           ),
           task(
@@ -396,6 +397,15 @@ defmodule HexpmWeb.Dashboard.AdminView do
     ]
   end
 
+  def consequences("rename_organization", %{lookup: lookup} = preview) do
+    old_name = lookup.organization.name
+
+    [
+      "Renames #{old_name} to #{preview.name}.",
+      "Reserves #{old_name}, so it can't be renamed back from the dashboard."
+    ]
+  end
+
   def consequences("delete_organization", %{lookup: lookup} = preview) do
     count = length(lookup.packages)
     members = length(lookup.members)
@@ -422,10 +432,20 @@ defmodule HexpmWeb.Dashboard.AdminView do
 
   defp billing(%{billing_status: status}, refuse_live?) do
     cond do
-      is_nil(status) -> "Has no billing subscription."
-      refuse_live? and AdminTasks.billing_live?(status) -> "Refused, billing is #{status}."
-      refuse_live? -> "Billing is #{status}."
-      true -> "Billing is #{status}, and the subscription is cancelled first."
+      is_nil(status) ->
+        "Has no billing subscription."
+
+      status == :unknown ->
+        "The billing service didn't answer, the task checks billing when it runs."
+
+      refuse_live? and AdminTasks.billing_live?(status) ->
+        "Refused, billing is #{status}."
+
+      refuse_live? ->
+        "Billing is #{status}."
+
+      true ->
+        "Billing is #{status}, and the subscription is cancelled first."
     end
   end
 

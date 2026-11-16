@@ -980,6 +980,19 @@ defmodule Hexpm.AdminTasksTest do
       assert {:ok, %{billing_status: nil, repository: nil, packages: []}} =
                AdminTasks.lookup_organization(organization.name)
     end
+
+    test "has an unknown billing status while the billing service is down" do
+      organization = insert(:organization)
+      expect(Hexpm.Billing.Mock, :get, fn _name, _opts -> raise "billing service unavailable" end)
+
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          assert {:ok, %{billing_status: :unknown}} =
+                   AdminTasks.lookup_organization(organization.name)
+        end)
+
+      assert log =~ "billing service unavailable"
+    end
   end
 
   describe "target_audit_logs/2" do

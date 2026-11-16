@@ -198,7 +198,7 @@ defmodule HexpmWeb.Dashboard.Admin.Components.Lookup do
         <.public_link href={~p"/orgs/#{@lookup.organization.name}"} />
       </:fact>
       <:fact label="Created">{pretty_datetime(@lookup.organization.inserted_at)}</:fact>
-      <:fact label="Billing">{@lookup.billing_status || "no subscription"}</:fact>
+      <:fact label="Billing">{billing_label(@lookup.billing_status)}</:fact>
       <:fact label="Two-factor authentication">
         {if @lookup.organization.tfa_required_at, do: "required", else: "not required"}
       </:fact>
@@ -322,6 +322,10 @@ defmodule HexpmWeb.Dashboard.Admin.Components.Lookup do
 
   defp package_label("hexpm", name), do: name
   defp package_label(repository, name), do: "#{repository}/#{name}"
+
+  defp billing_label(nil), do: "no subscription"
+  defp billing_label(:unknown), do: "unknown, the billing service didn't answer"
+  defp billing_label(status), do: status
 
   defp yes_no(true), do: "yes"
   defp yes_no(_false), do: "no"
