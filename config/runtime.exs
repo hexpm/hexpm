@@ -148,6 +148,7 @@ if config_env() == :prod do
     release: sentry_release
 
   config :hexpm,
+    git_sha: sentry_release,
     email_base_url: "https://#{System.fetch_env!("HEXPM_HOST")}",
     email_host: System.fetch_env!("HEXPM_EMAIL_HOST"),
     levenshtein_threshold: System.fetch_env!("HEXPM_LEVENSHTEIN_THRESHOLD")

@@ -3,7 +3,7 @@ defmodule HexpmWeb.PreviewLive do
 
   import HexpmWeb.Components.PackageLayout
 
-  alias Hexpm.Repository.Releases
+  alias Hexpm.Repository.{Release, Releases}
   alias HexpmWeb.PackageLayoutAssigns
   alias HexpmWeb.RepositoryAccess
   alias HexpmWeb.SSOEnforcement
@@ -39,6 +39,7 @@ defmodule HexpmWeb.PreviewLive do
        page_title: "Package files | Hex",
        description: nil,
        canonical_url: nil,
+       noindex?: false,
        container: "container"
      )}
   end
@@ -122,9 +123,19 @@ defmodule HexpmWeb.PreviewLive do
           dependants_count?: false
         )
 
+      # Every release's files are a page of their own, and the version picker
+      # links the file on screen in each release. Only the release the package
+      # page shows is indexed.
+      latest = Release.latest_version(releases, only_stable: true, unstable_fallback: true)
+
       socket
       |> assign(layout_assigns)
-      |> assign(package: package, package_name: package.name, version: version)
+      |> assign(
+        package: package,
+        package_name: package.name,
+        version: version,
+        noindex?: latest.id != release.id
+      )
     end
   end
 

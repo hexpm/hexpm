@@ -1,6 +1,7 @@
 import Config
 
 config :hexpm,
+  git_sha: "test",
   github_key_cache_ttl: 0,
   repo_bucket: {Hexpm.Store.Memory, "repo_bucket"},
   logs_bucket: {Hexpm.Store.Memory, "logs_bucket"},

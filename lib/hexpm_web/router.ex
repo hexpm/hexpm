@@ -61,6 +61,10 @@ defmodule HexpmWeb.Router do
     plug :default_repository
   end
 
+  pipeline :preview_cache_validation do
+    plug HexpmWeb.Plugs.PreviewCacheValidation
+  end
+
   pipeline :upload do
     plug :accepts, @accepted_formats
     plug HexpmWeb.Plugs.ReadOnly
@@ -338,12 +342,16 @@ defmodule HexpmWeb.Router do
     get "/preview/:package/:version", PreviewRedirectController, :version
     get "/preview/:package/:version/show/*filename", PreviewRedirectController, :version_file
 
-    live_session :preview,
-      on_mount: [{HexpmWeb.Live.InitAssigns, :default}, HexpmWeb.Live.StaticReload] do
-      live "/packages/:package/:version/files", PreviewLive, :files
-      live "/packages/:package/:version/files/*filename", PreviewLive, :files
-      live "/packages/:repository/:package/:version/files", PreviewLive, :files
-      live "/packages/:repository/:package/:version/files/*filename", PreviewLive, :files
+    scope "/" do
+      pipe_through :preview_cache_validation
+
+      live_session :preview,
+        on_mount: [{HexpmWeb.Live.InitAssigns, :default}, HexpmWeb.Live.StaticReload] do
+        live "/packages/:package/:version/files", PreviewLive, :files
+        live "/packages/:package/:version/files/*filename", PreviewLive, :files
+        live "/packages/:repository/:package/:version/files", PreviewLive, :files
+        live "/packages/:repository/:package/:version/files/*filename", PreviewLive, :files
+      end
     end
 
     get "/packages/:name/owners", PackageOwnerController, :index

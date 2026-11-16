@@ -35,6 +35,12 @@ defmodule HexpmWeb.LayoutView do
     end
   end
 
+  def robots(assigns) do
+    if Map.get(assigns, :noindex?) do
+      tag(:meta, name: "robots", content: "noindex")
+    end
+  end
+
   def search(assigns) do
     Map.get(assigns, :search)
   end

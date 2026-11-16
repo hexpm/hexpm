@@ -329,7 +329,7 @@ defmodule HexpmWeb.PreviewLiveTest do
 
     assert has_element?(
              view,
-             ~s(a[href="/packages/versioned_preview/2.0.0/files/lib/shared.ex?fallback=default"]),
+             ~s(a[rel="nofollow"][href="/packages/versioned_preview/2.0.0/files/lib/shared.ex?fallback=default"]),
              "2.0.0"
            )
 
@@ -364,6 +364,23 @@ defmodule HexpmWeb.PreviewLiveTest do
     render_patch(view, "/packages/versioned_preview/2.0.0/files/lib/shared.ex?fallback=default")
     assert_patch(view, "/packages/versioned_preview/2.0.0/files/README.md")
     assert has_element?(view, "h2", "README.md")
+  end
+
+  test "indexes only the files of the release the package page shows", %{conn: conn} do
+    package = put_release("indexed_preview", "1.0.0", [{"README.md", "one"}])
+    put_release("indexed_preview", "2.0.0", [{"README.md", "two"}], package)
+    put_release("indexed_preview", "3.0.0-rc.1", [{"README.md", "three"}], package)
+
+    noindex = ~s(<meta content="noindex" name="robots">)
+
+    assert html_response(get(conn, "/packages/indexed_preview/1.0.0/files/README.md"), 200) =~
+             noindex
+
+    refute html_response(get(conn, "/packages/indexed_preview/2.0.0/files/README.md"), 200) =~
+             noindex
+
+    assert html_response(get(conn, "/packages/indexed_preview/3.0.0-rc.1/files/README.md"), 200) =~
+             noindex
   end
 
   test "returns 404 when package or file data is missing", %{conn: conn} do

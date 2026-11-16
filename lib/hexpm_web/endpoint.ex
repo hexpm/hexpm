@@ -16,6 +16,8 @@ defmodule HexpmWeb.Endpoint do
     secure: Application.compile_env(:hexpm, [__MODULE__, :force_ssl]) != nil
   ]
 
+  def session_cookie, do: Keyword.fetch!(@session_options, :key)
+
   # Serve at "/" the static files from "priv/static" directory.
   #
   # You should set gzip to true if you are running phoenix.digest

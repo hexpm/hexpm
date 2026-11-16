@@ -150,6 +150,7 @@ defmodule HexpmWeb.Components.PackageLayout do
                         href={
                           path_for_tab(@active_tab, @package, release, @source_filename, @doc_kind)
                         }
+                        rel={@active_tab == :files && "nofollow"}
                         class={version_item_class(@current_release.version == release.version)}
                       >
                         <span class="font-mono text-sm">{release.version}</span>
