@@ -45,6 +45,12 @@ defmodule HexpmWeb.Plugs.OrganizationSSO do
          %{} = organization <- organization(conn, opts.source),
          {:error, refusal} <- SSOEnforcement.check(conn, organization, user) do
       cond do
+        # A moderator logged in as the user, see `HexpmWeb.Plugs.Impersonation`,
+        # can't break the glass, since that writes the user's audit log and
+        # mails the organization's administrators.
+        conn.assigns[:impersonator] ->
+          SSOEnforcement.refuse(conn, refusal, organization)
+
         carve_out?(conn, opts.except) and refusal == :sso_required ->
           record_break_glass(conn, organization, user, screen(conn, opts.screen))
 

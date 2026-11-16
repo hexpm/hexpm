@@ -24,7 +24,7 @@ defmodule HexpmWeb.Plugs.Impersonation do
   @session_key "impersonation_token"
   @safe_methods ~w(GET HEAD)
   @allowed_routes [{"POST", ["impersonation", "stop"]}, {"POST", ["logout"]}]
-  @auth_flows ~w(login logout tfa signup password email auth sso invites sudo oauth)
+  @auth_flows ~w(login tfa signup password email auth sso invites sudo oauth)
 
   def session_key(), do: @session_key
 

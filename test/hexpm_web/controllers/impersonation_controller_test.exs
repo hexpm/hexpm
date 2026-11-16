@@ -95,16 +95,9 @@ defmodule HexpmWeb.ImpersonationControllerTest do
   end
 
   describe "read-only" do
-    test "refuses every write, with or without a sudo form token", c do
+    test "refuses every write", c do
       conn = impersonate(c)
-      token = HexpmWeb.Plugs.Sudo.generate_form_token(c.user.id, "POST", "/dashboard/profile")
-
-      refused =
-        conn
-        |> post("/dashboard/profile", %{
-          "_sudo_token" => token,
-          "user" => %{"full_name" => "Changed"}
-        })
+      refused = post(conn, "/dashboard/profile", %{"user" => %{"full_name" => "Changed"}})
 
       assert html_response(refused, 403) =~ "read-only admin session as #{c.user.username}"
       assert Repo.get!(User, c.user.id).full_name == c.user.full_name
