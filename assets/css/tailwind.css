@@ -413,6 +413,19 @@ html[data-theme="dark"] .emergency-publishing-mode {
   background-color: var(--color-yellow-900);
 }
 
+.impersonation {
+  padding: 10px;
+  font-size: 1.2em;
+  font-weight: bold;
+  color: var(--color-red-900);
+  background-color: var(--color-red-200);
+}
+
+html[data-theme="dark"] .impersonation {
+  color: var(--color-red-100);
+  background-color: var(--color-red-900);
+}
+
 /* Inline form validation (view_helpers.ex) */
 .form-error {
   display: block;

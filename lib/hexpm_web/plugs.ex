@@ -5,6 +5,7 @@ defmodule HexpmWeb.Plugs do
   alias Hexpm.Accounts.Users
   alias Hexpm.UserSessions
   alias HexpmWeb.ControllerHelpers
+  alias HexpmWeb.Plugs.Impersonation
 
   # Max filesize: 20MB
   # Min upload speed: ~10kb/s
@@ -119,9 +120,28 @@ defmodule HexpmWeb.Plugs do
         {nil, nil}
       end
 
-    conn
-    |> assign(:current_user, user)
-    |> assign(:current_session, session)
+    case Impersonation.resolve(get_session(conn), user) do
+      {impersonated, impersonation_session} ->
+        conn
+        |> assign(:current_user, impersonated)
+        |> assign(:current_session, impersonation_session)
+        |> assign(:impersonator, user)
+
+      nil ->
+        conn
+        |> forget_impersonation()
+        |> assign(:current_user, user)
+        |> assign(:current_session, session)
+        |> assign(:impersonator, nil)
+    end
+  end
+
+  defp forget_impersonation(conn) do
+    if get_session(conn, Impersonation.session_key()) do
+      delete_session(conn, Impersonation.session_key())
+    else
+      conn
+    end
   end
 
   def disable_deactivated(conn, _opts) do

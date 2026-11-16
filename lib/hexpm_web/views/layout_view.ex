@@ -43,6 +43,10 @@ defmodule HexpmWeb.LayoutView do
     Map.get(assigns, :container, "container")
   end
 
+  def impersonation_expires_at(session) do
+    Calendar.strftime(session.expires_at, "%H:%M UTC")
+  end
+
   def error_page?(assigns) do
     assigns[:error] || (is_integer(assigns[:status]) && assigns[:status] >= 400)
   end

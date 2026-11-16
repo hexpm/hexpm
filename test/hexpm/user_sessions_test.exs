@@ -1204,4 +1204,69 @@ defmodule Hexpm.UserSessionsTest do
       assert log.remote_ip == "127.0.0.1"
     end
   end
+
+  describe "impersonation sessions" do
+    setup do
+      %{user: insert(:user), moderator: insert(:user, role: "mod")}
+    end
+
+    test "expire after an hour and write nothing to the user's audit log", c do
+      {:ok, session, _token} = UserSessions.create_impersonation_session(c.user, c.moderator)
+
+      assert session.user_id == c.user.id
+      assert session.impersonator_id == c.moderator.id
+      assert session.type == "browser"
+
+      assert_in_delta DateTime.diff(session.expires_at, DateTime.utc_now()), 60 * 60, 5
+      assert AuditLogs.all_by(c.user) == []
+    end
+
+    test "are found only by the moderator who started them", c do
+      {:ok, session, token} = UserSessions.create_impersonation_session(c.user, c.moderator)
+
+      assert UserSessions.get_impersonation_session(token, c.moderator).id == session.id
+      refute UserSessions.get_impersonation_session(token, insert(:user, role: "mod"))
+      refute UserSessions.get_browser_session_by_token(token)
+    end
+
+    test "are not found once expired or revoked", c do
+      {:ok, session, token} = UserSessions.create_impersonation_session(c.user, c.moderator)
+
+      session
+      |> Ecto.Changeset.change(expires_at: DateTime.add(DateTime.utc_now(), -1, :second))
+      |> Repo.update!()
+
+      refute UserSessions.get_impersonation_session(token, c.moderator)
+
+      {:ok, session, token} = UserSessions.create_impersonation_session(c.user, c.moderator)
+      {:ok, _session} = UserSessions.revoke(session)
+
+      refute UserSessions.get_impersonation_session(token, c.moderator)
+    end
+
+    test "are left out of the user's sessions and session limit", c do
+      sessions =
+        for i <- 1..5 do
+          {:ok, session, _token} =
+            UserSessions.create_browser_session(c.user,
+              name: "Session #{i}",
+              audit: audit_data(c.user)
+            )
+
+          session
+        end
+
+      {:ok, impersonation, _token} =
+        UserSessions.create_impersonation_session(c.user, c.moderator)
+
+      assert Enum.all?(sessions, &is_nil(Repo.get!(Hexpm.UserSession, &1.id).revoked_at))
+      refute impersonation.id in Enum.map(UserSessions.all_for_user(c.user), & &1.id)
+
+      {:ok, _session, _token} =
+        UserSessions.create_browser_session(c.user, name: "Session 6", audit: audit_data(c.user))
+
+      assert Repo.get!(Hexpm.UserSession, List.first(sessions).id).revoked_at
+      refute Repo.get!(Hexpm.UserSession, impersonation.id).revoked_at
+    end
+  end
 end

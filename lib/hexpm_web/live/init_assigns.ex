@@ -1,7 +1,8 @@
 defmodule HexpmWeb.Live.InitAssigns do
   @moduledoc """
-  on_mount callback that assigns `:current_user` and `:current_session` from the
-  session in the same way the `login/2` plug does for controllers.
+  on_mount callback that assigns `:current_user`, `:current_session` and
+  `:impersonator` from the session in the same way the `login/2` plug does for
+  controllers.
 
   The mount-time resolution is a snapshot and a connected socket outlives it, so
   the same resolution runs again before every `handle_params`, `handle_event`
@@ -19,16 +20,18 @@ defmodule HexpmWeb.Live.InitAssigns do
 
   alias Hexpm.UserSessions
   alias Hexpm.Accounts.Users
+  alias HexpmWeb.Plugs.Impersonation
 
   def session(conn), do: %{"remote_ip" => conn.remote_ip}
 
   def on_mount(:default, _params, session, socket) do
-    {user, user_session} = resolve_user(session)
+    {user, user_session, impersonator} = resolve_user(session)
 
     socket =
       socket
       |> assign_new(:current_user, fn -> user end)
       |> assign_new(:current_session, fn -> user_session end)
+      |> assign_new(:impersonator, fn -> impersonator end)
       |> assign_new(:current_organization, fn -> nil end)
       |> attach_refresh(session)
 
@@ -64,25 +67,31 @@ defmodule HexpmWeb.Live.InitAssigns do
   # only a connected socket resolves again.
   defp refresh(socket, session) do
     if connected?(socket) do
-      {user, user_session} = resolve_user(session)
+      {user, user_session, impersonator} = resolve_user(session)
 
       socket
       |> assign(:current_user, user)
       |> assign(:current_session, user_session)
+      |> assign(:impersonator, impersonator)
     else
       socket
     end
   end
 
-  defp resolve_user(%{"session_token" => token}) when is_binary(token) do
+  defp resolve_user(%{"session_token" => token} = session) when is_binary(token) do
     with {:ok, decoded} <- Base.decode64(token),
          %{user_id: user_id} = user_session when not is_nil(user_id) <-
            UserSessions.get_browser_session_by_token(decoded) do
-      {Users.get_by_id(user_id, [:emails, organizations: :repository]), user_session}
+      user = Users.get_by_id(user_id, [:emails, organizations: :repository])
+
+      case Impersonation.resolve(session, user) do
+        {impersonated, impersonation_session} -> {impersonated, impersonation_session, user}
+        nil -> {user, user_session, nil}
+      end
     else
-      _ -> {nil, nil}
+      _ -> {nil, nil, nil}
     end
   end
 
-  defp resolve_user(_session), do: {nil, nil}
+  defp resolve_user(_session), do: {nil, nil, nil}
 end

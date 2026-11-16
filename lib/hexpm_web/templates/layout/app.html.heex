@@ -27,6 +27,18 @@
       </div>
     </div>
 
+    <div :if={assigns[:impersonator]} id="impersonation-banner" class="impersonation" role="alert">
+      <div class="container flex flex-wrap items-center gap-x-4 gap-y-2">
+        <span>
+          {@impersonator.username} is logged in as {@current_user.username}, read-only until <time>{impersonation_expires_at(@current_session)}</time>.
+        </span>
+        <form action={~p"/impersonation/stop"} method="post">
+          <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
+          <button type="submit" class="underline cursor-pointer">Stop</button>
+        </form>
+      </div>
+    </div>
+
     <.header
       conn={assigns[:conn] || assigns[:socket]}
       current_user={assigns[:current_user]}
