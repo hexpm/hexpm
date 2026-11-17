@@ -1208,6 +1208,139 @@ defmodule HexpmWeb.PackageControllerTest do
       conn = get(build_conn(), "/packages/nonexistent_package/advisories")
       assert response(conn, 404)
     end
+
+    test "version page shows only advisories affecting that version", %{package1: package1} do
+      Hexpm.Security.Advisories.upsert(
+        [
+          advisory_record("GHSA-affects-001", package1.name, ">= 0.0.1 and < 0.0.2"),
+          advisory_record("GHSA-affects-002", package1.name, ">= 0.0.2 and < 0.0.3")
+        ],
+        %{package1.name => package1.id}
+      )
+
+      conn = get(build_conn(), "/packages/#{package1.name}/0.0.1/advisories")
+      result = response(conn, 200)
+      assert result =~ "GHSA-affects-001"
+      refute result =~ "GHSA-affects-002"
+      assert result =~ "Showing advisories affecting version"
+
+      document = LazyHTML.from_document(result)
+      assert link_text(document, "/packages/#{package1.name}/advisories") == "2 Advisories"
+
+      conn = get(build_conn(), "/packages/#{package1.name}/advisories")
+      result = response(conn, 200)
+      assert result =~ "GHSA-affects-001"
+      assert result =~ "GHSA-affects-002"
+      refute result =~ "Showing advisories affecting version"
+    end
+
+    test "version page without advisories shows empty state", %{package1: package1} do
+      Hexpm.Security.Advisories.upsert(
+        [advisory_record("GHSA-affects-001", package1.name, ">= 0.0.1 and < 0.0.2")],
+        %{package1.name => package1.id}
+      )
+
+      conn = get(build_conn(), "/packages/#{package1.name}/0.0.2/advisories")
+      result = response(conn, 200)
+      refute result =~ "GHSA-affects-001"
+      assert result =~ "No security advisories found for this version"
+    end
+
+    test "returns 404 for unknown version", %{package1: package1} do
+      conn = get(build_conn(), "/packages/#{package1.name}/9.9.9/advisories")
+      assert response(conn, 404)
+    end
+
+    test "private package advisories, package-wide and per version", %{
+      user1: user1,
+      repository1: repository1,
+      package3: package3
+    } do
+      Hexpm.Security.Advisories.upsert(
+        [advisory_record("GHSA-private-001", package3.name, "== 0.0.1")],
+        %{package3.name => package3.id}
+      )
+
+      for path <- [
+            "/packages/#{repository1.name}/#{package3.name}/advisories",
+            "/packages/#{repository1.name}/#{package3.name}/0.0.1/advisories"
+          ] do
+        result =
+          build_conn()
+          |> test_login(user1)
+          |> get(path)
+          |> response(200)
+
+        assert result =~ "GHSA-private-001"
+      end
+
+      conn = get(build_conn(), "/packages/#{repository1.name}/#{package3.name}/0.0.1/advisories")
+      assert response(conn, 404)
+    end
+
+    test "versions page links vulnerable releases to their own advisories",
+         %{package1: package1} do
+      Hexpm.Security.Advisories.upsert(
+        [advisory_record("GHSA-affects-001", package1.name, ">= 0.0.1 and < 0.0.2")],
+        %{package1.name => package1.id}
+      )
+
+      document =
+        build_conn()
+        |> get("/packages/#{package1.name}/versions")
+        |> response(200)
+        |> LazyHTML.from_document()
+
+      hrefs =
+        document
+        |> LazyHTML.query(~s(a[href$="/advisories"]))
+        |> Enum.map(&List.first(LazyHTML.attribute(&1, "href")))
+        |> Enum.uniq()
+        |> Enum.sort()
+
+      assert hrefs == [
+               "/packages/#{package1.name}/0.0.1/advisories",
+               "/packages/#{package1.name}/advisories"
+             ]
+    end
+
+    test "release banner links to that release's advisories", %{package1: package1} do
+      Hexpm.Security.Advisories.upsert(
+        [advisory_record("GHSA-affects-001", package1.name, ">= 0.0.1 and < 0.0.2")],
+        %{package1.name => package1.id}
+      )
+
+      document =
+        build_conn()
+        |> get("/packages/#{package1.name}/0.0.1")
+        |> response(200)
+        |> LazyHTML.from_document()
+
+      assert link_text(document, "/packages/#{package1.name}/0.0.1/advisories") ==
+               "View advisories"
+    end
+  end
+
+  defp advisory_record(id, package_name, requirement) do
+    %{
+      id: id,
+      summary: "Summary of #{id}",
+      aliases: [],
+      published_at: ~U[2024-04-03 16:46:30Z],
+      modified_at: ~U[2024-04-05 01:28:39Z],
+      withdrawn_at: nil,
+      cvss_vector: nil,
+      cvss_score: nil,
+      cvss_rating: nil,
+      references: [],
+      affected: [
+        %{
+          package: package_name,
+          requirements: [Version.parse_requirement!(requirement)],
+          versions: []
+        }
+      ]
+    }
   end
 
   describe "GET /packages/:name/dependents" do
