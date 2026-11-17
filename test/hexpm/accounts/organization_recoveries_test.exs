@@ -312,6 +312,45 @@ defmodule Hexpm.Accounts.OrganizationRecoveriesTest do
 
       assert OrganizationRecoveries.complete(recovery, audit: audit()) ==
                {:error, :recovery_unavailable}
+
+      assert OrganizationRecoveries.cancel(organization) == {:error, :no_recovery}
+    end
+
+    test "refuses once the organization has another administrator again", context do
+      %{organization: organization, old_admin: old_admin, member: member} = context
+      %{new_admin: new_admin} = context
+      recovery = organization |> start!(new_admin) |> verify!(new_admin) |> make_due!()
+      Organizations.change_role(organization, member, %{"role" => "admin"}, audit: audit())
+
+      assert OrganizationRecoveries.complete(recovery, audit: audit()) ==
+               {:error, :other_admins}
+
+      refute Organizations.get_role(organization, new_admin)
+      assert Organizations.get_role(organization, old_admin) == "admin"
+    end
+
+    test "refuses once the organization has a single sign-on connection", context do
+      %{organization: organization, new_admin: new_admin} = context
+      recovery = organization |> start!(new_admin) |> verify!(new_admin) |> make_due!()
+      insert(:organization_sso_connection, organization: organization)
+
+      assert OrganizationRecoveries.complete(recovery, audit: audit()) ==
+               {:error, :sso_connection}
+
+      refute Organizations.get_role(organization, new_admin)
+    end
+
+    test "changes nothing when the old administrator can't be removed", context do
+      %{organization: organization, old_admin: old_admin, new_admin: new_admin} = context
+      recovery = organization |> start!(new_admin) |> verify!(new_admin) |> make_due!()
+      Repo.update!(Ecto.Changeset.change(new_admin, deactivated_at: DateTime.utc_now()))
+
+      assert OrganizationRecoveries.complete(recovery, audit: audit()) == {:error, :last_admin}
+
+      refute Organizations.get_role(organization, new_admin)
+      assert Organizations.get_role(organization, old_admin) == "admin"
+      assert OrganizationRecovery.open?(reload(recovery))
+      assert length(entries(recovery)) == 2
     end
   end
 
@@ -343,6 +382,21 @@ defmodule Hexpm.Accounts.OrganizationRecoveriesTest do
 
       assert reload(due).completed_at
       refute reload(waiting).completed_at
+    end
+
+    test "cancels a recovery once the organization has another administrator", context do
+      %{organization: organization, member: member, new_admin: new_admin} = context
+      recovery = organization |> start!(new_admin) |> verify!(new_admin) |> make_due!()
+      Organizations.change_role(organization, member, %{"role" => "admin"}, audit: audit())
+
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          assert OrganizationRecoveries.run() == [{organization.name, {:canceled, :other_admins}}]
+        end)
+
+      assert log =~ "Organization recovery canceled"
+      assert reload(recovery).canceled_at
+      refute Organizations.get_role(organization, new_admin)
     end
   end
 

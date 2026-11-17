@@ -237,8 +237,12 @@ defmodule Hexpm.Accounts.OrganizationRecoveries do
   end
 
   @doc """
-  Completes every recovery whose notice period has passed. A failure is
-  reported and the recovery is tried again on the next run.
+  Completes every recovery whose notice period has passed.
+
+  A recovery whose organization got another administrator or a single sign-on
+  connection during the notice period is canceled, since the organization can
+  manage its administrators again. Any other failure is reported and the
+  recovery is tried again on the next run.
   """
   def run(now \\ DateTime.utc_now()) do
     now
@@ -251,28 +255,32 @@ defmodule Hexpm.Accounts.OrganizationRecoveries do
         :ok ->
           {organization.name, :ok}
 
+        {:error, reason} when reason in [:other_admins, :sso_connection] ->
+          Hexpm.AdminTasks.cancel_organization_recovery(organization.name, audit: audit)
+          report(:warning, "Organization recovery canceled", organization, reason)
+          {organization.name, {:canceled, reason}}
+
         {:error, reason} ->
-          report(organization, reason)
+          report(:error, "Organization recovery failed", organization, reason)
           {organization.name, {:error, reason}}
       end
     end)
   end
 
-  defp report(organization, reason) do
-    message = "Organization recovery failed"
+  defp report(level, message, organization, reason) do
     extra = %{organization: organization.name, reason: inspect(reason)}
-    Logger.error(Map.merge(%{message: message, event: "organization_recovery"}, extra))
-    Sentry.capture_message(message, level: :error, extra: extra)
+    Logger.log(level, Map.merge(%{message: message, event: "organization_recovery"}, extra))
+    Sentry.capture_message(message, level: level, extra: extra)
   end
 
   @doc """
   Makes the recovering account an administrator and removes the old
   administrator, once the notice period has passed.
 
-  The old administrator is removed in a second transaction, because removing
-  a member is refused while it would leave no administrator. If that removal
-  fails, the organization keeps both administrators and the error is
-  returned.
+  Everything happens in one transaction under the recovery's lock, so a cancel
+  either lands first or finds the recovery completed. The organization is
+  checked again, and the recovery waits if another administrator or a single
+  sign-on connection appeared during the notice period.
   """
   def complete(%OrganizationRecovery{} = recovery, audit: audit_data) do
     now = DateTime.utc_now()
@@ -288,25 +296,50 @@ defmodule Hexpm.Accounts.OrganizationRecoveries do
           Repo.rollback(:notice_period)
 
         true ->
-          promote(locked, audit_data)
+          promote(locked, now, audit_data)
       end
     end)
     |> case do
-      {:ok, locked} -> finish(locked, now, audit_data)
+      {:ok, :ok} -> :ok
       {:error, reason} -> {:error, reason}
     end
   end
 
-  defp promote(recovery, audit_data) do
+  # Removing the old administrator runs its own multi, which joins this
+  # transaction. It can only succeed once the new administrator exists, and a
+  # failure aborts the promotion with it.
+  defp promote(recovery, now, audit_data) do
     organization = Seats.lock!(recovery.organization)
     user = recovery.user
 
-    with :ok <- OrganizationTFA.admit(organization, user),
-         :ok <- add_admin(organization, user, recovery.old_admin, audit_data) do
+    with :ok <- check_organization(organization),
+         :ok <- check_admins(organization, recovery),
+         :ok <- OrganizationTFA.admit(organization, user),
+         :ok <- add_admin(organization, user, recovery.old_admin, audit_data),
+         :ok <- remove_old_admin(organization, recovery.old_admin, audit_data) do
       recovery
+      |> OrganizationRecovery.complete_changeset(now)
+      |> Repo.update!()
+
+      recovery
+      |> Emails.organization_recovery_completed(completed_recipients(recovery))
+      |> enqueue(recovery)
+
+      :ok
     else
       {:error, reason} -> Repo.rollback(reason)
     end
+  end
+
+  defp check_admins(organization, recovery) do
+    allowed = [recovery.user_id, recovery.old_admin_id]
+
+    others =
+      organization
+      |> Organizations.all_members()
+      |> Enum.filter(&(&1.role == "admin" and &1.user_id not in allowed))
+
+    if others == [], do: :ok, else: {:error, :other_admins}
   end
 
   defp add_admin(organization, user, old_admin, audit_data) do
@@ -332,37 +365,18 @@ defmodule Hexpm.Accounts.OrganizationRecoveries do
     end
   end
 
-  # The old administrator's seat is given up right after, so swapping one
-  # administrator for another takes no seat.
+  # The old administrator's seat is given up in the same transaction, so
+  # swapping one administrator for another takes no seat.
   defp seats_needed(organization, %User{id: id}) do
     if Repo.get_by(assoc(organization, :organization_users), user_id: id), do: 0, else: 1
   end
 
   defp seats_needed(_organization, nil), do: 1
 
-  defp finish(recovery, now, audit_data) do
-    removal =
-      case recovery.old_admin do
-        nil ->
-          :ok
+  defp remove_old_admin(_organization, nil, _audit_data), do: :ok
 
-        old_admin ->
-          Organizations.remove_member(recovery.organization, old_admin, audit: audit_data)
-      end
-
-    recovery
-    |> OrganizationRecovery.complete_changeset(now)
-    |> Repo.update!()
-
-    recovery
-    |> Emails.organization_recovery_completed(completed_recipients(recovery))
-    |> enqueue(recovery)
-
-    case removal do
-      :ok -> :ok
-      {:error, reason} -> {:error, {:old_admin_not_removed, reason}}
-    end
-  end
+  defp remove_old_admin(organization, old_admin, audit_data),
+    do: Organizations.remove_member(organization, old_admin, audit: audit_data)
 
   @doc "Cancels the open recovery of `organization`."
   def cancel(organization) do
