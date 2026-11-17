@@ -20,7 +20,7 @@ If you can still sign in, add a new email address and make it your primary addre
 
 ### When you can't recover access yourself
 
-The Hex team doesn't restore access to accounts. We won't disable two-factor authentication, reset a password, or change the email addresses of an account on request, whatever proof is offered, including identity documents. Accounts on Hex can publish packages that other people install, and any manual recovery process could also be used by someone pretending to be you.
+The Hex team doesn't restore access to accounts. We won't disable two-factor authentication, reset a password, or change the email addresses of an account on request, whatever proof is offered, including identity documents. Accounts on Hex can publish packages that other people install, and any manual recovery process could also be used by someone pretending to be you. This applies to requests made under the [Privacy Policy](/policies/privacy) too.
 
 If you have permanently lost access to your account:
 
