@@ -16,7 +16,7 @@ Private packages and private documentation are served only to authenticated memb
 
 ### Credentials
 
-Passwords are stored using bcrypt. API keys carry a defined scope and can be revoked individually. Two-factor authentication is available on user accounts.
+Passwords are stored using bcrypt. API keys carry a defined scope and can be revoked individually. Two-factor authentication is available on user accounts. The [Account Recovery Policy](/policies/account-recovery) describes how users regain access to their accounts.
 
 ### Resilience and recovery
 

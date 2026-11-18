@@ -116,7 +116,8 @@ defmodule HexpmWeb.Components.Footer do
           <.footer_link href={~p"/policies/termsofservice"} label="Terms of Service" />
           <.footer_link href={~p"/policies/privacy"} label="Privacy Policy" />
           <.footer_link href={~p"/policies/copyright"} label="Copyright Policy" />
-          <.footer_link href={~p"/policies/dispute"} label="Dispute Policy" />
+          <.footer_link href={~p"/policies/package-transfer"} label="Package Transfer Policy" />
+          <.footer_link href={~p"/policies/account-recovery"} label="Account Recovery Policy" />
         </.footer_link_column>
       </div>
     </div>

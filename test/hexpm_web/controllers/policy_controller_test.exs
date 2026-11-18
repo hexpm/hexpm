@@ -33,6 +33,27 @@ defmodule HexpmWeb.PolicyControllerTest do
     assert response(conn, 200) =~ "Copyright Policy"
   end
 
+  test "show policy package transfer" do
+    conn =
+      build_conn()
+      |> get("/policies/package-transfer")
+
+    response = response(conn, 200)
+    assert response =~ "Package Transfer Policy"
+    assert response =~ ~s(id="if-you-lost-access-to-your-account")
+    assert response =~ "/policies/account-recovery"
+  end
+
+  test "show policy account recovery" do
+    conn =
+      build_conn()
+      |> get("/policies/account-recovery")
+
+    response = response(conn, 200)
+    assert response =~ "Account Recovery Policy"
+    assert response =~ "/policies/package-transfer#if-you-lost-access-to-your-account"
+  end
+
   test "show policy subprocessors" do
     conn =
       build_conn()
