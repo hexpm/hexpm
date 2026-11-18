@@ -5,10 +5,6 @@ defmodule Hexpm.Repo.Migrations.AddImpersonatorToUserSessions do
   @disable_migration_lock true
 
   def up do
-    # Adding the foreign key takes SHARE ROW EXCLUSIVE on both tables, which
-    # conflicts with the ROW EXCLUSIVE an INSERT takes, and both `users` and
-    # `user_sessions` are written on the browser request path. Give up rather
-    # than queue behind a long-running read and hold every writer behind us.
     execute("SET lock_timeout TO '5s'")
 
     execute("""

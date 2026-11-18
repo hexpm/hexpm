@@ -64,8 +64,6 @@ defmodule HexpmWeb.LoginController do
     |> redirect(to: ~p"/")
   end
 
-  # The cookie's own session is the moderator's while they are logged in as
-  # another user, and the user's session is left out of their audit log.
   defp revoke_impersonation_session(%{assigns: %{impersonator: %User{}}} = conn) do
     UserSessions.revoke(conn.assigns.current_session)
   end

@@ -734,10 +734,8 @@ defmodule Hexpm.AdminTasks do
   end
 
   @doc """
-  Starts a read-only browser session as the user for the moderator, which
-  expires after an hour, see `HexpmWeb.Plugs.Impersonation`. Returns the
-  session token. The user isn't told: nothing goes to their audit log or their
-  sessions page.
+  Starts a one hour, read-only browser session as the user for the moderator
+  and returns its token.
 
   ## Examples
 

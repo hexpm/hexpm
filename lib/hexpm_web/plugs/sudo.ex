@@ -12,9 +12,6 @@ defmodule HexpmWeb.Plugs.Sudo do
   sudo or a valid form token, so form submissions work even if sudo expires
   between page load and form submit.
 
-  A moderator logged in as another user, see `HexpmWeb.Plugs.Impersonation`,
-  opens the pages for GET without sudo and can't submit them.
-
   Pass `force: true` to require a fresh authentication (`:hexpm, :sudo_force_timeout`)
   regardless of the rolling sudo window — used for destructive pages like account
   deletion. The signed form token still covers non-GET submissions.
@@ -44,8 +41,7 @@ defmodule HexpmWeb.Plugs.Sudo do
       disabled?() ->
         conn
 
-      # The sudo timestamp in the cookie is the moderator's, so it never
-      # authorizes a write as the user.
+      # The sudo timestamp is the moderator's.
       Map.get(conn.assigns, :impersonator) ->
         if conn.method in ~w(GET HEAD),
           do: conn,

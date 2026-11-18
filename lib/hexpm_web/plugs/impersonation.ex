@@ -1,20 +1,6 @@
 defmodule HexpmWeb.Plugs.Impersonation do
   @moduledoc """
-  A moderator logged in as another user.
-
-  The moderator's own browser session stays in `"session_token"` and the
-  user's session goes in `"impersonation_token"`. The `login/2` plug and
-  `HexpmWeb.Live.InitAssigns` resolve the user's session only alongside a
-  session of the moderator who started it, while that account still has the
-  mod role, so ending the moderator's session or role ends the impersonation.
-  The session expires after an hour, after which requests are the moderator's
-  again.
-
-  The plug refuses every request that would change something: any method other
-  than GET and HEAD, the GET routes that write or finish a login, and the
-  recovery codes page. Ending the impersonation and logging out are allowed.
-  `HexpmWeb.Plugs.Sudo` lets GET requests through without asking for the user's
-  password.
+  Refuses writes while a moderator is logged in as another user.
   """
 
   alias Hexpm.Accounts.{User, Users}
@@ -29,8 +15,7 @@ defmodule HexpmWeb.Plugs.Impersonation do
   def session_key(), do: @session_key
 
   @doc """
-  The user and their impersonation session from a Plug or LiveView session
-  map, when `impersonator` started it.
+  Returns the user and the impersonation session that `impersonator` started.
   """
   def resolve(session, %User{} = impersonator) do
     with true <- User.has_role?(impersonator, "mod"),

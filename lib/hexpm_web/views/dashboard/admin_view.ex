@@ -316,10 +316,6 @@ defmodule HexpmWeb.Dashboard.AdminView do
 
   def lookup_title(:organization, lookup), do: "Organization #{lookup.organization.name}"
 
-  @doc """
-  Whether the moderator can log in as the user, see
-  `Hexpm.AdminTasks.impersonate_user/3`.
-  """
   def impersonatable?(user, moderator) do
     not User.organization?(user) and is_nil(user.deactivated_at) and user.id != moderator.id
   end

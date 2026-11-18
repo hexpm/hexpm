@@ -23,13 +23,6 @@ defmodule Hexpm.UserSessions do
   All sessions expire after 30 days of creation (non-sliding window). Expired
   rows are deleted by `Hexpm.PurgeExpiredRecords`.
 
-  ## Impersonation
-
-  A moderator logged in as a user gets a browser session of that user's with
-  `impersonator_id` set, see `HexpmWeb.Plugs.Impersonation`. It expires after an
-  hour, is left out of `all_for_user/1` and the session limit, and only
-  `get_impersonation_session/2` finds it by its token.
-
   ## Last Use Tracking
 
   Browser sessions track last use via the login plug (throttled to once per 5 minutes).
@@ -101,8 +94,7 @@ defmodule Hexpm.UserSessions do
   end
 
   @doc """
-  Creates the browser session a moderator uses to log in as the user. It writes
-  nothing to the user's audit log and doesn't count toward their session limit.
+  Creates a one hour browser session as the user for the moderator.
   """
   def create_impersonation_session(user, impersonator) do
     session_token = :crypto.strong_rand_bytes(32)
@@ -282,8 +274,7 @@ defmodule Hexpm.UserSessions do
   end
 
   @doc """
-  Gets the active impersonation session with the token that the moderator
-  started.
+  Gets the active impersonation session the moderator started.
   """
   def get_impersonation_session(token, impersonator) do
     now = DateTime.utc_now()

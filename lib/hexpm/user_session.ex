@@ -26,8 +26,6 @@ defmodule Hexpm.UserSession do
 
     belongs_to :user, User
     belongs_to :organization, Organization
-
-    # The moderator logged in as the user, see `HexpmWeb.Plugs.Impersonation`.
     belongs_to :impersonator, User
     has_many :tokens, Token, foreign_key: :user_session_id
 
