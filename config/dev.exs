@@ -45,8 +45,6 @@ config :hexpm,
   readme_host: "readme.localhost",
   readme_url: "http://readme.localhost:4000",
   billing_url: "http://localhost:4001",
-  dashboard_user: "hex_user",
-  dashboard_password: "hex_password",
   geo_local_lookups: %{
     "127.0.0.1" => %{iso_code: "US", name: "United States"},
     "::1" => %{iso_code: "US", name: "United States"},

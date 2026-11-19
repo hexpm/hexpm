@@ -16,9 +16,14 @@ defmodule HexpmWeb.Plugs.Sudo do
   regardless of the rolling sudo window — used for destructive pages like account
   deletion. The signed form token still covers non-GET submissions.
 
+  Pass `confirmed: true` to require a verification made on the sudo page since
+  login, within `:hexpm, :sudo_timeout`. The sudo granted on login doesn't
+  count — used for the admin dashboard.
+
   Usage in controllers:
       plug HexpmWeb.Plugs.Sudo
       plug HexpmWeb.Plugs.Sudo, force: true
+      plug HexpmWeb.Plugs.Sudo, confirmed: true
   """
 
   use HexpmWeb, :verified_routes
@@ -35,7 +40,7 @@ defmodule HexpmWeb.Plugs.Sudo do
 
   @impl Plug
   def call(conn, opts) do
-    force? = Keyword.get(opts, :force, false)
+    mode = mode(opts)
 
     cond do
       disabled?() ->
@@ -47,7 +52,7 @@ defmodule HexpmWeb.Plugs.Sudo do
           do: conn,
           else: HexpmWeb.Plugs.Impersonation.refuse(conn)
 
-      sudo_satisfied?(conn, force?) ->
+      sudo_satisfied?(conn, mode) ->
         conn
 
       conn.method != "GET" and valid_form_token?(conn) ->
@@ -62,15 +67,25 @@ defmodule HexpmWeb.Plugs.Sudo do
           end
 
         conn
-        |> put_force_flag(force?)
+        |> put_force_flag(mode != :active)
         |> redirect_to_sudo(return_to)
         |> halt()
     end
   end
 
-  @spec sudo_satisfied?(Plug.Conn.t(), boolean()) :: boolean()
-  defp sudo_satisfied?(conn, false), do: sudo_active?(conn)
-  defp sudo_satisfied?(conn, true), do: sudo_fresh?(conn)
+  @spec mode(keyword()) :: :active | :fresh | :confirmed
+  defp mode(opts) do
+    cond do
+      Keyword.get(opts, :force, false) -> :fresh
+      Keyword.get(opts, :confirmed, false) -> :confirmed
+      true -> :active
+    end
+  end
+
+  @spec sudo_satisfied?(Plug.Conn.t(), :active | :fresh | :confirmed) :: boolean()
+  defp sudo_satisfied?(conn, :active), do: sudo_active?(conn)
+  defp sudo_satisfied?(conn, :fresh), do: sudo_fresh?(conn)
+  defp sudo_satisfied?(conn, :confirmed), do: sudo_confirmed?(conn)
 
   @spec put_force_flag(Plug.Conn.t(), boolean()) :: Plug.Conn.t()
   defp put_force_flag(conn, true), do: put_session(conn, "sudo_force", true)
@@ -127,9 +142,14 @@ defmodule HexpmWeb.Plugs.Sudo do
     authenticated_within?(conn, sudo_force_timeout())
   end
 
-  @spec authenticated_within?(Plug.Conn.t(), Duration.t()) :: boolean()
-  defp authenticated_within?(conn, duration) do
-    case get_session(conn, "sudo_authenticated_at") do
+  @spec sudo_confirmed?(Plug.Conn.t()) :: boolean()
+  def sudo_confirmed?(conn) do
+    authenticated_within?(conn, sudo_timeout(), "sudo_confirmed_at")
+  end
+
+  @spec authenticated_within?(Plug.Conn.t(), Duration.t(), String.t()) :: boolean()
+  defp authenticated_within?(conn, duration, key \\ "sudo_authenticated_at") do
+    case get_session(conn, key) do
       nil ->
         false
 
@@ -171,12 +191,23 @@ defmodule HexpmWeb.Plugs.Sudo do
 
   @spec set_sudo_authenticated(Plug.Conn.t()) :: Plug.Conn.t()
   def set_sudo_authenticated(conn) do
-    put_session(
-      conn,
-      "sudo_authenticated_at",
-      NaiveDateTime.utc_now() |> NaiveDateTime.to_iso8601()
-    )
+    conn
+    |> put_session("sudo_authenticated_at", now())
+    |> delete_session("sudo_confirmed_at")
   end
+
+  @doc """
+  Records a verification made on the sudo page, which also satisfies
+  `confirmed: true`.
+  """
+  @spec set_sudo_confirmed(Plug.Conn.t()) :: Plug.Conn.t()
+  def set_sudo_confirmed(conn) do
+    conn
+    |> put_session("sudo_authenticated_at", now())
+    |> put_session("sudo_confirmed_at", now())
+  end
+
+  defp now(), do: NaiveDateTime.utc_now() |> NaiveDateTime.to_iso8601()
 
   @doc """
   Generates a signed sudo form token for the given method and action.

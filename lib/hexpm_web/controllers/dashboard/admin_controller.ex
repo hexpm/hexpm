@@ -9,7 +9,7 @@ defmodule HexpmWeb.Dashboard.AdminController do
 
   plug :requires_login
   plug :requires_mod
-  plug HexpmWeb.Plugs.Sudo
+  plug HexpmWeb.Plugs.Sudo, confirmed: true
 
   @per_page 50
 
@@ -37,8 +37,13 @@ defmodule HexpmWeb.Dashboard.AdminController do
         not_found(conn)
 
       task ->
+        prefilled = for %{kind: :text, name: name, type: "text"} <- task.fields, do: name
+
         prefill =
-          for {key, value} when is_binary(value) <- args(params), into: %{}, do: {key, value}
+          for {key, value} when is_binary(value) <- args(params),
+              key in prefilled,
+              into: %{},
+              do: {key, value}
 
         render(conn, "show.html",
           title: "Admin - #{task.title}",
@@ -317,16 +322,6 @@ defmodule HexpmWeb.Dashboard.AdminController do
   defp preview("rename_organization", args) do
     with {:ok, lookup} <- AdminTasks.lookup_organization(arg(args, "old_name")) do
       {:ok, %{kind: :organization, lookup: lookup, name: arg(args, "new_name")}}
-    end
-  end
-
-  defp requires_mod(conn, _opts) do
-    if User.has_role?(conn.assigns.current_user, "mod") do
-      conn
-    else
-      conn
-      |> not_found()
-      |> halt()
     end
   end
 

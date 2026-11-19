@@ -372,7 +372,7 @@ defmodule HexpmWeb.AuthController do
 
     if has_matching_provider do
       conn
-      |> HexpmWeb.Plugs.Sudo.set_sudo_authenticated()
+      |> HexpmWeb.Plugs.Sudo.set_sudo_confirmed()
       |> delete_session("sudo_return_to")
       |> delete_session("sudo_force")
       |> redirect(to: return_to)

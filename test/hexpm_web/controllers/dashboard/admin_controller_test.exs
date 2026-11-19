@@ -31,6 +31,22 @@ defmodule HexpmWeb.Dashboard.AdminControllerTest do
 
   defp audit_log!(action), do: Repo.get_by!(AdminAuditLog, action: action)
 
+  describe "live dashboard" do
+    test "requires login" do
+      conn = get(build_conn(), "/db/home")
+      assert redirected_to(conn) == "/login?return=%2Fdb%2Fhome"
+    end
+
+    test "is not found for a user without the mod role" do
+      conn = build_conn() |> test_login(insert(:user)) |> get("/db/home")
+      assert response(conn, 404)
+    end
+
+    test "opens for a moderator", c do
+      assert c |> get_page("/db/home") |> response(200)
+    end
+  end
+
   describe "access" do
     test "requires login" do
       conn = get(build_conn(), "/dashboard/admin")
@@ -99,6 +115,24 @@ defmodule HexpmWeb.Dashboard.AdminControllerTest do
 
       assert redirected_to(conn) == "/sudo"
       assert Repo.get!(Report, report.id).triage_status == :open
+    end
+
+    test "asks a moderator who only has the sudo granted on login", c do
+      conn =
+        build_conn()
+        |> test_login(c.moderator, sudo_confirmed: false)
+        |> get("/dashboard/admin")
+
+      assert redirected_to(conn) == "/sudo"
+      assert get_session(conn, "sudo_force")
+
+      conn =
+        build_conn()
+        |> test_login(c.moderator, sudo_confirmed: false)
+        |> post("/dashboard/admin/tasks/block_email_domain", %{"args" => %{"domain" => "x.com"}})
+
+      assert redirected_to(conn) == "/sudo"
+      refute Repo.exists?(BlockedEmailDomain)
     end
 
     test "accepts the normal sudo window on every admin page", c do
@@ -256,6 +290,18 @@ defmodule HexpmWeb.Dashboard.AdminControllerTest do
         build_conn() |> test_login(c.moderator) |> get("/dashboard/admin/tasks/change_password")
 
       assert response(conn, 200) =~ ~s(autocomplete="new-password")
+    end
+
+    test "fills the text fields from the query and never the password", c do
+      html =
+        c
+        |> get_page(
+          "/dashboard/admin/tasks/change_password?args[user]=bob&args[password]=hunter22"
+        )
+        |> response(200)
+
+      assert html =~ ~s(value="bob")
+      refute html =~ "hunter22"
     end
 
     test "lists the blocked domains on the email domain tasks", c do

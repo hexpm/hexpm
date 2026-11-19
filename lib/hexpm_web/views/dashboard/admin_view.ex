@@ -61,7 +61,10 @@ defmodule HexpmWeb.Dashboard.AdminView do
               text_field("password", "New password", type: "password")
             ]
           ),
-          task("rename_user", "Rename user", "Refused when the new name is reserved.",
+          task(
+            "rename_user",
+            "Rename user",
+            "Reserves the old name. Refused when the new name is reserved.",
             fields: [
               text_field("old_name", "Current username"),
               text_field("new_name", "New username")

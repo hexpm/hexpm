@@ -178,7 +178,7 @@ defmodule HexpmWeb.SudoController do
     return_to = get_session(conn, "sudo_return_to") || ~p"/dashboard/security"
 
     conn
-    |> Sudo.set_sudo_authenticated()
+    |> Sudo.set_sudo_confirmed()
     |> delete_session("sudo_return_to")
     |> delete_session("sudo_force")
     |> redirect(to: return_to)
