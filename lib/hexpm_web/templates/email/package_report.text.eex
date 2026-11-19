@@ -1,10 +1,13 @@
-Package report
+<%= if @copy do %>A copy of the report you sent to the Hex administrators at support@hex.pm. Reply to this email to add to it.
+
+<% end %>Package report
 
 Package: <%= @package %>
 Package URL: <%= @package_url %>
 Reason: <%= @reason %>
 Reporter: <%= @reporter.name %> (@<%= @reporter.username %>), <%= @reporter.email %>
-
+<%= if @admin_url do %>Triage: <%= @admin_url %>
+<% end %>
 <%= @summary %>
 
 <%= @description %>

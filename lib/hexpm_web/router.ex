@@ -617,6 +617,9 @@ defmodule HexpmWeb.Router do
 
     get "/admin", AdminController, :index
     get "/admin/audit-log", AdminController, :audit_log
+    get "/admin/reports", AdminController, :reports
+    get "/admin/reports/:id", AdminController, :report
+    post "/admin/reports/:id", AdminController, :triage_report
     get "/admin/lookup", AdminController, :lookup
     get "/admin/users/:name", AdminController, :user
     get "/admin/packages/:repository/:name", AdminController, :package

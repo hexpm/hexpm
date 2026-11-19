@@ -6,6 +6,7 @@ defmodule Hexpm.AdminTasksTest do
   alias Hexpm.AdminTasks
   alias Hexpm.Accounts.{Organization, Organizations, OrganizationUser, User}
   alias Hexpm.Emails.{OutboxEntry, OutboxWorker}
+  alias Hexpm.PackageReports.Report
   alias Hexpm.Repository.{Package, PackageOwner, Release}
 
   describe "change_password/3" do
@@ -1077,6 +1078,107 @@ defmodule Hexpm.AdminTasksTest do
 
       assert AdminTasks.target_audit_logs(:organization, "acme")
              |> Enum.map(& &1.action) == ["rename_organization", "delete_organization_data"]
+    end
+  end
+
+  describe "package_reports/3" do
+    test "lists the reports in each filter, newest first" do
+      open = insert(:package_report, inserted_at: ~U[2026-11-01 12:00:00.000000Z])
+      in_progress = insert(:package_report, triage_status: :in_progress)
+      resolved = insert(:package_report, triage_status: :resolved)
+      dismissed = insert(:package_report, triage_status: :dismissed)
+
+      vulnerability = insert(:vulnerability_report)
+
+      ids = fn filter -> Enum.map(AdminTasks.package_reports(filter, 1, 50), & &1.id) end
+
+      assert ids.(:active) == [in_progress.id, open.id]
+      assert ids.(:resolved) == [resolved.id]
+      assert ids.(:dismissed) == [dismissed.id]
+      assert ids.(:vulnerability) == [vulnerability.id]
+      assert AdminTasks.count_package_reports(:active) == 2
+      assert AdminTasks.count_package_reports(:vulnerability) == 1
+    end
+
+    test "pages the reports" do
+      insert_list(3, :package_report)
+
+      assert length(AdminTasks.package_reports(:active, 1, 2)) == 2
+      assert length(AdminTasks.package_reports(:active, 2, 2)) == 1
+    end
+  end
+
+  describe "lookup_package_report/1" do
+    test "looks up a report with its package and reporter" do
+      report = insert(:package_report)
+
+      assert {:ok, found} = AdminTasks.lookup_package_report(report.id)
+      assert found.package.repository.name == "hexpm"
+      assert [_email] = found.reporter.emails
+    end
+
+    test "fails for an unknown report" do
+      assert AdminTasks.lookup_package_report(0) == {:error, :report_not_found}
+    end
+  end
+
+  describe "triage_package_report/3" do
+    test "sets the status and records the note" do
+      report = insert(:package_report)
+
+      assert {:ok, %Report{triage_status: :resolved}} =
+               AdminTasks.triage_package_report(report.id, :resolved, note: "Removed it")
+
+      assert Repo.get!(Report, report.id).triage_status == :resolved
+
+      assert [log] = AdminTasks.target_audit_logs(:package_report, report.id)
+      assert log.status == "ok"
+
+      assert log.params == %{
+               "report" => report.id,
+               "status" => "resolved",
+               "note" => "Removed it"
+             }
+    end
+
+    test "takes the status as a string" do
+      report = insert(:package_report)
+
+      assert {:ok, _report} = AdminTasks.triage_package_report(report.id, "in_progress")
+      assert Repo.get!(Report, report.id).triage_status == :in_progress
+    end
+
+    test "refuses an unknown status" do
+      report = insert(:package_report)
+
+      assert AdminTasks.triage_package_report(report.id, "closed") == {:error, :invalid_status}
+      assert AdminTasks.triage_package_report(report.id, "") == {:error, :invalid_status}
+      assert AdminTasks.triage_package_report(report.id, :closed) == {:error, :invalid_status}
+      assert Repo.get!(Report, report.id).triage_status == :open
+    end
+
+    test "refuses a vulnerability report" do
+      report = insert(:vulnerability_report)
+
+      assert AdminTasks.triage_package_report(report.id, :resolved) ==
+               {:error, :vulnerability_report}
+
+      assert Repo.get!(Report, report.id).triage_status == nil
+    end
+
+    test "fails for an unknown report" do
+      assert AdminTasks.triage_package_report(0, :resolved) == {:error, :report_not_found}
+    end
+
+    test "lists only the report's own history" do
+      report = insert(:package_report)
+      other = insert(:package_report)
+      AdminTasks.triage_package_report(report.id, :in_progress)
+      AdminTasks.triage_package_report(other.id, :dismissed)
+      AdminTasks.triage_package_report(report.id, :resolved)
+
+      assert AdminTasks.target_audit_logs(:package_report, report.id)
+             |> Enum.map(& &1.params["status"]) == ["resolved", "in_progress"]
     end
   end
 

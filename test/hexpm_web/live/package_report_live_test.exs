@@ -160,14 +160,14 @@ defmodule HexpmWeb.PackageReportLiveTest do
 
     assert has_element?(view, "#package-report-success", "support@hex.pm")
 
-    entry = Repo.one!(OutboxEntry)
-    assert entry.email["to"] == [%{"name" => "", "address" => "support@hex.pm"}]
-
-    assert entry.email["cc"] == [
-             %{
-               "name" => "Report Person",
-               "address" => Hexpm.Accounts.User.email(context.reporter, :primary)
-             }
+    assert Repo.all(from(e in OutboxEntry, order_by: e.id, select: e.email["to"])) == [
+             [%{"name" => "", "address" => "support@hex.pm"}],
+             [
+               %{
+                 "name" => "Report Person",
+                 "address" => Hexpm.Accounts.User.email(context.reporter, :primary)
+               }
+             ]
            ]
   end
 

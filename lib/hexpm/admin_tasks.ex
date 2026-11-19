@@ -104,6 +104,7 @@ defmodule Hexpm.AdminTasks do
   alias Hexpm.AdminTasks.Reasons
   alias Hexpm.Emails.{Outbox, OutboxEntry, OutboxLock}
   alias Hexpm.Hexdocs
+  alias Hexpm.PackageReports.Report
 
   @announcement_category "admin.announcement"
   # Announcements queue behind transactional mail: package reports, secret-scan
@@ -147,6 +148,7 @@ defmodule Hexpm.AdminTasks do
   @spec target_audit_logs(:user, [String.t()]) :: [AdminAuditLog.t()]
   @spec target_audit_logs(:package, {String.t(), String.t()}) :: [AdminAuditLog.t()]
   @spec target_audit_logs(:organization, String.t()) :: [AdminAuditLog.t()]
+  @spec target_audit_logs(:package_report, pos_integer()) :: [AdminAuditLog.t()]
   def target_audit_logs(kind, target) do
     from(l in AdminAuditLog.newest_first(), where: ^target_filter(kind, target), limit: 20)
     |> Repo.all()
@@ -183,6 +185,14 @@ defmodule Hexpm.AdminTasks do
         (l.action == "rename_organization" and
            (fragment("?->>'old_name'", l.params) == ^name or
               fragment("?->>'new_name'", l.params) == ^name))
+    )
+  end
+
+  defp target_filter(:package_report, id) do
+    dynamic(
+      [l],
+      l.action == "triage_package_report" and
+        fragment("?->>'report'", l.params) == ^to_string(id)
     )
   end
 
@@ -333,6 +343,105 @@ defmodule Hexpm.AdminTasks do
       )
 
       :unknown
+  end
+
+  @doc """
+  Package reports, newest first, with their package and reporter.
+
+  `:active` lists the open and in progress reports, `:resolved` and
+  `:dismissed` the closed ones, and `:vulnerability` the reports sent to the
+  CNA, which have no triage status. Records nothing.
+
+      iex> AdminTasks.package_reports(:active, 1, 50)
+      [%Hexpm.PackageReports.Report{triage_status: :open, ...}]
+  """
+  @spec package_reports(atom(), pos_integer(), pos_integer()) :: [Report.t()]
+  def package_reports(filter, page, per_page) do
+    from(r in package_reports_query(filter),
+      order_by: [desc: r.inserted_at, desc: r.id],
+      preload: [:reporter, package: :repository]
+    )
+    |> Hexpm.Utils.paginate(page, per_page)
+    |> Repo.all()
+  end
+
+  @spec count_package_reports(atom()) :: non_neg_integer()
+  def count_package_reports(filter) do
+    filter
+    |> package_reports_query()
+    |> Repo.aggregate(:count)
+  end
+
+  defp package_reports_query(:active) do
+    from(r in Report, where: r.triage_status in ^[:open, :in_progress])
+  end
+
+  defp package_reports_query(:vulnerability) do
+    from(r in Report, where: r.reason == ^:vulnerability)
+  end
+
+  defp package_reports_query(status) when status in [:resolved, :dismissed] do
+    from(r in Report, where: r.triage_status == ^status)
+  end
+
+  @doc """
+  Looks up a package report with its package and its reporter's emails.
+  Records nothing.
+
+      iex> AdminTasks.lookup_package_report(42)
+      {:ok, %Hexpm.PackageReports.Report{reason: :spam, triage_status: :open, ...}}
+  """
+  @spec lookup_package_report(pos_integer()) :: {:ok, Report.t()} | {:error, :report_not_found}
+  def lookup_package_report(id) do
+    case Repo.get(Report, id) do
+      nil -> {:error, :report_not_found}
+      report -> {:ok, Repo.preload(report, reporter: :emails, package: :repository)}
+    end
+  end
+
+  @doc """
+  Sets the triage status of a package report to `:open`, `:in_progress`,
+  `:resolved` or `:dismissed`. The `:note` option is recorded with it in the
+  audit log, which is the report's history, and giving a report its current
+  status records the note alone. Vulnerability reports are refused, since the
+  CNA triages them.
+
+      iex> AdminTasks.triage_package_report(42, :resolved, note: "Removed the package")
+      {:ok, %Hexpm.PackageReports.Report{triage_status: :resolved, ...}}
+  """
+  @spec triage_package_report(pos_integer(), atom() | String.t(), keyword()) ::
+          {:ok, Report.t()}
+          | {:error, :report_not_found | :vulnerability_report | :invalid_status}
+  def triage_package_report(id, status, opts \\ []) do
+    params = %{report: id, status: status, note: Keyword.get(opts, :note)}
+
+    audited(:triage_package_report, params, opts, fn ->
+      case Repo.get(Report, id) do
+        nil ->
+          {:error, :report_not_found}
+
+        %Report{reason: :vulnerability} ->
+          {:error, :vulnerability_report}
+
+        report ->
+          case triage_status(status) do
+            nil ->
+              {:error, :invalid_status}
+
+            status ->
+              report
+              |> Ecto.Changeset.change(triage_status: status)
+              |> Repo.update(log: false)
+          end
+      end
+    end)
+  end
+
+  # Matched against the known statuses so a form value never becomes an atom.
+  defp triage_status(status) do
+    Enum.find_value(Ecto.Enum.mappings(Report, :triage_status), fn {atom, string} ->
+      status in [atom, string] && atom
+    end)
   end
 
   # The entry is written before the task and outside any transaction it opens,

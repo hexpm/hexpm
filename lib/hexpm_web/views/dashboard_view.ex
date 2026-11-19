@@ -79,6 +79,7 @@ defmodule HexpmWeb.DashboardView do
   defp admin_pages() do
     [
       tasks: {"Tasks", ~p"/dashboard/admin", "wrench-screwdriver"},
+      reports: {"Package reports", ~p"/dashboard/admin/reports", "flag"},
       audit_log: {"Audit log", ~p"/dashboard/admin/audit-log", "clipboard-document-list"}
     ]
   end
@@ -92,6 +93,7 @@ defmodule HexpmWeb.DashboardView do
        when kind in ~w(users packages organizations),
        do: :tasks
 
+  defp admin_page(["dashboard", "admin", "reports" | _id]), do: :reports
   defp admin_page(["dashboard", "admin", "audit-log"]), do: :audit_log
   defp admin_page(_path), do: nil
 

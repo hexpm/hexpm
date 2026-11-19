@@ -112,6 +112,30 @@ defmodule Hexpm.Factory do
     %Hexpm.Repository.PackageOwner{level: "full"}
   end
 
+  def package_report_factory() do
+    %Hexpm.PackageReports.Report{
+      reason: :spam,
+      summary: "Generated package",
+      description: "The package contains generated advertisements.",
+      status: :submitted,
+      triage_status: :open,
+      package: build(:package),
+      reporter: build(:user)
+    }
+  end
+
+  def vulnerability_report_factory() do
+    struct!(
+      package_report_factory(),
+      reason: :vulnerability,
+      summary: nil,
+      description: nil,
+      triage_status: nil,
+      external_id: "report-id",
+      external_url: "https://cna.erlef.org/reports/report-id"
+    )
+  end
+
   def organization_user_factory() do
     %Hexpm.Accounts.OrganizationUser{
       role: "read"

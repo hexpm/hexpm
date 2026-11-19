@@ -1,0 +1,73 @@
+<div class="bg-grey-50 dark:bg-grey-950 min-h-screen py-4 sm:py-8">
+  <div class="max-w-7xl mx-auto px-4">
+    <div class="flex flex-col gap-4 sm:gap-8 lg:flex-row">
+      <%!-- Left Sidebar --%>
+      <div class="w-full lg:w-64 flex-shrink-0">
+        {render(HexpmWeb.DashboardView, "_sidebar.html", assigns)}
+      </div>
+
+      <%!-- Right Content --%>
+      <div class="flex-1 min-w-0 flex flex-col gap-6">
+        <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-4 sm:p-8">
+          <a
+            href={~p"/dashboard/admin/reports"}
+            class="inline-flex items-center gap-2 text-grey-600 dark:text-grey-300 text-sm mb-4 hover:text-grey-900 dark:hover:text-white"
+          >
+            {icon(:heroicon, "arrow-left", class: "w-4 h-4")} Package reports
+          </a>
+          <h2 class="text-grey-900 dark:text-white text-xl font-semibold mb-6">
+            Package report {@report.id}
+          </h2>
+          <.report_summary report={@report} />
+        </div>
+
+        <section
+          :if={@report.reason != :vulnerability}
+          id="triage"
+          class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-4 sm:p-8"
+        >
+          <h3 class="text-grey-900 dark:text-white text-lg font-semibold mb-4">Triage</h3>
+          <.sudo_form
+            current_user={@current_user}
+            action={~p"/dashboard/admin/reports/#{@report.id}"}
+            id="triage-form"
+          >
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <.select_input
+                id="triage-status"
+                name="args[status]"
+                label="Status"
+                options={triage_status_options()}
+                value={@report.triage_status}
+              />
+              <div class="md:col-span-2">
+                <.textarea_input
+                  id="triage-note"
+                  name="args[note]"
+                  label="Note"
+                  placeholder="What was done, or why nothing was. Only moderators see it."
+                  rows="3"
+                />
+              </div>
+            </div>
+            <div class="mt-6">
+              <.button type="submit" variant="primary">Update report</.button>
+            </div>
+          </.sudo_form>
+        </section>
+
+        <section
+          :if={@report.reason != :vulnerability}
+          id="audit-log"
+          class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-4 sm:p-8"
+        >
+          <h3 class="text-grey-900 dark:text-white text-lg font-semibold mb-4">History</h3>
+          <p :if={@audit_logs == []} class="text-grey-600 dark:text-grey-300 text-sm">
+            Nobody has triaged the report.
+          </p>
+          <.audit_table :if={@audit_logs != []} audit_logs={@audit_logs} />
+        </section>
+      </div>
+    </div>
+  </div>
+</div>

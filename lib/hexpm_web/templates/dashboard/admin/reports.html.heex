@@ -1,0 +1,58 @@
+<div class="bg-grey-50 dark:bg-grey-950 min-h-screen py-4 sm:py-8">
+  <div class="max-w-7xl mx-auto px-4">
+    <div class="flex flex-col gap-4 sm:gap-8 lg:flex-row">
+      <%!-- Left Sidebar --%>
+      <div class="w-full lg:w-64 flex-shrink-0">
+        {render(HexpmWeb.DashboardView, "_sidebar.html", assigns)}
+      </div>
+
+      <%!-- Right Content --%>
+      <div class="flex-1 min-w-0">
+        <div class="bg-white dark:bg-grey-800 border border-grey-200 dark:border-grey-700 rounded-lg p-4 sm:p-8">
+          <h2 class="text-grey-900 dark:text-white text-xl font-semibold mb-2">
+            Package reports
+          </h2>
+          <p class="text-grey-600 dark:text-grey-300 text-sm mb-6">
+            Reports are also emailed to support@hex.pm. Vulnerability reports go to the EEF CNA instead, which triages them.
+          </p>
+
+          <nav id="report-filters" class="flex flex-wrap gap-2 mb-6">
+            <a
+              :for={{id, label} <- report_filters()}
+              href={~p"/dashboard/admin/reports?#{[status: id]}"}
+              class={[
+                "px-3 py-1.5 rounded-lg text-sm",
+                if(id == @filter,
+                  do:
+                    "bg-purple-50 dark:bg-primary-900/40 text-purple-600 dark:text-primary-200 font-medium",
+                  else:
+                    "text-grey-600 dark:text-grey-300 hover:text-grey-900 dark:hover:text-white"
+                )
+              ]}
+            >
+              {label}
+            </a>
+          </nav>
+
+          <p :if={@reports == []} class="text-grey-600 dark:text-grey-300 text-sm">
+            No reports.
+          </p>
+
+          <.report_table :if={@reports != []} reports={@reports} />
+
+          <%= if @reports != [] do %>
+            {render(HexpmWeb.SharedView, "_pagination.html",
+              items: @reports,
+              page: @page,
+              total_count: @total_count,
+              per_page: @per_page,
+              unit: "report",
+              units: "reports",
+              path_fn: @path_fn
+            )}
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

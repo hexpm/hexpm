@@ -15,8 +15,14 @@ defmodule Hexpm.PackageReports do
 
     with {:ok, report} <- Ecto.Changeset.apply_action(changeset, :insert),
          reporter when not is_nil(reporter) <- Maintainers.identity(user) do
-      report = insert_report(report, package, user)
-      deliver(report, package, user, reporter)
+      saved = insert_report(report, package, user)
+
+      deliver(
+        %{saved | summary: report.summary, description: report.description},
+        package,
+        user,
+        reporter
+      )
     else
       {:error, changeset} -> {:error, changeset}
       nil -> {:error, :unverified_primary_email}
@@ -54,23 +60,25 @@ defmodule Hexpm.PackageReports do
   end
 
   defp deliver(report, package, _user, reporter) do
-    email =
-      Emails.package_report(
-        package_identifier(package),
-        package_url(package),
-        report,
-        reporter
-      )
+    identifier = package_identifier(package)
+    url = package_url(package)
+    admin_url = HexpmWeb.EmailView.email_url("/dashboard/admin/reports/#{report.id}")
 
     outbox_attrs =
-      Outbox.prepare!(email,
-        category: "package.report",
-        group_key: "package-report:#{report.id}",
-        scope_key: "package:#{package.id}"
+      Enum.map(
+        [
+          Emails.package_report(identifier, url, report, reporter, admin_url),
+          Emails.package_report_copy(identifier, url, report, reporter)
+        ],
+        &Outbox.prepare!(&1,
+          category: "package.report",
+          group_key: "package-report:#{report.id}",
+          scope_key: "package:#{package.id}"
+        )
       )
 
     Repo.transaction(fn ->
-      Outbox.insert!(outbox_attrs)
+      Outbox.insert_all!(outbox_attrs)
       update_report(report, status: :submitted)
     end)
 
@@ -118,10 +126,25 @@ defmodule Hexpm.PackageReports do
     end)
   end
 
+  # A vulnerability report's details go only to the CNA, hex.pm keeps that it
+  # was sent and the CNA's link to it.
+  defp insert_report(%Report{reason: :vulnerability} = report, package, user) do
+    report
+    |> Ecto.Changeset.change(
+      summary: nil,
+      description: nil,
+      status: :pending,
+      package_id: package.id,
+      reporter_id: user.id
+    )
+    |> Repo.insert!(log: false)
+  end
+
   defp insert_report(report, package, user) do
     report
     |> Ecto.Changeset.change(
       status: :pending,
+      triage_status: :open,
       package_id: package.id,
       reporter_id: user.id
     )
