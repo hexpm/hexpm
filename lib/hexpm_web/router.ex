@@ -1,6 +1,7 @@
 defmodule HexpmWeb.Router do
   use HexpmWeb, :router
   import Phoenix.LiveDashboard.Router
+  import HexpmWeb.ControllerHelpers, only: [requires_login: 2, requires_mod: 2]
   alias Hexpm.Accounts.{Organization, User}
 
   @accepted_formats ~w(json elixir erlang)
@@ -154,7 +155,8 @@ defmodule HexpmWeb.Router do
   end
 
   pipeline :admin do
-    plug HexpmWeb.Plugs.DashboardAuth
+    plug :requires_login
+    plug :requires_mod
   end
 
   if Mix.env() == :dev do

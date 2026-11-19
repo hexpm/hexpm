@@ -22,8 +22,6 @@ defmodule Hexpm.RuntimeConfigTest do
     "HEXPM_BILLING_TOKEN_PATH" => "/var/run/secrets/billing/token",
     "HEXPM_BILLING_URL" => "https://billing.example.com",
     "HEXPM_HOST" => "hex.example.com",
-    "HEXPM_DASHBOARD_USER" => "dashboard-user",
-    "HEXPM_DASHBOARD_PASSWORD" => "dashboard-password",
     "HEXPM_IMG_URL" => "https://img.example.com",
     "HEXPM_IMG_PROXY_SECRET" => "img-proxy-secret",
     "HEXPM_LOAD_BALANCER_SECRET" => "load-balancer-secret",

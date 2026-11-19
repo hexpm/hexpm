@@ -104,6 +104,16 @@ defmodule Hexpm.Accounts.User do
     |> validate_username_not_reserved()
   end
 
+  def rename(user, username) do
+    change(user, username: username)
+    |> update_change(:username, &String.downcase/1)
+    |> validate_length(:username, min: 3)
+    |> validate_length(:username, count: :bytes, max: 255)
+    |> validate_format(:username, @username_regex)
+    |> validate_exclusion(:username, @reserved_names)
+    |> unique_constraint(:username, name: "users_username_idx")
+  end
+
   def to_organization(user, organization) do
     change(user, %{password: nil, organization_id: organization.id})
   end

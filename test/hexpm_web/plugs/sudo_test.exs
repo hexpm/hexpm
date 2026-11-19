@@ -42,6 +42,59 @@ defmodule HexpmWeb.Plugs.SudoTest do
       assert timestamp
       assert {:ok, _datetime} = NaiveDateTime.from_iso8601(timestamp)
     end
+
+    test "drops an earlier confirmation" do
+      conn =
+        build_conn()
+        |> Plug.Test.init_test_session(%{})
+        |> Sudo.set_sudo_confirmed()
+        |> Sudo.set_sudo_authenticated()
+
+      assert Sudo.sudo_active?(conn)
+      refute Sudo.sudo_confirmed?(conn)
+    end
+  end
+
+  describe "confirmed: true" do
+    test "redirects a session that only has the sudo granted on login and sets the flag" do
+      user = insert(:user)
+
+      conn =
+        build_conn()
+        |> test_login(user, sudo_confirmed: false)
+        |> fetch_flash()
+        |> Sudo.call(confirmed: true)
+
+      assert conn.halted
+      assert redirected_to(conn) == "/sudo"
+      assert get_session(conn, "sudo_force") == true
+    end
+
+    test "passes a session confirmed on the sudo page" do
+      user = insert(:user)
+
+      conn =
+        build_conn()
+        |> test_login(user, sudo: false)
+        |> Sudo.set_sudo_confirmed()
+        |> Sudo.call(confirmed: true)
+
+      refute conn.halted
+    end
+
+    test "redirects once the confirmation is older than the sudo window" do
+      user = insert(:user)
+      expired = NaiveDateTime.add(NaiveDateTime.utc_now(), -3601, :second)
+
+      conn =
+        build_conn()
+        |> test_login(user, sudo_at: expired)
+        |> fetch_flash()
+        |> Sudo.call(confirmed: true)
+
+      assert conn.halted
+      assert redirected_to(conn) == "/sudo"
+    end
   end
 
   describe "call/2" do

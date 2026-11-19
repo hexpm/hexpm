@@ -4,7 +4,7 @@ defmodule HexpmWeb.ControllerHelpers do
   import Plug.Conn
   import Phoenix.Controller
 
-  alias Hexpm.Accounts.{Auth, Organizations}
+  alias Hexpm.Accounts.{Auth, Organizations, User}
   alias Hexpm.UserSessions
   alias Hexpm.Repository.{Packages, Releases, Repositories, Repository}
 
@@ -513,6 +513,16 @@ defmodule HexpmWeb.ControllerHelpers do
 
       conn
       |> redirect(to: ~p"/login?return=#{return_path}")
+      |> halt()
+    end
+  end
+
+  def requires_mod(conn, _opts) do
+    if User.has_role?(conn.assigns.current_user, "mod") do
+      conn
+    else
+      conn
+      |> not_found()
       |> halt()
     end
   end

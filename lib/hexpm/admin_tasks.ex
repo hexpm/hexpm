@@ -522,7 +522,9 @@ defmodule Hexpm.AdminTasks do
   end
 
   @doc """
-  Changes a user's password without requiring the old password.
+  Changes a user's password without requiring the old password. The user's
+  sessions and OAuth tokens are revoked, the change goes in their audit log
+  and they are emailed that the password changed.
 
   ## Arguments
 
@@ -554,12 +556,35 @@ defmodule Hexpm.AdminTasks do
           {:error, :user_not_found}
 
         user ->
-          case Repo.update(User.update_password_no_check(user, %{password: password})) do
-            {:ok, _user} -> :ok
-            {:error, changeset} -> {:error, changeset}
-          end
+          set_password(user, password)
       end
     end)
+  end
+
+  # Recorded in the user's own audit log, with the admin user agent.
+  defp set_password(user, password) do
+    {sessions_query, tokens_query, org_sessions_query} = Hexpm.UserSessions.revoke_all(user)
+
+    multi =
+      Multi.new()
+      |> Multi.update(:user, User.update_password_no_check(user, %{password: password}))
+      |> Multi.update_all(:revoke_tokens, tokens_query, [])
+      |> Multi.update_all(:revoke_sessions, sessions_query, [])
+      |> Multi.update_all(:revoke_org_sessions, org_sessions_query, [])
+      |> audit(%{AuditLogs.admin() | user: user}, "password.update", nil)
+
+    case Repo.transaction(multi) do
+      {:ok, %{user: user}} ->
+        user
+        |> Repo.preload(:emails)
+        |> Emails.password_changed()
+        |> deliver("user #{user.username}")
+
+        :ok
+
+      {:error, :user, changeset, _changes} ->
+        {:error, changeset}
+    end
   end
 
   defp find_user_by(:username, username), do: Repo.get_by(User, username: username)
@@ -696,12 +721,14 @@ defmodule Hexpm.AdminTasks do
   end
 
   @doc """
-  Renames a user.
+  Renames a user and reserves the old name. Organizations are renamed with
+  `rename_organization/3`.
 
   ## Arguments
 
   - `old_name` - The current username
-  - `new_name` - The new username, refused if it is reserved
+  - `new_name` - The new username, refused if it is reserved or not a valid
+    username
 
   ## Examples
 
@@ -711,16 +738,27 @@ defmodule Hexpm.AdminTasks do
       iex> AdminTasks.rename_user("oldname", "deleted_user")
       {:error, :name_reserved}
   """
-  @spec rename_user(String.t(), String.t(), keyword()) :: :ok | {:error, atom()}
+  @spec rename_user(String.t(), String.t(), keyword()) ::
+          :ok | {:error, atom() | Ecto.Changeset.t()}
   def rename_user(old_name, new_name, opts \\ []) do
     audited(:rename_user, %{old_name: old_name, new_name: new_name}, opts, fn ->
       with {:ok, user} <- find_user(old_name),
+           :ok <- check_not_organization(user),
            :ok <- check_name_available(new_name) do
-        user
-        |> Ecto.Changeset.change(username: new_name)
-        |> Repo.update!()
+        Repo.transaction(fn ->
+          case Repo.update(User.rename(user, new_name)) do
+            {:ok, _user} ->
+              Repo.insert!(%ReservedUsername{name: user.username}, on_conflict: :nothing)
+              :ok
 
-        :ok
+            {:error, changeset} ->
+              Repo.rollback(changeset)
+          end
+        end)
+        |> case do
+          {:ok, :ok} -> :ok
+          {:error, changeset} -> {:error, changeset}
+        end
       end
     end)
   end

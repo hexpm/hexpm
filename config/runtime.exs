@@ -92,8 +92,6 @@ if config_env() == :prod do
     billing_token_path: System.fetch_env!("HEXPM_BILLING_TOKEN_PATH"),
     billing_url: System.fetch_env!("HEXPM_BILLING_URL"),
     host: System.fetch_env!("HEXPM_HOST"),
-    dashboard_user: System.fetch_env!("HEXPM_DASHBOARD_USER"),
-    dashboard_password: System.fetch_env!("HEXPM_DASHBOARD_PASSWORD"),
     img_url: System.fetch_env!("HEXPM_IMG_URL"),
     img_proxy_secret: System.fetch_env!("HEXPM_IMG_PROXY_SECRET"),
     load_balancer_secret: System.fetch_env!("HEXPM_LOAD_BALANCER_SECRET"),

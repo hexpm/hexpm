@@ -29,6 +29,34 @@ defmodule Hexpm.AdminTasksTest do
       assert Bcrypt.verify_pass("new_password", updated_user.password)
     end
 
+    test "revokes the user's sessions, records the change and emails the user" do
+      user = insert(:user)
+      session = insert(:session, user_id: user.id)
+
+      assert :ok = AdminTasks.change_password(:username, user.username, "new_password")
+
+      assert Repo.get!(Hexpm.UserSession, session.id).revoked_at
+
+      log = Repo.get_by!(Hexpm.Accounts.AuditLog, user_id: user.id, action: "password.update")
+      assert log.user_agent == "ADMIN"
+
+      assert_email_sent(fn email ->
+        assert email.subject == "Hex.pm - Your password has changed"
+        assert Enum.map(email.to, &elem(&1, 1)) == [User.email(user, :primary)]
+      end)
+    end
+
+    test "keeps the sessions when the password is refused" do
+      user = insert(:user)
+      session = insert(:session, user_id: user.id)
+
+      assert {:error, %Ecto.Changeset{}} =
+               AdminTasks.change_password(:username, user.username, "short12")
+
+      refute Repo.get!(Hexpm.UserSession, session.id).revoked_at
+      refute Repo.get_by(Hexpm.Accounts.AuditLog, user_id: user.id, action: "password.update")
+    end
+
     test "returns error for nonexistent username" do
       assert {:error, :user_not_found} =
                AdminTasks.change_password(:username, "nonexistent", "password")
@@ -456,6 +484,43 @@ defmodule Hexpm.AdminTasksTest do
 
       updated_user = Repo.get!(User, user.id)
       assert updated_user.username == "newname"
+    end
+
+    test "reserves the old name" do
+      insert(:user, username: "oldname")
+
+      assert :ok = AdminTasks.rename_user("oldname", "newname")
+
+      assert Repo.get_by(Hexpm.Accounts.ReservedUsername, name: "oldname")
+    end
+
+    test "refuses a name that isn't a valid username" do
+      user = insert(:user, username: "oldname")
+
+      for name <- ["new name", "new@example.com", "new/name", "ab", "hexpm"] do
+        assert {:error, %Ecto.Changeset{errors: [username: _error]}} =
+                 AdminTasks.rename_user("oldname", name)
+      end
+
+      assert Repo.get!(User, user.id).username == "oldname"
+      refute Repo.get_by(Hexpm.Accounts.ReservedUsername, name: "oldname")
+    end
+
+    test "refuses a name another user has" do
+      insert(:user, username: "oldname")
+      insert(:user, username: "taken")
+
+      assert {:error, %Ecto.Changeset{errors: [username: _error]}} =
+               AdminTasks.rename_user("oldname", "taken")
+    end
+
+    test "refuses an organization" do
+      organization = insert(:organization)
+
+      assert {:error, :organization_user} =
+               AdminTasks.rename_user(organization.name, "newname")
+
+      assert Repo.get!(User, organization.user.id).username == organization.name
     end
 
     test "returns error for nonexistent user" do

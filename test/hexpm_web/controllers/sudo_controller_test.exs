@@ -408,6 +408,19 @@ defmodule HexpmWeb.SudoControllerTest do
       assert redirected_to(conn) == "/dashboard/delete-account"
       refute Plug.Conn.get_session(conn, "sudo_force")
     end
+
+    test "successful re-auth confirms sudo for the admin dashboard" do
+      user = insert(:user)
+
+      conn =
+        build_conn()
+        |> test_login(user, sudo_confirmed: false)
+        |> put_session_values(%{"sudo_force" => true, "sudo_return_to" => "/dashboard/admin"})
+        |> post("/sudo", %{"type" => "password", "password" => "password"})
+
+      assert redirected_to(conn) == "/dashboard/admin"
+      assert HexpmWeb.Plugs.Sudo.sudo_confirmed?(conn)
+    end
   end
 
   describe "redirects to sudo_return_to on success" do
