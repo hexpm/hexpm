@@ -46,6 +46,28 @@ defmodule Hexpm.AdminTasksTest do
       end)
     end
 
+    test "deletes the user's pending account deletion requests" do
+      user = insert(:user)
+
+      Ecto.build_assoc(user, :account_deletion_requests)
+      |> Hexpm.Accounts.AccountDeletionRequest.changeset(user)
+      |> Repo.insert!()
+
+      assert :ok = AdminTasks.change_password(:username, user.username, "new_password")
+
+      refute Repo.exists?(Ecto.assoc(user, :account_deletion_requests))
+    end
+
+    test "refuses an organization" do
+      organization = insert(:organization)
+
+      assert {:error, :organization_user} =
+               AdminTasks.change_password(:username, organization.name, "new_password")
+
+      assert Repo.get!(User, organization.user.id).password == organization.user.password
+      assert_no_email_sent()
+    end
+
     test "keeps the sessions when the password is refused" do
       user = insert(:user)
       session = insert(:session, user_id: user.id)
@@ -503,6 +525,16 @@ defmodule Hexpm.AdminTasksTest do
       end
 
       assert Repo.get!(User, user.id).username == "oldname"
+      refute Repo.get_by(Hexpm.Accounts.ReservedUsername, name: "oldname")
+    end
+
+    test "refuses the name the user already has without reserving it" do
+      insert(:user, username: "oldname")
+
+      for name <- ["oldname", "OLDNAME"] do
+        assert {:error, :same_name} = AdminTasks.rename_user("oldname", name)
+      end
+
       refute Repo.get_by(Hexpm.Accounts.ReservedUsername, name: "oldname")
     end
 

@@ -523,8 +523,9 @@ defmodule Hexpm.AdminTasks do
 
   @doc """
   Changes a user's password without requiring the old password. The user's
-  sessions and OAuth tokens are revoked, the change goes in their audit log
-  and they are emailed that the password changed.
+  sessions and OAuth tokens are revoked, their pending account deletion
+  requests are deleted, the change goes in their audit log and they are
+  emailed that the password changed. Organizations are refused.
 
   ## Arguments
 
@@ -556,7 +557,9 @@ defmodule Hexpm.AdminTasks do
           {:error, :user_not_found}
 
         user ->
-          set_password(user, password)
+          with :ok <- check_not_organization(user) do
+            set_password(user, password)
+          end
       end
     end)
   end
@@ -568,6 +571,7 @@ defmodule Hexpm.AdminTasks do
     multi =
       Multi.new()
       |> Multi.update(:user, User.update_password_no_check(user, %{password: password}))
+      |> Multi.delete_all(:account_deletion_requests, assoc(user, :account_deletion_requests))
       |> Multi.update_all(:revoke_tokens, tokens_query, [])
       |> Multi.update_all(:revoke_sessions, sessions_query, [])
       |> Multi.update_all(:revoke_org_sessions, org_sessions_query, [])
@@ -744,6 +748,7 @@ defmodule Hexpm.AdminTasks do
     audited(:rename_user, %{old_name: old_name, new_name: new_name}, opts, fn ->
       with {:ok, user} <- find_user(old_name),
            :ok <- check_not_organization(user),
+           :ok <- check_name_changes(user, new_name),
            :ok <- check_name_available(new_name) do
         Repo.transaction(fn ->
           case Repo.update(User.rename(user, new_name)) do
@@ -761,6 +766,14 @@ defmodule Hexpm.AdminTasks do
         end
       end
     end)
+  end
+
+  defp check_name_changes(user, new_name) do
+    if String.downcase(new_name) == String.downcase(user.username) do
+      {:error, :same_name}
+    else
+      :ok
+    end
   end
 
   defp check_name_available(name) do
