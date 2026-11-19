@@ -2,7 +2,9 @@ defmodule HexpmWeb.Dashboard.Admin.Components.Lookup do
   @moduledoc """
   What the admin pages show about a user, package or organization, from
   `Hexpm.AdminTasks.lookup_user/1`, `lookup_package/2` and
-  `lookup_organization/1`, and the admin audit log table.
+  `lookup_organization/1`, the package reports from
+  `Hexpm.AdminTasks.package_reports/3` and `lookup_package_report/1`, and the
+  admin audit log table.
   """
   use Phoenix.Component
   use HexpmWeb, :verified_routes
@@ -11,6 +13,7 @@ defmodule HexpmWeb.Dashboard.Admin.Components.Lookup do
   import HexpmWeb.ViewHelpers, only: [pretty_datetime: 1]
 
   alias Hexpm.Accounts.User
+  alias Hexpm.PackageReports.Report
 
   @link "text-primary-600 dark:text-primary-400 hover:underline"
 
@@ -233,6 +236,101 @@ defmodule HexpmWeb.Dashboard.Admin.Components.Lookup do
     """
   end
 
+  attr :reports, :list, required: true
+
+  def report_table(assigns) do
+    assigns = assign(assigns, :link, @link)
+
+    ~H"""
+    <.table>
+      <:header>
+        <th class="px-0 py-3 text-left text-sm font-medium">Report</th>
+        <th class="px-4 py-3 text-left text-sm font-medium">Package</th>
+        <th class="px-4 py-3 text-left text-sm font-medium">Reason</th>
+        <th class="px-4 py-3 text-left text-sm font-medium">Reporter</th>
+        <th class="px-4 py-3 text-left text-sm font-medium">Submitted</th>
+        <th class="px-4 py-3 text-left text-sm font-medium">Status</th>
+      </:header>
+      <:row>
+        <tr :for={report <- @reports} class="align-top">
+          <td class="px-0 py-3 text-sm">
+            <a href={~p"/dashboard/admin/reports/#{report.id}"} class={@link}>
+              {report.summary || "Vulnerability report #{report.id}"}
+            </a>
+          </td>
+          <td class="px-4 py-3 text-sm font-mono">
+            {package_label(report.package.repository.name, report.package.name)}
+          </td>
+          <td class="px-4 py-3 text-sm">{Report.reason_label(report.reason)}</td>
+          <td class="px-4 py-3 text-sm font-mono">{reporter_name(report)}</td>
+          <td class="px-4 py-3 text-sm whitespace-nowrap">{pretty_datetime(report.inserted_at)}</td>
+          <td class="px-4 py-3 text-sm">
+            <div>{report_status(report)}</div>
+            <div
+              :if={report.status == :failed and report.reason != :vulnerability}
+              class="text-red-700 dark:text-red-400 text-xs"
+            >
+              not emailed to support@hex.pm
+            </div>
+          </td>
+        </tr>
+      </:row>
+    </.table>
+    """
+  end
+
+  attr :report, :map, required: true
+
+  def report_summary(assigns) do
+    assigns = assign(assigns, :link, @link)
+
+    ~H"""
+    <.facts>
+      <:fact label="Package">
+        <a
+          href={package_path(@report.package.repository.name, @report.package.name)}
+          class={["font-mono", @link]}
+        >
+          {package_label(@report.package.repository.name, @report.package.name)}
+        </a>
+      </:fact>
+      <:fact label="Reason">{Report.reason_label(@report.reason)}</:fact>
+      <:fact label="Reporter">
+        <a
+          :if={@report.reporter}
+          href={~p"/dashboard/admin/users/#{@report.reporter.username}"}
+          class={["font-mono", @link]}
+        >
+          {@report.reporter.username}
+        </a>
+        <span :if={@report.reporter && User.email(@report.reporter, :primary)}>
+          ({User.email(@report.reporter, :primary)})
+        </span>
+        <span :if={!@report.reporter}>deleted user</span>
+      </:fact>
+      <:fact label="Submitted">{pretty_datetime(@report.inserted_at)}</:fact>
+      <:fact label="Sent to">
+        <span :if={@report.reason != :vulnerability}>{email_delivery(@report.status)}</span>
+        <span :if={@report.reason == :vulnerability}>{cna_delivery(@report.status)}</span>
+        <div :if={@report.external_url}>
+          <.public_link href={@report.external_url} />
+        </div>
+      </:fact>
+      <:fact :if={@report.reason != :vulnerability} label="Status">
+        {report_status(@report)}
+      </:fact>
+    </.facts>
+
+    <.heading :if={@report.summary}>{@report.summary}</.heading>
+    <div
+      :if={@report.description}
+      id="report-description"
+      class="text-sm text-grey-900 dark:text-grey-100 whitespace-pre-wrap break-words"
+      phx-no-format
+    >{@report.description}</div>
+    """
+  end
+
   attr :audit_logs, :list, required: true
 
   def audit_table(assigns) do
@@ -317,6 +415,22 @@ defmodule HexpmWeb.Dashboard.Admin.Components.Lookup do
     <p class="text-grey-600 dark:text-grey-300 text-sm">{render_slot(@inner_block)}</p>
     """
   end
+
+  defp reporter_name(%{reporter: %User{username: username}}), do: username
+  defp reporter_name(_report), do: "deleted user"
+
+  defp report_status(%{reason: :vulnerability, status: :submitted}), do: "sent to the CNA"
+  defp report_status(%{reason: :vulnerability, status: :failed}), do: "not sent to the CNA"
+  defp report_status(%{reason: :vulnerability, status: :pending}), do: "being sent to the CNA"
+  defp report_status(report), do: Report.triage_status_label(report.triage_status)
+
+  defp email_delivery(:submitted), do: "support@hex.pm, with a copy to the reporter"
+  defp email_delivery(:failed), do: "nobody, the email to support@hex.pm couldn't be queued"
+  defp email_delivery(:pending), do: "nobody yet, the email to support@hex.pm isn't queued"
+
+  defp cna_delivery(:submitted), do: "the EEF CNA"
+  defp cna_delivery(:failed), do: "nobody, the EEF CNA didn't answer"
+  defp cna_delivery(:pending), do: "nobody yet, the report is on its way to the EEF CNA"
 
   defp package_path(repository, name), do: ~p"/dashboard/admin/packages/#{repository}/#{name}"
 

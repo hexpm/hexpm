@@ -1,4 +1,9 @@
-<h1 style="color: #030913; font-size: 24px; line-height: 32px; font-weight: 600; margin: 0 0 24px 0; text-align: center;">
+<%= if @copy do %>
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  A copy of the report you sent to the Hex administrators at support@hex.pm. Reply to this email to add to it.
+</p>
+
+<% end %><h1 style="color: #030913; font-size: 24px; line-height: 32px; font-weight: 600; margin: 0 0 24px 0; text-align: center;">
   Package Report
 </h1>
 
@@ -16,7 +21,13 @@
   <a href="mailto:<%= @reporter.email %>" style="color: #0f59d8; text-decoration: none;"><%= @reporter.email %></a>
 </p>
 
-<h2 style="color: #030913; font-size: 18px; line-height: 26px; font-weight: 600; margin: 24px 0 8px 0;">
+<%= if @admin_url do %>
+<p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+  <strong>Triage:</strong>
+  <a href="<%= @admin_url %>" style="color: #0f59d8; text-decoration: none;"><%= @admin_url %></a>
+</p>
+
+<% end %><h2 style="color: #030913; font-size: 18px; line-height: 26px; font-weight: 600; margin: 24px 0 8px 0;">
   <%= @summary %>
 </h2>
 

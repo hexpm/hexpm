@@ -1,12 +1,15 @@
 defmodule Hexpm.PackageReports.Report do
   use Hexpm.Schema
 
+  @type t :: %__MODULE__{}
+
   schema "package_reports" do
     field :reason, Ecto.Enum, values: ~w(vulnerability malware spam copyright_infringement other)a
 
     field :summary, :string, redact: true
     field :description, :string, redact: true
     field :status, Ecto.Enum, values: ~w(pending submitted failed)a
+    field :triage_status, Ecto.Enum, values: ~w(open in_progress resolved dismissed)a
     field :external_id, :string
     field :external_url, :string
     field :external_sign_in_url, :string
@@ -47,6 +50,25 @@ defmodule Hexpm.PackageReports.Report do
 
     reason_options()
     |> Enum.find_value(fn {label, value} -> value == reason && label end)
+  end
+
+  @doc """
+  The triage statuses a moderator moves a report through on the admin
+  dashboard. Vulnerability reports have none, the CNA triages them.
+  """
+  def triage_status_options do
+    [
+      {"Open", "open"},
+      {"In progress", "in_progress"},
+      {"Resolved", "resolved"},
+      {"Dismissed", "dismissed"}
+    ]
+  end
+
+  def triage_status_label(status) do
+    status = if is_atom(status), do: Atom.to_string(status), else: status
+
+    Enum.find_value(triage_status_options(), fn {label, value} -> value == status && label end)
   end
 
   defp validate_vulnerability_confirmations(changeset) do

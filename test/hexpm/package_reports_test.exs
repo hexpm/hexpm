@@ -144,9 +144,10 @@ defmodule Hexpm.PackageReportsTest do
       saved_report = Repo.one!(Report)
 
       assert saved_report.reason == :vulnerability
-      assert saved_report.summary == "Unsafe parsing"
-      assert saved_report.description == "A crafted document can execute code."
+      assert saved_report.summary == nil
+      assert saved_report.description == nil
       assert saved_report.status == :submitted
+      assert saved_report.triage_status == nil
       assert saved_report.package_id == package.id
       assert saved_report.reporter_id == reporter.id
       assert saved_report.external_id == "report-id"
@@ -180,6 +181,8 @@ defmodule Hexpm.PackageReportsTest do
 
       assert %Report{
                reason: :vulnerability,
+               summary: nil,
+               description: nil,
                status: :failed,
                package_id: package_id,
                reporter_id: reporter_id,
@@ -193,7 +196,7 @@ defmodule Hexpm.PackageReportsTest do
       assert reporter_id == reporter.id
     end
 
-    test "queues other reports to support and copies the reporter" do
+    test "queues the report to support and a copy to the reporter" do
       reporter = insert(:user, username: "reporter", full_name: "Report Person")
       package = insert(:package, name: "spam_package")
 
@@ -204,24 +207,45 @@ defmodule Hexpm.PackageReportsTest do
                  description: "The package contains generated advertisements."
                })
 
-      entry = Repo.one!(OutboxEntry)
       saved_report = Repo.one!(Report)
-      email = entry.email
       reporter_email = Hexpm.Accounts.User.email(reporter, :primary)
+      admin_url = "http://localhost:5000/dashboard/admin/reports/#{saved_report.id}"
 
       assert saved_report.reason == :spam
       assert saved_report.status == :submitted
+      assert saved_report.triage_status == :open
       assert saved_report.package_id == package.id
       assert saved_report.reporter_id == reporter.id
-      assert entry.category == "package.report"
-      assert entry.group_key == "package-report:#{saved_report.id}"
-      assert entry.scope_key == "package:#{package.id}"
-      assert email["to"] == [%{"name" => "", "address" => "support@hex.pm"}]
-      assert email["cc"] == [%{"name" => "Report Person", "address" => reporter_email}]
-      assert email["reply_to"] == %{"name" => "Report Person", "address" => reporter_email}
-      assert email["subject"] == "Hex.pm package report: Generated package"
-      assert email["text_body"] =~ "Reason: Spam"
-      assert email["text_body"] =~ "http://localhost:5000/packages/spam_package"
+
+      assert [support, copy] = Repo.all(from(e in OutboxEntry, order_by: e.id))
+
+      for entry <- [support, copy] do
+        assert entry.category == "package.report"
+        assert entry.group_key == "package-report:#{saved_report.id}"
+        assert entry.scope_key == "package:#{package.id}"
+        assert entry.email["subject"] == "Hex.pm package report: Generated package"
+        assert entry.email["text_body"] =~ "Reason: Spam"
+        assert entry.email["text_body"] =~ "http://localhost:5000/packages/spam_package"
+      end
+
+      assert support.type == "package_report"
+      assert support.email["to"] == [%{"name" => "", "address" => "support@hex.pm"}]
+      assert support.email["cc"] == []
+
+      assert support.email["reply_to"] == %{
+               "name" => "Report Person",
+               "address" => reporter_email
+             }
+
+      assert support.email["text_body"] =~ "Triage: #{admin_url}"
+      assert support.email["html_body"] =~ admin_url
+
+      assert copy.type == "package_report_copy"
+      assert copy.email["to"] == [%{"name" => "Report Person", "address" => reporter_email}]
+      assert copy.email["reply_to"] == %{"name" => "", "address" => "support@hex.pm"}
+      assert copy.email["text_body"] =~ "A copy of the report you sent"
+      refute copy.email["text_body"] =~ "/dashboard/admin"
+      refute copy.email["html_body"] =~ "/dashboard/admin"
     end
 
     test "rejects a reporter without a verified primary email" do

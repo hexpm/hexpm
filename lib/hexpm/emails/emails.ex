@@ -407,13 +407,36 @@ defmodule Hexpm.Emails do
     |> render_body(:typosquat_candidates)
   end
 
-  def package_report(package, package_url, report, reporter) do
-    reporter_recipient = {reporter.name, reporter.email}
-
+  @doc """
+  The report as support@hex.pm gets it, with a link to triage it on the admin
+  dashboard. Replies go to the reporter.
+  """
+  def package_report(package, package_url, report, reporter, admin_url) do
     base_email(:package_report)
     |> email_to(Application.fetch_env!(:hexpm, :support_email))
-    |> Swoosh.Email.cc(reporter_recipient)
-    |> Swoosh.Email.reply_to(reporter_recipient)
+    |> Swoosh.Email.reply_to({reporter.name, reporter.email})
+    |> package_report_body(package, package_url, report, reporter)
+    |> assign(:copy, false)
+    |> assign(:admin_url, admin_url)
+    |> render_body(:package_report)
+  end
+
+  @doc """
+  The reporter's copy of `package_report/5`, without the admin link. Replies
+  go to support@hex.pm.
+  """
+  def package_report_copy(package, package_url, report, reporter) do
+    base_email(:package_report_copy)
+    |> Swoosh.Email.to({reporter.name, reporter.email})
+    |> Swoosh.Email.reply_to(Application.fetch_env!(:hexpm, :support_email))
+    |> package_report_body(package, package_url, report, reporter)
+    |> assign(:copy, true)
+    |> assign(:admin_url, nil)
+    |> render_body(:package_report)
+  end
+
+  defp package_report_body(email, package, package_url, report, reporter) do
+    email
     |> subject("Hex.pm package report: #{report.summary}")
     |> assign(:package, package)
     |> assign(:package_url, package_url)
@@ -421,7 +444,6 @@ defmodule Hexpm.Emails do
     |> assign(:summary, report.summary)
     |> assign(:description, report.description)
     |> assign(:reporter, reporter)
-    |> render_body(:package_report)
   end
 
   def organization_invite(organization, user) do

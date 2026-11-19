@@ -7,6 +7,7 @@ defmodule HexpmWeb.Dashboard.AdminControllerTest do
   alias Hexpm.AdminTasks
   alias Hexpm.AdminTasks.AuditLog, as: AdminAuditLog
   alias Hexpm.Accounts.{BlockedEmailDomain, Organization, OrganizationUser, PasswordReset, User}
+  alias Hexpm.PackageReports.Report
   alias Hexpm.Repository.{Package, PackageOwner, Release}
   alias HexpmWeb.Dashboard.AdminView
 
@@ -52,7 +53,9 @@ defmodule HexpmWeb.Dashboard.AdminControllerTest do
             "/dashboard/admin/lookup?kind=user&name=#{user.username}",
             "/dashboard/admin/users/#{user.username}",
             "/dashboard/admin/packages/hexpm/decimal",
-            "/dashboard/admin/organizations/acme"
+            "/dashboard/admin/organizations/acme",
+            "/dashboard/admin/reports",
+            "/dashboard/admin/reports/#{insert(:package_report).id}"
           ] do
         conn = build_conn() |> test_login(user) |> get(path)
         assert response(conn, 404)
@@ -86,6 +89,16 @@ defmodule HexpmWeb.Dashboard.AdminControllerTest do
 
       assert redirected_to(conn) == "/sudo"
       refute Repo.exists?(BlockedEmailDomain)
+
+      report = insert(:package_report)
+
+      conn =
+        build_conn()
+        |> test_login(c.moderator, sudo: false)
+        |> post("/dashboard/admin/reports/#{report.id}", %{"args" => %{"status" => "resolved"}})
+
+      assert redirected_to(conn) == "/sudo"
+      assert Repo.get!(Report, report.id).triage_status == :open
     end
 
     test "accepts the normal sudo window on every admin page", c do
@@ -1017,6 +1030,158 @@ defmodule HexpmWeb.Dashboard.AdminControllerTest do
     test "says when nothing has been run", c do
       conn = build_conn() |> test_login(c.moderator) |> get("/dashboard/admin/audit-log")
       assert response(conn, 200) =~ "No admin tasks have been run."
+    end
+  end
+
+  describe "package reports" do
+    defp triage(c, report, args) do
+      build_conn()
+      |> test_login(c.moderator)
+      |> post("/dashboard/admin/reports/#{report.id}", %{"args" => args})
+    end
+
+    test "the task list links the queue with the number of reports to triage", c do
+      insert(:package_report)
+      insert(:package_report, triage_status: :in_progress)
+      insert(:package_report, triage_status: :resolved)
+
+      html = response(get_page(c, "/dashboard/admin"), 200)
+      assert html =~ ~s(href="/dashboard/admin/reports")
+      assert html =~ "2 reports open or in progress."
+    end
+
+    test "lists the open and in progress reports by default", c do
+      package = insert(:package, name: "spammy")
+      insert(:package_report, package: package, summary: "Open one")
+      insert(:package_report, triage_status: :in_progress, summary: "Started one")
+      insert(:package_report, triage_status: :resolved, summary: "Closed one")
+      insert(:package_report, status: :failed, summary: "Undelivered one")
+
+      html = response(get_page(c, "/dashboard/admin/reports"), 200)
+      assert html =~ "Open one"
+      assert html =~ "Started one"
+      assert html =~ "In progress"
+      assert html =~ "spammy"
+      assert html =~ "not emailed to support@hex.pm"
+      refute html =~ "Closed one"
+
+      html = response(get_page(c, "/dashboard/admin/reports?status=resolved"), 200)
+      assert html =~ "Closed one"
+      refute html =~ "Open one"
+    end
+
+    test "lists the vulnerability reports apart", c do
+      report = insert(:vulnerability_report)
+
+      html = response(get_page(c, "/dashboard/admin/reports"), 200)
+      refute html =~ "Vulnerability report #{report.id}"
+
+      html = response(get_page(c, "/dashboard/admin/reports?status=vulnerability"), 200)
+      assert html =~ "Vulnerability report #{report.id}"
+      assert html =~ "sent to the CNA"
+    end
+
+    test "falls back to the open reports for an unknown filter", c do
+      insert(:package_report, summary: "Open one")
+
+      assert response(get_page(c, "/dashboard/admin/reports?status=bogus"), 200) =~ "Open one"
+    end
+
+    test "shows a report with its reporter and the triage form", c do
+      reporter = insert(:user, username: "reporter")
+
+      report =
+        insert(:package_report,
+          reporter: reporter,
+          description: "First line\nSecond <b>line</b>"
+        )
+
+      html = response(get_page(c, "/dashboard/admin/reports/#{report.id}"), 200)
+      assert html =~ "Package report #{report.id}"
+      assert html =~ ~s(href="/dashboard/admin/users/reporter")
+      assert html =~ User.email(reporter, :primary)
+      assert html =~ "support@hex.pm, with a copy to the reporter"
+      assert html =~ ~s(>First line\nSecond &lt;b&gt;line&lt;/b&gt;</div>)
+      assert html =~ ~s(action="/dashboard/admin/reports/#{report.id}")
+      assert html =~ "Nobody has triaged the report."
+    end
+
+    test "shows a vulnerability report without the triage form", c do
+      report = insert(:vulnerability_report)
+
+      html = response(get_page(c, "/dashboard/admin/reports/#{report.id}"), 200)
+      assert html =~ "https://cna.erlef.org/reports/report-id"
+      refute html =~ ~s(id="triage-form")
+      refute html =~ ~s(id="audit-log")
+      refute html =~ ~s(id="report-description")
+    end
+
+    test "shows a report whose reporter was deleted", c do
+      report = insert(:package_report, reporter: nil)
+
+      assert response(get_page(c, "/dashboard/admin/reports/#{report.id}"), 200) =~
+               "deleted user"
+    end
+
+    test "is not found for an unknown report", c do
+      assert response(get_page(c, "/dashboard/admin/reports/0"), 404)
+      assert response(get_page(c, "/dashboard/admin/reports/nope"), 404)
+    end
+
+    test "sets the status with a note and shows it in the history", c do
+      report = insert(:package_report)
+
+      conn = triage(c, report, %{"status" => "resolved", "note" => "Removed the package"})
+      assert redirected_to(conn) == "/dashboard/admin/reports/#{report.id}"
+      assert info(conn) == "Triage: done."
+      assert Repo.get!(Report, report.id).triage_status == :resolved
+
+      log = audit_log!("triage_package_report")
+      assert log.user_id == c.moderator.id
+
+      assert log.params == %{
+               "report" => report.id,
+               "status" => "resolved",
+               "note" => "Removed the package"
+             }
+
+      html = response(get_page(c, "/dashboard/admin/reports/#{report.id}"), 200)
+      assert html =~ "Removed the package"
+      assert html =~ c.moderator.username
+    end
+
+    test "records a note without a note field as nil", c do
+      report = insert(:package_report)
+
+      triage(c, report, %{"status" => "in_progress", "note" => "  "})
+      assert audit_log!("triage_package_report").params["note"] == nil
+    end
+
+    test "refuses an unknown status", c do
+      report = insert(:package_report)
+
+      conn = triage(c, report, %{"status" => "closed"})
+      assert error(conn) == "Triage: failed, :invalid_status."
+      assert Repo.get!(Report, report.id).triage_status == :open
+    end
+
+    test "refuses a vulnerability report", c do
+      report = insert(:vulnerability_report)
+
+      conn = triage(c, report, %{"status" => "resolved"})
+      assert error(conn) == "Triage: failed, :vulnerability_report."
+    end
+
+    test "goes back to the queue for an unknown report", c do
+      conn = triage(c, %{id: 0}, %{"status" => "resolved"})
+      assert redirected_to(conn) == "/dashboard/admin/reports"
+      assert error(conn) == "Triage: failed, :report_not_found."
+    end
+
+    test "is not found for a report id that isn't a number", c do
+      conn = triage(c, %{id: "nope"}, %{"status" => "resolved"})
+      assert response(conn, 404)
+      refute Repo.exists?(AdminAuditLog)
     end
   end
 end

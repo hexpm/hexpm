@@ -12,11 +12,19 @@ defmodule HexpmWeb.Dashboard.AdminController do
 
   @per_page 50
 
+  @report_filters %{
+    "active" => :active,
+    "resolved" => :resolved,
+    "dismissed" => :dismissed,
+    "vulnerability" => :vulnerability
+  }
+
   def index(conn, _params) do
     render(conn, "index.html",
       title: "Admin",
       container: "container page dashboard",
       sections: AdminView.listed_sections(),
+      active_report_count: AdminTasks.count_package_reports(:active),
       blocked_email_domains: AdminTasks.blocked_email_domains(),
       search_disabled_packages: AdminTasks.search_disabled_packages()
     )
@@ -125,6 +133,67 @@ defmodule HexpmWeb.Dashboard.AdminController do
       per_page: @per_page,
       path_fn: &~p"/dashboard/admin/audit-log?#{&1}"
     )
+  end
+
+  def reports(conn, params) do
+    filter_id =
+      if Map.has_key?(@report_filters, params["status"]), do: params["status"], else: "active"
+
+    filter = Map.fetch!(@report_filters, filter_id)
+    page = Hexpm.Utils.safe_int(params["page"]) || 1
+
+    render(conn, "reports.html",
+      title: "Admin - Package reports",
+      container: "container page dashboard",
+      filter: filter_id,
+      reports: AdminTasks.package_reports(filter, page, @per_page),
+      total_count: AdminTasks.count_package_reports(filter),
+      page: page,
+      per_page: @per_page,
+      path_fn: &~p"/dashboard/admin/reports?#{Map.put(&1, :status, filter_id)}"
+    )
+  end
+
+  def report(conn, %{"id" => id}) do
+    with id when is_integer(id) <- Hexpm.Utils.safe_int(id),
+         {:ok, report} <- AdminTasks.lookup_package_report(id) do
+      render(conn, "report.html",
+        title: "Admin - Package report #{report.id}",
+        container: "container page dashboard",
+        report: report,
+        audit_logs: AdminTasks.target_audit_logs(:package_report, report.id)
+      )
+    else
+      _not_found -> not_found(conn)
+    end
+  end
+
+  def triage_report(conn, %{"id" => id} = params) do
+    case Hexpm.Utils.safe_int(id) do
+      nil ->
+        not_found(conn)
+
+      id ->
+        args = args(params)
+
+        result =
+          AdminTasks.triage_package_report(id, arg(args, "status"),
+            note: optional(args, "note"),
+            audit: audit_data(conn)
+          )
+
+        {kind, message} = describe_result(result)
+
+        path =
+          case result do
+            {:error, :report_not_found} -> ~p"/dashboard/admin/reports"
+            _found -> ~p"/dashboard/admin/reports/#{id}"
+          end
+
+        conn
+        |> put_flash(kind, "Triage: #{message}")
+        |> redirect(to: path)
+    end
   end
 
   def run(conn, %{"task" => task_id} = params) do

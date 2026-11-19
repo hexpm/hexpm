@@ -3,7 +3,7 @@ defmodule HexpmWeb.Dashboard.AdminView do
 
   import HexpmWeb.Components.Buttons, only: [button: 1]
   import HexpmWeb.Components.Form, only: [sudo_form: 1]
-  import HexpmWeb.Components.Input, only: [select_input: 1, text_input: 1]
+  import HexpmWeb.Components.Input, only: [select_input: 1, text_input: 1, textarea_input: 1]
   import HexpmWeb.Components.Table, only: [table: 1]
   import HexpmWeb.ViewHelpers, only: [pretty_datetime: 1]
   import HexpmWeb.ViewIcons, only: [icon: 3]
@@ -11,6 +11,7 @@ defmodule HexpmWeb.Dashboard.AdminView do
   import HexpmWeb.Dashboard.Admin.Components.Lookup
 
   alias Hexpm.AdminTasks
+  alias Hexpm.PackageReports.Report
 
   @doc """
   The tasks in `Hexpm.AdminTasks` the dashboard runs, grouped by what they
@@ -292,6 +293,17 @@ defmodule HexpmWeb.Dashboard.AdminView do
     do: %{kind: :select, name: name, label: label, options: options}
 
   defp reason_field(scope), do: %{kind: :reason, scope: scope}
+
+  def report_filters() do
+    [
+      {"active", "Open and in progress"},
+      {"resolved", "Resolved"},
+      {"dismissed", "Dismissed"},
+      {"vulnerability", "Vulnerabilities"}
+    ]
+  end
+
+  def triage_status_options(), do: Report.triage_status_options()
 
   def lookup_title(:user, lookup), do: "User #{lookup.user.username}"
 
