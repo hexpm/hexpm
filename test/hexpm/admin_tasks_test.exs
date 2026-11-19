@@ -503,6 +503,47 @@ defmodule Hexpm.AdminTasksTest do
     end
   end
 
+  describe "impersonate_user/3" do
+    alias Hexpm.AdminTasks.AuditLog, as: AdminAuditLog
+
+    setup do
+      %{moderator: insert(:user, role: "mod")}
+    end
+
+    test "starts a session as the user for the moderator", c do
+      user = insert(:user)
+
+      assert {:ok, token} = AdminTasks.impersonate_user(user.username, c.moderator)
+
+      session = Hexpm.UserSessions.get_impersonation_session(token, c.moderator)
+      assert session.user_id == user.id
+
+      assert [%{action: "impersonate_user", status: "ok", params: %{"user" => username}}] =
+               Repo.all(AdminAuditLog)
+
+      assert username == user.username
+    end
+
+    test "refuses the moderator, a deactivated user and an organization", c do
+      deactivated = insert(:user, deactivated_at: DateTime.utc_now())
+      organization = insert(:organization)
+
+      assert {:error, :impersonator} =
+               AdminTasks.impersonate_user(c.moderator.username, c.moderator)
+
+      assert {:error, :deactivated} =
+               AdminTasks.impersonate_user(deactivated.username, c.moderator)
+
+      assert {:error, :organization_user} =
+               AdminTasks.impersonate_user(organization.user.username, c.moderator)
+
+      assert {:error, :user_not_found} = AdminTasks.impersonate_user("nonexistent", c.moderator)
+
+      refute Repo.exists?(Hexpm.UserSession)
+      assert Repo.aggregate(AdminAuditLog, :count) == 4
+    end
+  end
+
   describe "remove_organization_member/2" do
     test "removes an organization member and writes an admin audit log" do
       organization = insert(:organization)

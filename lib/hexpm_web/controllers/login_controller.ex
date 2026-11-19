@@ -55,6 +55,7 @@ defmodule HexpmWeb.LoginController do
 
   def delete(conn, _params) do
     if Hexpm.Repo.write_mode?() do
+      revoke_impersonation_session(conn)
       revoke_browser_session(conn)
     end
 
@@ -63,13 +64,25 @@ defmodule HexpmWeb.LoginController do
     |> redirect(to: ~p"/")
   end
 
+  defp revoke_impersonation_session(%{assigns: %{impersonator: %User{}}} = conn) do
+    UserSessions.revoke(conn.assigns.current_session)
+  end
+
+  defp revoke_impersonation_session(_conn), do: :ok
+
+  defp session_owner_audit_data(%{assigns: %{impersonator: %User{} = impersonator}} = conn) do
+    %{audit_data(conn) | user: impersonator}
+  end
+
+  defp session_owner_audit_data(conn), do: audit_data(conn)
+
   defp revoke_browser_session(conn) do
     if session_token = get_session(conn, "session_token") do
       case Base.decode64(session_token) do
         {:ok, decoded_token} ->
           case UserSessions.get_browser_session_by_token(decoded_token) do
             nil -> :ok
-            session -> UserSessions.revoke(session, nil, audit: audit_data(conn))
+            session -> UserSessions.revoke(session, nil, audit: session_owner_audit_data(conn))
           end
 
         _ ->

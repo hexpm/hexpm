@@ -19,6 +19,18 @@
             {lookup_title(@kind, @lookup)}
           </h2>
           <.user_summary :if={@kind == :user} lookup={@lookup} />
+          <.sudo_form
+            :if={@kind == :user and impersonatable?(@lookup.user, @current_user)}
+            current_user={@current_user}
+            action={~p"/dashboard/admin/users/#{@lookup.user.username}/impersonate"}
+            id="impersonate-form"
+            class="mt-8"
+          >
+            <.button type="submit" variant="outline">Log in as user</.button>
+            <p class="text-grey-600 dark:text-grey-300 text-sm mt-2">
+              Opens a read-only session as the user for one hour.
+            </p>
+          </.sudo_form>
           <.package_summary :if={@kind == :package} lookup={@lookup} />
           <.organization_summary :if={@kind == :organization} lookup={@lookup} />
         </div>

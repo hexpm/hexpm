@@ -49,7 +49,7 @@ defmodule HexpmWeb.Router do
       }
 
     plug HexpmWeb.Plugs.ReadOnly,
-      allowed_routes: [{"POST", "/logout"}],
+      allowed_routes: [{"POST", "/logout"}, {"POST", "/impersonation/stop"}],
       write_routes: [
         {"GET", "/auth/:provider/callback"},
         {"GET", "/email/verify"}
@@ -57,6 +57,7 @@ defmodule HexpmWeb.Router do
 
     plug :protect_from_forgery
     plug :login
+    plug HexpmWeb.Plugs.Impersonation
     plug :disable_deactivated
     plug :default_repository
   end
@@ -118,6 +119,7 @@ defmodule HexpmWeb.Router do
     plug HexpmWeb.Plugs.ReadOnly
     plug :protect_from_forgery
     plug :login
+    plug HexpmWeb.Plugs.Impersonation
     plug :disable_deactivated
     plug :default_repository
   end
@@ -200,6 +202,7 @@ defmodule HexpmWeb.Router do
     get "/login", LoginController, :show
     post "/login", LoginController, :create
     post "/logout", LoginController, :delete
+    post "/impersonation/stop", ImpersonationController, :stop
 
     get "/organizations/:organization/authenticate", OrganizationAuthController, :authenticate
 
@@ -622,6 +625,7 @@ defmodule HexpmWeb.Router do
     post "/admin/reports/:id", AdminController, :triage_report
     get "/admin/lookup", AdminController, :lookup
     get "/admin/users/:name", AdminController, :user
+    post "/admin/users/:name/impersonate", AdminController, :impersonate
     get "/admin/packages/:repository/:name", AdminController, :package
     get "/admin/organizations/:name", AdminController, :organization
     get "/admin/tasks/:task", AdminController, :show

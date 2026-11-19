@@ -316,6 +316,10 @@ defmodule HexpmWeb.Dashboard.AdminView do
 
   def lookup_title(:organization, lookup), do: "Organization #{lookup.organization.name}"
 
+  def impersonatable?(user, moderator) do
+    not User.organization?(user) and is_nil(user.deactivated_at) and user.id != moderator.id
+  end
+
   @doc """
   The tasks a lookup page links to, with the target's name filled in.
   """

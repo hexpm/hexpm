@@ -734,6 +734,39 @@ defmodule Hexpm.AdminTasks do
   end
 
   @doc """
+  Starts a one hour, read-only browser session as the user for the moderator
+  and returns its token.
+
+  ## Examples
+
+      iex> AdminTasks.impersonate_user("bob", moderator)
+      {:ok, <<...>>}
+
+      iex> AdminTasks.impersonate_user("bob", bob)
+      {:error, :impersonator}
+  """
+  @spec impersonate_user(String.t(), User.t(), keyword()) :: {:ok, binary()} | {:error, atom()}
+  def impersonate_user(username_or_email, %User{} = impersonator, opts \\ []) do
+    audited(:impersonate_user, %{user: username_or_email}, opts, fn ->
+      with {:ok, user} <- find_user(username_or_email),
+           :ok <- check_not_organization(user),
+           :ok <- check_impersonatable(user, impersonator),
+           {:ok, _session, session_token} <-
+             Hexpm.UserSessions.create_impersonation_session(user, impersonator) do
+        {:ok, session_token}
+      end
+    end)
+  end
+
+  defp check_impersonatable(user, impersonator) do
+    cond do
+      user.id == impersonator.id -> {:error, :impersonator}
+      user.deactivated_at -> {:error, :deactivated}
+      true -> :ok
+    end
+  end
+
+  @doc """
   Blocks new email addresses on a domain and everything under it.
 
   Existing addresses stay; only adding an address on the domain fails, at

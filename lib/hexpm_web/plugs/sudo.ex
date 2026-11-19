@@ -41,6 +41,12 @@ defmodule HexpmWeb.Plugs.Sudo do
       disabled?() ->
         conn
 
+      # The sudo timestamp is the moderator's.
+      Map.get(conn.assigns, :impersonator) ->
+        if conn.method in ~w(GET HEAD),
+          do: conn,
+          else: HexpmWeb.Plugs.Impersonation.refuse(conn)
+
       sudo_satisfied?(conn, force?) ->
         conn
 

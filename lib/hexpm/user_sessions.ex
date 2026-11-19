@@ -39,6 +39,7 @@ defmodule Hexpm.UserSessions do
   @max_user_sessions 5
   @min_org_sessions 5
   @default_session_expires_in 30 * 24 * 60 * 60
+  @impersonation_expires_in 60 * 60
 
   def default_session_expires_in, do: @default_session_expires_in
   def max_user_sessions, do: @max_user_sessions
@@ -89,6 +90,29 @@ defmodule Hexpm.UserSessions do
     case Repo.transaction(multi) do
       {:ok, %{session: session}} -> {:ok, session, session_token}
       {:error, :session, changeset, _} -> {:error, changeset}
+    end
+  end
+
+  @doc """
+  Creates a one hour browser session as the user for the moderator.
+  """
+  def create_impersonation_session(user, impersonator) do
+    session_token = :crypto.strong_rand_bytes(32)
+    expires_at = DateTime.add(DateTime.utc_now(), @impersonation_expires_in, :second)
+
+    attrs = %{
+      user_id: user.id,
+      type: "browser",
+      name: "Admin session",
+      session_token: session_token,
+      expires_at: expires_at
+    }
+
+    changeset = UserSession.changeset(%UserSession{impersonator_id: impersonator.id}, attrs)
+
+    case Repo.insert(changeset) do
+      {:ok, session} -> {:ok, session, session_token}
+      {:error, changeset} -> {:error, changeset}
     end
   end
 
@@ -243,8 +267,22 @@ defmodule Hexpm.UserSessions do
 
     from(s in UserSession,
       where:
-        s.type == "browser" and s.session_token == ^token and is_nil(s.revoked_at) and
-          s.expires_at > ^now
+        s.type == "browser" and s.session_token == ^token and is_nil(s.impersonator_id) and
+          is_nil(s.revoked_at) and s.expires_at > ^now
+    )
+    |> Repo.one()
+  end
+
+  @doc """
+  Gets the active impersonation session the moderator started.
+  """
+  def get_impersonation_session(token, impersonator) do
+    now = DateTime.utc_now()
+
+    from(s in UserSession,
+      where:
+        s.type == "browser" and s.session_token == ^token and
+          s.impersonator_id == ^impersonator.id and is_nil(s.revoked_at) and s.expires_at > ^now
     )
     |> Repo.one()
   end
@@ -256,7 +294,9 @@ defmodule Hexpm.UserSessions do
     now = DateTime.utc_now()
 
     from(s in UserSession,
-      where: s.user_id == ^user.id and is_nil(s.revoked_at) and s.expires_at > ^now,
+      where:
+        s.user_id == ^user.id and is_nil(s.impersonator_id) and is_nil(s.revoked_at) and
+          s.expires_at > ^now,
       order_by: [desc: s.inserted_at],
       preload: [:client]
     )
@@ -424,7 +464,12 @@ defmodule Hexpm.UserSessions do
   ensure the user stays within the limit.
   """
   def enforce_session_limit(%Hexpm.Accounts.User{} = user) do
-    filter = Ecto.Query.dynamic(^owner_filter(user) and not exists(api_key_tokens()))
+    filter =
+      Ecto.Query.dynamic(
+        [s],
+        ^owner_filter(user) and is_nil(s.impersonator_id) and not exists(api_key_tokens())
+      )
+
     revoke_lru_sessions(filter, @max_user_sessions - 1)
   end
 

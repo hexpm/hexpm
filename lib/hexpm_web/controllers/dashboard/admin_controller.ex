@@ -3,6 +3,7 @@ defmodule HexpmWeb.Dashboard.AdminController do
 
   alias Hexpm.AdminTasks
   alias HexpmWeb.Dashboard.AdminView
+  alias HexpmWeb.Plugs.Impersonation
 
   require Logger
 
@@ -80,6 +81,20 @@ defmodule HexpmWeb.Dashboard.AdminController do
 
       {:error, reason} ->
         lookup_not_found(conn, reason)
+    end
+  end
+
+  def impersonate(conn, %{"name" => name}) do
+    case AdminTasks.impersonate_user(name, conn.assigns.current_user, audit: audit_data(conn)) do
+      {:ok, session_token} ->
+        conn
+        |> put_session(Impersonation.session_key(), Base.encode64(session_token))
+        |> redirect(to: ~p"/dashboard")
+
+      {:error, reason} ->
+        conn
+        |> put_flash(:error, "Log in as user failed, #{inspect(reason)}.")
+        |> redirect(to: ~p"/dashboard/admin/users/#{name}")
     end
   end
 

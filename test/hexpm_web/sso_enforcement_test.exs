@@ -371,6 +371,26 @@ defmodule HexpmWeb.SSOEnforcementTest do
       assert response(conn, 200) =~ "/dashboard/orgs/#{context.organization.name}/leave"
     end
 
+    test "refuses the break-glass screens to a moderator logged in as a member", context do
+      require_sso(context)
+      moderator = insert(:user, role: "mod")
+
+      for {user, screen} <- [{context.admin, "billing"}, {context.member, "danger-zone"}] do
+        {:ok, _session, token} = Hexpm.UserSessions.create_impersonation_session(user, moderator)
+        {conn, _session} = login(moderator)
+
+        conn =
+          conn
+          |> init_test_session(%{"impersonation_token" => Base.encode64(token)})
+          |> get("/dashboard/orgs/#{context.organization.name}/#{screen}")
+
+        assert redirected_to(conn) =~ "/organizations/#{context.organization.name}/authenticate"
+      end
+
+      assert break_glass_logs(context) == []
+      assert Repo.all(from(e in OutboxEntry, where: e.category == "sso.break_glass")) == []
+    end
+
     test "records the break-glass when 2FA is also missing", context do
       require_sso(context)
 

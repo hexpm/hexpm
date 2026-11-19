@@ -26,6 +26,7 @@ defmodule Hexpm.UserSession do
 
     belongs_to :user, User
     belongs_to :organization, Organization
+    belongs_to :impersonator, User
     has_many :tokens, Token, foreign_key: :user_session_id
 
     timestamps()

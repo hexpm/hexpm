@@ -1,0 +1,67 @@
+defmodule HexpmWeb.Plugs.Impersonation do
+  @moduledoc """
+  Refuses writes while a moderator is logged in as another user.
+  """
+
+  alias Hexpm.Accounts.{User, Users}
+  alias Hexpm.UserSessions
+  alias HexpmWeb.ControllerHelpers
+
+  @session_key "impersonation_token"
+  @safe_methods ~w(GET HEAD)
+  @allowed_routes [{"POST", ["impersonation", "stop"]}, {"POST", ["logout"]}]
+  @auth_flows ~w(login tfa signup password email auth sso invites sudo oauth)
+
+  def session_key(), do: @session_key
+
+  @doc """
+  Returns the user and the impersonation session that `impersonator` started.
+  """
+  def resolve(session, %User{} = impersonator) do
+    with true <- User.has_role?(impersonator, "mod"),
+         token when is_binary(token) <- session[@session_key],
+         {:ok, decoded} <- Base.decode64(token),
+         %{user_id: user_id} = user_session <-
+           UserSessions.get_impersonation_session(decoded, impersonator),
+         %User{deactivated_at: nil} = user <-
+           Users.get_by_id(user_id, [:emails, organizations: :repository]) do
+      {user, user_session}
+    else
+      _ -> nil
+    end
+  end
+
+  def resolve(_session, nil), do: nil
+
+  def init(opts), do: opts
+
+  def call(%{assigns: %{impersonator: %User{}}} = conn, _opts) do
+    if allowed?(conn), do: conn, else: refuse(conn)
+  end
+
+  def call(conn, _opts), do: conn
+
+  def refuse(conn) do
+    ControllerHelpers.render_error(conn, 403, message: message(conn.assigns.current_user))
+  end
+
+  def message(%User{username: username}),
+    do: "This is a read-only admin session as #{username}."
+
+  # The router matches each segment decoded, so /%6Cogin is the /login route.
+  defp allowed?(conn) do
+    path_info = Enum.map(conn.path_info, &URI.decode/1)
+
+    if conn.method in @safe_methods do
+      not blocked_read?(path_info)
+    else
+      {conn.method, path_info} in @allowed_routes
+    end
+  end
+
+  defp blocked_read?([segment | _rest]) when segment in @auth_flows, do: true
+  defp blocked_read?(["organizations", "authorize"]), do: true
+  defp blocked_read?(["organizations", _organization, "authenticate"]), do: true
+  defp blocked_read?(["dashboard", "security", "recovery-codes"]), do: true
+  defp blocked_read?(_path_info), do: false
+end

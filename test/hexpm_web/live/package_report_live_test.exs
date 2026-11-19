@@ -77,6 +77,30 @@ defmodule HexpmWeb.PackageReportLiveTest do
     assert has_element?(view, "#report_description + div", "can't be blank")
   end
 
+  test "refuses to submit as a user a moderator is logged in as", context do
+    moderator = insert(:user, role: "mod")
+
+    {:ok, _session, token} =
+      Hexpm.UserSessions.create_impersonation_session(context.reporter, moderator)
+
+    conn =
+      context.conn
+      |> test_login(moderator)
+      |> init_test_session(%{"impersonation_token" => Base.encode64(token)})
+
+    {:ok, view, _html} = live(conn, report_path(context))
+
+    html =
+      render_submit(view, "submit", %{
+        "h-captcha-response" => "captcha",
+        "report" => %{reason: "malware", summary: "Bad", description: "Very bad."}
+      })
+
+    assert html =~ "read-only admin session as #{context.reporter.username}"
+    refute Repo.exists?(Report)
+    refute Repo.exists?(OutboxEntry)
+  end
+
   test "submits vulnerabilities to Varsel and shows the returned report link", context do
     Mox.expect(Hexpm.PackageReports.Varsel.Mock, :submit, fn report ->
       assert report.package == context.package.name

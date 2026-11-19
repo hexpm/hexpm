@@ -69,6 +69,11 @@ defmodule HexpmWeb.PackageReportLive do
     {:noreply, redirect(socket, to: ~p"/login?#{[return: return_path]}")}
   end
 
+  def handle_event("submit", _params, %{assigns: %{impersonator: %User{}}} = socket) do
+    message = HexpmWeb.Plugs.Impersonation.message(socket.assigns.current_user)
+    {:noreply, put_flash(socket, :error, message)}
+  end
+
   def handle_event("submit", %{"report" => params} = event_params, socket) do
     %{repository_name: repository, package_name: package_name} = socket.assigns
 
