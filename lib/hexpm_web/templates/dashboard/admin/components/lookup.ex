@@ -364,7 +364,7 @@ defmodule HexpmWeb.Dashboard.Admin.Components.Lookup do
           <td class="px-4 py-3 text-sm font-mono">{log.action}</td>
           <td class="px-4 py-3 text-sm">
             <dl class="grid grid-cols-[max-content_1fr] gap-x-3">
-              <%= for {key, value} <- Enum.sort(log.params), not is_nil(value) do %>
+              <%= for {key, value} <- Enum.sort(log.params), value not in [nil, []] do %>
                 <dt class="text-grey-500 dark:text-grey-400">{key}</dt>
                 <dd class="font-mono break-words">{format_param(value)}</dd>
               <% end %>
@@ -455,6 +455,7 @@ defmodule HexpmWeb.Dashboard.Admin.Components.Lookup do
   defp actor(%{user_agent: user_agent}), do: user_agent
 
   defp format_param(value) when is_binary(value), do: value
+  defp format_param(value) when is_list(value), do: Enum.map_join(value, ", ", &format_param/1)
   defp format_param(value), do: inspect(value)
 
   defp status_class("ok"), do: "text-green-700 dark:text-green-400"

@@ -1163,6 +1163,7 @@ defmodule HexpmWeb.Dashboard.AdminControllerTest do
       assert html =~ "(removed)"
       refute html =~ ~s(href="/packages/spammy")
       assert html =~ "remove_package"
+      assert html =~ ~s(<dd class="font-mono break-words">#{report.id}</dd>)
 
       html = response(get_page(c, "/dashboard/admin/reports"), 200)
       assert html =~ "spammy"
