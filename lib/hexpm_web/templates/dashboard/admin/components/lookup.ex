@@ -259,7 +259,7 @@ defmodule HexpmWeb.Dashboard.Admin.Components.Lookup do
             </a>
           </td>
           <td class="px-4 py-3 text-sm font-mono">
-            {package_label(report.package.repository.name, report.package.name)}
+            {package_label(report.package_data["repository"], report.package_data["name"])}
           </td>
           <td class="px-4 py-3 text-sm">{Report.reason_label(report.reason)}</td>
           <td class="px-4 py-3 text-sm font-mono">{reporter_name(report)}</td>
@@ -288,11 +288,18 @@ defmodule HexpmWeb.Dashboard.Admin.Components.Lookup do
     <.facts>
       <:fact label="Package">
         <a
+          :if={@report.package}
           href={package_path(@report.package.repository.name, @report.package.name)}
           class={["font-mono", @link]}
         >
           {package_label(@report.package.repository.name, @report.package.name)}
         </a>
+        <span :if={!@report.package}>
+          <span class="font-mono">
+            {package_label(@report.package_data["repository"], @report.package_data["name"])}
+          </span>
+          (removed)
+        </span>
       </:fact>
       <:fact label="Reason">{Report.reason_label(@report.reason)}</:fact>
       <:fact label="Reporter">

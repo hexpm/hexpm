@@ -458,6 +458,21 @@ defmodule Hexpm.Repository.ReleasesTest do
       refute Packages.get(Repository.hexpm(), package.name)
     end
 
+    test "revert the only release of a reported package keeps the report", %{
+      package: package,
+      release: release,
+      user: user
+    } do
+      report = insert(:package_report, package: package)
+
+      assert Releases.revert(package, release, audit: audit_data(user)) == :ok
+      refute Packages.get(Repository.hexpm(), package.name)
+
+      report = Repo.get!(Hexpm.PackageReports.Report, report.id)
+      assert report.package_id == nil
+      assert report.package_data["name"] == package.name
+    end
+
     test "revert release and package removes artifacts", %{
       package: package,
       release: release,

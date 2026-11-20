@@ -215,6 +215,7 @@ defmodule Hexpm.PackageReportsTest do
       assert saved_report.status == :submitted
       assert saved_report.triage_status == :open
       assert saved_report.package_id == package.id
+      assert saved_report.package_data == %{"name" => "spam_package", "repository" => "hexpm"}
       assert saved_report.reporter_id == reporter.id
 
       assert [support, copy] = Repo.all(from(e in OutboxEntry, order_by: e.id))

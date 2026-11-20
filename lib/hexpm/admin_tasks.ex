@@ -137,7 +137,8 @@ defmodule Hexpm.AdminTasks do
   organization, matched on the names the tasks were given.
 
   A user is matched on its username and emails, a package on its repository
-  and name, and an organization on its name.
+  and name, an organization on its name, and a package report on its id in its
+  triage and in the runs that removed its package.
 
       iex> AdminTasks.target_audit_logs(:user, ["bob", "bob@example.com"])
       [%Hexpm.AdminTasks.AuditLog{action: "reset_tfa", ...}]
@@ -188,11 +189,14 @@ defmodule Hexpm.AdminTasks do
     )
   end
 
+  # A report's triage, and the runs that removed its package.
   defp target_filter(:package_report, id) do
     dynamic(
       [l],
-      l.action == "triage_package_report" and
-        fragment("?->>'report'", l.params) == ^to_string(id)
+      (l.action == "triage_package_report" and
+         fragment("?->>'report'", l.params) == ^to_string(id)) or
+        (l.action in ["remove_package", "remove_user"] and
+           fragment("? @> ?", l.params, ^%{"reports" => [id]}))
     )
   end
 
@@ -639,7 +643,8 @@ defmodule Hexpm.AdminTasks do
   - `username` - The username of the user to remove
   - `opts` - Options:
     - `:delete_packages` - When `true`, deletes all packages where the user is
-      the sole owner before removing the user (default: `false`)
+      the sole owner before removing the user (default: `false`). Their
+      reports are kept, and the audit log entry lists their ids.
     - `:reason` - Emails the user why the account was removed, either a canned
       id from `reasons(:user)` or your own text. Nothing is sent without it.
 
@@ -657,7 +662,13 @@ defmodule Hexpm.AdminTasks do
   @spec remove_user(String.t(), keyword()) :: :ok | {:error, term()}
   def remove_user(username, opts \\ []) do
     deleted_packages? = Keyword.get(opts, :delete_packages, false)
-    params = %{user: username, delete_packages: deleted_packages?, reason: opts[:reason]}
+
+    params = %{
+      user: username,
+      delete_packages: deleted_packages?,
+      reason: opts[:reason],
+      reports: if(deleted_packages?, do: sole_owned_package_report_ids(username), else: [])
+    }
 
     audited(:remove_user, params, opts, fn ->
       with {:ok, user} <- find_user(username),
@@ -706,22 +717,42 @@ defmodule Hexpm.AdminTasks do
   end
 
   defp delete_sole_owned_packages(user) do
-    owned_packages =
-      Ecto.assoc(user, :owned_packages)
-      |> Repo.all()
-      |> Repo.preload(:repository)
+    sole_owned_packages(user)
+    |> Repo.all()
+    |> Repo.preload(:repository)
+    |> Enum.map(&remove_package_db/1)
+  end
 
-    Enum.flat_map(owned_packages, fn package ->
-      owner_count =
-        Ecto.assoc(package, :package_owners)
-        |> Repo.aggregate(:count)
+  defp sole_owned_packages(user) do
+    sole_owner =
+      from(po in PackageOwner,
+        group_by: po.package_id,
+        having: count(po.id) == 1,
+        select: po.package_id
+      )
 
-      if owner_count == 1 do
-        [remove_package_db(package)]
-      else
-        []
-      end
-    end)
+    from(p in Package,
+      join: po in assoc(p, :package_owners),
+      where: po.user_id == ^user.id and p.id in subquery(sole_owner)
+    )
+  end
+
+  defp sole_owned_package_report_ids(username) do
+    case Users.get(username) do
+      nil -> []
+      user -> package_report_ids(sole_owned_packages(user))
+    end
+  end
+
+  # Read before the task runs and kept in its audit log entry, so a report links
+  # to the run that removed its package.
+  defp package_report_ids(packages) do
+    from(r in Report,
+      where: r.package_id in subquery(from(p in packages, select: p.id)),
+      order_by: r.id,
+      select: r.id
+    )
+    |> Repo.all()
   end
 
   @doc """
@@ -943,6 +974,8 @@ defmodule Hexpm.AdminTasks do
   @doc """
   Removes a package and all its releases.
 
+  The package's reports are kept, and the audit log entry lists their ids.
+
   ## Arguments
 
   - `repo` - The repository name (e.g., "hexpm")
@@ -962,7 +995,18 @@ defmodule Hexpm.AdminTasks do
   """
   @spec remove_package(String.t(), String.t(), keyword()) :: :ok | {:error, term()}
   def remove_package(repo, package_name, opts \\ []) do
-    params = %{repository: repo, package: package_name, reason: opts[:reason]}
+    package =
+      from(p in Package,
+        join: r in assoc(p, :repository),
+        where: r.name == ^repo and p.name == ^package_name
+      )
+
+    params = %{
+      repository: repo,
+      package: package_name,
+      reason: opts[:reason],
+      reports: package_report_ids(package)
+    }
 
     audited(:remove_package, params, opts, fn ->
       with {:ok, package} <- find_package(repo, package_name),
