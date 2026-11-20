@@ -135,6 +135,7 @@ defmodule Hexpm.PackageReports do
       description: nil,
       status: :pending,
       package_id: package.id,
+      package_data: package_data(package),
       reporter_id: user.id
     )
     |> Repo.insert!(log: false)
@@ -146,10 +147,21 @@ defmodule Hexpm.PackageReports do
       status: :pending,
       triage_status: :open,
       package_id: package.id,
+      package_data: package_data(package),
       reporter_id: user.id
     )
     |> Repo.insert!(log: false)
   end
+
+  @doc """
+  What a report keeps about its package, so it still names the package once
+  the package is removed.
+  """
+  def package_data(%{repository_id: 1, name: name}),
+    do: %{"name" => name, "repository" => "hexpm"}
+
+  def package_data(%{repository: repository, name: name}),
+    do: %{"name" => name, "repository" => repository.name}
 
   defp update_report(report, attrs) do
     report

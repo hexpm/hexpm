@@ -241,6 +241,27 @@ defmodule Hexpm.AdminTasksTest do
       refute Repo.get(Package, package_id)
     end
 
+    test "keeps the reports of the deleted packages and links them to the run" do
+      user = insert(:user)
+      package = insert(:package, name: "spammy")
+      insert(:package_owner, package: package, user: user)
+      report = insert(:package_report, package: package)
+      shared = insert(:package)
+      insert(:package_owner, package: shared, user: user)
+      insert(:package_owner, package: shared, user: insert(:user))
+      insert(:package_report, package: shared)
+
+      assert :ok = AdminTasks.remove_user(user.username, delete_packages: true)
+
+      kept = Repo.get!(Report, report.id)
+      assert kept.package_id == nil
+      assert kept.package_data == %{"name" => "spammy", "repository" => "hexpm"}
+
+      assert [log] = AdminTasks.target_audit_logs(:package_report, report.id)
+      assert log.action == "remove_user"
+      assert log.params["reports"] == [report.id]
+    end
+
     test "preserves packages with multiple owners" do
       user = insert(:user)
       other_user = insert(:user)
@@ -809,6 +830,34 @@ defmodule Hexpm.AdminTasksTest do
       assert Enum.to_list(Hexpm.Store.list(:diff_bucket, "repos/")) == [
                "repos/#{repository.name}/metadata/other-1.0.0-2.0.0-1.json"
              ]
+    end
+
+    test "keeps the package's reports and links them to the run" do
+      package = insert(:package, name: "spammy")
+      report = insert(:package_report, package: package)
+      AdminTasks.triage_package_report(report.id, :in_progress)
+      other = insert(:package_report)
+
+      assert :ok = AdminTasks.remove_package("hexpm", "spammy")
+
+      kept = Repo.get!(Report, report.id)
+      assert kept.package_id == nil
+      assert kept.package_data == %{"name" => "spammy", "repository" => "hexpm"}
+      assert Repo.get!(Report, other.id).package_id
+
+      assert [removal, triage] = AdminTasks.target_audit_logs(:package_report, report.id)
+      assert triage.action == "triage_package_report"
+      assert removal.action == "remove_package"
+      assert removal.status == "ok"
+
+      assert removal.params == %{
+               "repository" => "hexpm",
+               "package" => "spammy",
+               "reason" => nil,
+               "reports" => [report.id]
+             }
+
+      assert AdminTasks.target_audit_logs(:package_report, other.id) == []
     end
   end
 
@@ -1719,6 +1768,7 @@ defmodule Hexpm.AdminTasksTest do
       report =
         Repo.insert!(%Hexpm.PackageReports.Report{
           package_id: package.id,
+          package_data: %{"name" => package.name, "repository" => repository.name},
           reason: :malware,
           summary: "summary",
           description: "description",

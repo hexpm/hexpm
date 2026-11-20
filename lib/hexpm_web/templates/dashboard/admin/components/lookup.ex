@@ -259,7 +259,7 @@ defmodule HexpmWeb.Dashboard.Admin.Components.Lookup do
             </a>
           </td>
           <td class="px-4 py-3 text-sm font-mono">
-            {package_label(report.package.repository.name, report.package.name)}
+            {package_label(report.package_data["repository"], report.package_data["name"])}
           </td>
           <td class="px-4 py-3 text-sm">{Report.reason_label(report.reason)}</td>
           <td class="px-4 py-3 text-sm font-mono">{reporter_name(report)}</td>
@@ -288,11 +288,18 @@ defmodule HexpmWeb.Dashboard.Admin.Components.Lookup do
     <.facts>
       <:fact label="Package">
         <a
+          :if={@report.package}
           href={package_path(@report.package.repository.name, @report.package.name)}
           class={["font-mono", @link]}
         >
           {package_label(@report.package.repository.name, @report.package.name)}
         </a>
+        <span :if={!@report.package}>
+          <span class="font-mono">
+            {package_label(@report.package_data["repository"], @report.package_data["name"])}
+          </span>
+          (removed)
+        </span>
       </:fact>
       <:fact label="Reason">{Report.reason_label(@report.reason)}</:fact>
       <:fact label="Reporter">
@@ -357,7 +364,7 @@ defmodule HexpmWeb.Dashboard.Admin.Components.Lookup do
           <td class="px-4 py-3 text-sm font-mono">{log.action}</td>
           <td class="px-4 py-3 text-sm">
             <dl class="grid grid-cols-[max-content_1fr] gap-x-3">
-              <%= for {key, value} <- Enum.sort(log.params), not is_nil(value) do %>
+              <%= for {key, value} <- Enum.sort(log.params), value not in [nil, []] do %>
                 <dt class="text-grey-500 dark:text-grey-400">{key}</dt>
                 <dd class="font-mono break-words">{format_param(value)}</dd>
               <% end %>
@@ -448,6 +455,7 @@ defmodule HexpmWeb.Dashboard.Admin.Components.Lookup do
   defp actor(%{user_agent: user_agent}), do: user_agent
 
   defp format_param(value) when is_binary(value), do: value
+  defp format_param(value) when is_list(value), do: Enum.map_join(value, ", ", &format_param/1)
   defp format_param(value), do: inspect(value)
 
   defp status_class("ok"), do: "text-green-700 dark:text-green-400"

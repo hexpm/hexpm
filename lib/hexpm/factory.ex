@@ -120,6 +120,7 @@ defmodule Hexpm.Factory do
       status: :submitted,
       triage_status: :open,
       package: build(:package),
+      package_data: &Hexpm.PackageReports.package_data(&1.package),
       reporter: build(:user)
     }
   end

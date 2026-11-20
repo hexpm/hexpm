@@ -14,6 +14,10 @@ defmodule Hexpm.PackageReports.Report do
     field :external_url, :string
     field :external_sign_in_url, :string
 
+    # The package's name and repository, kept after the package is removed and
+    # package_id is set to NULL.
+    field :package_data, :map
+
     field :confirms_criteria, :boolean, default: false, virtual: true
     field :confirms_in_scope, :boolean, default: false, virtual: true
 

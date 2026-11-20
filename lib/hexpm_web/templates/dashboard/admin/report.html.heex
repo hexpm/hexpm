@@ -63,7 +63,7 @@
         >
           <h3 class="text-grey-900 dark:text-white text-lg font-semibold mb-4">History</h3>
           <p :if={@audit_logs == []} class="text-grey-600 dark:text-grey-300 text-sm">
-            Nobody has triaged the report.
+            Nobody has triaged the report or removed its package.
           </p>
           <.audit_table :if={@audit_logs != []} audit_logs={@audit_logs} />
         </section>

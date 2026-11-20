@@ -495,7 +495,8 @@ defmodule HexpmWeb.Dashboard.AdminControllerTest do
       assert audit_log!("remove_user").params == %{
                "user" => user.username,
                "delete_packages" => true,
-               "reason" => "spam_account"
+               "reason" => "spam_account",
+               "reports" => []
              }
     end
 
@@ -1149,7 +1150,23 @@ defmodule HexpmWeb.Dashboard.AdminControllerTest do
       assert html =~ "support@hex.pm, with a copy to the reporter"
       assert html =~ ~s(>First line\nSecond &lt;b&gt;line&lt;/b&gt;</div>)
       assert html =~ ~s(action="/dashboard/admin/reports/#{report.id}")
-      assert html =~ "Nobody has triaged the report."
+      assert html =~ "Nobody has triaged the report or removed its package."
+    end
+
+    test "shows a report whose package was removed, with the removal in the history", c do
+      package = insert(:package, name: "spammy")
+      report = insert(:package_report, package: package)
+      :ok = Hexpm.AdminTasks.remove_package("hexpm", "spammy")
+
+      html = response(get_page(c, "/dashboard/admin/reports/#{report.id}"), 200)
+      assert html =~ "spammy"
+      assert html =~ "(removed)"
+      refute html =~ ~s(href="/packages/spammy")
+      assert html =~ "remove_package"
+      assert html =~ ~s(<dd class="font-mono break-words">#{report.id}</dd>)
+
+      html = response(get_page(c, "/dashboard/admin/reports"), 200)
+      assert html =~ "spammy"
     end
 
     test "shows a vulnerability report without the triage form", c do
