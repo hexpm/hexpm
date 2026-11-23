@@ -313,7 +313,8 @@ defmodule HexpmWeb.API.ReleaseController do
   defp unpack_release_metadata(body_path, output) do
     case :hex_tarball.unpack({:file, String.to_charlist(body_path)}, output) do
       {:ok, %{inner_checksum: inner_checksum, outer_checksum: outer_checksum, metadata: metadata}} ->
-        with :ok <- check_metadata_string(metadata, "name"),
+        with :ok <- check_metadata_structs(metadata),
+             :ok <- check_metadata_string(metadata, "name"),
              :ok <- check_metadata_string(metadata, "version"),
              :ok <- check_metadata_text(metadata) do
           {:ok, metadata, inner_checksum, outer_checksum}
@@ -340,6 +341,12 @@ defmodule HexpmWeb.API.ReleaseController do
 
   # Metadata is stored as text and jsonb, which hold neither a NUL byte nor
   # invalid UTF-8, and nothing upstream of the insert checks for them.
+  defp check_metadata_structs(metadata) do
+    if Hexpm.Utils.contains_struct?(metadata),
+      do: {:error, "metadata must not contain Elixir structs"},
+      else: :ok
+  end
+
   defp check_metadata_text(metadata) do
     if Hexpm.Utils.storable_text?(metadata),
       do: :ok,

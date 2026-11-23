@@ -32,6 +32,24 @@ defmodule Hexpm.Utils do
     String.valid?(value) and not String.contains?(value, <<0>>)
   end
 
+  @doc """
+  Returns true if any map in `term` has a `:__struct__` key.
+
+  A map decoded from client input with that key is dispatched to the named
+  struct's protocol implementations, so inspecting or enumerating it runs code
+  chosen by the client.
+  """
+  def contains_struct?(map) when is_map(map) do
+    Map.has_key?(map, :__struct__) or
+      Enum.any?(:maps.to_list(map), fn {key, value} ->
+        contains_struct?(key) or contains_struct?(value)
+      end)
+  end
+
+  def contains_struct?([head | tail]), do: contains_struct?(head) or contains_struct?(tail)
+  def contains_struct?(tuple) when is_tuple(tuple), do: contains_struct?(Tuple.to_list(tuple))
+  def contains_struct?(_other), do: false
+
   def storable_text?(map) when is_map(map) do
     map |> Map.to_list() |> storable_text?()
   end

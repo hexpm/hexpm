@@ -645,6 +645,40 @@ defmodule HexpmWeb.API.ReleaseControllerTest do
       end
     end
 
+    test "refuses metadata containing structs", %{user: user} do
+      metadata = %{
+        "name" => Fake.sequence(:package),
+        "version" => "1.0.0",
+        "app" => "app",
+        "description" => "description",
+        "licenses" => ["Apache-2.0"],
+        "build_tools" => ["mix"],
+        "files" => ["mix.exs"],
+        "requirements" => %{}
+      }
+
+      struct = %{__struct__: URI, host: "example.com"}
+
+      for {field, value} <- [
+            {"requirements", struct},
+            {"requirements", %{"decimal" => struct}},
+            {"links", %{"GitHub" => struct}},
+            {"extra", %{"key" => [struct]}}
+          ] do
+        conn =
+          build_conn()
+          |> put_req_header("content-type", "application/octet-stream")
+          |> put_req_header("authorization", key_for(user))
+          |> post("/api/publish", create_tar_with_raw_metadata(Map.put(metadata, field, value)))
+
+        assert json_response(conn, 422)["errors"] == %{
+                 "tar" => "metadata must not contain Elixir structs"
+               }
+      end
+
+      refute Hexpm.Repo.get_by(Package, name: metadata["name"])
+    end
+
     test "accepts release with internal symlink", %{user: user} do
       meta = %{name: Fake.sequence(:package), version: "1.0.0", description: "description"}
 
