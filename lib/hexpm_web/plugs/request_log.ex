@@ -1,8 +1,9 @@
 defmodule HexpmWeb.Plugs.RequestLog do
   @moduledoc """
   Logs one `http.request` line per request when the response is sent, with the
-  method, path, status, duration and, once routed, the controller, action and
-  format as fields. A request authenticated with an API key, an OAuth token or
+  method, path, client IP, status, duration and, once routed, the controller,
+  action and format as fields. A request with a body also gets `content_type`
+  and `content_length`, as its headers gave them. A request authenticated with an API key, an OAuth token or
   a browser session also gets `credential`, `key:<id>`, `token:<jti>` or
   `session:<id>`, the same identifiers repo.hex.pm's access log uses and never
   the secret.
@@ -30,14 +31,22 @@ defmodule HexpmWeb.Plugs.RequestLog do
   end
 
   defp line(conn, duration_us) do
-    Enum.into(routed(conn.private) ++ credential(conn.assigns), %{
+    Enum.into(body(conn) ++ routed(conn.private) ++ credential(conn.assigns), %{
       message: "HTTP request",
       event: "http.request",
       method: conn.method,
       path: conn.request_path,
+      ip: conn.remote_ip |> :inet.ntoa() |> to_string(),
       status: conn.status,
       duration_us: duration_us
     })
+  end
+
+  defp body(conn) do
+    for {field, header} <- [content_type: "content-type", content_length: "content-length"],
+        value <- conn |> get_req_header(header) |> Enum.take(1) do
+      {field, value}
+    end
   end
 
   defp routed(%{phoenix_controller: controller, phoenix_action: action} = private) do
