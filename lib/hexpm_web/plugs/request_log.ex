@@ -2,8 +2,9 @@ defmodule HexpmWeb.Plugs.RequestLog do
   @moduledoc """
   Logs one `http.request` line per request when the response is sent, with the
   method, path, client IP, status, duration and, once routed, the controller,
-  action and format as fields. A request with a body also gets `content_type`
-  and `content_length`, as its headers gave them. A request authenticated with an API key, an OAuth token or
+  action and format as fields. A request that sends a `content-type` or
+  `content-length` header also gets its value as `content_type` or
+  `content_length`. A request authenticated with an API key, an OAuth token or
   a browser session also gets `credential`, `key:<id>`, `token:<jti>` or
   `session:<id>`, the same identifiers repo.hex.pm's access log uses and never
   the secret.
