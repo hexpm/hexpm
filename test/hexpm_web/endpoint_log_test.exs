@@ -9,6 +9,7 @@ defmodule HexpmWeb.EndpointLogTest do
              event: "http.request",
              method: "GET",
              path: "/diffs",
+             ip: "127.0.0.1",
              status: 200,
              duration_us: duration,
              controller: "HexpmWeb.DiffController",
@@ -20,6 +21,23 @@ defmodule HexpmWeb.EndpointLogTest do
     assert is_integer(duration)
     assert is_binary(request_id)
     refute Map.has_key?(line, :credential)
+    refute Map.has_key?(line, :content_type)
+    refute Map.has_key?(line, :content_length)
+  end
+
+  test "logs the content type and length of a request with a body" do
+    body = :erlang.term_to_binary(%{"url" => "https://hex.pm/packages"})
+
+    line =
+      request_line(fn ->
+        build_conn()
+        |> put_req_header("content-type", "application/vnd.hex+erlang")
+        |> put_req_header("content-length", "#{byte_size(body)}")
+        |> post("/api/short_url", body)
+      end)
+
+    assert %{path: "/api/short_url", content_type: "application/vnd.hex+erlang"} = line
+    assert line.content_length == "#{byte_size(body)}"
   end
 
   test "logs the id of the API key that authenticated the request" do
