@@ -25,14 +25,6 @@ defmodule Hexpm.Utils do
   end
 
   @doc """
-  Whether every string in `term`, map keys included, is text a Postgres `text`
-  or `jsonb` column accepts: valid UTF-8 with no NUL byte.
-  """
-  def storable_text?(value) when is_binary(value) do
-    String.valid?(value) and not String.contains?(value, <<0>>)
-  end
-
-  @doc """
   Returns true if any map in `term` has a `:__struct__` key.
 
   A map decoded from client input with that key is dispatched to the named
@@ -49,6 +41,14 @@ defmodule Hexpm.Utils do
   def contains_struct?([head | tail]), do: contains_struct?(head) or contains_struct?(tail)
   def contains_struct?(tuple) when is_tuple(tuple), do: contains_struct?(Tuple.to_list(tuple))
   def contains_struct?(_other), do: false
+
+  @doc """
+  Whether every string in `term`, map keys included, is text a Postgres `text`
+  or `jsonb` column accepts: valid UTF-8 with no NUL byte.
+  """
+  def storable_text?(value) when is_binary(value) do
+    String.valid?(value) and not String.contains?(value, <<0>>)
+  end
 
   def storable_text?(map) when is_map(map) do
     map |> Map.to_list() |> storable_text?()
