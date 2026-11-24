@@ -15,7 +15,7 @@ The attacker's commands could read the credentials our servers use, so we replac
 ### What you should do
 
 1. **Change your password** at [hex.pm](https://hex.pm).
-2. **Reset your 2FA** with a new secret and store the new recovery codes.
+2. **Reset your 2FA** at [hex.pm/dashboard/security](https://hex.pm/dashboard/security): under "Authenticator App", choose "Setup New App" and verify a code from the new entry. You get a new secret and new recovery codes, so store the new codes. This works when an organization requires 2FA, where disabling it is refused.
 3. **Update your Hex client** when the release with the new signing system is out in the coming days. Until then, use only repo.hex.pm, not mirrors. To update, run `mix local.hex --force`, and update rebar3 or Gleam if you use them.
 
 ### Timeline
