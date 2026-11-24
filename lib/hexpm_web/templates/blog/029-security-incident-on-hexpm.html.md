@@ -68,7 +68,7 @@ We are working on hardening fixes for these libraries which should prevent such 
 1. **plug_crypto:** Document that the decoder is only safe for authenticated payloads, and add an option to reject structs.
 2. **plug:** Refuse struct values as body params.
 3. **ecto:** Check that the binding is a list before enumerating it in `Inspect`.
-4. **db_connection:** Don't apply `:log` callbacks taken from stream structs.
+4. **db_connection:** Don't apply `:log` callbacks taken from stream structs. Tracked as [CVE-2026-133555](https://cna.erlef.org/cves/CVE-2026-133555.html).
 
 ### How we investigated
 
