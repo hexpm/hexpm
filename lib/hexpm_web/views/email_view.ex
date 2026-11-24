@@ -186,8 +186,24 @@ defmodule HexpmWeb.EmailView do
   end
 
   defmodule Announcement do
-    defdelegate paragraphs(body), to: Common
     defdelegate html_paragraph(text), to: Common
+
+    def blocks(body) do
+      body
+      |> Common.paragraphs()
+      |> Enum.map(fn paragraph ->
+        case String.split(paragraph, "\n") do
+          ["## " <> heading] -> {:heading, String.trim(heading)}
+          _lines -> {:paragraph, paragraph}
+        end
+      end)
+    end
+
+    def text(body) do
+      body
+      |> blocks()
+      |> Enum.map_join("\n\n", fn {_type, text} -> text end)
+    end
 
     def title("Hex.pm - " <> title), do: title
     def title(subject), do: subject
