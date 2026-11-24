@@ -798,13 +798,9 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       info = "Private packages enabled with a one month free trial."
 
       update_billing(conn, organization, params, info, fn customer_params ->
-        if is_map(customer_params["person"]) or is_map(customer_params["company"]) do
-          Seats.update_quantity(organization, :member_count, fn quantity ->
-            Hexpm.Billing.create(Map.put(customer_params, "quantity", quantity), audit: audit)
-          end)
-        else
-          {:error, %{"person" => %{"country" => ["can't be blank"]}}}
-        end
+        Seats.update_quantity(organization, :member_count, fn quantity ->
+          Hexpm.Billing.create(Map.put(customer_params, "quantity", quantity), audit: audit)
+        end)
       end)
     end)
   end
@@ -1006,6 +1002,9 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     company = params["company"]
 
     cond do
+      is_nil(person) and is_nil(company) ->
+        {:error, %{"person" => %{"country" => ["can't be blank"]}}}
+
       is_map(person) && (person["country"] == nil || person["country"] == "") ->
         {:error, %{"person" => %{"country" => ["can't be blank"]}}}
 

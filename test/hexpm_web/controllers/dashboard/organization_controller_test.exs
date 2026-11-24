@@ -1737,7 +1737,7 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
 
       stub(Hexpm.Billing.Mock, :update, fn token, params ->
         assert organization.name == token
-        assert %{"email" => "billing@example.com"} = params
+        assert %{"email" => "billing@example.com", "person" => %{"country" => "SE"}} = params
         {:ok, %{}}
       end)
 
@@ -1747,11 +1747,36 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
         build_conn()
         |> test_login(user)
         |> post("/dashboard/orgs/#{organization.name}/update-billing", %{
-          "email" => "billing@example.com"
+          "email" => "billing@example.com",
+          "person" => %{"country" => "SE"}
         })
 
       assert redirected_to(conn) == "/dashboard/orgs/#{organization.name}/billing"
       assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Updated your billing information."
+    end
+
+    test "rejects billing without person or company", %{user: user, organization: organization} do
+      mock_customer(organization)
+
+      stub(Hexpm.Billing.Mock, :update, fn _, _ ->
+        {:error,
+         %{"errors" => %{"person" => ["can't be blank"], "company" => ["can't be blank"]}}}
+      end)
+
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+
+      for person <- [nil, "SE", ["SE"]] do
+        params = %{"email" => "billing@example.com"}
+        params = if person, do: Map.put(params, "person", person), else: params
+
+        conn =
+          build_conn()
+          |> test_login(user)
+          |> post("/dashboard/orgs/#{organization.name}/update-billing", params)
+
+        assert html_response(conn, 400) =~ "can&#39;t be blank"
+        assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "required fields"
+      end
     end
 
     test "create audit_log with action billing.update", %{user: user, organization: organization} do
@@ -1763,7 +1788,8 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       build_conn()
       |> test_login(user)
       |> post("/dashboard/orgs/#{organization.name}/update-billing", %{
-        "email" => "billing@example.com"
+        "email" => "billing@example.com",
+        "person" => %{"country" => "SE"}
       })
 
       audit_logs = AuditLogs.all_by(user)
