@@ -1978,7 +1978,8 @@ defmodule Hexpm.AdminTasks do
     and `Hexpm.Accounts.Organizations.all_admin_notifiable_emails/1`
   - `subject` - Subject line, a leading `"Hex.pm - "` is dropped from the heading
   - `body` - Plain text body, blank lines separate paragraphs, single newlines
-    are kept as line breaks and bare URLs become links in the HTML part
+    are kept as line breaks and bare URLs become links in the HTML part. A
+    paragraph of one line starting with `## ` is a heading
 
   ## Examples
 

@@ -2,8 +2,15 @@
   <%= Announcement.title(@subject) %>
 </h1>
 
-<%= for paragraph <- Announcement.paragraphs(@body) do %>
-  <p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
-    <%= raw(Announcement.html_paragraph(paragraph)) %>
-  </p>
+<%= for block <- Announcement.blocks(@body) do %>
+  <%= case block do %>
+    <% {:heading, heading} -> %>
+      <h2 style="color: #030913; font-size: 18px; line-height: 28px; font-weight: 600; margin: 24px 0 12px 0;">
+        <%= heading %>
+      </h2>
+    <% {:paragraph, paragraph} -> %>
+      <p style="color: #304254; font-size: 16px; line-height: 24px; margin: 0 0 16px 0;">
+        <%= raw(Announcement.html_paragraph(paragraph)) %>
+      </p>
+  <% end %>
 <% end %>

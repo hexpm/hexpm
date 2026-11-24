@@ -2517,6 +2517,25 @@ defmodule Hexpm.AdminTasksTest do
                  "https://hex.pm/policies/termsofservice\nhttps://hex.pm/policies/privacy"
       end)
     end
+
+    test "renders a line starting with ## as a heading" do
+      assert {:ok, 1} =
+               AdminTasks.send_email(
+                 ["bob@example.com"],
+                 "Subject",
+                 "Intro.\n\n## What <you> should do\n\nChange your password.\n\n## Not a heading\nSecond line."
+               )
+
+      deliver_queued_emails()
+
+      assert_email_sent(fn email ->
+        assert email.html_body =~ ~r{<h2[^>]*>\s*What &lt;you&gt; should do\s*</h2>}
+        assert email.html_body =~ ~r{<p[^>]*>\s*## Not a heading<br>\s*Second line\.\s*</p>}
+
+        assert email.text_body =~
+                 "Intro.\n\nWhat <you> should do\n\nChange your password.\n\n## Not a heading\nSecond line."
+      end)
+    end
   end
 
   describe "audit log" do
