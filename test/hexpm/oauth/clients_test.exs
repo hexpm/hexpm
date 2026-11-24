@@ -69,6 +69,7 @@ defmodule Hexpm.OAuth.ClientsTest do
       assert Clients.supports_scopes?(client, ["docs:acme"])
       assert Clients.supports_scopes?(client, ["docs:myorg"])
       assert Clients.supports_scopes?(client, ["docs:some-organization"])
+      refute Clients.supports_scopes?(client, ["docs"])
     end
 
     test "returns true for multiple resource-specific scopes" do
