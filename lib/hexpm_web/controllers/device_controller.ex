@@ -164,7 +164,11 @@ defmodule HexpmWeb.DeviceController do
   end
 
   defp handle_authorization(conn, user_code, user, params) do
-    selected_scopes = params["selected_scopes"] || []
+    selected_scopes =
+      case params["selected_scopes"] do
+        scopes when is_list(scopes) -> scopes
+        _ -> []
+      end
 
     if selected_scopes == [] do
       case DeviceCodes.get_for_verification(user_code) do
