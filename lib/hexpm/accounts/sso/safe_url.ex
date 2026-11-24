@@ -31,6 +31,7 @@ defmodule Hexpm.Accounts.SSO.SafeURL do
 
     cond do
       uri.scheme != "https" and not exempt_host?(uri.host) -> error(:https_required)
+      uri.port != 443 and not exempt_host?(uri.host) -> error(:port_not_allowed)
       is_nil(uri.host) or uri.host == "" -> error(:host_required)
       uri.userinfo -> error(:userinfo_not_allowed)
       uri.fragment -> error(:fragment_not_allowed)
@@ -40,7 +41,7 @@ defmodule Hexpm.Accounts.SSO.SafeURL do
 
   def validate_syntax(_value), do: error(:invalid_url)
 
-  # Hosts listed here skip the HTTPS and public-address requirements so a test
+  # Hosts listed here skip the HTTPS, port and public-address requirements so a test
   # harness can serve an issuer over plain HTTP on loopback. The list is empty
   # unless configured, and config/runtime.exs refuses to populate it in prod.
   defp exempt_host?(host) when is_binary(host) do

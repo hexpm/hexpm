@@ -59,7 +59,7 @@ The issuer to enter in Hexpm is the tenant-specific v2 issuer, `https://login.mi
 
 On the organization's **SSO** dashboard:
 
-1. Enter the **Issuer URL** for your provider, exactly as given above. Hexpm requires an HTTPS issuer with no query or fragment and requires the provider discovery document to return that exact issuer.
+1. Enter the **Issuer URL** for your provider, exactly as given above. Hexpm requires an HTTPS issuer on port 443 with no query or fragment and requires the provider discovery document to return that exact issuer.
 2. Enter the application's **Client ID** and **Client secret**.
 3. Select **Save configuration**.
 4. Select **Test connection** and complete the provider sign-in as the same Hexpm administrator who saved the configuration.

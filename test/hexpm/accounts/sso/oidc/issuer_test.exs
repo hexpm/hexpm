@@ -4,8 +4,13 @@ defmodule Hexpm.Accounts.SSO.OIDC.IssuerTest do
   alias Hexpm.Accounts.SSO.Error
   alias Hexpm.Accounts.SSO.OIDC.Issuer
 
-  test "accepts an exact HTTPS issuer with an optional port and path" do
+  test "accepts an exact HTTPS issuer with a path" do
     assert {:ok, %URI{query: nil, fragment: nil}} =
+             Issuer.validate_syntax("https://identity.example.com/tenant/v2.0")
+  end
+
+  test "rejects a port other than 443" do
+    assert {:error, %Error{stage: :url_validation, code: :port_not_allowed}} =
              Issuer.validate_syntax("https://identity.example.com:8443/tenant/v2.0")
   end
 
