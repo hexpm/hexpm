@@ -798,9 +798,13 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
       info = "Private packages enabled with a one month free trial."
 
       update_billing(conn, organization, params, info, fn customer_params ->
-        Seats.update_quantity(organization, :member_count, fn quantity ->
-          Hexpm.Billing.create(Map.put(customer_params, "quantity", quantity), audit: audit)
-        end)
+        if is_map(customer_params["person"]) or is_map(customer_params["company"]) do
+          Seats.update_quantity(organization, :member_count, fn quantity ->
+            Hexpm.Billing.create(Map.put(customer_params, "quantity", quantity), audit: audit)
+          end)
+        else
+          {:error, %{"person" => %{"country" => ["can't be blank"]}}}
+        end
       end)
     end)
   end
@@ -957,11 +961,12 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   end
 
   defp update_billing(conn, organization, params, info, fun) do
-    customer_params =
+    params =
       params
-      |> Map.take(["email", "person", "company", "token", "quantity"])
-      |> Map.put_new("person", nil)
-      |> Map.put_new("company", nil)
+      |> Map.put("person", map_or_nil(params["person"]))
+      |> Map.put("company", map_or_nil(params["company"]))
+
+    customer_params = Map.take(params, ["email", "person", "company", "token", "quantity"])
 
     with :ok <- validate_billing_params(customer_params),
          {:ok, _} <- fun.(customer_params) do
@@ -991,6 +996,9 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
         |> render_index(organization, params: params, errors: reason["errors"], tab: :billing)
     end
   end
+
+  defp map_or_nil(value) when is_map(value), do: value
+  defp map_or_nil(_value), do: nil
 
   defp validate_billing_params(%{"email" => email} = params)
        when is_binary(email) and email != "" do

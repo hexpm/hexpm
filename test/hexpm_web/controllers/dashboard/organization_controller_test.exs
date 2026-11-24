@@ -1994,6 +1994,52 @@ defmodule HexpmWeb.Dashboard.OrganizationControllerTest do
       assert Organization.trialing?(organization)
     end
 
+    test "rejects billing without person or company", %{user: user} do
+      organization = insert(:organization, billing_active: false, trial_end: nil)
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+      stub(Hexpm.Billing.Mock, :get, fn _, _opts -> nil end)
+
+      stub(Hexpm.Billing.Mock, :create, fn _params ->
+        {:error,
+         %{"errors" => %{"person" => ["can't be blank"], "company" => ["can't be blank"]}}}
+      end)
+
+      conn =
+        build_conn()
+        |> test_login(user)
+        |> post("/dashboard/orgs/#{organization.name}/create-billing", %{
+          "email" => "eric@mail.com"
+        })
+
+      assert html_response(conn, 400) =~ "can&#39;t be blank"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "required fields"
+      assert Repo.get!(Organization, organization.id).trial_end == nil
+    end
+
+    test "rejects billing with person details that are not a map", %{user: user} do
+      organization = insert(:organization, billing_active: false, trial_end: nil)
+      insert(:organization_user, organization: organization, user: user, role: "admin")
+      stub(Hexpm.Billing.Mock, :get, fn _, _opts -> nil end)
+
+      stub(Hexpm.Billing.Mock, :create, fn _params ->
+        {:error, %{"errors" => %{"person" => ["is invalid"]}}}
+      end)
+
+      for person <- ["SE", ["SE"]] do
+        conn =
+          build_conn()
+          |> test_login(user)
+          |> post("/dashboard/orgs/#{organization.name}/create-billing", %{
+            "email" => "eric@mail.com",
+            "person" => person
+          })
+
+        assert html_response(conn, 400) =~ "can&#39;t be blank"
+      end
+
+      assert Repo.get!(Organization, organization.id).trial_end == nil
+    end
+
     test "does not start the trial when billing fails", %{user: user} do
       organization = insert(:organization, billing_active: false, trial_end: nil)
       insert(:organization_user, organization: organization, user: user, role: "admin")
