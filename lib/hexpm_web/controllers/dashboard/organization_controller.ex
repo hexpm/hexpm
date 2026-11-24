@@ -957,11 +957,12 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
   end
 
   defp update_billing(conn, organization, params, info, fun) do
-    customer_params =
+    params =
       params
-      |> Map.take(["email", "person", "company", "token", "quantity"])
-      |> Map.put_new("person", nil)
-      |> Map.put_new("company", nil)
+      |> Map.put("person", map_or_nil(params["person"]))
+      |> Map.put("company", map_or_nil(params["company"]))
+
+    customer_params = Map.take(params, ["email", "person", "company", "token", "quantity"])
 
     with :ok <- validate_billing_params(customer_params),
          {:ok, _} <- fun.(customer_params) do
@@ -992,12 +993,18 @@ defmodule HexpmWeb.Dashboard.OrganizationController do
     end
   end
 
+  defp map_or_nil(value) when is_map(value), do: value
+  defp map_or_nil(_value), do: nil
+
   defp validate_billing_params(%{"email" => email} = params)
        when is_binary(email) and email != "" do
     person = params["person"]
     company = params["company"]
 
     cond do
+      is_nil(person) and is_nil(company) ->
+        {:error, %{"person" => %{"country" => ["can't be blank"]}}}
+
       is_map(person) && (person["country"] == nil || person["country"] == "") ->
         {:error, %{"person" => %{"country" => ["can't be blank"]}}}
 
