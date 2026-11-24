@@ -507,6 +507,21 @@ defmodule HexpmWeb.DeviceControllerTest do
       assert updated_device_code.status == "pending"
     end
 
+    test "shows error when scopes param is not a list", %{user: user, device_code: device_code} do
+      conn = login_with_verified_code(build_conn(), user, device_code.user_code)
+
+      conn =
+        post(conn, ~p"/oauth/device/authorize", %{
+          "action" => "authorize",
+          "selected_scopes" => "api:read"
+        })
+
+      assert html_response(conn, 200) =~ "At least one permission must be selected"
+
+      updated_device_code = Repo.get(DeviceCode, device_code.id)
+      assert updated_device_code.status == "pending"
+    end
+
     test "shows error when no scopes param at all", %{user: user, device_code: device_code} do
       conn = login_with_verified_code(build_conn(), user, device_code.user_code)
 

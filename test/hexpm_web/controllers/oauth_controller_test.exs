@@ -222,6 +222,29 @@ defmodule HexpmWeb.OAuthControllerTest do
       %{client: client, user: user}
     end
 
+    test "returns error when selected_scopes is not a list", %{client: client, user: user} do
+      conn = login_user(build_conn(), user)
+
+      conn =
+        post(conn, ~p"/oauth/authorize", %{
+          "client_id" => client.client_id,
+          "redirect_uri" => "https://example.com/callback",
+          "scope" => "api:read repositories",
+          "state" => "test_state",
+          "code_challenge" => "challenge123",
+          "code_challenge_method" => "S256",
+          "action" => "approve",
+          "selected_scopes" => "api:read"
+        })
+
+      redirect_url = redirected_to(conn)
+      assert redirect_url =~ "https://example.com/callback"
+      assert redirect_url =~ "error=invalid_request"
+      assert redirect_url =~ URI.encode_www_form("At least one permission must be selected")
+
+      refute Repo.get_by(Hexpm.OAuth.AuthorizationCode, client_id: client.client_id)
+    end
+
     test "returns error when no selected_scopes provided", %{client: client, user: user} do
       conn = login_user(build_conn(), user)
 
@@ -487,6 +510,25 @@ defmodule HexpmWeb.OAuthControllerTest do
       organization = insert(:organization)
       insert(:organization_user, organization: organization, user: user)
       %{client: client, user: user, organization: organization}
+    end
+
+    test "rejects the docs scope without an organization", %{client: client, user: user} do
+      conn = login_user(build_conn(), user)
+      redirect_uri = "https://acme.hexorgs.pm/oauth/callback"
+
+      conn =
+        get(conn, ~p"/oauth/authorize", %{
+          "client_id" => client.client_id,
+          "redirect_uri" => redirect_uri,
+          "scope" => "docs",
+          "state" => "test_state",
+          "code_challenge" => "challenge123",
+          "code_challenge_method" => "S256"
+        })
+
+      redirect_url = redirected_to(conn)
+      assert redirect_url =~ redirect_uri
+      assert redirect_url =~ "error=invalid_request"
     end
 
     test "accepts docs:{org} scope with wildcard redirect URI", %{
