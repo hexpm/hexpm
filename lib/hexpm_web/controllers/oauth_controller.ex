@@ -268,7 +268,11 @@ defmodule HexpmWeb.OAuthController do
   end
 
   defp get_selected_scopes(params, requested_scopes, client) do
-    selected_scopes = params["selected_scopes"] || []
+    selected_scopes =
+      case params["selected_scopes"] do
+        scopes when is_list(scopes) -> scopes
+        _ -> []
+      end
 
     cond do
       selected_scopes == [] ->
