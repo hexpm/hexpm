@@ -22,7 +22,7 @@ jobs:
     timeout-minutes: 15
     env:
       otp: 29.1
-      elixir: 1.20.4
+      elixir: 1.20.5
 
     services:
       postgres:
@@ -87,7 +87,7 @@ jobs:
     timeout-minutes: 20
     env:
       otp: 29.1
-      elixir: 1.20.4
+      elixir: 1.20.5
       MIX_ENV: test
 
     services:
@@ -163,13 +163,13 @@ jobs:
         include:
           - hex-version: main
             otp: 29.1
-            elixir: 1.20.4
+            elixir: 1.20.5
           - hex-version: v2.5
             otp: 29.1
-            elixir: 1.20.4
+            elixir: 1.20.5
           - hex-version: v2.4
             otp: 29.1
-            elixir: 1.20.4
+            elixir: 1.20.5
 
     env:
       HEXPM_PATH: ..
