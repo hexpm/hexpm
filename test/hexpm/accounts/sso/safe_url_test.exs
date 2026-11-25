@@ -18,6 +18,16 @@ defmodule Hexpm.Accounts.SSO.SafeURLTest do
              SafeURL.validate("https://127.0.0.1/mock")
   end
 
+  test "requires port 443 when no host is exempt" do
+    assert {:error, %Error{stage: :url_validation, code: :port_not_allowed}} =
+             SafeURL.validate_syntax("https://identity.example.com:8443/tenant")
+
+    assert {:ok, %URI{port: 443}} =
+             SafeURL.validate_syntax("https://identity.example.com:443/tenant")
+
+    assert {:ok, %URI{port: 443}} = SafeURL.validate_syntax("https://identity.example.com/tenant")
+  end
+
   test "allows plain HTTP on an exempt host" do
     exempt(["localhost"])
 
