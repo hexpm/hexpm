@@ -25,10 +25,11 @@ defmodule HexpmWeb.API.PackageController do
     end)
   end
 
-  def show(conn, _params) do
+  def show(conn, params) do
     if package = conn.assigns.package do
       when_stale(conn, package, fn conn ->
-        package = Packages.preload(package)
+        package = Packages.preload(package, releases_preload(params))
+
         owners = Enum.map(Owners.all(package, user: :emails), & &1.user)
         package = %{package | owners: owners}
 
@@ -50,6 +51,14 @@ defmodule HexpmWeb.API.PackageController do
       not_found(conn)
     end
   end
+
+  defp releases_preload(%{"release_downloads" => "true"}) do
+    if Hexpm.FeatureFlags.mode(:release_download_breakdowns) == :enabled,
+      do: {:releases, :download_breakdowns},
+      else: :releases
+  end
+
+  defp releases_preload(_params), do: :releases
 
   defp sort(nil), do: sort("name")
   defp sort("downloads"), do: sort("total_downloads")

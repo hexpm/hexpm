@@ -43,6 +43,9 @@ config :hexpm, :feature_flags,
     mode: env_mode.("HEXPM_WORKLOAD_IDENTITY_MODE", "enabled"),
     beta_users: env_list.("HEXPM_WORKLOAD_IDENTITY_BETA_USERS"),
     beta_organizations: env_list.("HEXPM_WORKLOAD_IDENTITY_BETA_ORGANIZATIONS")
+  ],
+  release_download_breakdowns: [
+    mode: env_mode.("HEXPM_RELEASE_DOWNLOAD_BREAKDOWNS_MODE", "off")
   ]
 
 sso_exempt_issuer_hosts =
